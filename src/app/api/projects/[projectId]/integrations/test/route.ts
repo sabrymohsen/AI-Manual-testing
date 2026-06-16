@@ -1,0 +1,133 @@
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/db"
+import { getSession } from "@/lib/auth"
+import { decryptSecret } from "@/lib/crypto"
+
+export async function POST(
+  request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  const session = await getSession()
+  if (!session) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  }
+
+  // Verify project owner
+  const project = await prisma.project.findFirst({
+    where: { id: params.projectId, userId: session.user.id }
+  })
+  if (!project) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 })
+  }
+
+  const body = await request.json()
+  const { provider, host, projectKey, username } = body
+  let token = body.token
+
+  // If token is empty/not provided, try to load it from the database and decrypt it
+  if (!token) {
+    const config = await prisma.integrationConfig.findUnique({
+      where: { projectId: params.projectId }
+    })
+    if (config?.encryptedToken) {
+      try {
+        token = decryptSecret({
+          encrypted: config.encryptedToken,
+          iv: config.encryptionIv || "",
+          authTag: config.encryptionAuthTag || "",
+          keyVersion: config.keyVersion || "v1"
+        })
+      } catch (err) {
+        return NextResponse.json({ error: "Failed to decrypt saved token" }, { status: 500 })
+      }
+    }
+  }
+
+  if (!token) {
+    return NextResponse.json({ error: "API token/PAT is required to test connection" }, { status: 400 })
+  }
+
+  if (!host || !projectKey) {
+    return NextResponse.json({ error: "Host and Project Key/ID are required to test connection" }, { status: 400 })
+  }
+
+  try {
+    if (provider === "jira") {
+      // Clean host url
+      let jiraHost = host.trim().replace(/^https?:\/\//, "")
+      const url = `https://${jiraHost}/rest/api/2/project/${projectKey.trim()}`
+      const credentials = Buffer.from(`${username.trim()}:${token.trim()}`).toString("base64")
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": `Basic ${credentials}`,
+          "Accept": "application/json"
+        }
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        return NextResponse.json({ error: `Jira returned status ${res.status}: ${text.slice(0, 100)}` }, { status: 400 })
+      }
+
+      return NextResponse.json({ success: true, message: "Successfully connected to Jira!" })
+    }
+
+    if (provider === "azure_devops") {
+      // Azure DevOps Personal Access Token (PAT) requires basic auth with empty username or custom username
+      const credentials = Buffer.from(`:${token.trim()}`).toString("base64")
+      // host for ADO is usually organization: e.g. "dev.azure.com/org" or "org" (if it is just the name)
+      let adoOrg = host.trim().replace(/^https?:\/\//, "").replace(/\/$/, "")
+      if (!adoOrg.includes("dev.azure.com/")) {
+        adoOrg = `dev.azure.com/${adoOrg}`
+      }
+      const url = `https://${adoOrg}/${projectKey.trim()}/_apis/projects/${projectKey.trim()}?api-version=6.0`
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": `Basic ${credentials}`,
+          "Accept": "application/json"
+        }
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        return NextResponse.json({ error: `Azure DevOps returned status ${res.status}: ${text.slice(0, 100)}` }, { status: 400 })
+      }
+
+      return NextResponse.json({ success: true, message: "Successfully connected to Azure DevOps!" })
+    }
+
+    if (provider === "openproject") {
+      let opHost = host.trim().replace(/\/$/, "")
+      if (!opHost.startsWith("http")) {
+        opHost = `https://${opHost}`
+      }
+      const url = `${opHost}/api/v3/projects/${projectKey.trim()}`
+      // OpenProject supports Basic auth with username 'apikey' and API token as password
+      const credentials = Buffer.from(`apikey:${token.trim()}`).toString("base64")
+
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Authorization": `Basic ${credentials}`,
+          "Accept": "application/json"
+        }
+      })
+
+      if (!res.ok) {
+        const text = await res.text()
+        return NextResponse.json({ error: `OpenProject returned status ${res.status}: ${text.slice(0, 100)}` }, { status: 400 })
+      }
+
+      return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!" })
+    }
+
+    return NextResponse.json({ error: "Unsupported provider" }, { status: 400 })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Network error"
+    return NextResponse.json({ error: `Connection failed: ${msg}` }, { status: 500 })
+  }
+}

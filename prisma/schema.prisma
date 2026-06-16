@@ -1,0 +1,960 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Environment {
+  Dev
+  Staging
+  UAT
+  Production
+}
+
+enum BrowserType {
+  Chromium
+  Firefox
+  WebKit
+}
+
+enum ViewportType {
+  Desktop
+  Tablet
+  Mobile
+  Custom
+}
+
+enum TestType {
+  Functional
+  VisualDesign
+  E2E
+  Regression
+  Smoke
+  Exploratory
+}
+
+enum Priority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum RequirementStatus {
+  Draft
+  ReadyForTesting
+  InTesting
+  Covered
+  PartiallyCovered
+  Failed
+  Blocked
+  Deprecated
+}
+
+enum RequirementSource {
+  Manual
+  ExcelImport
+  Jira
+  AzureDevOps
+  GitHub
+  Figma
+  AIGenerated
+}
+
+enum TestRunStatus {
+  Queued
+  Running
+  Passed
+  Failed
+  Blocked
+  Warning
+  Cancelled
+}
+
+enum StepStatus {
+  Pending
+  Running
+  Passed
+  Failed
+  Blocked
+  Warning
+  Skipped
+}
+
+enum TestCaseSource {
+  Manual
+  AIGenerated
+  Imported
+  Exploratory
+}
+
+enum ActionType {
+  open_url
+  click
+  fill
+  select
+  upload_file
+  wait_for_text
+  wait_for_url
+  assert_visible
+  assert_hidden
+  assert_text
+  assert_url
+  assert_api_status
+  screenshot
+  custom_instruction
+}
+
+enum TargetType {
+  test_id
+  role
+  text
+  label
+  placeholder
+  css
+  xpath
+  url
+  none
+}
+
+enum LogLevel {
+  info
+  warning
+  error
+  debug
+}
+
+enum LogSource {
+  browser
+  server
+  playwright
+  ai
+  network
+}
+
+enum JobStatus {
+  Queued
+  Running
+  Completed
+  Failed
+  Cancelled
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  projects     Project[]
+  auditLogs    AuditLog[]
+}
+
+model Project {
+  id          String       @id @default(uuid())
+  name        String
+  webAppUrl   String
+  figmaUrl    String?
+  description String?
+  environment Environment  @default(Staging)
+  browserType BrowserType  @default(Chromium)
+  viewport    ViewportType @default(Desktop)
+  testType    TestType     @default(Functional)
+
+  customViewportWidth  Int?
+  customViewportHeight Int?
+
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  credentials ProjectCredential[]
+  figmaConfig FigmaConfig?
+  integrationConfig IntegrationConfig?
+  testCases   TestCase[]
+  testRuns    TestRun[]
+  auditLogs   AuditLog[]
+  elementLocators ElementLocator[]
+  recordingSessions RecordingSession[]
+  modules     ProjectModule[]
+  features    ProjectFeature[]
+  components  ProjectComponent[]
+
+  manualTestSessions ManualTestSession[]
+  reusableStepFlows   ReusableStepFlow[]
+  testDataVariables   TestDataVariable[]
+  requirements        Requirement[]
+  bugReports          BugReport[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model ProjectCredential {
+  id                String   @id @default(uuid())
+  roleName          String
+  username          String
+  encryptedPassword String
+  encryptionIv      String
+  encryptionAuthTag String
+  keyVersion        String   @default("v1")
+  loginUrl          String?
+  notes             String?
+
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  auditLogs         AuditLog[]
+  testRuns          TestRun[]
+  testCases         TestCase[]
+  recordingSessions RecordingSession[]
+  manualTestSessions ManualTestSession[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model FigmaConfig {
+  id                      String   @id @default(uuid())
+  projectId               String   @unique
+  project                 Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  encryptedApiToken       String?
+  encryptionIv            String?
+  encryptionAuthTag       String?
+  keyVersion              String   @default("v1")
+
+  fileKey                 String?
+  nodeId                  String?
+  visualTolerancePercent  Float    @default(1.0)
+  lastFetchedAt           DateTime?
+}
+
+model TestCase {
+  id              String          @id @default(uuid())
+  title           String
+  module          String?
+  priority        Priority        @default(Medium)
+  preconditions   String?
+  source          TestCaseSource  @default(Manual)
+
+  moduleId        String?
+  moduleRelation  ProjectModule?   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  featureId       String?
+  feature         ProjectFeature?  @relation(fields: [featureId], references: [id], onDelete: SetNull)
+  componentId     String?
+  component       ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
+
+  requiredCredentialId String?
+  requiredCredential   ProjectCredential? @relation(fields: [requiredCredentialId], references: [id], onDelete: SetNull)
+
+  testData        Json?
+  tags            String[]
+
+  projectId       String
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  steps           TestStep[]
+  testRuns        TestRun[]
+  manualSessionCases ManualSessionCase[]
+  requirements    TestCaseRequirement[]
+  bugReports      BugReport[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model TestStep {
+  id                String      @id @default(uuid())
+  testCaseId        String
+  testCase          TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  stepNumber        Int
+  actionDescription String
+  expectedResult    String
+
+  actionType        ActionType  @default(custom_instruction)
+  targetType        TargetType  @default(none)
+  targetValue       String?
+  inputValue        String?
+  timeoutMs         Int         @default(10000)
+  assertions        Json?
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  stepResults       TestStepResult[]
+  manualStepResults ManualStepResult[]
+}
+
+model TestRun {
+  id            String             @id @default(uuid())
+
+  projectId     String
+  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  testCaseId    String?
+  testCase      TestCase?          @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+
+  credentialId  String?
+  credential    ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+
+  status        TestRunStatus      @default(Queued)
+  roleUsed      String             @default("None")
+
+  browserType   BrowserType
+  viewport      ViewportType
+  viewportWidth Int?
+  viewportHeight Int?
+
+  triggeredBy   TestCaseSource     @default(Manual)
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  durationMs    Int                @default(0)
+
+  jobs          TestJob?
+  logs          Log[]
+  networkLogs   NetworkLog[]
+  stepResults   TestStepResult[]
+  bugReports    BugReport[]
+  attachments   Attachment[]
+  visualResults VisualComparisonResult[]
+
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model TestJob {
+  id          String    @id @default(uuid())
+  testRunId   String    @unique
+  testRun     TestRun   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  status      JobStatus @default(Queued)
+  attempts    Int       @default(0)
+  error       String?
+  workerId    String?
+
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+}
+
+model TestStepResult {
+  id                String      @id @default(uuid())
+
+  testRunId         String
+  testRun           TestRun     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  testStepId        String?
+  testStep          TestStep?   @relation(fields: [testStepId], references: [id], onDelete: SetNull)
+
+  stepNumber        Int
+  actionDescription String
+  expectedResult    String
+  actualResult      String?
+
+  status            StepStatus  @default(Pending)
+
+  screenshotBefore  String?
+  screenshotAfter   String?
+  errorDetails      String?
+  notes             String?
+  durationMs        Int         @default(0)
+
+  logs              Log[]
+  networkLogs       NetworkLog[]
+  visualResults     VisualComparisonResult[]
+  bugReports        BugReport[]
+
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+}
+
+model Log {
+  id               String          @id @default(uuid())
+
+  testRunId        String
+  testRun          TestRun         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  testStepResultId String?
+  testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: Cascade)
+
+  source           LogSource
+  level            LogLevel
+  message          String
+  raw              Json?
+
+  timestamp        DateTime        @default(now())
+}
+
+model NetworkLog {
+  id               String          @id @default(uuid())
+
+  testRunId        String
+  testRun          TestRun         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  testStepResultId String?
+  testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: Cascade)
+
+  url              String
+  method           String
+  status           Int?
+  error            String?
+  resourceType     String?
+  durationMs       Int             @default(0)
+
+  requestHeaders   Json?
+  responseHeaders  Json?
+  responseBodyPreview String?
+
+  timestamp        DateTime        @default(now())
+}
+
+model VisualComparisonResult {
+  id               String      @id @default(uuid())
+
+  testRunId        String
+  testRun          TestRun     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  stepResultId     String?
+  stepResult       TestStepResult? @relation(fields: [stepResultId], references: [id], onDelete: SetNull)
+
+  figmaImagePath   String
+  actualImagePath  String
+  diffImagePath    String?
+
+  mismatchPercent  Float
+  tolerancePercent Float
+  viewportWidth    Int
+  viewportHeight   Int
+  status           StepStatus
+
+  createdAt        DateTime    @default(now())
+}
+
+model BugReport {
+  id               String       @id @default(uuid())
+  bugKey           String?      // e.g. BUG-0001
+  title            String
+
+  projectId        String?
+  project          Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  moduleId         String?
+  moduleRelation   ProjectModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+
+  featureId        String?
+  feature          ProjectFeature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
+
+  componentId      String?
+  component        ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
+
+  testCaseId       String?
+  testCase         TestCase?    @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+
+  testRunId        String?
+  testRun          TestRun?     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  testStepResultId String?
+  testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: SetNull)
+
+  severity         Priority
+  priority         Priority
+  status           BugStatus    @default(Open)
+
+  environment      Environment?
+  roleUsed         String?
+  browser          BrowserType?
+  viewport         ViewportType?
+
+  assignedTo       String?
+
+  stepsToReproduce String
+  expectedResult   String
+  actualResult     String
+
+  screenshotPath   String?
+  consoleLogs      String?
+  networkErrors    String?
+
+  comments         BugComment[]
+  activities       BugActivity[]
+  bugAttachments   BugAttachment[]
+
+  attachments      Attachment[]
+
+  manualTestSessionId String?
+  manualTestSession   ManualTestSession? @relation(fields: [manualTestSessionId], references: [id], onDelete: SetNull)
+  requirements        BugReportRequirement[]
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Attachment {
+  id          String     @id @default(uuid())
+
+  testRunId   String?
+  testRun     TestRun?   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  bugReportId String?
+  bugReport   BugReport? @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
+
+  fileName    String
+  filePath    String
+  fileType    String
+  fileSize    Int?
+
+  createdAt   DateTime   @default(now())
+}
+
+model AuditLog {
+  id           String             @id @default(uuid())
+
+  action       String
+  details      String
+
+  userId       String
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId    String?
+  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  credentialId String?
+  credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+
+  createdAt    DateTime           @default(now())
+}
+
+model ElementLocator {
+  id                  String            @id @default(uuid())
+  projectId           String
+  project             Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  moduleId            String?
+  moduleRelation      ProjectModule?    @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  featureId           String?
+  feature             ProjectFeature?   @relation(fields: [featureId], references: [id], onDelete: SetNull)
+  componentId         String?
+  component           ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
+  friendlyName        String
+  description         String?
+  pageUrl             String
+  tagName             String?
+  visibleText         String?
+  locatorType         TargetType
+  locatorValue        String
+  recommendedSelector String?
+  cssSelector         String?
+  xpathSelector       String?
+  idSelector          String?
+  testIdSelector      String?
+  roleSelector        String?
+  textSelector        String?
+  labelSelector       String?
+  placeholderSelector String?
+  reliabilityScore    Int               @default(0)
+  attributes          Json?
+  screenshotPath      String?
+  isValidated         Boolean           @default(false)
+  matchCount          Int?
+  lastValidatedAt     DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+model RecordingSession {
+  id           String             @id @default(uuid())
+  projectId    String
+  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  credentialId String?
+  credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  status       String             @default("Active") // Active, Paused, Finished, Cancelled
+  browserType  BrowserType
+  viewport     ViewportType
+  startUrl     String
+  currentUrl   String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  finishedAt   DateTime?
+
+  recordedTestCases RecordedTestCase[]
+}
+
+model RecordedTestCase {
+  id                   String            @id @default(uuid())
+  sessionId            String
+  session              RecordingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  title                String
+  module               String
+  moduleId             String?
+  featureId            String?
+  componentId          String?
+  priority             Priority          @default(Medium)
+  preconditions        String?
+  requiredCredentialId String?
+  status               String            @default("Draft") // Draft, SavedAsTestCase, Discarded
+  finalTestCaseId      String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  steps                RecordedStep[]
+}
+
+model RecordedStep {
+  id                  String           @id @default(uuid())
+  recordedTestCaseId  String
+  recordedTestCase    RecordedTestCase @relation(fields: [recordedTestCaseId], references: [id], onDelete: Cascade)
+  stepNumber          Int
+  pageUrl             String
+  actionType          ActionType
+  actionDescription   String
+  targetType          TargetType
+  targetValue         String?
+  inputValue          String?
+  expectedResult      String?
+  notes               String?
+  tagName             String?
+  visibleText         String?
+  recommendedSelector String?
+  cssSelector         String?
+  xpathSelector       String?
+  idSelector          String?
+  testIdSelector      String?
+  roleSelector        String?
+  labelSelector       String?
+  placeholderSelector String?
+  reliabilityScore    Int              @default(0)
+  attributes          Json?
+  alternativeLocators Json?
+  assertions          Json?
+  screenshotBefore    String?
+  screenshotAfter     String?
+  includeInFinalTestCase Boolean       @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+}
+
+model IntegrationConfig {
+  id                String   @id @default(uuid())
+  projectId         String   @unique
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  provider          String   // "jira" | "azure_devops" | "openproject"
+  enabled           Boolean  @default(false)
+
+  host              String?  // e.g., "jira-domain.atlassian.net"
+  projectKey        String?  // e.g., Jira Project Key / ADO Project / OpenProject ID
+  username          String?  // Jira email / ADO username / OpenProject username
+
+  encryptedToken    String?
+  encryptionIv      String?
+  encryptionAuthTag String?
+  keyVersion        String   @default("v1")
+
+  triggerOn         String   @default("Failed") // "Failed" | "All"
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ProjectModule {
+  id              String           @id @default(uuid())
+  projectId       String
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  orderIndex      Int              @default(0)
+
+  features        ProjectFeature[]
+  components      ProjectComponent[]
+  testCases       TestCase[]
+  elementLocators ElementLocator[]
+  requirements    Requirement[]
+  bugReports      BugReport[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model ProjectFeature {
+  id              String           @id @default(uuid())
+  moduleId        String
+  module          ProjectModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  projectId       String
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  orderIndex      Int              @default(0)
+
+  components      ProjectComponent[]
+  testCases       TestCase[]
+  elementLocators ElementLocator[]
+  requirements    Requirement[]
+  bugReports      BugReport[]
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model ProjectComponent {
+  id              String         @id @default(uuid())
+  featureId       String
+  feature         ProjectFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  moduleId        String
+  module          ProjectModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  projectId       String
+  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  orderIndex      Int            @default(0)
+
+  testCases       TestCase[]
+  elementLocators ElementLocator[]
+  requirements    Requirement[]
+  bugReports      BugReport[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model ReusableStepFlow {
+  id          String   @id @default(uuid())
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  category    String?
+
+  steps       ReusableStep[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model ReusableStep {
+  id                String   @id @default(uuid())
+
+  flowId            String
+  flow              ReusableStepFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  stepNumber        Int
+  actionDescription String
+  expectedResult    String?
+
+  actionType        ActionType
+  targetType        TargetType
+  targetValue       String?
+  inputValue        String?
+  assertions        Json?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model TestDataVariable {
+  id          String   @id @default(uuid())
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  key         String
+  value       String?
+  encryptedValue String?
+  encryptionIv String?
+  encryptionAuthTag String?
+  keyVersion String?
+
+  dataType    String   @default("text") // text, number, boolean, date, json, secret
+  environment Environment?
+  isSensitive Boolean  @default(false)
+  notes       String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, key])
+}
+
+model ManualTestSession {
+  id          String   @id @default(uuid())
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name        String
+  status      String   @default("Active") // Active, Completed, Cancelled
+
+  credentialId String?
+  credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+
+  environment Environment
+  browserType BrowserType
+  viewport    ViewportType
+
+  keepBrowserSession Boolean @default(true)
+  stopOnFailure      Boolean @default(false)
+
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  durationMs  Int      @default(0)
+
+  sessionCases ManualSessionCase[]
+  notes        ManualSessionNote[]
+  bugs         BugReport[]
+}
+
+model ManualSessionCase {
+  id          String @id @default(uuid())
+
+  sessionId   String
+  session     ManualTestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  testCaseId  String
+  testCase    TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  orderIndex  Int @default(0)
+  status      StepStatus @default(Pending)
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int @default(0)
+
+  stepResults ManualStepResult[]
+}
+
+model ManualStepResult {
+  id              String @id @default(uuid())
+
+  sessionCaseId   String
+  sessionCase     ManualSessionCase @relation(fields: [sessionCaseId], references: [id], onDelete: Cascade)
+
+  testStepId      String?
+  testStep        TestStep? @relation(fields: [testStepId], references: [id], onDelete: SetNull)
+
+  stepNumber      Int
+  actionDescription String
+  expectedResult  String?
+  actualResult    String?
+
+  status          StepStatus @default(Pending)
+  notes           String?
+
+  screenshotPath  String?
+  bugReportId     String?
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ManualSessionNote {
+  id          String @id @default(uuid())
+
+  sessionId   String
+  session     ManualTestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  note        String
+  screenshotPath String?
+  pageUrl     String?
+
+  createdAt   DateTime @default(now())
+}
+
+model Requirement {
+  id              String   @id @default(uuid())
+  projectId        String
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requirementKey   String
+  title            String
+  description      String?
+  acceptanceCriteria String?
+  priority         Priority @default(Medium)
+  status           RequirementStatus @default(Draft)
+  source           RequirementSource @default(Manual)
+  moduleId         String?
+  module           ProjectModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  featureId        String?
+  feature          ProjectFeature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
+  componentId      String?
+  component        ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
+  figmaUrl         String?
+  externalUrl      String?
+  externalSystem   String? // Jira, Azure DevOps, GitHub, Manual, Other
+  testCases        TestCaseRequirement[]
+  bugReports       BugReportRequirement[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([projectId, requirementKey])
+}
+
+model TestCaseRequirement {
+  id             String      @id @default(uuid())
+  requirementId  String
+  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  testCaseId     String
+  testCase       TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+
+  @@unique([requirementId, testCaseId])
+}
+
+model BugReportRequirement {
+  id             String      @id @default(uuid())
+  requirementId  String
+  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  bugReportId    String
+  bugReport      BugReport   @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
+  createdAt      DateTime    @default(now())
+
+  @@unique([requirementId, bugReportId])
+}
+
+enum BugStatus {
+  Open
+  InProgress
+  ReadyForRetest
+  Reopened
+  Resolved
+  Closed
+  Rejected
+  Duplicate
+}
+
+model BugComment {
+  id        String @id @default(uuid())
+  bugId     String
+  bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  authorId  String?
+  comment   String
+  createdAt DateTime @default(now())
+}
+
+model BugActivity {
+  id        String @id @default(uuid())
+  bugId     String
+  bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model BugAttachment {
+  id        String @id @default(uuid())
+  bugId     String
+  bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
+  fileName  String
+  filePath  String
+  fileType  String
+  fileSize  Int?
+  createdAt DateTime @default(now())
+}
+
+
+
