@@ -1,14 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -17,21 +15,30 @@ export default function LoginPage() {
     setLoading(true)
     setError("")
 
-    const form = new FormData(e.currentTarget)
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: form.get("email"),
-        password: form.get("password"),
-      }),
-    })
+    try {
+      const form = new FormData(e.currentTarget)
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: form.get("email"),
+          password: form.get("password"),
+        }),
+      })
 
-    if (res.ok) {
-      router.push("/dashboard")
-    } else {
       const data = await res.json()
-      setError(data.error || "Login failed")
+
+      if (res.ok) {
+        // Full page reload to ensure the cookie is sent on the next request
+        window.location.href = "/dashboard"
+      } else {
+        setError(data.error || "Login failed")
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error("Login error:", err)
+      setError("An unexpected error occurred. Please try again.")
       setLoading(false)
     }
   }

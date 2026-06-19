@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
 import { fetchFigmaImage } from "@/lib/figma/api-client"
 import { parseFigmaUrl } from "@/lib/figma/url-parser"
 import { compareImages } from "@/lib/playwright/visual-diff"
@@ -12,12 +13,18 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
-  const { targetUrl } = await request.json()
+  const body = await request.json()
+  const compareSchema = z.object({
+    targetUrl: z.string().url().optional().nullable(),
+  })
+  const parsed = compareSchema.safeParse(body)
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+  }
+  const { targetUrl } = parsed.data
 
   try {
     // 1. Fetch project and Figma config
@@ -77,7 +84,7 @@ export async function POST(
 
     // Save actual screenshot
     const actualImagePath = await saveFile(
-      "screenshots",
+      "visual-checks/actual",
       `visual-actual-${Date.now()}.png`,
       screenshotBuffer
     )

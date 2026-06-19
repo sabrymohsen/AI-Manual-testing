@@ -1,29 +1,40 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { z } from "zod"
+import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+
+const bodySchema = z.object({
+  testCaseIds: z.array(z.string().min(1)).min(1, "No test case IDs provided"),
+  targetProjectId: z.string().min(1, "targetProjectId is required"),
+  targetModuleId: z.string().optional().nullable(),
+  targetFeatureId: z.string().optional().nullable(),
+  targetComponentId: z.string().optional().nullable(),
+})
 
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
   }
+  const session = auth.session!
 
   try {
     const body = await request.json()
+    const parse = bodySchema.safeParse(body)
+    if (!parse.success) {
+      return badRequestResponse(parse.error.errors[0].message)
+    }
     const {
       testCaseIds,
       targetProjectId,
       targetModuleId,
       targetFeatureId,
       targetComponentId
-    } = body
+    } = parse.data
 
-    if (!testCaseIds || !Array.isArray(testCaseIds) || testCaseIds.length === 0) {
-      return NextResponse.json({ error: "No test case IDs provided" }, { status: 400 })
-    }
-
-    if (!targetProjectId) {
-      return NextResponse.json({ error: "targetProjectId is required" }, { status: 400 })
+    const targetAuth = await requireProjectOwner(targetProjectId)
+    if (targetAuth.error) {
+      return notFoundResponse("Project not found or access denied")
     }
 
     // Retrieve the target module's name to update the module string column in TestCase if needed

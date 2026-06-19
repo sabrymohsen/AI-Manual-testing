@@ -11,6 +11,8 @@ export interface ActiveSession {
   projectId: string
   currentTestCaseId: string
   sessionId: string
+  consoleErrors: string[]
+  networkErrors: string[]
 }
 
 const globalForRecording = global as unknown as {
@@ -22,6 +24,23 @@ export const activeSessions =
 
 if (process.env.NODE_ENV !== "production") {
   globalForRecording.activeSessions = activeSessions
+}
+
+function maskSensitiveInput(fieldName: string | null, value: string | null): string | null {
+  if (!value) return value
+  if (!fieldName) return value
+  const key = fieldName.toLowerCase()
+  if (
+    key.includes("password") ||
+    key.includes("token") ||
+    key.includes("secret") ||
+    key.includes("apikey") ||
+    key.includes("auth") ||
+    key.includes("credential")
+  ) {
+    return "***MASKED***"
+  }
+  return value
 }
 
 export async function startSession(
@@ -71,7 +90,32 @@ export async function startSession(
 
   const page = await context.newPage()
 
-  // 2. Create RecordingSession in DB
+  // 2. Setup error collectors
+  const consoleErrors: string[] = []
+  const networkErrors: string[] = []
+
+  page.on("console", (msg) => {
+    if (msg.type() === "error") {
+      const text = msg.text()
+      // Mask authorization/credentials if they appear in logs
+      if (!text.toLowerCase().includes("authorization") && !text.toLowerCase().includes("cookie")) {
+        consoleErrors.push(text)
+      }
+    }
+  })
+
+  page.on("pageerror", (err) => {
+    consoleErrors.push(err.message)
+  })
+
+  page.on("response", (res) => {
+    const status = res.status()
+    if (status >= 400) {
+      networkErrors.push(`Failed to load resource: the server responded with a status of ${status} (${res.url()})`)
+    }
+  })
+
+  // 3. Create RecordingSession in DB
   const dbSession = await prisma.recordingSession.create({
     data: {
       projectId,
@@ -92,7 +136,7 @@ export async function startSession(
     }
   }
 
-  // 3. Create initial draft RecordedTestCase in DB
+  // 4. Create initial draft RecordedTestCase in DB
   const dbCase = await prisma.recordedTestCase.create({
     data: {
       sessionId: dbSession.id,
@@ -110,36 +154,117 @@ export async function startSession(
 
   const sessionId = dbSession.id
 
-  // 4. Save to global sessions list
+  // 5. Save to global sessions list
   activeSessions.set(sessionId, {
     browser,
     page,
     projectId,
     currentTestCaseId: dbCase.id,
     sessionId,
+    consoleErrors,
+    networkErrors,
   })
 
-  // 5. Expose action listener callback
+  // 6. Expose action listener callback
   await context.exposeFunction("qaRecordAction", async (actionData: any) => {
     console.log(`[BACKEND RECORDER CALLBACK] Received action: ${actionData.actionType} for session: ${sessionId}`)
     try {
       const activeSess = activeSessions.get(sessionId)
       if (!activeSess) {
         console.log(`[BACKEND RECORDER CALLBACK] Active session not found in activeSessions map!`)
-        return
+        return { success: false }
       }
 
       // Handle toolbar special actions
       if (actionData.actionType === "finish_recording") {
-        await saveCurrentRecordedTestCase(sessionId, activeSess.currentTestCaseId)
+        if (!actionData.confirmed) {
+          return { success: false, error: "Explicit confirmation is required to end the session." }
+        }
+        if (actionData.saveDraft) {
+          try {
+            await saveCurrentRecordedTestCase(sessionId, activeSess.currentTestCaseId)
+          } catch (err: any) {
+            console.error("Error saving draft on finish:", err)
+            return { success: false, error: err.message || "Failed to save draft" }
+          }
+        } else {
+          // Discard current draft - update status to Discarded
+          if (activeSess.currentTestCaseId) {
+            try {
+              await prisma.recordedTestCase.update({
+                where: { id: activeSess.currentTestCaseId },
+                data: { status: "Discarded" }
+              })
+            } catch (err: any) {
+              console.error("Error discarding draft on finish:", err)
+            }
+          }
+        }
         setTimeout(async () => {
           try {
             await finishSession(sessionId)
           } catch (err) {
             console.error("Error in async finishSession:", err)
           }
-        }, 100)
+        }, 1000)
         return { success: true }
+      }
+
+      if (actionData.actionType === "delete_step") {
+        const { stepId } = actionData
+        try {
+          const stepToDelete = await prisma.recordedStep.findUnique({
+            where: { id: stepId }
+          })
+          if (stepToDelete) {
+            await prisma.recordedStep.delete({
+              where: { id: stepId }
+            })
+            // Re-adjust numbers of subsequent steps
+            await prisma.recordedStep.updateMany({
+              where: {
+                recordedTestCaseId: stepToDelete.recordedTestCaseId,
+                stepNumber: { gt: stepToDelete.stepNumber }
+              },
+              data: {
+                stepNumber: { decrement: 1 }
+              }
+            })
+            return { success: true }
+          }
+          return { success: false, error: "Step not found" }
+        } catch (err: any) {
+          console.error("Error deleting step:", err)
+          return { success: false, error: err.message || "Failed to delete step" }
+        }
+      }
+
+      if (actionData.actionType === "ignore_step") {
+        const { stepId } = actionData
+        try {
+          const step = await prisma.recordedStep.update({
+            where: { id: stepId },
+            data: { includeInFinalTestCase: false }
+          })
+          return { success: true, step }
+        } catch (err: any) {
+          console.error("Error ignoring step:", err)
+          return { success: false, error: err.message || "Failed to ignore step" }
+        }
+      }
+
+      if (actionData.actionType === "restore_step") {
+        const { stepId } = actionData
+        try {
+          const step = await prisma.recordedStep.update({
+            where: { id: stepId },
+            data: { includeInFinalTestCase: true }
+          })
+          return { success: true, step }
+        } catch (err: any) {
+          console.error("Error restoring step:", err)
+          return { success: false, error: err.message || "Failed to restore step" }
+        }
       }
 
       if (actionData.actionType === "cancel_recording") {
@@ -153,13 +278,106 @@ export async function startSession(
         return { success: true }
       }
 
+      if (actionData.actionType === "pause_recording") {
+        await pauseSession(sessionId)
+        return { success: true, status: "Paused" }
+      }
+
+      if (actionData.actionType === "get_status") {
+        const activeCase = await prisma.recordedTestCase.findUnique({
+          where: { id: activeSess.currentTestCaseId }
+        })
+        const sessionDb = await prisma.recordingSession.findUnique({
+          where: { id: sessionId }
+        })
+        return {
+          success: true,
+          caseTitle: activeCase?.title || "",
+          casePriority: activeCase?.priority || "Medium",
+          sessionStatus: sessionDb?.status || "Active",
+          consoleErrorsCount: activeSess.consoleErrors.length,
+          networkErrorsCount: activeSess.networkErrors.length,
+          currentStepCount: await prisma.recordedStep.count({ where: { recordedTestCaseId: activeSess.currentTestCaseId } })
+        }
+      }
+
+      if (actionData.actionType === "get_stats") {
+        const stats = await getSessionStats(sessionId)
+        return {
+          success: true,
+          ...stats
+        }
+      }
+
+      if (actionData.actionType === "get_recorded_steps") {
+        const steps = await prisma.recordedStep.findMany({
+          where: { recordedTestCaseId: activeSess.currentTestCaseId },
+          orderBy: { stepNumber: "asc" }
+        })
+        return {
+          success: true,
+          steps
+        }
+      }
+
+      if (actionData.actionType === "resume_recording") {
+        await resumeSession(sessionId)
+        return { success: true, status: "Active" }
+      }
+
+      if (actionData.actionType === "new_test_case") {
+        const newCase = await startNewRecordedTestCase(sessionId, {
+          title: actionData.title,
+          module: actionData.module || "General",
+          moduleId: actionData.moduleId,
+          featureId: actionData.featureId,
+          componentId: actionData.componentId,
+          priority: actionData.priority || "Medium",
+          preconditions: actionData.preconditions,
+        })
+        return { success: true, testCase: newCase }
+      }
+
+      if (actionData.actionType === "save_current_case") {
+        const savedCase = await saveCurrentRecordedTestCase(sessionId, activeSess.currentTestCaseId)
+        return { success: true, testCase: savedCase }
+      }
+
+      if (actionData.actionType === "take_screenshot") {
+        let screenshotPath: string | null = null
+        try {
+          const screenshotBuffer = await page.screenshot({ type: "png", fullPage: !!actionData.fullPage })
+          screenshotPath = await saveFile("screenshots", `record-${sessionId}-${Date.now()}.png`, screenshotBuffer)
+        } catch (err) {
+          console.error("Manual screenshot error:", err)
+        }
+        return { success: true, screenshotPath }
+      }
+
+      if (actionData.actionType === "create_bug") {
+        const bug = await createBugFromSession(sessionId, actionData)
+        return { success: true, bug }
+      }
+
+      if (actionData.actionType === "add_note") {
+        const note = await prisma.recordingSessionNote.create({
+          data: {
+            sessionId,
+            note: actionData.note,
+            pageUrl: page.url(),
+            screenshotPath: actionData.screenshotPath || null,
+          }
+        })
+        return { success: true, note }
+      }
+
       // Verify session is active
       const sessionDb = await prisma.recordingSession.findUnique({
         where: { id: sessionId },
       })
       if (!sessionDb || sessionDb.status !== "Active") {
         console.log(`[BACKEND RECORDER CALLBACK] Session in DB is not Active! status: ${sessionDb?.status}`)
-        return
+        return { success: false, error: "Session is not active" }
       }
 
       // Take screenshot after the action is registered with a 1500ms safety timeout to prevent hanging during navigations
@@ -175,6 +393,12 @@ export async function startSession(
         console.error("Screenshot error during recording:", err)
       }
 
+      // Mask sensitive values before saving to database
+      const safeInputValue = maskSensitiveInput(
+        actionData.recommendedSelector || actionData.cssSelector || actionData.tagName, 
+        actionData.inputValue
+      )
+
       // Find the last recorded step to de-duplicate or update consecutive fill/duplicate steps
       const lastStep = await prisma.recordedStep.findFirst({
         where: { recordedTestCaseId: activeSess.currentTestCaseId },
@@ -186,10 +410,10 @@ export async function startSession(
         if (
           lastStep.actionType === actionData.actionType &&
           (lastStep.cssSelector === actionData.cssSelector || lastStep.recommendedSelector === actionData.recommendedSelector) &&
-          lastStep.inputValue === actionData.inputValue
+          lastStep.inputValue === safeInputValue
         ) {
           console.log(`[BACKEND RECORDER CALLBACK] Skipping identical consecutive step: ${actionData.actionType}`)
-          return
+          return { success: true, consoleErrorsCount: activeSess.consoleErrors.length, networkErrorsCount: activeSess.networkErrors.length }
         }
 
         // Rule B: If it's a consecutive fill on the same input, update the value instead of creating a new step
@@ -202,14 +426,14 @@ export async function startSession(
           await prisma.recordedStep.update({
             where: { id: lastStep.id },
             data: {
-              inputValue: actionData.inputValue || null,
+              inputValue: safeInputValue,
               actionDescription: actionData.actionDescription,
               screenshotAfter: screenshotPath || lastStep.screenshotAfter,
               attributes: actionData.attributes || {},
               alternativeLocators: actionData.alternativeLocators || {},
             }
           })
-          return
+          return { success: true, consoleErrorsCount: activeSess.consoleErrors.length, networkErrorsCount: activeSess.networkErrors.length }
         }
       }
 
@@ -228,7 +452,7 @@ export async function startSession(
           actionDescription: actionData.actionDescription,
           targetType: actionData.targetType,
           targetValue: actionData.targetValue || null,
-          inputValue: actionData.inputValue || null,
+          inputValue: safeInputValue,
           tagName: actionData.tagName || null,
           visibleText: actionData.visibleText || null,
           recommendedSelector: actionData.recommendedSelector || null,
@@ -243,23 +467,33 @@ export async function startSession(
           attributes: actionData.attributes || {},
           alternativeLocators: actionData.alternativeLocators || {},
           screenshotAfter: screenshotPath,
+          assertionType: actionData.assertionType || null,
+          assertionValue: actionData.assertionValue || null,
+          assertions: actionData.assertions || [],
         },
       })
 
-      // Update current url
+      // Update current url in session
       await prisma.recordingSession.update({
         where: { id: sessionId },
         data: { currentUrl: page.url() },
       })
+
+      return {
+        success: true,
+        consoleErrorsCount: activeSess.consoleErrors.length,
+        networkErrorsCount: activeSess.networkErrors.length
+      }
     } catch (err) {
       console.error("Failed to persist recorded browser action:", err)
+      return { success: false, error: "Database save error" }
     }
   })
 
-  // 6. Set up automatic content script injection on reloads/navigations
+  // 7. Set up automatic content script injection on reloads/navigations
   await page.addInitScript(INJECTED_RECORDER_SCRIPT)
 
-  // 7. Auto-login if credentials selected
+  // 8. Auto-login if credentials selected
   if (options.requiredCredentialId) {
     const cred = await prisma.projectCredential.findUnique({
       where: { id: options.requiredCredentialId },
@@ -297,7 +531,7 @@ export async function startSession(
     }
   }
 
-  // 8. Go to starting page
+  // 9. Go to starting page
   try {
     await page.goto(options.startUrl, { waitUntil: "load" })
 
@@ -448,6 +682,23 @@ export async function startNewRecordedTestCase(
   // Update in-memory session current test case ID pointer
   activeSess.currentTestCaseId = dbCase.id
 
+  // Navigate Playwright browser to project startUrl or clear state if starting fresh
+  // We keep page open on current URL by default, which matches "Start new test case from current page"
+  // If the starting URL is requested to reload, we do it:
+  // But by default, we just add the opening step for the new case at current URL
+  const currentUrl = activeSess.page.url()
+  await prisma.recordedStep.create({
+    data: {
+      recordedTestCaseId: dbCase.id,
+      stepNumber: 1,
+      pageUrl: currentUrl,
+      actionType: "open_url",
+      actionDescription: `Continue recording from: ${currentUrl}`,
+      targetType: "url",
+      targetValue: currentUrl,
+    }
+  })
+
   return dbCase
 }
 
@@ -473,7 +724,7 @@ export async function saveCurrentRecordedTestCase(
     data: {
       projectId: draft.session.projectId,
       title: draft.title,
-      module: draft.module,
+      module: draft.module || "General",
       moduleId: draft.moduleId,
       featureId: draft.featureId,
       componentId: draft.componentId,
@@ -492,6 +743,15 @@ export async function saveCurrentRecordedTestCase(
           inputValue: step.inputValue,
           timeoutMs: 10000,
           assertions: step.assertions || [],
+          componentType: step.componentType,
+          groupId: step.groupId,
+          rawEvents: step.rawEvents || undefined,
+          actionMetadata: step.actionMetadata || undefined,
+          locatorCandidates: step.locatorCandidates || undefined,
+          selectedOptionText: step.selectedOptionText,
+          selectedOptionValue: step.selectedOptionValue,
+          validationStatus: step.validationStatus,
+          validationMessage: step.validationMessage,
         })),
       },
     },
@@ -503,8 +763,206 @@ export async function saveCurrentRecordedTestCase(
     data: {
       status: "SavedAsTestCase",
       finalTestCaseId: realTestCase.id,
+      savedAt: new Date()
     },
   })
 
   return realTestCase
 }
+
+export async function validateStepLocator(stepId: string): Promise<{ success: boolean; matches: number }> {
+  const step = await prisma.recordedStep.findUnique({
+    where: { id: stepId },
+    include: {
+      recordedTestCase: {
+        include: { session: true }
+      }
+    }
+  })
+  if (!step) return { success: false, matches: 0 }
+  
+  const sessionId = step.recordedTestCase.session.id
+  const activeSess = activeSessions.get(sessionId)
+  if (!activeSess) return { success: false, matches: 0 }
+
+  const selector = step.recommendedSelector || step.cssSelector
+  if (!selector) return { success: false, matches: 0 }
+
+  try {
+    const el = await activeSess.page.$(selector)
+    return { success: true, matches: el ? 1 : 0 }
+  } catch {
+    return { success: false, matches: 0 }
+  }
+}
+
+export async function createBugFromSession(sessionId: string, bugData: any) {
+  const activeSess = activeSessions.get(sessionId)
+  if (!activeSess) throw new Error("Active session not found")
+
+  const draftCase = await prisma.recordedTestCase.findUnique({
+    where: { id: activeSess.currentTestCaseId },
+    include: { steps: { orderBy: { stepNumber: "asc" } } }
+  })
+  if (!draftCase) throw new Error("Active test case not found")
+
+  // Generate bugKey
+  const count = await prisma.bugReport.count({ where: { projectId: activeSess.projectId } })
+  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+
+  // Format steps to reproduce
+  const stepsText = draftCase.steps
+    .map(s => `${s.stepNumber}. ${s.actionDescription}`)
+    .join("\n")
+
+  // Save screenshot if screenshotPath is provided or take viewport screenshot
+  let finalScreenshot: string | null = bugData.screenshotPath || null
+  if (!finalScreenshot) {
+    try {
+      const screenshotBuffer = await activeSess.page.screenshot({ type: "png" })
+      finalScreenshot = await saveFile("screenshots", `bug-${sessionId}-${Date.now()}.png`, screenshotBuffer)
+    } catch (err) {
+      console.error("Bug screenshot error:", err)
+    }
+  }
+
+  // Create BugReport
+  const bug = await prisma.bugReport.create({
+    data: {
+      bugKey,
+      title: bugData.title || `Bug in test case: ${draftCase.title}`,
+      projectId: activeSess.projectId,
+      moduleId: draftCase.moduleId || null,
+      featureId: draftCase.featureId || null,
+      componentId: draftCase.componentId || null,
+      recordedTestCaseId: draftCase.id,
+      severity: bugData.severity || "Medium",
+      priority: bugData.priority || "Medium",
+      status: "Open",
+      environment: "Dev",
+      roleUsed: "None",
+      browser: "Chromium",
+      viewport: "Desktop",
+      stepsToReproduce: stepsText || "No steps recorded yet.",
+      expectedResult: "Application operates correctly.",
+      actualResult: bugData.actualResult || "Error occurred during execution.",
+      screenshotPath: finalScreenshot,
+      consoleLogs: activeSess.consoleErrors.join("\n") || null,
+      networkErrors: activeSess.networkErrors.join("\n") || null,
+    }
+  })
+
+  // Create BugActivity
+  await prisma.bugActivity.create({
+    data: {
+      bugId: bug.id,
+      action: "CREATE_FROM_RECORDER",
+      details: `Manual bug report created inside recorder workspace. ID: ${bugKey}.`
+    }
+  })
+
+  return bug
+}
+
+export interface FlowValidationReport {
+  success: boolean
+  steps: {
+    stepId: string
+    stepNumber: number
+    validationStatus: string
+    validationMessage: string
+  }[]
+}
+
+export async function validateRecordedFlow(sessionId: string): Promise<FlowValidationReport> {
+  const activeSess = activeSessions.get(sessionId)
+  if (!activeSess) {
+    throw new Error("Active session not found")
+  }
+
+  const steps = await prisma.recordedStep.findMany({
+    where: { 
+      recordedTestCaseId: activeSess.currentTestCaseId,
+    },
+    orderBy: { stepNumber: "asc" }
+  })
+
+  const reportSteps: {
+    stepId: string
+    stepNumber: number
+    validationStatus: string
+    validationMessage: string
+  }[] = []
+
+  let overallSuccess = true
+
+  for (const step of steps) {
+    let status = "Passed"
+    let message = "Locator resolved successfully"
+
+    const isUrlAction = ["open_url", "wait_for_url", "assert_url"].includes(step.actionType)
+    const isCustomAction = step.actionType === "custom_instruction"
+
+    if (!isUrlAction && !isCustomAction) {
+      const selector = step.recommendedSelector || step.cssSelector
+      if (!selector) {
+        status = "Failed"
+        message = "No locator configured for this action"
+      } else {
+        try {
+          const element = await activeSess.page.$(selector)
+          if (!element) {
+            status = "Failed"
+            message = `Element with locator '${selector}' not found on active page`
+          }
+        } catch (err: any) {
+          status = "Failed"
+          message = `Error resolving locator: ${err.message || err}`
+        }
+      }
+    }
+
+    if (status === "Failed") {
+      overallSuccess = false
+    }
+
+    await prisma.recordedStep.update({
+      where: { id: step.id },
+      data: {
+        validationStatus: status,
+        validationMessage: message
+      }
+    })
+
+    reportSteps.push({
+      stepId: step.id,
+      stepNumber: step.stepNumber,
+      validationStatus: status,
+      validationMessage: message
+    })
+  }
+
+  return {
+    success: overallSuccess,
+    steps: reportSteps
+  }
+}
+
+export async function getSessionStats(sessionId: string) {
+  const cases = await prisma.recordedTestCase.findMany({
+    where: { sessionId },
+    include: { steps: true }
+  })
+  
+  const savedCount = cases.filter(c => c.status === "SavedAsTestCase").length
+  const draftCases = cases.filter(c => c.status === "Draft")
+  const draftCount = draftCases.length
+  const draftStepCount = draftCases.reduce((acc, c) => acc + c.steps.length, 0)
+  
+  return {
+    savedCount,
+    draftCount,
+    draftStepCount
+  }
+}
+

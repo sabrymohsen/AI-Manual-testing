@@ -1,24 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { createIntegrationConfigSchema } from "@/schemas"
+import { z } from "zod"
 import { encryptSecret } from "@/lib/crypto"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  // Verify project owner
-  const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id }
-  })
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const config = await prisma.integrationConfig.findUnique({
     where: { projectId: params.projectId }
@@ -41,25 +33,18 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  // Verify project owner
-  const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id }
-  })
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
-  const { provider, enabled, host, projectKey, username, token, triggerOn } = body
-
-  if (!provider) {
-    return NextResponse.json({ error: "Provider is required" }, { status: 400 })
+  const integrationSchema = createIntegrationConfigSchema.extend({
+    token: z.string().optional(),
+  })
+  const parsed = integrationSchema.safeParse(body)
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
+  const { provider, enabled, host, projectKey, username, token, triggerOn } = parsed.data
 
   let tokenData: Record<string, string> = {}
   if (token) {

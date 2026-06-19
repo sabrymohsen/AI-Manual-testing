@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string; runId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
-  const testRun = await prisma.testRun.findUnique({
-    where: { id: params.runId },
+  const testRun = await prisma.testRun.findFirst({
+    where: { id: params.runId, projectId: params.projectId },
+
     select: {
       id: true,
       status: true,
@@ -23,7 +22,7 @@ export async function GET(
   })
 
   if (!testRun) {
-    return NextResponse.json({ error: "Test run not found" }, { status: 404 })
+    return notFoundResponse("Test run not found")
   }
 
   const stepResults = await prisma.testStepResult.findMany({

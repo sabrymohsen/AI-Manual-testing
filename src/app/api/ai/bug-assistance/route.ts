@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { z } from "zod"
 
 function sanitizeInputText(text: string): string {
   if (!text) return ""
@@ -23,14 +24,27 @@ function getClient() {
   return { baseUrl, apiKey }
 }
 
+const bodySchema = z.object({
+  action: z.string().min(1, "Action is required"),
+  title: z.string().optional(),
+  stepsToReproduce: z.string().optional(),
+  expectedResult: z.string().optional(),
+  actualResult: z.string().optional(),
+  consoleLogs: z.string().optional(),
+  networkErrors: z.string().optional(),
+})
+
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const body = await request.json()
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
+    }
+    const body = rawBody
     const {
       action,
       title,

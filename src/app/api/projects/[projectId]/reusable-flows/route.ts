@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const reusableFlowSchema = z.object({
+  name: z.string().min(1, "Flow name is required"),
+  description: z.string().optional().nullable(),
+  category: z.string().optional().nullable(),
+  steps: z.array(z.any()).optional(),
+})
 
 export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const flows = await prisma.reusableStepFlow.findMany({
@@ -31,18 +37,18 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
-    const { name, description, category, steps } = body
+    const parsed = reusableFlowSchema.safeParse(body)
 
-    if (!name) {
-      return NextResponse.json({ error: "Flow name is required" }, { status: 400 })
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
     }
+
+    const { name, description, category, steps } = parsed.data
 
     const flow = await prisma.$transaction(async (tx) => {
       const createdFlow = await tx.reusableStepFlow.create({

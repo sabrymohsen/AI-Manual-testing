@@ -1,35 +1,46 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { z } from "zod"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { encryptSecret } from "@/lib/crypto"
+
+const putBodySchema = z.object({
+  key: z.string().min(1, "Variable key is required"),
+  value: z.string().optional(),
+  dataType: z.string().optional(),
+  environment: z.string().optional(),
+  isSensitive: z.boolean().optional(),
+  notes: z.string().optional(),
+})
 
 export async function PUT(
   request: Request,
   { params }: { params: { variableId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
+  }
+
+  const existing = await prisma.testDataVariable.findFirst({
+    where: { id: params.variableId, project: { userId: auth.session!.user.id } },
+    select: { projectId: true, encryptedValue: true, encryptionIv: true, encryptionAuthTag: true, keyVersion: true }
+  })
+
+  if (!existing) {
+    return notFoundResponse("Not found")
   }
 
   try {
     const body = await request.json()
-    const { key, value, dataType, environment, isSensitive, notes } = body
-
-    if (!key) {
-      return NextResponse.json({ error: "Variable key is required" }, { status: 400 })
+    const parse = putBodySchema.safeParse(body)
+    if (!parse.success) {
+      return badRequestResponse(parse.error.errors[0].message)
     }
-
-    const existing = await prisma.testDataVariable.findUnique({
-      where: { id: params.variableId }
-    })
-
-    if (!existing) {
-      return NextResponse.json({ error: "Variable not found" }, { status: 404 })
-    }
+    const { key, value, dataType, environment, isSensitive, notes } = parse.data
 
     let encryptedData = {}
-    let rawValue = value
+    let rawValue: string | null | undefined = value
 
     if (isSensitive) {
       if (value === "••••••••") {
@@ -75,9 +86,9 @@ export async function PUT(
       where: { id: params.variableId },
       data: {
         key: key.trim(),
-        value: rawValue,
+        value: rawValue ?? undefined,
         dataType: dataType || "text",
-        environment: environment || null,
+        environment: (environment as any) || null,
         isSensitive: !!isSensitive,
         notes,
         ...encryptedData
@@ -102,9 +113,17 @@ export async function DELETE(
   request: Request,
   { params }: { params: { variableId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
+  }
+
+  const entity = await prisma.testDataVariable.findFirst({
+    where: { id: params.variableId, project: { userId: auth.session!.user.id } },
+    select: { projectId: true }
+  })
+  if (!entity) {
+    return notFoundResponse("Not found")
   }
 
   try {

@@ -1,14 +1,25 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
-  { params }: { params: { bugId: string } }
+  { params }: { params: { projectId: string; bugId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
+
+  const bugExists = await prisma.bugReport.findFirst({
+    where: {
+      id: params.bugId,
+      OR: [
+        { testRun: { projectId: params.projectId } },
+        { manualTestSession: { projectId: params.projectId } }
+      ]
+    }
+  })
+  if (!bugExists) {
+    return notFoundResponse("Bug report not found")
   }
 
   const bugReport = await prisma.bugReport.findUnique({

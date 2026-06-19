@@ -1,15 +1,23 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function GET(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
   }
+  const session = auth.session!
 
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get("projectId") || undefined
+
+  if (projectId) {
+    const projAuth = await requireProjectOwner(projectId)
+    if (projAuth.error) {
+      return notFoundResponse("Project not found or access denied")
+    }
+  }
   const moduleId = searchParams.get("moduleId") || undefined
   const featureId = searchParams.get("featureId") || undefined
   const componentId = searchParams.get("componentId") || undefined
@@ -114,9 +122,8 @@ export async function GET(request: NextRequest) {
         component: true,
         project: true,
         testRuns: {
-          orderBy: { completedAt: "desc" },
-          take: 1,
-          where: { completedAt: { not: null } }
+          orderBy: { createdAt: "desc" },
+          take: 2
         },
         manualSessionCases: {
           orderBy: { completedAt: "desc" },
@@ -129,22 +136,23 @@ export async function GET(request: NextRequest) {
 
     // Compute computed status and values in JS
     const computedTestCases = testCases.map((tc) => {
-      const latestRun = tc.testRuns[0] || null
+      const activeRun = tc.testRuns.find(r => r.completedAt === null) || null
+      const latestCompletedRun = tc.testRuns.find(r => r.completedAt !== null) || null
       const latestManual = tc.manualSessionCases[0] || null
 
       let status = "NotExecuted"
       let date = null
 
-      let runTime = latestRun?.completedAt ? new Date(latestRun.completedAt).getTime() : 0
+      let runTime = latestCompletedRun?.completedAt ? new Date(latestCompletedRun.completedAt).getTime() : 0
       let manualTime = latestManual?.completedAt ? new Date(latestManual.completedAt).getTime() : 0
 
       if (runTime > 0 || manualTime > 0) {
         if (runTime >= manualTime) {
-          status = latestRun.status
-          date = latestRun.completedAt
+          status = latestCompletedRun?.status ?? "NotExecuted"
+          date = latestCompletedRun?.completedAt ?? null
         } else {
-          status = latestManual.status
-          date = latestManual.completedAt
+          status = latestManual?.status ?? "NotExecuted"
+          date = latestManual?.completedAt ?? null
         }
       }
 
@@ -180,7 +188,14 @@ export async function GET(request: NextRequest) {
         lastRunDate: date,
         stepsCount: tc.steps?.length || 0,
         createdAt: tc.createdAt,
-        updatedAt: tc.updatedAt
+        updatedAt: tc.updatedAt,
+        activeRun: activeRun ? {
+          testRunId: activeRun.id,
+          projectId: activeRun.projectId,
+          status: activeRun.status,
+          currentStep: null,
+          totalSteps: tc.steps?.length || 0
+        } : null
       }
     })
 

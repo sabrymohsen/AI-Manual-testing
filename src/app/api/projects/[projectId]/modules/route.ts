@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { createModuleSchema } from "@/schemas"
+import { z } from "zod"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const modules = await prisma.projectModule.findMany({
@@ -35,23 +35,25 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
-    if (!body.name) {
-      return NextResponse.json({ error: "Module name is required" }, { status: 400 })
+    const createModuleBodySchema = createModuleSchema.extend({
+      orderIndex: z.number().optional(),
+    })
+    const parsed = createModuleBodySchema.safeParse(body)
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
     }
 
     const newModule = await prisma.projectModule.create({
       data: {
         projectId: params.projectId,
-        name: body.name,
-        description: body.description || null,
-        orderIndex: typeof body.orderIndex === "number" ? body.orderIndex : 0
+        name: parsed.data.name,
+        description: parsed.data.description || null,
+        orderIndex: parsed.data.orderIndex ?? 0
       }
     })
     return NextResponse.json({ module: newModule }, { status: 201 })

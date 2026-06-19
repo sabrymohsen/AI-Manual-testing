@@ -1,19 +1,38 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { z } from "zod"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+
+const bodySchema = z.object({
+  moduleId: z.string().optional(),
+  featureId: z.string().optional(),
+  componentId: z.string().optional(),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { testCaseId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
+  }
+
+  const entity = await prisma.testCase.findFirst({
+    where: { id: params.testCaseId, project: { userId: auth.session!.user.id } },
+    select: { projectId: true }
+  })
+  if (!entity) {
+    return notFoundResponse("Not found")
   }
 
   try {
     const body = await request.json()
-    const { moduleId, featureId, componentId } = body
+    const parse = bodySchema.safeParse(body)
+    if (!parse.success) {
+      return badRequestResponse(parse.error.errors[0].message)
+    }
+    const { moduleId, featureId, componentId } = parse.data
 
     let finalModuleId = moduleId || null
     let finalFeatureId = featureId || null

@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { createRequirementSchema } from "@/schemas"
 
 export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const requirements = await prisma.requirement.findMany({
@@ -144,13 +143,15 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
+    const parsed = createRequirementSchema.safeParse(body)
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+    }
     const {
       requirementKey,
       title,
@@ -165,14 +166,7 @@ export async function POST(
       figmaUrl,
       externalUrl,
       externalSystem
-    } = body
-
-    if (!requirementKey || !title) {
-      return NextResponse.json(
-        { error: "Requirement Key and Title are required" },
-        { status: 400 }
-      )
-    }
+    } = parsed.data
 
     // Enforce uniqueness of key per project
     const existing = await prisma.requirement.findFirst({

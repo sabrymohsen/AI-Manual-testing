@@ -38,7 +38,8 @@ import {
   HelpCircle,
   Maximize2,
   Copy,
-  FolderOpen
+  FolderOpen,
+  Loader2
 } from "lucide-react"
 
 // Types matching Prisma models
@@ -66,6 +67,14 @@ interface Project {
   }>
 }
 
+interface ActiveRun {
+  testRunId: string
+  projectId: string
+  status: string
+  currentStep: number | null
+  totalSteps: number
+}
+
 interface TestCase {
   id: string
   title: string
@@ -90,6 +99,7 @@ interface TestCase {
   lastRunDate: string | null
   stepsCount: number
   createdAt: string
+  activeRun?: ActiveRun | null
 }
 
 function TestCasesHubContent() {
@@ -148,6 +158,21 @@ function TestCasesHubContent() {
   const [showBulkMoveModal, setShowBulkMoveModal] = useState(false)
   const [showBulkPriorityModal, setShowBulkPriorityModal] = useState(false)
   const [quickEditId, setQuickEditId] = useState<string | null>(null)
+
+  // Permanent delete modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<TestCase | null>(null)
+  const [deleteTypedTitle, setDeleteTypedTitle] = useState("")
+  const [deleteRunCount, setDeleteRunCount] = useState(0)
+  const [deleteBugCount, setDeleteBugCount] = useState(0)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState("")
+
+  // Active run tracking
+  const [activeRuns, setActiveRuns] = useState<Map<string, ActiveRun>>(new Map())
+
+  // Toast notification state
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
   // Create Test Case states
   const [createProjectId, setCreateProjectId] = useState("")
@@ -274,10 +299,28 @@ function TestCasesHubContent() {
     fetch(`/api/test-cases?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
-        setTestCases(data.items || [])
+        const items = data.items || []
+        setTestCases(items)
         setTotalCount(data.total || 0)
         if (data.summary) {
           setSummary(data.summary)
+        }
+
+        // Initialize active runs mapping from loaded items
+        const newActiveRuns = new Map<string, ActiveRun>()
+        items.forEach((tc: TestCase) => {
+          if (tc.activeRun) {
+            newActiveRuns.set(tc.id, tc.activeRun)
+          }
+        })
+        if (newActiveRuns.size > 0) {
+          setActiveRuns((prev) => {
+            const updated = new Map(prev)
+            newActiveRuns.forEach((run, tcId) => {
+              updated.set(tcId, run)
+            })
+            return updated
+          })
         }
       })
       .catch((err) => console.error("Error fetching test cases:", err))
@@ -304,6 +347,48 @@ function TestCasesHubContent() {
     sortBy,
     sortDirection
   ])
+
+  // Poll active runs status
+  useEffect(() => {
+    if (activeRuns.size === 0) return
+    const interval = setInterval(async () => {
+      const newRuns = new Map(activeRuns)
+      let changed = false
+      for (const [tcId, run] of Array.from(newRuns)) {
+        try {
+          const res = await fetch(`/api/projects/${run.projectId}/test-runs/${run.testRunId}/progress`)
+          if (res.ok) {
+            const data = await res.json()
+            const terminal = ["Passed", "Failed", "Blocked", "Warning", "Cancelled"]
+            if (terminal.includes(data.status)) {
+              newRuns.delete(tcId)
+              changed = true
+              fetchData() // refresh after completion
+            } else {
+              const totalSteps = data.stepResults?.length || run.totalSteps
+              newRuns.set(tcId, {
+                ...run,
+                status: data.status,
+                currentStep: data.currentStep,
+                totalSteps
+              })
+              changed = true
+            }
+          }
+        } catch { /* ignore polling errors */ }
+      }
+      if (changed) setActiveRuns(newRuns)
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [activeRuns])
+
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast) {
+      const t = setTimeout(() => setToast(null), 5000)
+      return () => clearTimeout(t)
+    }
+  }, [toast])
 
   // Fetch single testcase details when opening Quick Edit Drawer
   useEffect(() => {
@@ -366,22 +451,86 @@ function TestCasesHubContent() {
     setPage(1)
   }
 
+  // Open permanent delete modal for a single test case
+  async function openDeleteModal(tc: TestCase) {
+    setDeleteTarget(tc)
+    setDeleteTypedTitle("")
+    setDeleteError("")
+    setDeleteLoading(false)
+    // Fetch run and bug counts
+    try {
+      const [runsRes] = await Promise.all([
+        fetch(`/api/projects/${tc.projectId}/test-runs`)
+      ])
+      if (runsRes.ok) {
+        const runsData = await runsRes.json()
+        const runs = (runsData.testRuns || []).filter((r: any) => r.testCaseId === tc.id)
+        setDeleteRunCount(runs.length)
+        // Count bugs from runs
+        const bugCount = runs.reduce((acc: number, r: any) => acc + (r.bugReports?.length || 0), 0)
+        setDeleteBugCount(bugCount)
+      } else {
+        setDeleteRunCount(0)
+        setDeleteBugCount(0)
+      }
+    } catch {
+      setDeleteRunCount(0)
+      setDeleteBugCount(0)
+    }
+    setDeleteModalOpen(true)
+  }
+
+  // Execute permanent delete
+  async function executePermanentDelete() {
+    if (!deleteTarget) return
+    if (deleteTypedTitle !== deleteTarget.title) return
+
+    setDeleteLoading(true)
+    setDeleteError("")
+
+    try {
+      const res = await fetch(`/api/test-cases/${deleteTarget.id}/permanent-delete`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmTitle: deleteTypedTitle })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        setDeleteModalOpen(false)
+        setDeleteTarget(null)
+        setToast({ 
+          message: `Test case and all related history were permanently deleted. (${data.deleted?.testRuns || 0} runs, ${data.deleted?.steps || 0} steps, ${data.deleted?.bugReports || 0} bugs removed)`,
+          type: "success"
+        })
+        fetchData()
+      } else {
+        const errData = await res.json()
+        setDeleteError(errData.error || "Failed to delete test case")
+      }
+    } catch {
+      setDeleteError("Network error deleting test case")
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   // Delete a single test case
   async function handleDeleteCase(tc: TestCase) {
-    if (confirm(`Are you sure you want to delete "${tc.title}"?`)) {
-      try {
-        const res = await fetch(`/api/projects/${tc.projectId}/test-cases/${tc.id}`, {
-          method: "DELETE"
-        })
-        if (res.ok) {
-          fetchData()
-        } else {
-          alert("Failed to delete test case")
-        }
-      } catch (err) {
-        alert("Network error deleting test case")
-      }
+    openDeleteModal(tc)
+  }
+
+  function getStatusBadge(status: string) {
+    const colors: Record<string, string> = {
+      Queued: "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400",
+      Running: "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400",
+      Passed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400",
+      Failed: "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400",
+      Blocked: "bg-slate-100 text-slate-700 dark:bg-slate-800/30 dark:text-slate-400",
+      Warning: "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400",
+      Cancelled: "bg-gray-100 text-gray-600 dark:bg-gray-800/30 dark:text-gray-400",
     }
+    return colors[status] || "bg-secondary text-secondary-foreground"
   }
 
   // Run duplicate checks for a test case
@@ -627,15 +776,29 @@ function TestCasesHubContent() {
           // Redirect to the manual session
           router.push(`/projects/${data.sessions[0].projectId}/manual-sessions/${data.sessions[0].id}`)
         } else {
-          alert(`Successfully queued ${data.runsCount} automated test runs.`)
+          if (data.runs && Array.isArray(data.runs)) {
+            const newActiveRuns = new Map(activeRuns)
+            data.runs.forEach((run: any) => {
+              const tc = testCases.find(t => t.id === run.testCaseId)
+              newActiveRuns.set(run.testCaseId, {
+                testRunId: run.id,
+                projectId: run.projectId,
+                status: run.status,
+                currentStep: null,
+                totalSteps: tc?.stepsCount || 0
+              })
+            })
+            setActiveRuns(newActiveRuns)
+          }
+          setToast({ message: `Successfully queued ${data.runsCount} automated test runs.`, type: "success" })
           fetchData()
         }
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to execute bulk run")
+        setToast({ message: err.error || "Failed to execute bulk run", type: "error" })
       }
     } catch {
-      alert("Network error trying to trigger execution")
+      setToast({ message: "Network error trying to trigger execution", type: "error" })
     } finally {
       setBulkRunning(false)
     }
@@ -790,7 +953,7 @@ function TestCasesHubContent() {
   // Delete all selected test cases
   async function handleDeleteSelected() {
     if (selectedIds.size === 0) return
-    if (confirm(`Are you sure you want to delete ${selectedIds.size} selected test cases?`)) {
+    if (confirm(`Are you sure you want to PERMANENTLY delete ${selectedIds.size} selected test cases and ALL related data (execution runs, steps, results, attachments, bugs, files)? This cannot be undone.`)) {
       try {
         const projectGroups: Record<string, string[]> = {}
         const selectedCases = testCases.filter((tc) => selectedIds.has(tc.id))
@@ -799,18 +962,28 @@ function TestCasesHubContent() {
           projectGroups[tc.projectId].push(tc.id)
         }
 
+        let totalDeleted = 0
         for (const [pId, ids] of Object.entries(projectGroups)) {
-          await fetch(`/api/projects/${pId}/test-cases`, {
+          const res = await fetch(`/api/projects/${pId}/test-cases`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ids })
           })
+          if (res.ok) {
+            const data = await res.json()
+            totalDeleted += data.count || ids.length
+          }
         }
 
+        const count = selectedIds.size
         setSelectedIds(new Set())
+        setToast({
+          message: `Successfully permanently deleted ${count} selected test cases and all related history.`,
+          type: "success"
+        })
         fetchData()
       } catch {
-        alert("Error executing bulk delete")
+        setToast({ message: "Error executing bulk delete", type: "error" })
       }
     }
   }
@@ -1560,44 +1733,86 @@ function TestCasesHubContent() {
                           </span>
                         </td>
                         <td className="p-4">
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`h-2 w-2 rounded-full ${
-                                tc.lastRunStatus === "Passed" ? "bg-green-500" :
-                                tc.lastRunStatus === "Failed" ? "bg-red-500" :
-                                tc.lastRunStatus === "Blocked" ? "bg-yellow-500" :
-                                tc.lastRunStatus === "Warning" ? "bg-orange-500" :
-                                "bg-slate-400"
-                              }`}
-                            />
-                            <span className="text-xs font-semibold">
-                              {tc.lastRunStatus === "NotExecuted" ? "Untested" : tc.lastRunStatus}
-                            </span>
-                          </div>
-                          {tc.lastRunDate && (
-                            <div className="text-[10px] text-muted-foreground mt-0.5">
-                              {new Date(tc.lastRunDate).toLocaleDateString()}
-                            </div>
+                          {activeRuns.has(tc.id) ? (
+                            (() => {
+                              const activeRun = activeRuns.get(tc.id)!
+                              return (
+                                <div className="space-y-1">
+                                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide inline-flex items-center gap-1 ${getStatusBadge(activeRun.status)}`}>
+                                    {activeRun.status === "Running" && <Loader2 className="h-3 w-3 animate-spin" />}
+                                    {activeRun.status}
+                                    {activeRun.status === "Running" && activeRun.currentStep && (
+                                      <span className="ml-1">({activeRun.currentStep}/{activeRun.totalSteps})</span>
+                                    )}
+                                  </span>
+                                  {activeRun.status === "Running" && activeRun.currentStep && (
+                                    <div className="w-20 bg-muted rounded-full h-1.5 overflow-hidden">
+                                      <div 
+                                        className="bg-indigo-600 h-full transition-all duration-300"
+                                        style={{ width: `${(activeRun.currentStep / activeRun.totalSteps) * 100}%` }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className={`h-2 w-2 rounded-full ${
+                                    tc.lastRunStatus === "Passed" ? "bg-green-500" :
+                                    tc.lastRunStatus === "Failed" ? "bg-red-500" :
+                                    tc.lastRunStatus === "Blocked" ? "bg-yellow-500" :
+                                    tc.lastRunStatus === "Warning" ? "bg-orange-500" :
+                                    "bg-slate-400"
+                                  }`}
+                                />
+                                <span className="text-xs font-semibold">
+                                  {tc.lastRunStatus === "NotExecuted" ? "Untested" : tc.lastRunStatus}
+                                </span>
+                              </div>
+                              {tc.lastRunDate && (
+                                <div className="text-[10px] text-muted-foreground mt-0.5">
+                                  {new Date(tc.lastRunDate).toLocaleDateString()}
+                                </div>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 w-8 p-0"
-                              title="Run test"
-                              onClick={() => {
-                                setSelectedIds(new Set([tc.id]))
-                                setBulkBrowser(tc.project.browserType || "Chromium")
-                                setBulkViewport(tc.project.viewport || "Desktop")
-                                setBulkEnvironment(tc.project.environment || "Staging")
-                                setBulkSessionName(`Automated execution - ${new Date().toLocaleDateString()}`)
-                                setShowBulkRunModal(true)
-                              }}
-                            >
-                              <Play className="h-4 w-4 text-indigo-500 fill-indigo-500" />
-                            </Button>
+                            {activeRuns.has(tc.id) ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400"
+                                  title="Open active run details"
+                                  onClick={() => router.push(`/projects/${activeRuns.get(tc.id)!.projectId}/test-runs/${activeRuns.get(tc.id)!.testRunId}`)}
+                                >
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                title="Run test"
+                                disabled={tc.stepsCount === 0}
+                                onClick={() => {
+                                  setSelectedIds(new Set([tc.id]))
+                                  setBulkBrowser(tc.project.browserType || "Chromium")
+                                  setBulkViewport(tc.project.viewport || "Desktop")
+                                  setBulkEnvironment(tc.project.environment || "Staging")
+                                  setBulkSessionName(`Automated execution - ${new Date().toLocaleDateString()}`)
+                                  setShowBulkRunModal(true)
+                                }}
+                              >
+                                <Play className="h-4 w-4 text-indigo-500 fill-indigo-500" />
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="ghost"
@@ -2380,6 +2595,94 @@ function TestCasesHubContent() {
               <Button variant="ghost" size="sm" onClick={() => setShowBulkPriorityModal(false)}>Cancel</Button>
               <Button size="sm" disabled={prioritySaving} onClick={handleExecuteBulkPriority}>
                 {prioritySaving ? "Updating..." : "Update Priorities"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-[9999] px-4 py-3 rounded-xl shadow-xl border flex items-center gap-3 animate-in slide-in-from-top duration-300 max-w-md ${
+          toast.type === "success" 
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/80 dark:border-emerald-800 dark:text-emerald-200" 
+            : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/80 dark:border-red-800 dark:text-red-200"
+        }`}>
+          <span className="text-sm font-medium flex-1">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="shrink-0 opacity-60 hover:opacity-100">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Permanent Delete Confirmation Modal */}
+      {deleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!deleteLoading) { setDeleteModalOpen(false); setDeleteTarget(null) } }}>
+          <div className="bg-card border border-red-300 dark:border-red-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5 mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-red-100 dark:bg-red-950/40 rounded-xl shrink-0">
+                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-foreground">Permanently delete this test case?</h3>
+                <p className="text-sm text-muted-foreground mt-1">This action will permanently delete:</p>
+              </div>
+            </div>
+
+            <ul className="text-sm text-muted-foreground space-y-1 pl-4 list-disc">
+              <li>The test case</li>
+              <li>All test steps</li>
+              <li>All execution history</li>
+              <li>All test runs</li>
+              <li>All step results</li>
+              <li>All screenshots</li>
+              <li>All logs</li>
+              <li>All attachments</li>
+              <li>Related bug reports if they belong only to this test case</li>
+            </ul>
+
+            {(deleteRunCount > 0 || deleteBugCount > 0) && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Warning: This test case has {deleteRunCount} execution run{deleteRunCount !== 1 ? "s" : ""} and {deleteBugCount} linked bug{deleteBugCount !== 1 ? "s" : ""}. Deleting it will remove all related evidence permanently.
+                </p>
+              </div>
+            )}
+
+            <p className="text-sm font-bold text-red-600 dark:text-red-400">This action cannot be undone.</p>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                To confirm, type the test case title: <span className="font-bold text-red-600 dark:text-red-400">"{deleteTarget.title}"</span>
+              </label>
+              <Input
+                value={deleteTypedTitle}
+                onChange={(e) => setDeleteTypedTitle(e.target.value)}
+                placeholder="Type the test case title to confirm"
+                className="border-red-300 dark:border-red-700 focus-visible:ring-red-500"
+                disabled={deleteLoading}
+              />
+            </div>
+
+            {deleteError && (
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{deleteError}</p>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="ghost"
+                disabled={deleteLoading}
+                onClick={() => { setDeleteModalOpen(false); setDeleteTarget(null) }}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteLoading || deleteTypedTitle !== deleteTarget.title}
+                onClick={executePermanentDelete}
+              >
+                {deleteLoading ? "Deleting..." : "Delete Permanently"}
               </Button>
             </div>
           </div>

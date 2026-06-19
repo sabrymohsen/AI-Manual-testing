@@ -1,17 +1,28 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function POST(
   request: Request,
   { params }: { params: { sessionId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    const session = await prisma.manualTestSession.findUnique({
+      where: { id: params.sessionId },
+      include: { project: { select: { userId: true } } }
+    })
+
+    if (!session) {
+      return notFoundResponse("Manual session not found")
+    }
+
+    if (session.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
+    }
+
     await prisma.manualTestSession.update({
       where: { id: params.sessionId },
       data: {

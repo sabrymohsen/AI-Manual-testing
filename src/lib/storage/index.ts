@@ -4,7 +4,19 @@ import { v4 as uuidv4 } from "uuid"
 
 const STORAGE_ROOT = process.env.STORAGE_ROOT || "./storage"
 
-export type StorageDir = "screenshots" | "figma" | "diffs" | "traces" | "videos" | "exports"
+export type StorageDir =
+  | "screenshots"
+  | "figma"
+  | "diffs"
+  | "traces"
+  | "videos"
+  | "exports"
+  | "crops"
+  | "visual-checks/figma"
+  | "visual-checks/actual"
+  | "visual-checks/diff"
+  | "visual-checks/crops"
+  | "visual-checks/reports"
 
 async function ensureDir(dir: string): Promise<void> {
   try {

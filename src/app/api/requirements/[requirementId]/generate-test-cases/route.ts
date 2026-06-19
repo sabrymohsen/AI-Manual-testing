@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function POST(
   request: Request,
   { params }: { params: { requirementId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
   const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
@@ -25,7 +23,7 @@ export async function POST(
     const requirement = await prisma.requirement.findUnique({
       where: { id: params.requirementId },
       include: {
-        project: true,
+        project: { select: { userId: true } },
         module: true,
         feature: true,
         component: true
@@ -33,7 +31,11 @@ export async function POST(
     })
 
     if (!requirement) {
-      return NextResponse.json({ error: "Requirement not found" }, { status: 404 })
+      return notFoundResponse("Requirement not found")
+    }
+
+    if (requirement.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
     }
 
     const systemPrompt = `You are an expert QA tester. Analyze the requirement parameters and generate a list of positive, negative, boundary, validation, and security test cases.

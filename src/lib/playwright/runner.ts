@@ -7,6 +7,7 @@ import { executeStep } from "./step-executor"
 import { runAssertions } from "./assertion-runner"
 import { handleLogin } from "./login-handler"
 import { notifyIntegrations } from "@/lib/integrations/notifier"
+import { isCancelSignalSet, publishTestRunEvent } from "@/lib/queue"
 
 interface RunOptions {
   testRunId: string
@@ -32,19 +33,32 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       where: { id: testRunId },
       data: { status: "Failed", completedAt: new Date() },
     })
+    await publishTestRunEvent(testRunId, "test_run.completed", { status: "Failed", error: "Test case not found" })
     return
   }
 
   const startTime = Date.now()
 
+  // 1. Initial Cancellation Check
+  if (await isCancelSignalSet(testRunId)) {
+    await prisma.testRun.update({
+      where: { id: testRunId },
+      data: { status: "Cancelled", completedAt: new Date() },
+    })
+    await publishTestRunEvent(testRunId, "test_run.completed", { status: "Cancelled" })
+    return
+  }
+
   await prisma.testRun.update({
     where: { id: testRunId },
     data: { status: "Running", startedAt: new Date() },
   })
+  await publishTestRunEvent(testRunId, "test_run.started", { status: "Running" })
 
   let browser: Browser | null = null
   let context: BrowserContext | null = null
   let page: Page | null = null
+  let decryptedPassword = ""
 
   try {
     browser = await chromium.launch({ headless })
@@ -84,28 +98,31 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         method: request.method(),
         resourceType: request.resourceType(),
         timestamp: new Date().toISOString(),
+        requestStart: Date.now(),
         requestHeaders: sanitizeHeaders(request.headers() as Record<string, string>),
       })
     })
 
     page.on("response", (response) => {
-      const entry = networkLogs.find((l) => l.url === sanitizeUrl(response.url()) && !l.status)
-      if (entry) {
+      const url = sanitizeUrl(response.url())
+      const entries = networkLogs.filter((l) => l.url === url && l.status === undefined)
+      if (entries.length > 0) {
+        const entry = entries.sort((a, b) => b.requestStart - a.requestStart)[0]
         entry.status = response.status()
         entry.responseHeaders = sanitizeHeaders(response.headers() as Record<string, string>)
-        entry.durationMs = 0
+        entry.durationMs = Date.now() - entry.requestStart
       }
     })
 
     page.on("requestfailed", (request) => {
-      const entry = networkLogs.find((l) => l.url === sanitizeUrl(request.url()) && !l.error)
-      if (entry) {
+      const url = sanitizeUrl(request.url())
+      const entries = networkLogs.filter((l) => l.url === url && l.error === undefined)
+      if (entries.length > 0) {
+        const entry = entries.sort((a, b) => b.requestStart - a.requestStart)[0]
         entry.error = request.failure()?.errorText || "Request failed"
         entry.status = 0
       }
     })
-
-    let decryptedPassword = ""
 
     // Handle login if credential is selected
     if (testRun.credential) {
@@ -122,21 +139,43 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
 
       if (!hasRecordedLoginSteps) {
         const loginUrl = testRun.credential.loginUrl || testRun.project.webAppUrl
-        await handleLogin(page, {
-          url: loginUrl,
-          username: testRun.credential.username,
-          password: decryptedPassword,
-        })
+        try {
+          await handleLogin(page, {
+            url: loginUrl,
+            username: testRun.credential.username,
+            password: decryptedPassword,
+          })
+        } catch (loginError: any) {
+          console.error("[runner.ts] Login handler failed:", loginError)
+          await prisma.testRun.update({
+            where: { id: testRunId },
+            data: {
+              status: "Blocked",
+              completedAt: new Date(),
+              durationMs: Date.now() - startTime,
+            },
+          })
+          await publishTestRunEvent(testRunId, "test_run.completed", { status: "Blocked", error: `Login failed: ${loginError.message}` })
+          await notifyIntegrations(testRunId)
+          return
+        }
       }
     }
 
     let hasFailed = false
+    let isCancelled = false
 
     // Execute steps
     for (const step of testRun.testCase.steps) {
+      // 2. Cancellation Check between steps
+      if (await isCancelSignalSet(testRunId)) {
+        isCancelled = true
+        break
+      }
+
       const stepStartTime = Date.now()
 
-      // Find the existing step result created by the API route
+      // Find or create step result
       const existingStepResult = await prisma.testStepResult.findFirst({
         where: {
           testRunId,
@@ -165,6 +204,12 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         stepResultId = stepResult.id
       }
 
+      await publishTestRunEvent(testRunId, "test_run.step_started", {
+        stepId: step.id,
+        stepNumber: step.stepNumber,
+        actionDescription: step.actionDescription,
+      })
+
       // Screenshot before
       let screenshotBeforePath: string | null = null
       try {
@@ -179,33 +224,60 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       let actualResult = ""
       let status: string = "Passed"
       let errorDetails: string | null = null
+      let attempts = 0
+      const maxAttempts = 3 // 1 initial + 2 retries
 
-      try {
-        if (page) {
-          let stepToExecute = step
-          if (step.inputValue === "***MASKED***" && decryptedPassword) {
-            stepToExecute = {
-              ...step,
-              inputValue: decryptedPassword,
+      while (attempts < maxAttempts) {
+        try {
+          if (page) {
+            let stepToExecute = step
+            if (step.inputValue === "***MASKED***" && decryptedPassword) {
+              stepToExecute = {
+                ...step,
+                inputValue: decryptedPassword,
+              }
+            }
+            await executeStep(page, stepToExecute)
+          }
+
+          if (page && step.assertions) {
+            const assertionResults = await runAssertions(page, step.assertions as any[], logs)
+            const failed = assertionResults.filter((r) => !r.passed)
+            if (failed.length > 0) {
+              status = "Failed"
+              errorDetails = failed.map((f) => `${f.message}: ${f.expected} vs ${f.actual}`).join("; ")
+              actualResult = errorDetails
+              break // Assertion failure - do NOT retry
             }
           }
-          await executeStep(page, stepToExecute)
-        }
 
-        if (page && step.assertions) {
-          const assertionResults = await runAssertions(page, step.assertions as any[])
-          const failed = assertionResults.filter((r) => !r.passed)
-          if (failed.length > 0) {
+          status = "Passed"
+          actualResult = "Step completed successfully"
+          break // Success - break retry loop
+        } catch (error: any) {
+          attempts++
+          const errorMessage = error.message || ""
+          const isTransient = errorMessage.includes("timeout") || 
+                              errorMessage.includes("locator") || 
+                              errorMessage.includes("waiting") || 
+                              errorMessage.includes("element")
+
+          if (attempts < maxAttempts && isTransient) {
+            console.log(`[runner.ts] Transient error on step ${step.stepNumber}. Retrying (${attempts}/${maxAttempts - 1})...`)
+            await publishTestRunEvent(testRunId, "test_run.retrying", {
+              stepId: step.id,
+              stepNumber: step.stepNumber,
+              attempt: attempts,
+              error: errorMessage,
+            })
+            if (page) await page.waitForTimeout(1000)
+          } else {
             status = "Failed"
-            errorDetails = failed.map((f) => `${f.message}: ${f.expected} vs ${f.actual}`).join("; ")
+            errorDetails = errorMessage
+            actualResult = errorDetails || "Unknown error"
+            break
           }
         }
-
-        actualResult = "Step completed successfully"
-      } catch (error) {
-        status = "Failed"
-        errorDetails = error instanceof Error ? error.message : "Unknown error"
-        actualResult = errorDetails
       }
 
       // Screenshot after
@@ -269,23 +341,55 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         })
       }
 
-      // Stop on failure
       if (status === "Failed") {
         hasFailed = true
+        await publishTestRunEvent(testRunId, "test_run.step_failed", {
+          stepId: step.id,
+          stepNumber: step.stepNumber,
+          status: "Failed",
+          error: errorDetails,
+          durationMs: stepDuration,
+        })
         break
+      } else {
+        await publishTestRunEvent(testRunId, "test_run.step_completed", {
+          stepId: step.id,
+          stepNumber: step.stepNumber,
+          status: "Passed",
+          durationMs: stepDuration,
+        })
       }
     }
 
     const totalDuration = Date.now() - startTime
-    await prisma.testRun.update({
-      where: { id: testRunId },
-      data: {
-        status: hasFailed ? "Failed" : "Passed",
-        completedAt: new Date(),
-        durationMs: totalDuration,
-      },
-    })
+
+    if (isCancelled) {
+      await prisma.testRun.update({
+        where: { id: testRunId },
+        data: {
+          status: "Cancelled",
+          completedAt: new Date(),
+          durationMs: totalDuration,
+        },
+      })
+      await publishTestRunEvent(testRunId, "test_run.completed", { status: "Cancelled", durationMs: totalDuration })
+    } else {
+      const finalStatus = hasFailed ? "Failed" : "Passed"
+      await prisma.testRun.update({
+        where: { id: testRunId },
+        data: {
+          status: finalStatus,
+          completedAt: new Date(),
+          durationMs: totalDuration,
+        },
+      })
+      await publishTestRunEvent(testRunId, "test_run.completed", { status: finalStatus, durationMs: totalDuration })
+    }
+
     await notifyIntegrations(testRunId)
+    if (decryptedPassword) {
+      decryptedPassword = ""
+    }
   } catch (error) {
     console.error("[runner.ts] Error during test run execution:", error)
     const message = error instanceof Error ? error.message : "Unknown error"
@@ -297,8 +401,12 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         durationMs: Date.now() - startTime,
       },
     })
+    await publishTestRunEvent(testRunId, "test_run.completed", { status: "Failed", error: message })
     await notifyIntegrations(testRunId)
   } finally {
+    if (decryptedPassword) {
+      decryptedPassword = ""
+    }
     if (context) await context.close()
     if (browser) await browser.close()
   }

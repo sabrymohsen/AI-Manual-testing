@@ -24,7 +24,14 @@ import {
   Sparkles,
   Eye,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Edit2,
+  AlertCircle,
+  HelpCircle,
+  Bug,
+  Compass,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react"
 import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 
@@ -51,6 +58,7 @@ interface RecordedStep {
   targetValue: string | null
   inputValue: string | null
   expectedResult: string | null
+  actualResult: string | null
   notes: string | null
   tagName: string | null
   visibleText: string | null
@@ -67,16 +75,35 @@ interface RecordedStep {
   alternativeLocators: any
   screenshotAfter: string | null
   includeInFinalTestCase: boolean
+  assertionType: string | null
+  assertionValue: string | null
+  componentType?: string | null
+  groupId?: string | null
+  validationStatus?: string | null
+  validationMessage?: string | null
+  selectedOptionText?: string | null
+  selectedOptionValue?: string | null
 }
 
 interface RecordedTestCase {
   id: string
   title: string
-  module: string
+  module: string | null
+  moduleId: string | null
+  featureId: string | null
+  componentId: string | null
   priority: string
   preconditions: string | null
   status: string
   finalTestCaseId: string | null
+}
+
+interface BugReport {
+  id: string
+  bugKey: string | null
+  title: string
+  severity: string
+  status: string
 }
 
 export default function RecorderWorkspacePage() {
@@ -92,6 +119,8 @@ export default function RecorderWorkspacePage() {
   const [sessionStatus, setSessionStatus] = useState<string>("Inactive")
   const [currentTestCase, setCurrentTestCase] = useState<RecordedTestCase | null>(null)
   const [recordedSteps, setRecordedSteps] = useState<RecordedStep[]>([])
+  const [sessionBugs, setSessionBugs] = useState<BugReport[]>([])
+  const [savedCasesList, setSavedCasesList] = useState<RecordedTestCase[]>([])
 
   // Setup form states
   const [title, setTitle] = useState("")
@@ -110,8 +139,7 @@ export default function RecorderWorkspacePage() {
   // Workspace interface controls
   const [isSavingCase, setIsSavingCase] = useState(false)
   const [isFinishing, setIsFinishing] = useState(false)
-  const [activeTab, setActiveTab] = useState<"steps" | "previews">("steps")
-  const [savedCasesList, setSavedCasesList] = useState<RecordedTestCase[]>([])
+  const [activeTab, setActiveTab] = useState<"steps" | "cases" | "bugs">("steps")
   
   // New Case overlay modal state (inside recording session)
   const [isNewCaseModalOpen, setIsNewCaseModalOpen] = useState(false)
@@ -122,6 +150,29 @@ export default function RecorderWorkspacePage() {
   const [newCaseComponentId, setNewCaseComponentId] = useState("")
   const [newCasePriority, setNewCasePriority] = useState("Medium")
   const [newCasePreconditions, setNewCasePreconditions] = useState("")
+
+  // Dynamic locator validation state map
+  const [validatingLocators, setValidatingLocators] = useState<{ [stepId: string]: boolean }>({})
+  const [validationResults, setValidationResults] = useState<{ [stepId: string]: { success: boolean; matches: number } }>({})
+  const [isValidatingFlow, setIsValidatingFlow] = useState(false)
+  const [stepsFilter, setStepsFilter] = useState<"grouped" | "raw">("grouped")
+
+  // Bug reporting modal from step
+  const [bugModalStep, setBugModalStep] = useState<RecordedStep | null>(null)
+  const [bugTitle, setBugTitle] = useState("")
+  const [bugSeverity, setBugSeverity] = useState("Medium")
+  const [bugPriority, setBugPriority] = useState("Medium")
+  const [bugActualResult, setBugActualResult] = useState("")
+  const [bugNotes, setBugNotes] = useState("")
+  const [bugReporting, setBugReporting] = useState(false)
+
+  // Annotation Tool Canvas Modal states
+  const [annotationStep, setAnnotationStep] = useState<RecordedStep | null>(null)
+  const [annotationColor, setAnnotationColor] = useState("#ef4444") // Red default
+  const [annotationShape, setAnnotationShape] = useState<"arrow" | "rect" | "circle" | "text" | "blur">("rect")
+  const [annotationTextVal, setAnnotationTextVal] = useState("")
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const [canvasDrawingHistory, setCanvasDrawingHistory] = useState<ImageData[]>([])
 
   // Polling ref
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
@@ -215,6 +266,16 @@ export default function RecorderWorkspacePage() {
       if (res.ok) {
         const data = await res.json()
         setRecordedSteps(data.steps || [])
+      }
+
+      // Fetch bugs list for the active test case
+      if (currentTestCase) {
+        const bugsRes = await fetch(`/api/bug-reports?projectId=${params.id}&page=1&pageSize=100`)
+        if (bugsRes.ok) {
+          const bugsData = await bugsRes.json()
+          // Filter bugs belonging to the recorded case
+          setSessionBugs((bugsData.items || []).filter((b: any) => b.recordedTestCaseId === currentTestCase.id))
+        }
       }
     } catch (err) {
       console.error("Error fetching steps:", err)
@@ -330,6 +391,8 @@ export default function RecorderWorkspacePage() {
         setSavedCasesList(prev => 
           prev.map(c => c.id === currentTestCase.id ? { ...c, status: "SavedAsTestCase" } : c)
         )
+        // Set state to start a new case modal
+        setIsNewCaseModalOpen(true)
       } else {
         alert("Failed to save test case.")
       }
@@ -377,6 +440,8 @@ export default function RecorderWorkspacePage() {
         setNewCaseComponentId("")
         setNewCasePriority("Medium")
         setNewCasePreconditions("")
+
+        fetchSessionSteps()
       } else {
         alert("Failed to start new test case draft.")
       }
@@ -526,8 +591,45 @@ export default function RecorderWorkspacePage() {
     } else if (step.actionType === "fill") {
       const name = step.actionDescription.replace("Fill ", "").replace(/\"/g, "")
       suggestion = `Field "${name}" should accept input value and show it correctly.`
-    } else if (step.actionType === "select") {
-      suggestion = "Dropdown value should change and display the selected option."
+    } else if (["select", "select_custom", "select_searchable", "autocomplete_select"].includes(step.actionType)) {
+      const val = step.selectedOptionText || step.inputValue || "selected option"
+      suggestion = `Dropdown selection should update and display "${val}".`
+    } else if (step.actionType === "multi_select") {
+      suggestion = "Multiple options should be selected successfully."
+    } else if (step.actionType === "check") {
+      suggestion = "Checkbox option should be checked/enabled."
+    } else if (step.actionType === "uncheck") {
+      suggestion = "Checkbox option should be unchecked/disabled."
+    } else if (step.actionType === "radio_select") {
+      suggestion = "Radio option should be activated/selected."
+    } else if (step.actionType === "toggle_on") {
+      suggestion = "Toggle switch should be switched ON/active."
+    } else if (step.actionType === "toggle_off") {
+      suggestion = "Toggle switch should be switched OFF/inactive."
+    } else if (step.actionType === "tab_select") {
+      suggestion = "Active tab panel content should display the selected tab section."
+    } else if (step.actionType === "menu_select") {
+      suggestion = "Menu item should be selected and trigger action or navigation."
+    } else if (step.actionType === "modal_open") {
+      suggestion = "Modal dialog should be displayed overlaying the main page."
+    } else if (step.actionType === "modal_close") {
+      suggestion = "Modal dialog should close and restore page focus."
+    } else if (step.actionType === "accordion_expand") {
+      suggestion = "Accordion panel should expand to reveal underlying content."
+    } else if (step.actionType === "accordion_collapse") {
+      suggestion = "Accordion panel should collapse to hide content."
+    } else if (step.actionType === "pagination_next" || step.actionType === "pagination_previous") {
+      suggestion = "List view should refresh and show the requested page."
+    } else if (step.actionType === "table_row_select") {
+      suggestion = "Row action should execute successfully and update row state."
+    } else if (step.actionType === "slider_set") {
+      suggestion = `Slider value should be adjusted to ${step.inputValue || "the selected value"}.`
+    } else if (step.actionType === "date_select") {
+      suggestion = `Selected date ${step.inputValue || ""} should be accepted.`
+    } else if (step.actionType === "time_select") {
+      suggestion = `Selected time ${step.inputValue || ""} should be set.`
+    } else if (step.actionType === "wait_for_text") {
+      suggestion = `Page text "${step.assertionValue || step.inputValue || ""}" should appear successfully.`
     } else if (step.actionType === "upload_file") {
       suggestion = "Selected file should upload and verify successfully."
     } else if (step.actionType === "screenshot") {
@@ -535,6 +637,277 @@ export default function RecorderWorkspacePage() {
     }
 
     handleUpdateStepField(step.id, "expectedResult", suggestion)
+  }
+
+  // 11. Playwright Live Locator Validation
+  async function handleValidateStepLocator(stepId: string) {
+    setValidatingLocators(prev => ({ ...prev, [stepId]: true }))
+    try {
+      const res = await fetch(`/api/recording/steps/${stepId}/validate-locator`, { method: "POST" })
+      if (res.ok) {
+        const data = await res.json()
+        setValidationResults(prev => ({ ...prev, [stepId]: { success: data.success, matches: data.matches } }))
+      }
+    } catch {
+      console.error("Locator validation request failed")
+    } finally {
+      setValidatingLocators(prev => ({ ...prev, [stepId]: false }))
+    }
+  }
+
+  async function handleValidateRecordedFlow() {
+    if (!sessionId) return
+    setIsValidatingFlow(true)
+    try {
+      const res = await fetch(`/api/recording/${sessionId}/validate-flow`, { method: "POST" })
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          alert("Flow validation completed: All steps successfully resolved!")
+        } else {
+          alert("Flow validation completed with errors. Some steps failed resolving in the active browser window.")
+        }
+        fetchSessionSteps()
+      } else {
+        alert("Failed to run flow validation.")
+      }
+    } catch (err) {
+      console.error("Flow validation failed:", err)
+      alert("Error calling validation endpoint.")
+    } finally {
+      setIsValidatingFlow(false)
+    }
+  }
+
+  // 12. Move steps Up/Down
+  async function handleMoveStep(stepId: string, direction: "up" | "down") {
+    const idx = recordedSteps.findIndex(s => s.id === stepId)
+    if (idx === -1) return
+    if (direction === "up" && idx === 0) return
+    if (direction === "down" && idx === recordedSteps.length - 1) return
+
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1
+    const currentStep = recordedSteps[idx]
+    const targetStep = recordedSteps[targetIdx]
+
+    // Swap stepNumbers
+    const tempNum = currentStep.stepNumber
+    currentStep.stepNumber = targetStep.stepNumber
+    targetStep.stepNumber = tempNum
+
+    // PUT updates to database
+    try {
+      await Promise.all([
+        fetch(`/api/recording/steps/${currentStep.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stepNumber: currentStep.stepNumber })
+        }),
+        fetch(`/api/recording/steps/${targetStep.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stepNumber: targetStep.stepNumber })
+        })
+      ])
+      fetchSessionSteps()
+    } catch (e) {
+      console.error("Failed to swap steps:", e)
+    }
+  }
+
+  // 13. Create Bug Report from Step Modal
+  function handleTriggerBugModal(step: RecordedStep) {
+    setBugModalStep(step)
+    setBugTitle(`Bug in step ${step.stepNumber}: ${step.actionDescription}`)
+    setBugSeverity("Medium")
+    setBugPriority("Medium")
+    setBugActualResult(step.actualResult || "Element did not respond to click as expected.")
+    setBugNotes(step.notes || "")
+  }
+
+  async function handleCreateBugFromStep(e: React.FormEvent) {
+    e.preventDefault()
+    if (!bugModalStep) return
+    setBugReporting(true)
+
+    try {
+      const res = await fetch(`/api/recording/steps/${bugModalStep.id}/bug`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: bugTitle,
+          severity: bugSeverity,
+          priority: bugPriority,
+          actualResult: bugActualResult,
+          notes: bugNotes
+        })
+      })
+
+      if (res.ok) {
+        const data = await res.json()
+        alert(`Bug report successfully created! ID: ${data.bug.bugKey}`)
+        setBugModalStep(null)
+        fetchSessionSteps()
+      } else {
+        alert("Failed to submit bug report.")
+      }
+    } catch {
+      alert("Error reporting bug.")
+    } finally {
+      setBugReporting(false)
+    }
+  }
+
+  // 14. Screenshot Annotation Tools Canvas logic
+  function handleTriggerAnnotation(step: RecordedStep) {
+    setAnnotationStep(step)
+    setCanvasDrawingHistory([])
+  }
+
+  useEffect(() => {
+    if (!annotationStep || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const img = new window.Image()
+    img.src = `/api/files/${annotationStep.screenshotAfter}`
+    img.onload = () => {
+      canvas.width = img.naturalWidth || 800
+      canvas.height = img.naturalHeight || 500
+      ctx.drawImage(img, 0, 0)
+      
+      // Save initial state in history
+      const initialData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      setCanvasDrawingHistory([initialData])
+    }
+
+    let drawing = false
+    let startX = 0
+    let startY = 0
+
+    const getMousePos = (evt: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect()
+      return {
+        x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+        y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+      }
+    }
+
+    const mousedown = (e: MouseEvent) => {
+      drawing = true
+      const pos = getMousePos(e)
+      startX = pos.x
+      startY = pos.y
+    }
+
+    const mousemove = (e: MouseEvent) => {
+      if (!drawing) return
+      const pos = getMousePos(e)
+      
+      // Restore previous state before drawing preview
+      if (canvasDrawingHistory.length > 0) {
+        ctx.putImageData(canvasDrawingHistory[canvasDrawingHistory.length - 1], 0, 0)
+      }
+
+      ctx.strokeStyle = annotationColor
+      ctx.fillStyle = annotationColor
+      ctx.lineWidth = 3
+
+      if (annotationShape === "rect") {
+        ctx.strokeRect(startX, startY, pos.x - startX, pos.y - startY)
+      } else if (annotationShape === "circle") {
+        ctx.beginPath()
+        const radius = Math.sqrt(Math.pow(pos.x - startX, 2) + Math.pow(pos.y - startY, 2))
+        ctx.arc(startX, startY, radius, 0, 2 * Math.PI)
+        ctx.stroke()
+      } else if (annotationShape === "arrow") {
+        ctx.beginPath()
+        ctx.moveTo(startX, startY)
+        ctx.lineTo(pos.x, pos.y)
+        ctx.stroke()
+
+        // Draw arrowhead
+        const angle = Math.atan2(pos.y - startY, pos.x - startX)
+        ctx.beginPath()
+        ctx.moveTo(pos.x, pos.y)
+        ctx.lineTo(pos.x - 15 * Math.cos(angle - Math.PI / 6), pos.y - 15 * Math.sin(angle - Math.PI / 6))
+        ctx.lineTo(pos.x - 15 * Math.cos(angle + Math.PI / 6), pos.y - 15 * Math.sin(angle + Math.PI / 6))
+        ctx.closePath()
+        ctx.fill()
+      } else if (annotationShape === "blur") {
+        // Simple pixelated/blurred rect
+        ctx.fillStyle = "rgba(100,116,139,0.95)"
+        ctx.fillRect(startX, startY, pos.x - startX, pos.y - startY)
+      }
+    }
+
+    const mouseup = (e: MouseEvent) => {
+      if (!drawing) return
+      drawing = false
+
+      if (annotationShape === "text" && annotationTextVal) {
+        const pos = getMousePos(e)
+        ctx.font = "bold 20px sans-serif"
+        ctx.fillStyle = annotationColor
+        ctx.fillText(annotationTextVal, pos.x, pos.y)
+        setAnnotationTextVal("")
+      }
+
+      // Commit state to history
+      const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      setCanvasDrawingHistory(prev => [...prev, currentData])
+    }
+
+    canvas.addEventListener("mousedown", mousedown)
+    canvas.addEventListener("mousemove", mousemove)
+    canvas.addEventListener("mouseup", mouseup)
+
+    return () => {
+      canvas.removeEventListener("mousedown", mousedown)
+      canvas.removeEventListener("mousemove", mousemove)
+      canvas.removeEventListener("mouseup", mouseup)
+    }
+  }, [annotationStep, annotationColor, annotationShape, annotationTextVal, canvasDrawingHistory])
+
+  function handleUndoCanvas() {
+    if (canvasDrawingHistory.length <= 1 || !canvasRef.current) return
+    const canvas = canvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    const newHistory = canvasDrawingHistory.slice(0, -1)
+    setCanvasDrawingHistory(newHistory)
+    ctx.putImageData(newHistory[newHistory.length - 1], 0, 0)
+  }
+
+  async function handleSaveAnnotation() {
+    if (!annotationStep || !canvasRef.current) return
+
+    const canvas = canvasRef.current
+    canvas.toBlob(async (blob) => {
+      if (!blob) return
+      const formData = new FormData()
+      formData.append("file", blob, `annotated-${annotationStep.id}.png`)
+      
+      try {
+        // Upload canvas image blob to files endpoint
+        const uploadRes = await fetch(`/api/files/screenshots/annotated-${annotationStep.id}.png`, {
+          method: "POST",
+          body: formData
+        })
+        if (uploadRes.ok) {
+          const filePath = `screenshots/annotated-${annotationStep.id}.png`
+          await handleUpdateStepField(annotationStep.id, "screenshotAfter", filePath)
+          alert("Annotation saved successfully!")
+          setAnnotationStep(null)
+          fetchSessionSteps()
+        }
+      } catch {
+        alert("Error saving canvas drawing")
+      }
+    }, "image/png")
   }
 
   if (loadingProject) return <p className="text-muted-foreground p-6">Loading Workspace details...</p>
@@ -552,7 +925,7 @@ export default function RecorderWorkspacePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Manual Test Case Recorder</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Manual Test Recording Workspace</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
               Project: <span className="font-semibold text-foreground">{project.name}</span>
             </p>
@@ -561,7 +934,7 @@ export default function RecorderWorkspacePage() {
 
         {sessionId && (
           <div className="flex items-center gap-3">
-            <span className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-bold animate-pulse ${
+            <span className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-bold animate-pulse ${
               sessionStatus === "Active" ? "bg-red-100 text-red-700 dark:bg-red-950/20 dark:text-red-400" : "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/20 dark:text-yellow-400"
             }`}>
               <Video className="h-3.5 w-3.5 fill-current" />
@@ -650,9 +1023,9 @@ export default function RecorderWorkspacePage() {
                 >
                   <option value="">No Automatic Login</option>
                   {project.credentials.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.roleName} ({c.username})
-                    </option>
+                     <option key={c.id} value={c.id}>
+                       {c.roleName} ({c.username})
+                     </option>
                   ))}
                 </select>
               </div>
@@ -694,62 +1067,67 @@ export default function RecorderWorkspacePage() {
         <div className="flex-1 grid gap-6 md:grid-cols-3 min-h-[500px]">
           
           {/* LEFT/MIDDLE: Control panel & Playwright Guidance */}
-          <div className="md:col-span-2 space-y-6 flex flex-col">
+          <div className="md:col-span-1 space-y-6 flex flex-col">
             
             {/* Session Controller bar */}
-            <div className="p-4 border rounded-xl bg-card shadow-sm shrink-0 flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
+            <div className="p-4 border rounded-xl bg-card shadow-sm space-y-3">
+              <div className="flex items-center justify-between border-b pb-2">
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Controls</span>
+                <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full dark:bg-green-950/20 dark:text-green-400">
+                  External Browser Open
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {sessionStatus === "Active" ? (
-                  <Button variant="outline" size="sm" onClick={handlePauseSession} className="flex items-center gap-1.5 text-xs">
-                    <Pause className="h-4 w-4" /> Pause Recording
+                  <Button variant="outline" size="sm" onClick={handlePauseSession} className="flex-1 flex items-center gap-1.5 text-xs">
+                    <Pause className="h-4 w-4" /> Pause
                   </Button>
                 ) : (
-                  <Button variant="outline" size="sm" onClick={handleResumeSession} className="flex items-center gap-1.5 text-xs bg-red-50 hover:bg-red-100 dark:bg-red-950/20 text-red-600">
-                    <Play className="h-4 w-4 fill-current" /> Resume Recording
+                  <Button variant="outline" size="sm" onClick={handleResumeSession} className="flex-1 flex items-center gap-1.5 text-xs bg-red-50 hover:bg-red-100 dark:bg-red-950/20 text-red-600">
+                    <Play className="h-4 w-4 fill-current" /> Resume
                   </Button>
                 )}
-
                 <Button 
                   variant="outline"
                   size="sm"
                   onClick={() => setIsNewCaseModalOpen(true)}
-                  className="flex items-center gap-1.5 text-xs"
+                  className="flex-1 flex items-center gap-1.5 text-xs"
                 >
-                  <Plus className="h-4 w-4" /> Start New Test Case
+                  <Plus className="h-4 w-4" /> New Case
                 </Button>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex gap-2">
                 <Button
                   onClick={handleSaveCurrentCase}
                   disabled={isSavingCase}
                   variant="outline"
                   size="sm"
-                  className="border-green-600/30 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/20 text-xs font-bold"
+                  className="flex-1 border-green-600/30 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/20 text-xs font-bold"
                 >
-                  <Save className="h-4 w-4" /> Save Case Draft
+                  <Save className="h-4 w-4" /> Save Case
                 </Button>
                 <Button
                   onClick={handleFinishAll}
                   disabled={isFinishing}
                   size="sm"
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5"
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold flex items-center gap-1.5"
                 >
-                  {isFinishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Finish & Exit
-                </Button>
-                <Button
-                  onClick={handleCancelSession}
-                  variant="ghost"
-                  size="sm"
-                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs"
-                >
-                  Cancel
+                  {isFinishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Finish Session
                 </Button>
               </div>
+              <Button
+                onClick={handleCancelSession}
+                variant="ghost"
+                size="sm"
+                className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs"
+              >
+                Cancel Recording Session
+              </Button>
             </div>
 
             {/* Active Test Case card */}
-            <div className="p-4 border border-dashed rounded-xl bg-accent/10 space-y-2 shrink-0">
+            <div className="p-4 border rounded-xl bg-accent/5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Active Test Case Draft</div>
                 <span className="text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 rounded-full font-bold uppercase">
@@ -757,186 +1135,336 @@ export default function RecorderWorkspacePage() {
                 </span>
               </div>
               <h3 className="text-md font-bold text-foreground">{currentTestCase?.title}</h3>
-              <p className="text-xs text-muted-foreground">
-                Module: <span className="font-semibold text-foreground">{currentTestCase?.module}</span>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>Module: <span className="font-semibold text-foreground">{currentTestCase?.module}</span></div>
                 {currentTestCase?.preconditions && (
-                  <> · Preconditions: <span className="italic text-foreground">{currentTestCase.preconditions}</span></>
+                  <div>Preconditions: <span className="italic text-foreground">{currentTestCase.preconditions}</span></div>
                 )}
-              </p>
-            </div>
-
-            {/* In-Browser Interaction Guidance Container */}
-            <div className="flex-1 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 text-center bg-card/25 min-h-[300px]">
-              <div className="h-16 w-16 rounded-full bg-red-100 dark:bg-red-950/20 flex items-center justify-center text-red-600 animate-pulse mb-4">
-                <Video className="h-8 w-8 fill-current" />
-              </div>
-              <h4 className="font-bold text-lg">Interactive Browser Session Active!</h4>
-              <p className="text-sm text-muted-foreground max-w-md mt-2 leading-relaxed">
-                A non-headless browser window has been opened on your display. 
-                Perform your manual actions there. Every click, keystroke, and select is being tracked, indexed, and displayed in the sidebar.
-              </p>
-              <div className="flex flex-wrap gap-4 justify-center mt-6 text-xs text-muted-foreground bg-accent/20 p-3 rounded-lg border">
-                <div>Start URL: <strong className="text-foreground">{startUrl}</strong></div>
-                <div>Browser: <strong className="text-foreground">{browserType}</strong></div>
-                <div>Viewport: <strong className="text-foreground">{viewport}</strong></div>
               </div>
             </div>
 
-            {/* Saved Test Cases Drafts in this Session tracker list */}
-            <div className="p-4 border rounded-xl bg-card space-y-3 shrink-0">
-              <h4 className="font-bold text-xs text-muted-foreground uppercase tracking-wide">Test Cases in this session</h4>
-              <div className="flex flex-wrap gap-2">
-                {savedCasesList.map((c) => (
-                  <div key={c.id} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${
-                    c.id === currentTestCase?.id
-                      ? "border-primary bg-primary/5 text-primary"
-                      : c.status === "SavedAsTestCase"
-                        ? "border-green-200 bg-green-50 text-green-700 dark:border-green-950 dark:bg-green-950/20 dark:text-green-400"
-                        : "border-border bg-accent/20 text-muted-foreground"
-                  }`}>
-                    <FileText className="h-3.5 w-3.5" />
-                    <span>{c.title}</span>
-                    {c.status === "SavedAsTestCase" && <Check className="h-3 w-3 text-green-600" />}
-                  </div>
-                ))}
+            {/* In-Session navigation lists tabs */}
+            <div className="border rounded-xl bg-card overflow-hidden flex flex-col flex-1 min-h-[200px]">
+              <div className="flex border-b text-xs font-semibold bg-accent/15">
+                <button 
+                  onClick={() => setActiveTab("steps")} 
+                  className={`flex-1 py-2 px-3 border-r text-center ${activeTab === "steps" ? "bg-background text-primary" : "text-muted-foreground"}`}
+                >
+                  Test Cases ({savedCasesList.length})
+                </button>
+                <button 
+                  onClick={() => setActiveTab("bugs")} 
+                  className={`flex-1 py-2 px-3 text-center ${activeTab === "bugs" ? "bg-background text-primary" : "text-muted-foreground"}`}
+                >
+                  Bugs Created ({sessionBugs.length})
+                </button>
+              </div>
+
+              <div className="flex-1 p-3 overflow-y-auto space-y-2">
+                {activeTab === "steps" && (
+                  savedCasesList.map((c) => (
+                    <div key={c.id} className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium ${
+                      c.id === currentTestCase?.id
+                        ? "border-primary bg-primary/5 text-primary"
+                        : c.status === "SavedAsTestCase"
+                          ? "border-green-200 bg-green-50/50 text-green-700 dark:border-green-950/40 dark:bg-green-950/10 dark:text-green-400"
+                          : "border-border bg-accent/10 text-muted-foreground"
+                    }`}>
+                      <span className="truncate max-w-[170px]">{c.title}</span>
+                      <span className="text-[10px] text-muted-foreground">{c.status === "SavedAsTestCase" ? "Saved" : "Recording"}</span>
+                    </div>
+                  ))
+                )}
+
+                {activeTab === "bugs" && (
+                  sessionBugs.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-muted-foreground">No bugs reported in this session yet.</div>
+                  ) : (
+                    sessionBugs.map((b) => (
+                      <div key={b.id} className="flex items-center justify-between p-2 rounded border text-xs bg-red-50/50 border-red-200 text-red-800 dark:bg-red-950/10 dark:border-red-900/50 dark:text-red-400">
+                        <span className="font-semibold">{b.bugKey}: {b.title}</span>
+                        <span className="text-[10px] uppercase font-bold text-red-600">{b.severity}</span>
+                      </div>
+                    ))
+                  )
+                )}
               </div>
             </div>
           </div>
 
-          {/* RIGHT PANEL: Recorded Steps List */}
-          <div className="md:col-span-1 border rounded-2xl bg-card shadow-lg flex flex-col overflow-hidden max-h-[80vh]">
-            {/* Header tab */}
+          {/* MIDDLE/RIGHT: Live Recorded Steps Panel */}
+          <div className="md:col-span-2 border rounded-2xl bg-card shadow-lg flex flex-col overflow-hidden max-h-[85vh]">
             <div className="px-4 py-3 border-b flex items-center justify-between bg-accent/25">
-              <div className="font-bold text-sm">Recorded Steps ({recordedSteps.length})</div>
-              <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={fetchSessionSteps}>
-                Refresh
-              </Button>
+              <div className="font-bold text-sm">Live Recorded Steps ({recordedSteps.length})</div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-7 text-xs border-indigo-600/30 text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1" 
+                  onClick={handleValidateRecordedFlow}
+                  disabled={isValidatingFlow}
+                >
+                  {isValidatingFlow ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  Validate Flow
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-primary" onClick={fetchSessionSteps}>
+                  Refresh List
+                </Button>
+              </div>
             </div>
 
-            {/* List container */}
+            {/* Grouped vs Raw tabs */}
+            <div className="flex border-b text-xs font-semibold bg-accent/5">
+              <button 
+                onClick={() => setStepsFilter("grouped")} 
+                className={`flex-1 py-2 text-center border-r transition-colors ${stepsFilter === "grouped" ? "bg-background text-primary border-b-2 border-b-primary font-bold" : "text-muted-foreground hover:bg-accent/10"}`}
+              >
+                Grouped Steps ({recordedSteps.filter(s => s.includeInFinalTestCase).length})
+              </button>
+              <button 
+                onClick={() => setStepsFilter("raw")} 
+                className={`flex-1 py-2 text-center transition-colors ${stepsFilter === "raw" ? "bg-background text-primary border-b-2 border-b-primary font-bold" : "text-muted-foreground hover:bg-accent/10"}`}
+              >
+                Raw Events ({recordedSteps.length})
+              </button>
+            </div>
+
             <div className="flex-1 p-4 overflow-y-auto space-y-4">
               {recordedSteps.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground space-y-2">
-                  <Video className="h-8 w-8 mx-auto stroke-1" />
-                  <p className="text-xs">No steps recorded yet. Intercepting browser actions...</p>
+                <div className="text-center py-24 text-muted-foreground space-y-3">
+                  <Video className="h-12 w-12 mx-auto stroke-1 text-muted-foreground/50 animate-pulse" />
+                  <h4 className="font-semibold text-sm">Interactive Browser Active</h4>
+                  <p className="text-xs max-w-sm mx-auto">
+                    Open the external Chromium browser and start clicking or filling inputs. Every action is reflected here live.
+                  </p>
                 </div>
               ) : (
-                recordedSteps.map((step) => (
-                  <div key={step.id} className={`border rounded-xl p-3 bg-card shadow-sm space-y-3 transition-opacity ${
-                    !step.includeInFinalTestCase ? "opacity-50" : ""
-                  }`}>
-                    {/* Top indicator */}
-                    <div className="flex items-start justify-between border-b pb-2 gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-muted-foreground">Step {step.stepNumber}</span>
-                        <span className="text-[9px] font-semibold bg-secondary/80 text-secondary-foreground border px-1.5 py-0.5 rounded uppercase tracking-wider">
-                          {step.actionType}
-                        </span>
+                (() => {
+                  const filteredSteps = stepsFilter === "grouped"
+                    ? recordedSteps.filter(s => s.includeInFinalTestCase)
+                    : recordedSteps;
+                  return filteredSteps.map((step, idx) => {
+                  const validation = validationResults[step.id]
+                  const isValidating = validatingLocators[step.id]
+                  
+                  return (
+                    <div key={step.id} className={`border rounded-xl p-4 bg-card shadow-sm space-y-4 transition-all ${
+                      !step.includeInFinalTestCase ? "opacity-50 border-dashed bg-slate-50/50 dark:bg-slate-900/20" : ""
+                    }`}>
+                      {/* Step Header */}
+                      <div className="flex items-start justify-between border-b pb-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 px-2 py-0.5 rounded">
+                            Step {step.stepNumber}
+                          </span>
+                          <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900/50 px-2 py-0.5 rounded uppercase">
+                            {step.actionType}
+                          </span>
+                          {step.validationStatus && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                              step.validationStatus === "Passed"
+                                ? "bg-green-50 text-green-700 border-green-100 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900/50"
+                                : "bg-red-50 text-red-700 border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/50"
+                            }`} title={step.validationMessage || ""}>
+                              {step.validationStatus === "Passed" ? "✓ Resolved" : "✗ Error"}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Reliability score */}
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[11px] font-bold ${
+                            step.reliabilityScore >= 80 ? "text-green-600 dark:text-green-400" :
+                            step.reliabilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" :
+                            "text-red-600 dark:text-red-400"
+                          }`}>
+                            Score: {step.reliabilityScore}%
+                          </span>
+                        </div>
                       </div>
-                      
-                      {/* Reliability indicator */}
-                      <span className={`text-[10px] font-bold ${
-                        step.reliabilityScore >= 80 ? "text-green-600 dark:text-green-400" :
-                        step.reliabilityScore >= 50 ? "text-yellow-600 dark:text-yellow-400" :
-                        "text-red-600 dark:text-red-400"
-                      }`}>
-                        {step.reliabilityScore}%
-                      </span>
-                    </div>
 
-                    {/* Action description text */}
-                    <p className="text-xs font-semibold leading-normal text-foreground" dir="auto">
-                      {step.actionDescription}
-                    </p>
+                      {/* Step Description */}
+                      <p className="text-sm font-semibold text-foreground leading-normal" dir="auto">
+                        {step.actionDescription}
+                      </p>
 
-                    {/* Meta values */}
-                    <div className="space-y-1 bg-accent/15 p-2 rounded-lg text-[10px] text-muted-foreground">
-                      <div className="truncate" title={step.pageUrl}>URL: <span className="font-mono text-foreground">{step.pageUrl}</span></div>
-                      {step.targetValue && (
-                        <div className="truncate" title={step.targetValue}>
-                          Locator ({step.targetType}): <span className="font-mono text-foreground">{step.targetValue}</span>
+                      {/* Selector & metadata info panel */}
+                      <div className="space-y-1 bg-accent/20 p-2.5 rounded-lg text-xs text-muted-foreground font-medium">
+                        <div className="truncate" title={step.pageUrl}>
+                          Page URL: <span className="font-mono text-foreground">{step.pageUrl}</span>
+                        </div>
+                        {step.recommendedSelector && (
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate">
+                              Selector: <span className="font-mono text-foreground">{step.recommendedSelector}</span>
+                            </span>
+                            <button
+                              onClick={() => handleValidateStepLocator(step.id)}
+                              disabled={isValidating}
+                              className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline shrink-0 flex items-center gap-1 font-bold"
+                            >
+                              {isValidating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Compass className="h-3 w-3" />
+                              )}
+                              Validate
+                            </button>
+                          </div>
+                        )}
+                        {step.inputValue && (
+                          <div>
+                            Input Value: <span className="font-mono text-foreground font-semibold">{step.inputValue}</span>
+                          </div>
+                        )}
+
+                        {/* Locator validation result badge */}
+                        {validation && (
+                          <div className="mt-1.5 flex items-center">
+                            {validation.success && validation.matches === 1 ? (
+                              <span className="text-[10px] bg-green-100 text-green-800 dark:bg-green-950/30 dark:text-green-400 px-2 py-0.5 rounded font-bold">
+                                ✓ Valid Locator (1 Element found)
+                              </span>
+                            ) : validation.matches > 1 ? (
+                              <span className="text-[10px] bg-yellow-100 text-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400 px-2 py-0.5 rounded font-bold">
+                                ⚠ Ambiguous Locator ({validation.matches} Elements found)
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 px-2 py-0.5 rounded font-bold">
+                                ✗ Not Found (0 Elements match)
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {step.validationStatus === "Failed" && step.validationMessage && (
+                        <div className="bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/10 dark:border-red-900/45 dark:text-red-400 p-2.5 rounded-xl text-xs flex items-start gap-2 font-medium">
+                          <AlertCircle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
+                          <div>{step.validationMessage}</div>
                         </div>
                       )}
-                      {step.inputValue && (
-                        <div>Input Value: <span className="font-mono text-foreground font-semibold">{step.inputValue}</span></div>
+
+                      {/* Expected Result Field */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-bold text-muted-foreground">Expected Result</Label>
+                          <button
+                            onClick={() => handleSuggestExpectedResult(step)}
+                            className="text-[10px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5 font-bold"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 fill-current" /> AI Fill
+                          </button>
+                        </div>
+                        <Input
+                          value={step.expectedResult || ""}
+                          onChange={(e) => handleUpdateStepField(step.id, "expectedResult", e.target.value)}
+                          placeholder="Action completes successfully..."
+                          className="h-9 text-xs bg-background"
+                        />
+                      </div>
+
+                      {/* Screenshot after action */}
+                      {step.screenshotAfter && (
+                        <div className="border rounded-xl overflow-hidden bg-accent/20 max-h-48 flex items-center justify-center p-1.5 relative group">
+                          <img 
+                            src={`/api/files/${step.screenshotAfter}`} 
+                            alt="Recorded Action screenshot"
+                            className="object-contain max-h-44 rounded-lg"
+                          />
+                          <div className="absolute inset-0 bg-black/50 text-white flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={() => window.open(`/api/files/${step.screenshotAfter}`)}
+                              className="bg-white/10 hover:bg-white/20 p-2 rounded-lg text-xs flex items-center gap-1 font-semibold"
+                            >
+                              <Eye className="h-4 w-4" /> Full View
+                            </button>
+                            <button 
+                              onClick={() => handleTriggerAnnotation(step)}
+                              className="bg-primary hover:bg-primary/90 p-2 rounded-lg text-xs flex items-center gap-1 font-semibold text-white"
+                            >
+                              <Edit2 className="h-4 w-4" /> Annotate
+                            </button>
+                          </div>
+                        </div>
                       )}
-                    </div>
 
-                    {/* Expected Result Input */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-[10px] font-bold text-muted-foreground">Expected Result</Label>
-                        
-                        {/* AI suggest expected result */}
-                        <button
-                          onClick={() => handleSuggestExpectedResult(step)}
-                          className="text-[10px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5 font-bold"
-                          title="Generate Expected Result using AI description analysis"
-                        >
-                          <Sparkles className="h-3 w-3 fill-current" /> AI Auto-Fill
-                        </button>
+                      {/* Notes / Actual result section */}
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold text-muted-foreground uppercase">Actual Result</Label>
+                          <Input
+                            value={step.actualResult || ""}
+                            onChange={(e) => handleUpdateStepField(step.id, "actualResult", e.target.value)}
+                            placeholder="Observed execution output..."
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] font-bold text-muted-foreground uppercase">Developer Notes</Label>
+                          <Input
+                            value={step.notes || ""}
+                            onChange={(e) => handleUpdateStepField(step.id, "notes", e.target.value)}
+                            placeholder="Warnings, APIs slow loads..."
+                            className="h-8 text-xs"
+                          />
+                        </div>
                       </div>
-                      
-                      <Input
-                        value={step.expectedResult || ""}
-                        onChange={(e) => handleUpdateStepField(step.id, "expectedResult", e.target.value)}
-                        placeholder="Write what should occur..."
-                        className="h-8 text-xs bg-background/50 focus:bg-background"
-                      />
-                    </div>
 
-                    {/* Screenshot preview */}
-                    {step.screenshotAfter && (
-                      <div className="border rounded-lg overflow-hidden bg-accent/20 max-h-24 flex items-center justify-center p-1 relative group">
-                        <img 
-                          src={`/api/files/${step.screenshotAfter}`} 
-                          alt="After action screenshot"
-                          className="object-contain max-h-20 rounded"
-                        />
-                        <button 
-                          onClick={() => window.open(`/api/files/${step.screenshotAfter}`)}
-                          className="absolute inset-0 bg-black/40 text-white flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
-                        >
-                          <Eye className="h-3.5 w-3.5" /> Full Size
-                        </button>
+                      {/* Footer Actions: Include state, Bug report, ordering */}
+                      <div className="flex items-center justify-between border-t pt-3.5 text-xs text-muted-foreground font-semibold">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={step.includeInFinalTestCase}
+                            onChange={(e) => handleUpdateStepField(step.id, "includeInFinalTestCase", e.target.checked)}
+                            className="rounded border-muted-foreground/30 text-primary focus:ring-primary h-4 w-4"
+                          />
+                          <span>Include in Test Case</span>
+                        </label>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => handleTriggerBugModal(step)}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 px-2 py-1 rounded flex items-center gap-1 text-xs"
+                          >
+                            <Bug className="h-3.5 w-3.5" /> Report Bug
+                          </button>
+                          
+                          <div className="flex border rounded-lg overflow-hidden">
+                            <button
+                              disabled={idx === 0}
+                              onClick={() => handleMoveStep(step.id, "up")}
+                              className="p-1 hover:bg-accent disabled:opacity-30"
+                              title="Move step up"
+                            >
+                              <ArrowUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              disabled={idx === recordedSteps.length - 1}
+                              onClick={() => handleMoveStep(step.id, "down")}
+                              className="p-1 hover:bg-accent border-l disabled:opacity-30"
+                              title="Move step down"
+                            >
+                              <ArrowDown className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+
+                          <button
+                            onClick={() => handleDeleteStep(step.id)}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1 rounded transition-colors"
+                            title="Delete step"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                    )}
 
-                    {/* Step notes input */}
-                    <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-muted-foreground">Notes</Label>
-                      <Input
-                        value={step.notes || ""}
-                        onChange={(e) => handleUpdateStepField(step.id, "notes", e.target.value)}
-                        placeholder="Additional step logs..."
-                        className="h-7 text-[11px] bg-background/50"
-                      />
                     </div>
-
-                    {/* Checkbox controls for final commit */}
-                    <div className="flex items-center justify-between pt-1 border-t text-[11px]">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={step.includeInFinalTestCase}
-                          onChange={(e) => handleUpdateStepField(step.id, "includeInFinalTestCase", e.target.checked)}
-                          className="rounded border-muted-foreground/30 text-primary focus:ring-primary h-3.5 w-3.5"
-                        />
-                        <span className="text-muted-foreground">Include in case</span>
-                      </label>
-
-                      <button
-                        onClick={() => handleDeleteStep(step.id)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 p-1 rounded transition-colors"
-                        title="Delete step"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                  </div>
-                ))
-              )}
+                  )
+                })
+              })()
+            )}
             </div>
           </div>
         </div>
@@ -1008,7 +1536,7 @@ export default function RecorderWorkspacePage() {
               <Button variant="ghost" size="sm" onClick={() => setIsNewCaseModalOpen(false)}>
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleCreateNewTestCase} className="bg-primary hover:bg-primary/95">
+              <Button size="sm" onClick={handleCreateNewTestCase} className="bg-primary hover:bg-primary/95 text-white">
                 Create & Start Recording
               </Button>
             </div>
@@ -1016,7 +1544,209 @@ export default function RecorderWorkspacePage() {
         </div>
       )}
 
-      {/* NON-BLOCKING CUSTOM CONFIRMATION DIALOG */}
+      {/* CREATE BUG REPORT MODAL */}
+      {bugModalStep && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <form onSubmit={handleCreateBugFromStep} className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div>
+              <h3 className="text-lg font-bold flex items-center gap-1.5 text-red-600 dark:text-red-400">
+                <Bug className="h-5 w-5" /> Report Observed Bug
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Observed at Step {bugModalStep.stepNumber}. Project context and steps recorded so far will be linked.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground">Bug Title *</Label>
+                <Input
+                  value={bugTitle}
+                  onChange={(e) => setBugTitle(e.target.value)}
+                  placeholder="Summarize the observed failure..."
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-muted-foreground">Severity</Label>
+                  <select
+                    value={bugSeverity}
+                    onChange={(e) => setBugSeverity(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-muted-foreground">Priority</Label>
+                  <select
+                    value={bugPriority}
+                    onChange={(e) => setBugPriority(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground">Actual Result *</Label>
+                <textarea
+                  value={bugActualResult}
+                  onChange={(e) => setBugActualResult(e.target.value)}
+                  rows={2}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none"
+                  placeholder="Explain actual browser behavior..."
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground">Notes (Optional)</Label>
+                <Input
+                  value={bugNotes}
+                  onChange={(e) => setBugNotes(e.target.value)}
+                  placeholder="Console warnings or API errors..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setBugModalStep(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="sm" disabled={bugReporting} className="bg-red-600 hover:bg-red-700 text-white">
+                {bugReporting ? "Submitting..." : "Submit Bug Report"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* SCREENSHOT ANNOTATION MODAL */}
+      {annotationStep && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-4">
+          <div className="bg-background border rounded-2xl w-full max-w-4xl p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b pb-2">
+              <div>
+                <h3 className="text-lg font-bold flex items-center gap-1.5">
+                  <ImageIcon className="h-5 w-5 text-indigo-500" /> Annotate Screenshot
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Draw arrows, circles, rectangles, add text, or blur sensitive values directly on the evidence screenshot.
+                </p>
+              </div>
+              <button onClick={() => setAnnotationStep(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Annotation Toolbar */}
+            <div className="flex flex-wrap items-center gap-4 bg-accent/20 p-3 rounded-xl border text-xs">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-muted-foreground">Tools:</span>
+                <div className="flex border rounded-lg overflow-hidden bg-background">
+                  <button 
+                    onClick={() => setAnnotationShape("rect")} 
+                    className={`px-3 py-1.5 font-semibold ${annotationShape === "rect" ? "bg-primary text-white" : "hover:bg-accent"}`}
+                  >
+                    Rectangle
+                  </button>
+                  <button 
+                    onClick={() => setAnnotationShape("circle")} 
+                    className={`px-3 py-1.5 font-semibold border-l ${annotationShape === "circle" ? "bg-primary text-white" : "hover:bg-accent"}`}
+                  >
+                    Circle
+                  </button>
+                  <button 
+                    onClick={() => setAnnotationShape("arrow")} 
+                    className={`px-3 py-1.5 font-semibold border-l ${annotationShape === "arrow" ? "bg-primary text-white" : "hover:bg-accent"}`}
+                  >
+                    Arrow
+                  </button>
+                  <button 
+                    onClick={() => setAnnotationShape("blur")} 
+                    className={`px-3 py-1.5 font-semibold border-l ${annotationShape === "blur" ? "bg-primary text-white" : "hover:bg-accent"}`}
+                  >
+                    Blur Area
+                  </button>
+                  <button 
+                    onClick={() => setAnnotationShape("text")} 
+                    className={`px-3 py-1.5 font-semibold border-l ${annotationShape === "text" ? "bg-primary text-white" : "hover:bg-accent"}`}
+                  >
+                    Text
+                  </button>
+                </div>
+              </div>
+
+              {annotationShape === "text" && (
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-muted-foreground">Text Note:</span>
+                  <Input 
+                    value={annotationTextVal} 
+                    onChange={(e) => setAnnotationTextVal(e.target.value)} 
+                    placeholder="Type then click to draw..." 
+                    className="h-8 text-xs w-44"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-muted-foreground">Color:</span>
+                <select 
+                  value={annotationColor} 
+                  onChange={(e) => setAnnotationColor(e.target.value)} 
+                  className="bg-background border rounded px-2 py-1"
+                >
+                  <option value="#ef4444">Red</option>
+                  <option value="#3b82f6">Blue</option>
+                  <option value="#10b981">Green</option>
+                  <option value="#eab308">Yellow</option>
+                  <option value="#a855f7">Purple</option>
+                </select>
+              </div>
+
+              <div className="flex-1 flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  disabled={canvasDrawingHistory.length <= 1} 
+                  onClick={handleUndoCanvas}
+                >
+                  Undo
+                </Button>
+              </div>
+            </div>
+
+            {/* Drawing Canvas Area */}
+            <div className="flex-1 overflow-auto border rounded-xl bg-slate-900 flex items-center justify-center p-2 min-h-[300px]">
+              <canvas 
+                ref={canvasRef} 
+                className="cursor-crosshair shadow-lg border bg-background"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="ghost" size="sm" onClick={() => setAnnotationStep(null)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveAnnotation} className="bg-primary hover:bg-primary/95 text-white">
+                Save & Link Annotated Screenshot
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION DIALOG */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
@@ -1048,7 +1778,7 @@ export default function RecorderWorkspacePage() {
                 className={
                   confirmModal.isDestructive
                     ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                    : "bg-primary hover:bg-primary/90"
+                    : "bg-primary hover:bg-primary/90 text-white"
                 }
               >
                 {confirmModal.confirmLabel}

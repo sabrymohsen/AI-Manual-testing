@@ -1,28 +1,30 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
 import { decryptSecret } from "@/lib/crypto"
 
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  // Verify project owner
-  const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id }
-  })
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
-  const { provider, host, projectKey, username } = body
-  let token = body.token
+  const testSchema = z.object({
+    provider: z.string().min(1, "Provider is required"),
+    host: z.string().min(1, "Host is required"),
+    projectKey: z.string().min(1, "Project Key is required"),
+    username: z.string().optional(),
+    token: z.string().optional(),
+  })
+  const parsed = testSchema.safeParse(body)
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+  }
+  const { provider, host, projectKey, username } = parsed.data
+  let token = parsed.data.token
 
   // If token is empty/not provided, try to load it from the database and decrypt it
   if (!token) {
@@ -56,7 +58,7 @@ export async function POST(
       // Clean host url
       let jiraHost = host.trim().replace(/^https?:\/\//, "")
       const url = `https://${jiraHost}/rest/api/2/project/${projectKey.trim()}`
-      const credentials = Buffer.from(`${username.trim()}:${token.trim()}`).toString("base64")
+      const credentials = Buffer.from(`${(username || "").trim()}:${token.trim()}`).toString("base64")
 
       const res = await fetch(url, {
         method: "GET",

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 
 export async function GET() {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
+  const session = auth.session!
 
   const totalProjects = await prisma.project.count({
     where: { userId: session.user.id },

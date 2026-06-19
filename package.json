@@ -9,7 +9,9 @@
     "lint": "next lint",
     "worker": "tsx src/workers/test-runner.worker.ts",
     "test": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:migrate-hierarchy": "tsx scripts/migrate-hierarchy.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.0",

@@ -16,7 +16,8 @@ interface AssertionResult {
 
 export async function runAssertions(
   page: Page,
-  assertions: Assertion[]
+  assertions: Assertion[],
+  logs?: { level: string; message: string }[]
 ): Promise<AssertionResult[]> {
   const results: AssertionResult[] = []
 
@@ -75,13 +76,12 @@ export async function runAssertions(
           break
 
         case "console_no_errors":
-          // Console errors are collected in the runner; this assertion type
-          // signals that the test expects zero console errors
+          const hasErrors = logs?.some((l) => l.level === "error")
           results.push({
-            passed: true,
+            passed: !hasErrors,
             message: "Console errors check",
             expected: "No console errors",
-            actual: "No console errors detected",
+            actual: hasErrors ? "Console errors detected" : "No console errors detected",
           })
           break
 

@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
 
 export async function POST(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const bug = await prisma.bugReport.findUnique({
+    where: { id: params.bugId },
+    select: { projectId: true, status: true }
+  })
+
+  if (!bug) {
+    return notFoundResponse("Bug report not found")
   }
+
+  const auth = await requireProjectOwner(bug.projectId!)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
@@ -19,16 +26,8 @@ export async function POST(
       return NextResponse.json({ error: "Status value is required" }, { status: 400 })
     }
 
-    const existingBug = await prisma.bugReport.findUnique({
-      where: { id: params.bugId }
-    })
-
-    if (!existingBug) {
-      return NextResponse.json({ error: "Bug report not found" }, { status: 404 })
-    }
-
     const updatedBug = await prisma.$transaction(async (tx) => {
-      const bug = await tx.bugReport.update({
+      const updated = await tx.bugReport.update({
         where: { id: params.bugId },
         data: {
           status: status as any
@@ -39,11 +38,11 @@ export async function POST(
         data: {
           bugId: params.bugId,
           action: "Status Changed",
-          details: `Status transitioned from ${existingBug.status} to ${status}.`
+          details: `Status transitioned from ${bug.status} to ${status}.`
         }
       })
 
-      return bug
+      return updated
     })
 
     return NextResponse.json({ bug: updatedBug })

@@ -1,25 +1,49 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const putBodySchema = z.object({
+  name: z.string().min(1, "Flow name is required"),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  steps: z.array(z.any()).optional(),
+})
 
 export async function PUT(
   request: Request,
   { params }: { params: { flowId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const body = await request.json()
+    const flow = await prisma.reusableStepFlow.findUnique({
+      where: { id: params.flowId },
+      include: { project: { select: { userId: true } } }
+    })
+
+    if (!flow) {
+      return notFoundResponse("Flow not found")
+    }
+
+    if (flow.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
+    }
+
+    const rawBody = await request.json()
+    const parseResult = putBodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.errors.map(e => e.message).join(", ") }, { status: 400 })
+    }
+    const body = rawBody
     const { name, description, category, steps } = body
 
     if (!name) {
       return NextResponse.json({ error: "Flow name is required" }, { status: 400 })
     }
 
-    const flow = await prisma.$transaction(async (tx) => {
+    const updatedFlow = await prisma.$transaction(async (tx) => {
       // Update flow details
       await tx.reusableStepFlow.update({
         where: { id: params.flowId },
@@ -65,7 +89,7 @@ export async function PUT(
       })
     })
 
-    return NextResponse.json(flow)
+    return NextResponse.json(updatedFlow)
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to update flow" }, { status: 500 })
   }
@@ -75,12 +99,23 @@ export async function DELETE(
   request: Request,
   { params }: { params: { flowId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    const flow = await prisma.reusableStepFlow.findUnique({
+      where: { id: params.flowId },
+      include: { project: { select: { userId: true } } }
+    })
+
+    if (!flow) {
+      return notFoundResponse("Flow not found")
+    }
+
+    if (flow.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
+    }
+
     await prisma.reusableStepFlow.delete({
       where: { id: params.flowId }
     })

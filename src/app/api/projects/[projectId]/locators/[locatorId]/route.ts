@@ -1,18 +1,21 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { updateLocatorSchema } from "@/schemas"
 
 export async function PUT(
   request: Request,
   { params }: { params: { projectId: string; locatorId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
-  const { friendlyName, description, locatorType, locatorValue } = body
+  const parsed = updateLocatorSchema.safeParse(body)
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+  }
+  const { friendlyName, description, locatorType, locatorValue } = parsed.data
 
   if (!friendlyName || !locatorType || !locatorValue) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -42,10 +45,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { projectId: string; locatorId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     await prisma.elementLocator.delete({

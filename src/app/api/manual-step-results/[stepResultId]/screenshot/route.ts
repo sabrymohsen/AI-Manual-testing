@@ -1,23 +1,54 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 import { saveFile } from "@/lib/storage"
+import { z } from "zod"
+
+const bodySchema = z.object({
+  imageBase64: z.string().min(1, "imageBase64 is required"),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { stepResultId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const body = await request.json()
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.errors.map(e => e.message).join(", ") }, { status: 400 })
+    }
+    const body = rawBody
     const { imageBase64 } = body
 
     if (!imageBase64) {
       return NextResponse.json({ error: "imageBase64 is required" }, { status: 400 })
+    }
+
+    const stepResult = await prisma.manualStepResult.findUnique({
+      where: { id: params.stepResultId },
+      include: {
+        sessionCase: {
+          include: {
+            session: {
+              include: {
+                project: { select: { userId: true } }
+              }
+            }
+          }
+        }
+      }
+    })
+
+    if (!stepResult || !stepResult.sessionCase) {
+      return notFoundResponse("Manual step result not found")
+    }
+
+    if (stepResult.sessionCase.session.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
     }
 
     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "")

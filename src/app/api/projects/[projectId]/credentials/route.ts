@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
 import { encryptSecret } from "@/lib/crypto"
+import { createCredentialSchema } from "@/schemas"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { createAuditLog } from "@/lib/auth/audit"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const credentials = await prisma.projectCredential.findMany({
     where: { projectId: params.projectId },
@@ -33,20 +33,17 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
-  const { roleName, username, password, loginUrl, notes } = body
+  const parsed = createCredentialSchema.safeParse(body)
 
-  if (!roleName || !username || !password) {
-    return NextResponse.json(
-      { error: "Role name, username, and password are required" },
-      { status: 400 }
-    )
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
+
+  const { roleName, username, password, loginUrl, notes } = parsed.data
 
   const encrypted = encryptSecret(password)
 
@@ -62,6 +59,14 @@ export async function POST(
       notes,
       projectId: params.projectId,
     },
+  })
+
+  await createAuditLog({
+    action: "CREDENTIAL_CREATED",
+    details: `Created credential "${roleName}" for project ${params.projectId}`,
+    userId: auth.session!.user.id,
+    projectId: params.projectId,
+    credentialId: credential.id,
   })
 
   return NextResponse.json(

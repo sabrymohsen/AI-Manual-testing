@@ -1,16 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
 
 export async function GET(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
   try {
     const bug = await prisma.bugReport.findUnique({
       where: { id: params.bugId },
@@ -35,9 +30,12 @@ export async function GET(
       }
     })
 
-    if (!bug) {
-      return NextResponse.json({ error: "Bug report not found" }, { status: 404 })
+    if (!bug || !bug.project) {
+      return notFoundResponse("Bug report not found")
     }
+
+    const auth = await requireProjectOwner(bug.project.id)
+    if (auth.error) return unauthorizedResponse(auth.error)
 
     return NextResponse.json({ bug })
   } catch (error: any) {
@@ -49,11 +47,6 @@ export async function PUT(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
   try {
     const body = await request.json()
     const {
@@ -76,8 +69,11 @@ export async function PUT(
     })
 
     if (!existingBug) {
-      return NextResponse.json({ error: "Bug report not found" }, { status: 404 })
+      return notFoundResponse("Bug report not found")
     }
+
+    const auth = await requireProjectOwner(existingBug.projectId!)
+    if (auth.error) return unauthorizedResponse(auth.error)
 
     // Capture log messages for changes
     const changes: string[] = []
@@ -147,12 +143,19 @@ export async function DELETE(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
   try {
+    const bug = await prisma.bugReport.findUnique({
+      where: { id: params.bugId },
+      select: { projectId: true }
+    })
+
+    if (!bug) {
+      return notFoundResponse("Bug report not found")
+    }
+
+    const auth = await requireProjectOwner(bug.projectId!)
+    if (auth.error) return unauthorizedResponse(auth.error)
+
     await prisma.bugReport.delete({
       where: { id: params.bugId }
     })

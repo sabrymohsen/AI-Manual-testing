@@ -96,7 +96,29 @@ enum ActionType {
   click
   fill
   select
+  select_custom
+  select_searchable
+  multi_select
+  remove_multi_select_value
+  autocomplete_select
+  date_select
+  time_select
   upload_file
+  check
+  uncheck
+  radio_select
+  tab_select
+  menu_select
+  modal_open
+  modal_close
+  table_row_select
+  pagination_next
+  pagination_previous
+  accordion_expand
+  accordion_collapse
+  toggle_on
+  toggle_off
+  slider_set
   wait_for_text
   wait_for_url
   assert_visible
@@ -165,6 +187,7 @@ model Project {
   browserType BrowserType  @default(Chromium)
   viewport    ViewportType @default(Desktop)
   testType    TestType     @default(Functional)
+  status      ProjectStatus @default(Active)
 
   customViewportWidth  Int?
   customViewportHeight Int?
@@ -189,9 +212,18 @@ model Project {
   testDataVariables   TestDataVariable[]
   requirements        Requirement[]
   bugReports          BugReport[]
+  figmaFrames             FigmaFrame[]
+  visualCheckMappings     VisualCheckMapping[]
+  visualToleranceProfiles VisualToleranceProfile[]
+  visualCheckRuns         VisualCheckRun[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([environment])
+  @@index([createdAt])
 }
 
 model ProjectCredential {
@@ -216,6 +248,9 @@ model ProjectCredential {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([roleName])
 }
 
 model FigmaConfig {
@@ -266,6 +301,13 @@ model TestCase {
 
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
+  @@index([projectId])
+  @@index([moduleId])
+  @@index([featureId])
+  @@index([componentId])
+  @@index([priority])
+  @@index([source])
 }
 
 model TestStep {
@@ -284,11 +326,24 @@ model TestStep {
   timeoutMs         Int         @default(10000)
   assertions        Json?
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  componentType       String?
+  groupId             String?
+  rawEvents           Json?
+  actionMetadata      Json?
+  locatorCandidates   Json?
+  selectedOptionText  String?
+  selectedOptionValue String?
+  validationStatus    String?
+  validationMessage   String?
+
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   stepResults       TestStepResult[]
   manualStepResults ManualStepResult[]
+
+  @@index([testCaseId])
+  @@index([stepNumber])
 }
 
 model TestRun {
@@ -327,6 +382,11 @@ model TestRun {
 
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+
+  @@index([projectId])
+  @@index([testCaseId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model TestJob {
@@ -373,6 +433,10 @@ model TestStepResult {
 
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+
+  @@index([testRunId])
+  @@index([testStepId])
+  @@index([status])
 }
 
 model Log {
@@ -390,6 +454,10 @@ model Log {
   raw              Json?
 
   timestamp        DateTime        @default(now())
+
+  @@index([testRunId])
+  @@index([testStepResultId])
+  @@index([timestamp])
 }
 
 model NetworkLog {
@@ -413,6 +481,10 @@ model NetworkLog {
   responseBodyPreview String?
 
   timestamp        DateTime        @default(now())
+
+  @@index([testRunId])
+  @@index([testStepResultId])
+  @@index([timestamp])
 }
 
 model VisualComparisonResult {
@@ -435,6 +507,9 @@ model VisualComparisonResult {
   status           StepStatus
 
   createdAt        DateTime    @default(now())
+
+  @@index([testRunId])
+  @@index([stepResultId])
 }
 
 model BugReport {
@@ -491,9 +566,18 @@ model BugReport {
   manualTestSessionId String?
   manualTestSession   ManualTestSession? @relation(fields: [manualTestSessionId], references: [id], onDelete: SetNull)
   requirements        BugReportRequirement[]
+  recordedTestCaseId  String?
+  recordedTestCase    RecordedTestCase?  @relation(fields: [recordedTestCaseId], references: [id], onDelete: SetNull)
+  visualIssues        VisualDifferenceIssue[]
 
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([testCaseId])
+  @@index([testRunId])
+  @@index([createdAt])
 }
 
 model Attachment {
@@ -529,6 +613,10 @@ model AuditLog {
   credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
 
   createdAt    DateTime           @default(now())
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
 }
 
 model ElementLocator {
@@ -565,6 +653,12 @@ model ElementLocator {
   lastValidatedAt     DateTime?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
+
+  @@index([projectId])
+  @@index([moduleId])
+  @@index([featureId])
+  @@index([componentId])
+  @@index([locatorType])
 }
 
 model RecordingSession {
@@ -573,16 +667,19 @@ model RecordingSession {
   project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   credentialId String?
   credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
-  status       String             @default("Active") // Active, Paused, Finished, Cancelled
+  status       RecordingSessionStatus @default(Active)
   browserType  BrowserType
   viewport     ViewportType
   startUrl     String
   currentUrl   String?
+  keepBrowserOpen Boolean         @default(true)
+  startedAt    DateTime           @default(now())
+  finishedAt   DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
-  finishedAt   DateTime?
 
   recordedTestCases RecordedTestCase[]
+  notes             RecordingSessionNote[]
 }
 
 model RecordedTestCase {
@@ -590,19 +687,22 @@ model RecordedTestCase {
   sessionId            String
   session              RecordingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   title                String
-  module               String
+  module               String?           @default("General")
   moduleId             String?
   featureId            String?
   componentId          String?
   priority             Priority          @default(Medium)
   preconditions        String?
   requiredCredentialId String?
-  status               String            @default("Draft") // Draft, SavedAsTestCase, Discarded
+  requirementLinks     Json?
+  status               RecordedTestCaseStatus @default(Draft)
   finalTestCaseId      String?
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt
+  savedAt              DateTime?
 
   steps                RecordedStep[]
+  bugs                 BugReport[]
 }
 
 model RecordedStep {
@@ -617,7 +717,10 @@ model RecordedStep {
   targetValue         String?
   inputValue          String?
   expectedResult      String?
+  actualResult        String?
   notes               String?
+  assertionType       String?
+  assertionValue      String?
   tagName             String?
   visibleText         String?
   recommendedSelector String?
@@ -635,6 +738,17 @@ model RecordedStep {
   screenshotBefore    String?
   screenshotAfter     String?
   includeInFinalTestCase Boolean       @default(true)
+
+  componentType       String?
+  groupId             String?
+  rawEvents           Json?
+  actionMetadata      Json?
+  locatorCandidates   Json?
+  selectedOptionText  String?
+  selectedOptionValue String?
+  validationStatus    String?
+  validationMessage   String?
+
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 }
@@ -892,6 +1006,11 @@ model Requirement {
   updatedAt        DateTime @updatedAt
 
   @@unique([projectId, requirementKey])
+  @@index([projectId])
+  @@index([status])
+  @@index([moduleId])
+  @@index([featureId])
+  @@index([componentId])
 }
 
 model TestCaseRequirement {
@@ -955,6 +1074,232 @@ model BugAttachment {
   fileSize  Int?
   createdAt DateTime @default(now())
 }
+
+model RecordingSessionNote {
+  id             String           @id @default(uuid())
+  sessionId      String
+  session        RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  note           String
+  pageUrl        String?
+  screenshotPath String?
+  createdAt      DateTime         @default(now())
+}
+
+enum RecordingSessionStatus {
+  Active
+  Paused
+  Finished
+  Cancelled
+}
+
+enum RecordedTestCaseStatus {
+  Draft
+  SavedAsTestCase
+  Discarded
+}
+
+enum ProjectStatus {
+  Active
+  Archived
+}
+
+model FigmaFrame {
+  id                 String               @id @default(uuid())
+  projectId          String
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  fileKey            String
+  nodeId             String
+  name               String
+  pageName           String?
+  width              Int?
+  height             Int?
+  thumbnailPath      String?
+  referenceImagePath String?
+  lastSyncedAt       DateTime?
+  figmaUpdatedAt     DateTime?
+  
+  mappings           VisualCheckMapping[]
+  
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([projectId, fileKey, nodeId])
+}
+
+model VisualCheckMapping {
+  id                 String               @id @default(uuid())
+  projectId          String
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  figmaFrameId       String
+  figmaFrame         FigmaFrame           @relation(fields: [figmaFrameId], references: [id], onDelete: Cascade)
+  
+  appUrl             String
+  routeName          String?
+  moduleId           String?
+  featureId          String?
+  componentId        String?
+  
+  viewportName       String
+  viewportWidth      Int
+  viewportHeight     Int
+  deviceScaleFactor  Float                @default(1)
+  
+  browserType        BrowserType          @default(Chromium)
+  credentialId       String?
+  
+  waitStrategy       String               @default("network_idle")
+  waitSelector       String?
+  fixedDelayMs       Int?
+  
+  toleranceProfileId String?
+  toleranceProfile   VisualToleranceProfile? @relation(fields: [toleranceProfileId], references: [id], onDelete: SetNull)
+  
+  isActive           Boolean              @default(true)
+  
+  ignoredRegions     VisualIgnoredRegion[]
+  runs               VisualCheckRun[]
+  
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([projectId])
+  @@index([figmaFrameId])
+  @@index([toleranceProfileId])
+}
+
+model VisualIgnoredRegion {
+  id                 String               @id @default(uuid())
+  mappingId          String
+  mapping            VisualCheckMapping   @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+  
+  x                  Int
+  y                  Int
+  width              Int
+  height             Int
+  reason             String
+  appliesToViewport  String?
+  
+  createdAt          DateTime             @default(now())
+}
+
+model VisualToleranceProfile {
+  id                     String               @id @default(uuid())
+  projectId              String
+  project                Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  name                   String
+  allowedMismatchPercent Float                @default(2.0)
+  pixelThreshold         Float                @default(0.1)
+  minRegionArea          Int                  @default(25)
+  ignoreAntiAliasing     Boolean              @default(true)
+  layoutShiftTolerancePx Int                  @default(2)
+  
+  mappings               VisualCheckMapping[]
+  
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@index([projectId])
+}
+
+model VisualCheckRun {
+  id              String                  @id @default(uuid())
+  mappingId       String
+  mapping         VisualCheckMapping      @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+  
+  projectId       String
+  project         Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  status          VisualCheckStatus       @default(NeedsReview)
+  
+  figmaImagePath  String
+  actualImagePath String
+  diffImagePath   String?
+  
+  mismatchPercent Float
+  totalRegions    Int                     @default(0)
+  
+  browserType     BrowserType
+  viewportName    String
+  viewportWidth   Int
+  viewportHeight  Int
+  roleUsed        String?
+  
+  startedAt       DateTime                @default(now())
+  completedAt     DateTime?
+  durationMs      Int                     @default(0)
+  
+  issues          VisualDifferenceIssue[]
+  
+  createdAt       DateTime                @default(now())
+
+  @@index([mappingId])
+  @@index([projectId])
+  @@index([status])
+}
+
+model VisualDifferenceIssue {
+  id              String                    @id @default(uuid())
+  runId           String
+  run             VisualCheckRun            @relation(fields: [runId], references: [id], onDelete: Cascade)
+  
+  x               Int
+  y               Int
+  width           Int
+  height          Int
+  
+  mismatchPercent Float
+  regionArea      Int
+  
+  category        VisualDifferenceCategory  @default(Unknown)
+  severity        Priority                  @default(Medium)
+  status          VisualIssueStatus         @default(New)
+  
+  expectedCropPath String?
+  actualCropPath   String?
+  diffCropPath     String?
+  
+  notes           String?
+  bugReportId     String?
+  bugReport       BugReport?                @relation(fields: [bugReportId], references: [id], onDelete: SetNull)
+  
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+}
+
+enum VisualCheckStatus {
+  Passed
+  Failed
+  NeedsReview
+  Error
+}
+
+enum VisualIssueStatus {
+  New
+  Bug
+  Accepted
+  Ignored
+  NeedsReview
+  Fixed
+}
+
+enum VisualDifferenceCategory {
+  LayoutMismatch
+  SpacingMismatch
+  ColorMismatch
+  TextMismatch
+  FontSizeMismatch
+  MissingElement
+  ExtraElement
+  ImageMismatch
+  IconMismatch
+  AlignmentIssue
+  ResponsiveIssue
+  Unknown
+}
+
 
 
 

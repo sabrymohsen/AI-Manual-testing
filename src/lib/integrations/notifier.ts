@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/db"
 import { decryptSecret } from "@/lib/crypto"
 
+const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
+
 export async function notifyIntegrations(testRunId: string) {
   try {
     const testRun = (await prisma.testRun.findUnique({
@@ -77,7 +79,7 @@ export async function notifyIntegrations(testRunId: string) {
       let description = `Test Case: ${testRun.testCase?.title || "Visual Comparison"}\n`
       description += `Status: ${testRun.status}\n`
       description += `Duration: ${(testRun.durationMs / 1000).toFixed(2)}s\n`
-      description += `Report URL: http://localhost:3000/projects/${testRun.projectId}/test-runs/${testRun.id}/report\n\n`
+      description += `Report URL: ${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report\n\n`
       description += `Steps Execution details:\n`
       for (const res of testRun.stepResults) {
         description += `- Step ${res.stepNumber}: ${res.actionDescription} -> ${res.status}\n`
@@ -132,7 +134,7 @@ export async function notifyIntegrations(testRunId: string) {
       htmlDescription += `<p><strong>TestCase:</strong> ${testRun.testCase?.title || "Visual Comparison"}</p>`
       htmlDescription += `<p><strong>Status:</strong> ${testRun.status}</p>`
       htmlDescription += `<p><strong>Duration:</strong> ${(testRun.durationMs / 1000).toFixed(2)}s</p>`
-      htmlDescription += `<p><strong>Run Details:</strong> <a href="http://localhost:3000/projects/${testRun.projectId}/test-runs/${testRun.id}/report">View Report</a></p>`
+      htmlDescription += `<p><strong>Run Details:</strong> <a href="${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report">View Report</a></p>`
       htmlDescription += `<h3>Executed Steps:</h3><ul>`
       for (const res of testRun.stepResults) {
         const color = res.status === "Passed" ? "green" : res.status === "Failed" ? "red" : "gray"
@@ -188,7 +190,7 @@ export async function notifyIntegrations(testRunId: string) {
       let mdDescription = `**TestCase**: ${testRun.testCase?.title || "Visual Comparison"}\n`
       mdDescription += `**Status**: ${testRun.status}\n`
       mdDescription += `**Duration**: ${(testRun.durationMs / 1000).toFixed(2)}s\n`
-      mdDescription += `**Run Details**: [View Report](http://localhost:3000/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
+      mdDescription += `**Run Details**: [View Report](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
       mdDescription += `### Executed Steps:\n`
       for (const res of testRun.stepResults) {
         const statusIcon = res.status === "Passed" ? "✅" : res.status === "Failed" ? "❌" : "⏳"

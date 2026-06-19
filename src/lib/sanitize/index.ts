@@ -47,12 +47,12 @@ export function sanitizeUrl(url: string): string {
     }
     return parsed.toString()
   } catch {
-    const masked = url
+    let masked = url
     for (const param of Array.from(SENSITIVE_PARAMS)) {
       const regex = new RegExp(`(${param}=)[^&]+`, "gi")
-      return masked.replace(regex, `$1${MASKED}`)
+      masked = masked.replace(regex, `$1${MASKED}`)
     }
-    return url
+    return masked
   }
 }
 

@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { updateProjectSchema } from "@/schemas"
+import { requireProjectOwner, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return auth.status === 404 ? notFoundResponse(auth.error) : unauthorizedResponse(auth.error)
 
   const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id },
+    where: { id: params.projectId, userId: auth.session!.user.id },
     include: {
       credentials: {
         select: {
@@ -30,13 +29,16 @@ export async function GET(
         select: {
           testCases: true,
           testRuns: true,
+          credentials: true,
+          requirements: true,
+          bugReports: true,
         },
       },
     },
   })
 
   if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
+    return notFoundResponse("Project not found")
   }
 
   return NextResponse.json({ project })
@@ -46,23 +48,19 @@ export async function PUT(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id },
-  })
-
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return auth.status === 404 ? notFoundResponse(auth.error) : unauthorizedResponse(auth.error)
 
   const body = await request.json()
+  const parsed = updateProjectSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+  }
+
   const updated = await prisma.project.update({
     where: { id: params.projectId },
-    data: body,
+    data: parsed.data,
   })
 
   return NextResponse.json({ project: updated })
@@ -72,18 +70,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id },
-  })
-
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return auth.status === 404 ? notFoundResponse(auth.error) : unauthorizedResponse(auth.error)
 
   await prisma.project.delete({ where: { id: params.projectId } })
 

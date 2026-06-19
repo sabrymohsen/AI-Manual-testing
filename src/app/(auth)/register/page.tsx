@@ -1,14 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
@@ -17,31 +15,39 @@ export default function RegisterPage() {
     setLoading(true)
     setError("")
 
-    const form = new FormData(e.currentTarget)
-    const password = form.get("password") as string
-    const confirm = form.get("confirmPassword") as string
+    try {
+      const form = new FormData(e.currentTarget)
+      const password = form.get("password") as string
+      const confirm = form.get("confirmPassword") as string
 
-    if (password !== confirm) {
-      setError("Passwords do not match")
-      setLoading(false)
-      return
-    }
+      if (password !== confirm) {
+        setError("Passwords do not match")
+        setLoading(false)
+        return
+      }
 
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.get("name"),
-        email: form.get("email"),
-        password,
-      }),
-    })
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.get("name"),
+          email: form.get("email"),
+          password,
+        }),
+      })
 
-    if (res.ok) {
-      router.push("/dashboard")
-    } else {
       const data = await res.json()
-      setError(data.error || "Registration failed")
+
+      if (res.ok) {
+        window.location.href = "/dashboard"
+      } else {
+        setError(data.error || "Registration failed")
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error("Registration error:", err)
+      setError("An unexpected error occurred. Please try again.")
       setLoading(false)
     }
   }

@@ -1,18 +1,39 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const bodySchema = z.object({
+  testCaseIds: z.array(z.string()).min(1, "testCaseIds is required"),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { requirementId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const body = await request.json()
+    const requirement = await prisma.requirement.findUnique({
+      where: { id: params.requirementId },
+      include: { project: { select: { userId: true } } }
+    })
+
+    if (!requirement) {
+      return notFoundResponse("Requirement not found")
+    }
+
+    if (requirement.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
+    }
+
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
+    }
+    const body = rawBody
     const { testCaseIds } = body
 
     if (!testCaseIds || !Array.isArray(testCaseIds)) {

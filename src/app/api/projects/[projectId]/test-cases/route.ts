@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
+import { createTestCaseSchema } from "@/schemas"
 
 async function resolveHierarchyIds(projectId: string, data: {
   moduleId?: string | null
@@ -168,10 +170,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const { searchParams } = new URL(request.url)
   const testModule = searchParams.get("module")
@@ -184,7 +184,6 @@ export async function GET(
   const testCases = await prisma.testCase.findMany({
     where: {
       projectId: params.projectId,
-      project: { userId: session.user.id },
       ...(testModule ? { module: testModule } : {}),
       ...(priority ? { priority: priority as any } : {}),
       ...(source ? { source: source as any } : {}),
@@ -208,10 +207,8 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
 
@@ -330,9 +327,22 @@ export async function DELETE(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
+
+  const fs = require("fs")
+  const path = require("path")
+
+  function collectFilePaths(obj: any, fields: string[]): string[] {
+    const paths: string[] = []
+    if (!obj) return paths
+    for (const field of fields) {
+      const val = obj[field]
+      if (val && typeof val === "string" && val.trim().length > 0) {
+        paths.push(val)
+      }
+    }
+    return paths
   }
 
   try {
@@ -342,17 +352,241 @@ export async function DELETE(
       return NextResponse.json({ error: "Invalid IDs list" }, { status: 400 })
     }
 
-    await prisma.testCase.deleteMany({
+    const testCases = await prisma.testCase.findMany({
       where: {
-        projectId: params.projectId,
         id: { in: ids },
+        projectId: params.projectId,
       },
+      include: {
+        testRuns: { select: { id: true } },
+        manualSessionCases: { select: { id: true } }
+      }
     })
 
-    return NextResponse.json({ success: true })
+    const foundIds = testCases.map(tc => tc.id)
+    if (foundIds.length === 0) {
+      return NextResponse.json({ success: true, count: 0 })
+    }
+
+    const testRunIds = testCases.flatMap(tc => tc.testRuns.map(r => r.id))
+    const manualSessionCaseIds = testCases.flatMap(tc => tc.manualSessionCases.map(m => m.id))
+
+    // Fetch full data for file cleanup and exclusive bug checks
+    const testCasesFull = await prisma.testCase.findMany({
+      where: { id: { in: foundIds } },
+      include: {
+        steps: true,
+        testRuns: {
+          include: {
+            stepResults: true,
+            attachments: true,
+            visualResults: true,
+            bugReports: {
+              include: {
+                bugAttachments: true,
+                attachments: true,
+                visualIssues: true,
+              }
+            }
+          }
+        },
+        manualSessionCases: {
+          include: {
+            stepResults: true
+          }
+        },
+        bugReports: {
+          include: {
+            bugAttachments: true,
+            attachments: true,
+            visualIssues: true
+          }
+        }
+      }
+    })
+
+    const filesToDelete: string[] = []
+    for (const tc of testCasesFull) {
+      for (const run of tc.testRuns) {
+        for (const sr of run.stepResults) {
+          filesToDelete.push(...collectFilePaths(sr, ["screenshotBefore", "screenshotAfter"]))
+        }
+        for (const att of run.attachments) {
+          filesToDelete.push(...collectFilePaths(att, ["filePath"]))
+        }
+        for (const vr of run.visualResults) {
+          filesToDelete.push(...collectFilePaths(vr, ["figmaImagePath", "actualImagePath", "diffImagePath"]))
+        }
+        for (const bug of run.bugReports) {
+          filesToDelete.push(...collectFilePaths(bug, ["screenshotPath"]))
+          for (const ba of bug.bugAttachments) {
+            filesToDelete.push(...collectFilePaths(ba, ["filePath"]))
+          }
+          for (const att of bug.attachments) {
+            filesToDelete.push(...collectFilePaths(att, ["filePath"]))
+          }
+          for (const vi of bug.visualIssues) {
+            filesToDelete.push(...collectFilePaths(vi, ["expectedCropPath", "actualCropPath", "diffCropPath"]))
+          }
+        }
+      }
+      for (const bug of tc.bugReports) {
+        filesToDelete.push(...collectFilePaths(bug, ["screenshotPath"]))
+        for (const ba of bug.bugAttachments) {
+          filesToDelete.push(...collectFilePaths(ba, ["filePath"]))
+        }
+        for (const att of bug.attachments) {
+          filesToDelete.push(...collectFilePaths(att, ["filePath"]))
+        }
+        for (const vi of bug.visualIssues) {
+          filesToDelete.push(...collectFilePaths(vi, ["expectedCropPath", "actualCropPath", "diffCropPath"]))
+        }
+      }
+      for (const msc of tc.manualSessionCases) {
+        for (const msr of msc.stepResults) {
+          filesToDelete.push(...collectFilePaths(msr, ["screenshotPath"]))
+        }
+      }
+    }
+
+    // Determine exclusive vs shared bug reports
+    const allBugIds = new Set<string>()
+    for (const tc of testCasesFull) {
+      for (const run of tc.testRuns) {
+        for (const bug of run.bugReports) {
+          allBugIds.add(bug.id)
+        }
+      }
+      for (const bug of tc.bugReports) {
+        allBugIds.add(bug.id)
+      }
+    }
+
+    const exclusiveBugIds: string[] = []
+    const sharedBugIds: string[] = []
+
+    for (const bugId of Array.from(allBugIds)) {
+      const otherLinks = await prisma.bugReport.findFirst({
+        where: {
+          id: bugId,
+          OR: [
+            { testCaseId: { notIn: foundIds, not: null } },
+          ]
+        }
+      })
+
+      if (!otherLinks) {
+        exclusiveBugIds.push(bugId)
+      } else {
+        sharedBugIds.push(bugId)
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (testRunIds.length > 0) {
+        await tx.visualComparisonResult.deleteMany({
+          where: { testRunId: { in: testRunIds } }
+        })
+        await tx.log.deleteMany({
+          where: { testRunId: { in: testRunIds } }
+        })
+        await tx.networkLog.deleteMany({
+          where: { testRunId: { in: testRunIds } }
+        })
+        await tx.attachment.deleteMany({
+          where: { testRunId: { in: testRunIds } }
+        })
+      }
+
+      if (exclusiveBugIds.length > 0) {
+        await tx.bugAttachment.deleteMany({ where: { bugId: { in: exclusiveBugIds } } })
+        await tx.bugActivity.deleteMany({ where: { bugId: { in: exclusiveBugIds } } })
+        await tx.bugComment.deleteMany({ where: { bugId: { in: exclusiveBugIds } } })
+        await tx.bugReportRequirement.deleteMany({ where: { bugReportId: { in: exclusiveBugIds } } })
+        await tx.attachment.deleteMany({ where: { bugReportId: { in: exclusiveBugIds } } })
+        
+        await tx.visualDifferenceIssue.updateMany({
+          where: { bugReportId: { in: exclusiveBugIds } },
+          data: { bugReportId: null }
+        })
+
+        await tx.bugReport.deleteMany({ where: { id: { in: exclusiveBugIds } } })
+      }
+
+      if (sharedBugIds.length > 0) {
+        await tx.bugReport.updateMany({
+          where: { id: { in: sharedBugIds } },
+          data: { testCaseId: null }
+        })
+      }
+
+      if (testRunIds.length > 0) {
+        await tx.bugReport.updateMany({
+          where: { 
+            testRunId: { in: testRunIds },
+            id: { notIn: exclusiveBugIds }
+          },
+          data: { testRunId: null }
+        })
+      }
+
+      if (manualSessionCaseIds.length > 0) {
+        await tx.manualStepResult.deleteMany({
+          where: { sessionCaseId: { in: manualSessionCaseIds } }
+        })
+        await tx.manualSessionCase.deleteMany({
+          where: { id: { in: manualSessionCaseIds } }
+        })
+      }
+
+      if (testRunIds.length > 0) {
+        await tx.testStepResult.deleteMany({
+          where: { testRunId: { in: testRunIds } }
+        })
+        await tx.testJob.deleteMany({
+          where: { testRunId: { in: testRunIds } }
+        })
+        await tx.testRun.deleteMany({
+          where: { id: { in: testRunIds } }
+        })
+      }
+
+      await tx.testCaseRequirement.deleteMany({
+        where: { testCaseId: { in: foundIds } }
+      })
+
+      await tx.testStep.deleteMany({
+        where: { testCaseId: { in: foundIds } }
+      })
+
+      await tx.testCase.deleteMany({
+        where: { id: { in: foundIds } }
+      })
+    })
+
+    const STORAGE_ROOT = path.resolve(process.cwd(), "storage")
+    const isUnderStorageRoot = (filePath: string): boolean => {
+      const resolved = path.resolve(filePath)
+      return resolved.startsWith(STORAGE_ROOT)
+    }
+
+    const uniqueFiles = Array.from(new Set(filesToDelete))
+    for (const filePath of uniqueFiles) {
+      try {
+        const resolvedPath = path.resolve(filePath)
+        if (isUnderStorageRoot(resolvedPath) && fs.existsSync(resolvedPath)) {
+          fs.unlinkSync(resolvedPath)
+        }
+      } catch (err: any) {
+        console.error(`Failed to delete file artifact: ${filePath}`, err)
+      }
+    }
+
+    return NextResponse.json({ success: true, count: foundIds.length })
   } catch (err: any) {
     console.error("Bulk delete error:", err)
     return NextResponse.json({ error: err.message || "Failed to delete test cases" }, { status: 500 })
   }
 }
+
 

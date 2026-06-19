@@ -1,19 +1,42 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const bulkAssignSchema = z.object({
+  bugIds: z.array(z.string()).min(1),
+  assignedTo: z.string().optional().nullable()
+})
 
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
+  const session = auth.session!
 
   try {
     const body = await request.json()
-    const { bugIds, assignedTo } = body
+    const parsed = bulkAssignSchema.safeParse(body)
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+    }
 
-    if (!bugIds || !Array.isArray(bugIds) || bugIds.length === 0) {
-      return NextResponse.json({ error: "No bug IDs provided" }, { status: 400 })
+    const { bugIds, assignedTo } = parsed.data
+
+    // Verify ownership of all bug reports
+    const bugs = await prisma.bugReport.findMany({
+      where: { id: { in: bugIds } },
+      select: { projectId: true }
+    })
+    const bugProjectIds = Array.from(new Set(bugs.map(b => b.projectId).filter(Boolean) as string[]))
+
+    const userProjects = await prisma.project.findMany({
+      where: { userId: session.user.id },
+      select: { id: true }
+    })
+    const userProjectIds = userProjects.map(p => p.id)
+
+    if (bugProjectIds.some(pid => pid && !userProjectIds.includes(pid))) {
+      return unauthorizedResponse("Access denied to one or more bug reports")
     }
 
     await prisma.$transaction(async (tx) => {

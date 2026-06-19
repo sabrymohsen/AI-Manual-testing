@@ -1,21 +1,35 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const putBodySchema = z.object({
+  requirementKey: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  acceptanceCriteria: z.string().optional(),
+  priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
+  status: z.enum(["Draft", "ReadyForTesting", "InTesting", "Covered", "PartiallyCovered", "Failed", "Blocked", "Deprecated"]).optional(),
+  moduleId: z.string().optional().nullable(),
+  featureId: z.string().optional().nullable(),
+  componentId: z.string().optional().nullable(),
+  figmaUrl: z.string().optional().nullable(),
+  externalUrl: z.string().optional().nullable(),
+  externalSystem: z.string().optional().nullable(),
+})
 
 export async function GET(
   request: Request,
   { params }: { params: { requirementId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const requirement = await prisma.requirement.findUnique({
       where: { id: params.requirementId },
       include: {
-        project: true,
+        project: { select: { userId: true } },
         module: true,
         feature: true,
         component: true,
@@ -46,7 +60,11 @@ export async function GET(
     })
 
     if (!requirement) {
-      return NextResponse.json({ error: "Requirement not found" }, { status: 404 })
+      return notFoundResponse("Requirement not found")
+    }
+
+    if (requirement.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
     }
 
     // Build breadcrumbs path: Module / Feature / Component
@@ -153,21 +171,29 @@ export async function PUT(
   request: Request,
   { params }: { params: { requirementId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const requirement = await prisma.requirement.findUnique({
-      where: { id: params.requirementId }
+      where: { id: params.requirementId },
+      include: { project: { select: { userId: true } } }
     })
 
     if (!requirement) {
-      return NextResponse.json({ error: "Requirement not found" }, { status: 404 })
+      return notFoundResponse("Requirement not found")
     }
 
-    const body = await request.json()
+    if (requirement.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
+    }
+
+    const rawBody = await request.json()
+    const parseResult = putBodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.errors.map(e => e.message).join(", ") }, { status: 400 })
+    }
+    const body = rawBody
     const {
       requirementKey,
       title,
@@ -231,18 +257,21 @@ export async function DELETE(
   request: Request,
   { params }: { params: { requirementId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const requirement = await prisma.requirement.findUnique({
-      where: { id: params.requirementId }
+      where: { id: params.requirementId },
+      include: { project: { select: { userId: true } } }
     })
 
     if (!requirement) {
-      return NextResponse.json({ error: "Requirement not found" }, { status: 404 })
+      return notFoundResponse("Requirement not found")
+    }
+
+    if (requirement.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
     }
 
     await prisma.requirement.delete({

@@ -1,23 +1,28 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const confirmImportSchema = z.object({
+  previewRows: z.array(z.any()).min(1, "previewRows is required"),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
-    const { previewRows } = body
+    const parsed = confirmImportSchema.safeParse(body)
 
-    if (!previewRows || !Array.isArray(previewRows)) {
-      return NextResponse.json({ error: "previewRows is required" }, { status: 400 })
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
     }
+
+    const { previewRows } = parsed.data
 
     let createdCount = 0
     let updatedCount = 0

@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { explainFailure } from "@/lib/ai/explain-failure"
+import { z } from "zod"
+
+const bodySchema = z.object({
+  errorMessage: z.string().min(1, "errorMessage is required"),
+  stepDescription: z.string().min(1, "stepDescription is required"),
+  logs: z.array(z.string()).optional(),
+})
 
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const { errorMessage, logs, stepDescription } = await request.json()
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
+    }
+    const { errorMessage, logs, stepDescription } = rawBody
 
     if (!errorMessage || !stepDescription) {
       return NextResponse.json(

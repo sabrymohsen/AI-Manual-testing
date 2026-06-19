@@ -1,16 +1,33 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { z } from "zod"
+import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { addTestRunJob } from "@/lib/queue"
 
+const bodySchema = z.object({
+  testCaseIds: z.array(z.string().min(1)).min(1, "No test case IDs provided"),
+  executionMode: z.enum(["Manual Session", "Automated Run"]).optional().nullable(),
+  browserType: z.string().optional().nullable(),
+  viewport: z.string().optional().nullable(),
+  environment: z.string().optional().nullable(),
+  credentialId: z.string().optional().nullable(),
+  name: z.string().optional().nullable(),
+  projectId: z.string().optional().nullable(),
+})
+
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
   }
+  const session = auth.session!
 
   try {
     const body = await request.json()
+    const parse = bodySchema.safeParse(body)
+    if (!parse.success) {
+      return badRequestResponse(parse.error.errors[0].message)
+    }
     const {
       testCaseIds,
       executionMode,
@@ -18,11 +35,15 @@ export async function POST(request: Request) {
       viewport,
       environment,
       credentialId,
-      name
-    } = body
+      name,
+      projectId
+    } = parse.data
 
-    if (!testCaseIds || !Array.isArray(testCaseIds) || testCaseIds.length === 0) {
-      return NextResponse.json({ error: "No test case IDs provided" }, { status: 400 })
+    if (projectId) {
+      const projAuth = await requireProjectOwner(projectId)
+      if (projAuth.error) {
+        return notFoundResponse("Project not found or access denied")
+      }
     }
 
     // Fetch test cases to group by projectId
@@ -176,7 +197,13 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         type: "automated",
-        runsCount: testRuns.length
+        runsCount: testRuns.length,
+        runs: testRuns.map(r => ({
+          id: r.id,
+          testCaseId: r.testCaseId,
+          projectId: r.projectId,
+          status: r.status
+        }))
       })
     }
   } catch (error: any) {

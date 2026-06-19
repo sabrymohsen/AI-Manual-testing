@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { z } from "zod"
+import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+
+const bodySchema = z.object({
+  testCaseIds: z.array(z.string().min(1)).min(1, "No test case IDs provided"),
+  priority: z.enum(["Low", "Medium", "High", "Critical"]),
+})
 
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
   }
+  const session = auth.session!
 
   try {
     const body = await request.json()
-    const { testCaseIds, priority } = body
-
-    if (!testCaseIds || !Array.isArray(testCaseIds) || testCaseIds.length === 0) {
-      return NextResponse.json({ error: "No test case IDs provided" }, { status: 400 })
+    const parse = bodySchema.safeParse(body)
+    if (!parse.success) {
+      return badRequestResponse(parse.error.errors[0].message)
     }
-
-    if (!priority) {
-      return NextResponse.json({ error: "priority is required" }, { status: 400 })
-    }
+    const { testCaseIds, priority } = parse.data
 
     const result = await prisma.testCase.updateMany({
       where: {

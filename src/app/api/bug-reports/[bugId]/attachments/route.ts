@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
 
 export async function POST(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const bug = await prisma.bugReport.findUnique({
+    where: { id: params.bugId },
+    select: { projectId: true }
+  })
+
+  if (!bug) {
+    return notFoundResponse("Bug report not found")
   }
+
+  const auth = await requireProjectOwner(bug.projectId!)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()

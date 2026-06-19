@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
 import { addTestRunJob } from "@/lib/queue"
+import { createTestRunSchema } from "@/schemas"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const testRuns = await prisma.testRun.findMany({
     where: { projectId: params.projectId },
@@ -29,20 +29,31 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
+
+  // Rate limit: 20 test runs per user per 10 minutes
+  const rateLimit = await checkRateLimit(`testrun:${auth.session!.user.id}`, {
+    windowMs: 10 * 60 * 1000,
+    maxRequests: 20,
+    keyPrefix: "ratelimit",
+  })
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Too many test run requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)) } }
+    )
   }
 
   const body = await request.json()
-  const { testCaseId, credentialId } = body
+  const parsed = createTestRunSchema.safeParse(body)
 
-  if (!testCaseId) {
-    return NextResponse.json(
-      { error: "testCaseId is required" },
-      { status: 400 }
-    )
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
+
+  const { testCaseId, credentialId } = parsed.data
 
   const testCase = await prisma.testCase.findFirst({
     where: { id: testCaseId, projectId: params.projectId },
@@ -59,13 +70,13 @@ export async function POST(
   })
 
   if (!testCase) {
-    return NextResponse.json({ error: "Test case not found" }, { status: 404 })
+    return notFoundResponse("Test case not found")
   }
 
   let roleUsed = "None"
   if (credentialId) {
-    const credential = await prisma.projectCredential.findUnique({
-      where: { id: credentialId },
+    const credential = await prisma.projectCredential.findFirst({
+      where: { id: credentialId, projectId: params.projectId },
     })
     if (credential) {
       roleUsed = credential.roleName

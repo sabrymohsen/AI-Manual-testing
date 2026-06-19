@@ -6,6 +6,15 @@ interface Step {
   targetValue?: string | null
   inputValue?: string | null
   timeoutMs: number
+  componentType?: string | null
+  groupId?: string | null
+  rawEvents?: any
+  actionMetadata?: any
+  locatorCandidates?: any
+  selectedOptionText?: string | null
+  selectedOptionValue?: string | null
+  validationStatus?: string | null
+  validationMessage?: string | null
 }
 
 function getLocator(page: Page, targetType: string, targetValue?: string | null) {
@@ -77,6 +86,16 @@ export async function executeStep(page: Page, step: Step): Promise<void> {
       break
 
     case "click":
+    case "radio_select":
+    case "tab_select":
+    case "menu_select":
+    case "modal_open":
+    case "modal_close":
+    case "table_row_select":
+    case "pagination_next":
+    case "pagination_previous":
+    case "accordion_expand":
+    case "accordion_collapse":
       await locator.waitFor({ state: "visible", timeout })
       await locator.click()
       break
@@ -90,6 +109,148 @@ export async function executeStep(page: Page, step: Step): Promise<void> {
       await locator.waitFor({ state: "visible", timeout })
       await locator.selectOption(inputValue || "")
       break
+
+    case "select_custom": {
+      // Click dropdown trigger first
+      await locator.waitFor({ state: "visible", timeout })
+      await locator.click()
+
+      // Attempt to find and click target option
+      let optionLoc = null
+      const meta = step.actionMetadata as any
+      if (meta && typeof meta === "object" && meta.optionSelector) {
+        optionLoc = page.locator(meta.optionSelector)
+      } else if (step.selectedOptionText) {
+        optionLoc = page.getByRole("option", { name: step.selectedOptionText, exact: false })
+          .or(page.getByText(step.selectedOptionText, { exact: false }))
+          .or(page.locator(`[role="option"]:has-text("${step.selectedOptionText}")`))
+          .first()
+      } else if (inputValue) {
+        optionLoc = page.getByRole("option", { name: inputValue, exact: false })
+          .or(page.getByText(inputValue, { exact: false }))
+          .first()
+      }
+
+      if (optionLoc) {
+        await optionLoc.waitFor({ state: "visible", timeout: 8000 })
+        await optionLoc.click()
+      }
+      break
+    }
+
+    case "select_searchable":
+    case "autocomplete_select": {
+      // Click trigger/combobox
+      await locator.waitFor({ state: "visible", timeout })
+      await locator.click()
+
+      // Fill in search query
+      const phrase = (step.actionMetadata as any)?.searchPhrase || inputValue || ""
+      if (phrase) {
+        let inputLoc = locator
+        if (await locator.evaluate((el) => el.tagName.toLowerCase() !== "input")) {
+          // If the locator isn't an input, try to search for an input inside it
+          inputLoc = locator.locator("input").first()
+          if (await inputLoc.count() === 0) {
+            // fallback: find active text input
+            inputLoc = page.locator("input[type='text'], input:not([type])").first()
+          }
+        }
+        await inputLoc.fill(phrase)
+      }
+
+      // Select option
+      let optionLoc = null
+      const meta = step.actionMetadata as any
+      if (meta && typeof meta === "object" && meta.optionSelector) {
+        optionLoc = page.locator(meta.optionSelector)
+      } else if (step.selectedOptionText) {
+        optionLoc = page.getByRole("option", { name: step.selectedOptionText, exact: false })
+          .or(page.getByText(step.selectedOptionText, { exact: false }))
+          .first()
+      } else if (inputValue) {
+        optionLoc = page.getByRole("option", { name: inputValue, exact: false })
+          .or(page.getByText(inputValue, { exact: false }))
+          .first()
+      }
+
+      if (optionLoc) {
+        await optionLoc.waitFor({ state: "visible", timeout: 8000 })
+        await optionLoc.click()
+      }
+      break
+    }
+
+    case "multi_select": {
+      await locator.waitFor({ state: "visible", timeout })
+      await locator.click()
+
+      const options = (step.actionMetadata as any)?.options || []
+      for (const opt of options) {
+        const text = typeof opt === "string" ? opt : opt.text
+        const optLoc = page.getByRole("option", { name: text, exact: false })
+          .or(page.getByText(text, { exact: false }))
+          .first()
+        await optLoc.click()
+      }
+      await page.keyboard.press("Escape")
+      break
+    }
+
+    case "remove_multi_select_value": {
+      await locator.waitFor({ state: "visible", timeout })
+      await locator.click()
+      break
+    }
+
+    case "date_select":
+    case "time_select": {
+      await locator.waitFor({ state: "visible", timeout })
+      if (await locator.evaluate((el) => el.tagName.toLowerCase() === "input")) {
+        await locator.fill(inputValue || "")
+      } else {
+        await locator.click()
+      }
+      break
+    }
+
+    case "check":
+      await locator.waitFor({ state: "visible", timeout })
+      await locator.check()
+      break
+
+    case "uncheck":
+      await locator.waitFor({ state: "visible", timeout })
+      await locator.uncheck()
+      break
+
+    case "toggle_on": {
+      await locator.waitFor({ state: "visible", timeout })
+      const isChecked = await locator.getAttribute("aria-checked") === "true" || await locator.isChecked()
+      if (!isChecked) {
+        await locator.click()
+      }
+      break
+    }
+
+    case "toggle_off": {
+      await locator.waitFor({ state: "visible", timeout })
+      const isChecked = await locator.getAttribute("aria-checked") === "true" || await locator.isChecked()
+      if (isChecked) {
+        await locator.click()
+      }
+      break
+    }
+
+    case "slider_set": {
+      await locator.waitFor({ state: "visible", timeout })
+      if (inputValue) {
+        await locator.fill(inputValue)
+      } else {
+        await locator.click()
+      }
+      break
+    }
 
     case "upload_file":
       await locator.waitFor({ state: "visible", timeout })

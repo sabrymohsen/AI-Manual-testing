@@ -1,23 +1,29 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const previewImportSchema = z.object({
+  rows: z.array(z.any()).min(1, "rows is required"),
+  mapping: z.record(z.string(), z.any()).refine((v) => Object.keys(v).length > 0, { message: "mapping is required" }),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
-    const { rows, mapping } = body
+    const parsed = previewImportSchema.safeParse(body)
 
-    if (!rows || !Array.isArray(rows) || !mapping) {
-      return NextResponse.json({ error: "rows and mapping are required" }, { status: 400 })
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
     }
+
+    const { rows, mapping } = parsed.data
 
     // Load existing structures for comparison
     const existingModules = await prisma.projectModule.findMany({ where: { projectId: params.projectId } })

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
 import { chromium, Page } from "playwright"
 
 function getPlaywrightLocator(page: Page, type: string, value: string) {
@@ -36,24 +37,21 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: session.user.id },
-  })
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
-  const { pageUrl, locatorType, locatorValue, locatorId } = body
-
-  if (!pageUrl || !locatorType || !locatorValue) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+  const validateSchema = z.object({
+    pageUrl: z.string().url("Invalid URL"),
+    locatorType: z.string().min(1, "Locator type is required"),
+    locatorValue: z.string().min(1, "Locator value is required"),
+    locatorId: z.string().optional(),
+  })
+  const parsed = validateSchema.safeParse(body)
+  if (!parsed.success) {
+    return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
+  const { pageUrl, locatorType, locatorValue, locatorId } = parsed.data
 
   let browser: any = null
   let context: any = null

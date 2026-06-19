@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
+import { z } from "zod"
 
 function getClient() {
   const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
@@ -40,19 +41,23 @@ function localJaccardSimilarity(str1: string, str2: string): number {
   return Math.round((intersectionCount / unionSize) * 100)
 }
 
+const bodySchema = z.object({
+  projectId: z.string().min(1, "projectId is required"),
+  title: z.string().min(1, "title is required"),
+  steps: z.array(z.any()).optional(),
+})
+
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
   try {
-    const body = await request.json()
-    const { projectId, title, steps } = body
-
-    if (!projectId || !title) {
-      return NextResponse.json({ error: "projectId and title are required" }, { status: 400 })
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
     }
+    const { projectId, title, steps } = rawBody
+
+    const auth = await requireProjectOwner(projectId)
+    if (auth.error) return unauthorizedResponse(auth.error)
 
     const existing = await prisma.testCase.findMany({
       where: { projectId },

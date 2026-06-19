@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
   { params }: { params: { featureId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    const feature = await prisma.projectFeature.findFirst({
+      where: { id: params.featureId, project: { userId: auth.session!.user.id } }
+    })
+    if (!feature) {
+      return notFoundResponse("Feature not found")
+    }
+
     const components = await prisma.projectComponent.findMany({
       where: { featureId: params.featureId },
       include: {
@@ -33,22 +38,20 @@ export async function POST(
   request: Request,
   { params }: { params: { featureId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const parentFeature = await prisma.projectFeature.findUnique({
-      where: { id: params.featureId }
+    const parentFeature = await prisma.projectFeature.findFirst({
+      where: { id: params.featureId, project: { userId: auth.session!.user.id } }
     })
     if (!parentFeature) {
-      return NextResponse.json({ error: "Feature not found" }, { status: 404 })
+      return notFoundResponse("Feature not found")
     }
 
     const body = await request.json()
     if (!body.name) {
-      return NextResponse.json({ error: "Component name is required" }, { status: 400 })
+      return badRequestResponse("Component name is required")
     }
 
     const newComponent = await prisma.projectComponent.create({

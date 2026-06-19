@@ -1,17 +1,22 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
   { params }: { params: { moduleId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    const module = await prisma.projectModule.findFirst({
+      where: { id: params.moduleId, project: { userId: auth.session!.user.id } }
+    })
+    if (!module) {
+      return notFoundResponse("Module not found")
+    }
+
     const features = await prisma.projectFeature.findMany({
       where: { moduleId: params.moduleId },
       include: {
@@ -34,22 +39,20 @@ export async function POST(
   request: Request,
   { params }: { params: { moduleId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const parentModule = await prisma.projectModule.findUnique({
-      where: { id: params.moduleId }
+    const parentModule = await prisma.projectModule.findFirst({
+      where: { id: params.moduleId, project: { userId: auth.session!.user.id } }
     })
     if (!parentModule) {
-      return NextResponse.json({ error: "Module not found" }, { status: 404 })
+      return notFoundResponse("Module not found")
     }
 
     const body = await request.json()
     if (!body.name) {
-      return NextResponse.json({ error: "Feature name is required" }, { status: 400 })
+      return badRequestResponse("Feature name is required")
     }
 
     const newFeature = await prisma.projectFeature.create({

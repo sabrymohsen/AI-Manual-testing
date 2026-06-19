@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { createBugReportSchema } from "@/schemas"
+import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 
 export async function GET(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get("projectId") || undefined
@@ -30,10 +29,15 @@ export async function GET(request: NextRequest) {
   const sortBy = searchParams.get("sortBy") || "createdAt"
   const sortDirection = searchParams.get("sortDirection") || "desc"
 
+  if (projectId) {
+    const ownerAuth = await requireProjectOwner(projectId)
+    if (ownerAuth.error) return unauthorizedResponse(ownerAuth.error)
+  }
+
   try {
     // 1. Get user's projects to ensure strict isolation
     const userProjects = await prisma.project.findMany({
-      where: { userId: session.user.id },
+      where: { userId: auth.session!.user.id },
       select: { id: true }
     })
     const projectIds = userProjects.map(p => p.id)
@@ -205,14 +209,20 @@ export async function GET(request: NextRequest) {
   }
 }
 
+
+
 export async function POST(request: Request) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const authCheck = await requireAuth()
+  if (authCheck.error) return unauthorizedResponse(authCheck.error)
 
   try {
     const body = await request.json()
+    const parsed = createBugReportSchema.safeParse(body)
+
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+    }
+
     const {
       projectId,
       title,
@@ -229,11 +239,10 @@ export async function POST(request: Request) {
       componentId,
       testCaseId,
       requirementIds
-    } = body
+    } = parsed.data
 
-    if (!projectId || !title) {
-      return NextResponse.json({ error: "projectId and title are required" }, { status: 400 })
-    }
+    const auth = await requireProjectOwner(projectId)
+    if (auth.error) return unauthorizedResponse(auth.error)
 
     // 1. Generate sequential bug key e.g., BUG-0001
     const count = await prisma.bugReport.count({ where: { projectId } })

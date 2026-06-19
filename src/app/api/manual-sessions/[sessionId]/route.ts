@@ -1,22 +1,29 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const putBodySchema = z.object({
+  name: z.string().optional(),
+  status: z.string().optional(),
+  note: z.string().optional(),
+  screenshotPath: z.string().optional(),
+  pageUrl: z.string().optional(),
+})
 
 export async function GET(
   request: Request,
   { params }: { params: { sessionId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const sessionDetails = await prisma.manualTestSession.findUnique({
       where: { id: params.sessionId },
       include: {
         project: {
-          select: { name: true }
+          select: { name: true, userId: true }
         },
         credential: true,
         sessionCases: {
@@ -43,7 +50,11 @@ export async function GET(
     })
 
     if (!sessionDetails) {
-      return NextResponse.json({ error: "Manual session not found" }, { status: 404 })
+      return notFoundResponse("Manual session not found")
+    }
+
+    if (sessionDetails.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
     }
 
     return NextResponse.json(sessionDetails)
@@ -56,13 +67,29 @@ export async function PUT(
   request: Request,
   { params }: { params: { sessionId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const body = await request.json()
+    const session = await prisma.manualTestSession.findUnique({
+      where: { id: params.sessionId },
+      include: { project: { select: { userId: true } } }
+    })
+
+    if (!session) {
+      return notFoundResponse("Manual session not found")
+    }
+
+    if (session.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
+    }
+
+    const rawBody = await request.json()
+    const parseResult = putBodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.errors.map(e => e.message).join(", ") }, { status: 400 })
+    }
+    const body = rawBody
     const { name, status, note, screenshotPath, pageUrl } = body
 
     if (note) {

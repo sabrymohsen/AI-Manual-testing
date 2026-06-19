@@ -23,19 +23,21 @@ import {
 } from "@/lib/test-constants"
 
 export function AssertionBuilder({ assertions, onChange }: AssertionBuilderProps) {
+  const safeAssertions = assertions || []
+
   function addAssertion() {
     onChange([
-      ...assertions,
+      ...safeAssertions,
       { type: "element_visible", value: "", targetType: "css", targetValue: "" },
     ])
   }
 
   function removeAssertion(index: number) {
-    onChange(assertions.filter((_, i) => i !== index))
+    onChange(safeAssertions.filter((_, i) => i !== index))
   }
 
   function updateAssertion(index: number, field: keyof Assertion, value: string) {
-    const updated = [...assertions]
+    const updated = [...safeAssertions]
     updated[index] = { ...updated[index], [field]: value }
     onChange(updated)
   }
@@ -49,12 +51,12 @@ export function AssertionBuilder({ assertions, onChange }: AssertionBuilderProps
         </Button>
       </div>
 
-      {assertions.length === 0 && (
+      {safeAssertions.length === 0 && (
         <p className="text-xs text-muted-foreground">No assertions defined</p>
       )}
 
       <div className="space-y-2">
-        {assertions.map((assertion, index) => (
+        {safeAssertions.map((assertion, index) => (
           <div key={index} className="flex items-start gap-2 border rounded p-2">
             <select
               value={assertion.type}

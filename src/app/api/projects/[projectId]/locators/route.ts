@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { createLocatorSchema } from "@/schemas"
+import { z } from "zod"
 import { chromium } from "playwright"
 import { decryptSecret } from "@/lib/crypto"
 import { saveFile } from "@/lib/storage"
@@ -10,10 +12,8 @@ export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const locators = await prisma.elementLocator.findMany({
     where: { projectId: params.projectId },
@@ -32,41 +32,43 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()
   const { action } = body
 
   // Action: SAVE a locator
   if (action === "save") {
+    const parsed = createLocatorSchema.passthrough().safeParse(body)
+    if (!parsed.success) {
+      return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
+    }
     const saved = await prisma.elementLocator.create({
       data: {
         projectId: params.projectId,
-        moduleId: body.moduleId || null,
-        featureId: body.featureId || null,
-        componentId: body.componentId || null,
-        friendlyName: body.friendlyName,
-        description: body.description || null,
-        pageUrl: body.pageUrl,
-        tagName: body.tagName || null,
-        visibleText: body.visibleText || null,
-        locatorType: body.locatorType,
-        locatorValue: body.locatorValue,
-        recommendedSelector: body.recommendedSelector || null,
-        cssSelector: body.cssSelector || null,
-        xpathSelector: body.xpathSelector || null,
-        idSelector: body.idSelector || null,
-        testIdSelector: body.testIdSelector || null,
-        roleSelector: body.roleSelector || null,
-        textSelector: body.textSelector || null,
-        labelSelector: body.labelSelector || null,
-        placeholderSelector: body.placeholderSelector || null,
-        reliabilityScore: body.reliabilityScore || 0,
-        attributes: body.attributes || {},
-        screenshotPath: body.screenshotPath || null,
+        moduleId: parsed.data.moduleId || null,
+        featureId: parsed.data.featureId || null,
+        componentId: parsed.data.componentId || null,
+        friendlyName: parsed.data.friendlyName,
+        description: parsed.data.description || null,
+        pageUrl: parsed.data.pageUrl,
+        tagName: parsed.data.tagName || null,
+        visibleText: parsed.data.visibleText || null,
+        locatorType: (parsed.data.locatorType as any) || "css",
+        locatorValue: parsed.data.locatorValue,
+        recommendedSelector: parsed.data.recommendedSelector || null,
+        cssSelector: parsed.data.cssSelector || null,
+        xpathSelector: parsed.data.xpathSelector || null,
+        idSelector: parsed.data.idSelector || null,
+        testIdSelector: parsed.data.testIdSelector || null,
+        roleSelector: parsed.data.roleSelector || null,
+        textSelector: parsed.data.textSelector || null,
+        labelSelector: parsed.data.labelSelector || null,
+        placeholderSelector: parsed.data.placeholderSelector || null,
+        reliabilityScore: Number(parsed.data.reliabilityScore || 0),
+        attributes: (parsed.data.attributes || {}) as any,
+        screenshotPath: (parsed.data.screenshotPath || null) as string | null,
         isValidated: true,
         matchCount: 1,
         lastValidatedAt: new Date(),
@@ -77,16 +79,22 @@ export async function POST(
 
   // Action: PICK elements via Playwright non-headless session
   if (action === "pick") {
-    const { url, credentialId } = body
-    if (!url) {
-      return NextResponse.json({ error: "URL is required for picking" }, { status: 400 })
+    const pickSchema = z.object({
+      action: z.literal("pick"),
+      url: z.string().url("Invalid URL"),
+      credentialId: z.string().optional().nullable(),
+    })
+    const pickParsed = pickSchema.safeParse(body)
+    if (!pickParsed.success) {
+      return badRequestResponse(pickParsed.error.errors.map(e => e.message).join(", "))
     }
+    const { url, credentialId } = pickParsed.data
 
-    const project = await prisma.project.findFirst({
-      where: { id: params.projectId, userId: session.user.id },
+    const project = await prisma.project.findUnique({
+      where: { id: params.projectId },
     })
     if (!project) {
-      return NextResponse.json({ error: "Project not found" }, { status: 404 })
+      return notFoundResponse("Project not found")
     }
 
     let roleUsed = "None"
@@ -125,7 +133,7 @@ export async function POST(
           // Audit credential usage
           await prisma.auditLog.create({
             data: {
-              userId: session.user.id,
+              userId: auth.session!.user.id,
               projectId: params.projectId,
               credentialId: credentialId,
               action: "Use Credential for Locator Picker",

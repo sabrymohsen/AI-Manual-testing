@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function PUT(
   request: Request,
   { params }: { params: { moduleId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
     if (!body.name) {
-      return NextResponse.json({ error: "Module name is required" }, { status: 400 })
+      return badRequestResponse("Module name is required")
+    }
+
+    const module = await prisma.projectModule.findFirst({
+      where: { id: params.moduleId, project: { userId: auth.session!.user.id } }
+    })
+    if (!module) {
+      return notFoundResponse("Module not found")
     }
 
     const updated = await prisma.projectModule.update({
@@ -35,12 +40,17 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { moduleId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    const module = await prisma.projectModule.findFirst({
+      where: { id: params.moduleId, project: { userId: auth.session!.user.id } }
+    })
+    if (!module) {
+      return notFoundResponse("Module not found")
+    }
+
     await prisma.projectModule.delete({
       where: { id: params.moduleId }
     })

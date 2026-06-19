@@ -239,14 +239,14 @@ export default function ProjectDetailPage() {
     fetch(`/api/projects/${params.id}/hierarchy`)
       .then((res) => res.json())
       .then((data) => setHierarchyModules(data.modules || []))
-      .catch(() => {})
+      .catch(() => { })
   }
 
   function fetchRequirementsSummary() {
     fetch(`/api/projects/${params.id}/coverage-summary`)
       .then((res) => res.json())
       .then((data) => setRequirementsSummary(data))
-      .catch(() => {})
+      .catch(() => { })
   }
 
   async function handleStartTestRun(tcId: string) {
@@ -655,10 +655,10 @@ export default function ProjectDetailPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 text-sm text-slate-500">
-            <a 
-              href={project.webAppUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href={project.webAppUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 underline font-medium truncate flex items-center gap-1 max-w-[300px]"
             >
               {project.webAppUrl}
@@ -675,7 +675,7 @@ export default function ProjectDetailPage() {
 
         {/* Header Actions: Start Testing (Primary) and More Actions (Secondary) */}
         <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto self-stretch sm:self-auto justify-end">
-          <Button 
+          <Button
             onClick={() => setShowStartTestingModal(true)}
             className="flex-1 sm:flex-initial bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold flex items-center justify-center gap-2 shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] transition-all"
           >
@@ -694,15 +694,15 @@ export default function ProjectDetailPage() {
 
             {isMoreActionsOpen && (
               <>
-                <div 
-                  className="fixed inset-0 z-20" 
+                <div
+                  className="fixed inset-0 z-20"
                   onClick={() => setIsMoreActionsOpen(false)}
                 />
                 <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl py-2 z-30 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="px-3 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 dark:border-slate-800/60 pb-1 mb-1">
                     Quick Actions
                   </div>
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}/record`}
                     onClick={() => setIsMoreActionsOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
@@ -719,25 +719,25 @@ export default function ProjectDetailPage() {
                     <FileSpreadsheet className="h-4 w-4 text-slate-400" /> Import Cases
                   </button>
                   <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
-                  
+
                   <div className="px-3 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 dark:border-slate-800/60 pb-1 mb-1">
                     QA Libraries
                   </div>
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}/locators`}
                     onClick={() => setIsMoreActionsOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
                   >
                     <Compass className="h-4 w-4 text-slate-400" /> Element Picker
                   </Link>
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}/test-data`}
                     onClick={() => setIsMoreActionsOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
                   >
                     <Key className="h-4 w-4 text-slate-400" /> Test Data Variables
                   </Link>
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}/reusable-flows`}
                     onClick={() => setIsMoreActionsOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
@@ -749,14 +749,14 @@ export default function ProjectDetailPage() {
                   <div className="px-3 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 dark:border-slate-800/60 pb-1 mb-1">
                     Figma / Setup
                   </div>
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}/visual-comparison`}
                     onClick={() => setIsMoreActionsOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors"
                   >
                     <Eye className="h-4 w-4 text-slate-400" /> Figma Visual Check
                   </Link>
-                  <Link 
+                  <Link
                     href={`/projects/${project.id}/edit`}
                     onClick={() => setIsMoreActionsOpen(false)}
                     className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-805 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors font-semibold text-indigo-650"
@@ -775,11 +775,10 @@ export default function ProjectDetailPage() {
               <button
                 key={mode}
                 onClick={() => handleUserModeChange(mode)}
-                className={`px-2 py-0.5 rounded-lg font-bold capitalize transition-all ${
-                  userMode === mode
+                className={`px-2 py-0.5 rounded-lg font-bold capitalize transition-all ${userMode === mode
                     ? "bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm border border-slate-100 dark:border-slate-800"
                     : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-                }`}
+                  }`}
               >
                 {mode.replace("qa_", "")}
               </button>
@@ -796,11 +795,10 @@ export default function ProjectDetailPage() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 pb-3.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
-                activeTab === tab.id
+              className={`flex items-center gap-2 pb-3.5 text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === tab.id
                   ? "border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
                   : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
-              }`}
+                }`}
             >
               <Icon className="h-4.5 w-4.5" />
               {tab.label}
@@ -826,18 +824,18 @@ export default function ProjectDetailPage() {
               </div>
               <div className="flex flex-wrap gap-2 w-full md:w-auto justify-end">
                 {nextAction.extraBtns?.map((btn, bidx) => (
-                  <Button 
-                    key={bidx} 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    key={bidx}
+                    variant="outline"
+                    size="sm"
                     onClick={btn.onClick}
                     className="text-xs font-semibold"
                   >
                     {btn.label}
                   </Button>
                 ))}
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={nextAction.onClick}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
                 >
@@ -917,8 +915,8 @@ export default function ProjectDetailPage() {
                     <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200">Import Test Cases</h4>
                     <p className="text-xs text-slate-400 leading-normal">Upload Excel spreadsheet with predefined test cases.</p>
                   </div>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     onClick={() => setIsImportModalOpen(true)}
                     className="w-full text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white"
                   >
@@ -932,9 +930,9 @@ export default function ProjectDetailPage() {
           {/* Quick Start Panel toggle if collapsed */}
           {!showQuickStartPanel && (
             <div className="flex justify-start">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setQuickStartCollapsed(false)}
                 className="text-xs font-bold text-indigo-650 dark:text-indigo-400 hover:underline flex items-center gap-1 p-0 h-auto"
               >
@@ -958,8 +956,8 @@ export default function ProjectDetailPage() {
               </div>
 
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div 
-                  className="bg-indigo-600 dark:bg-indigo-400 h-full rounded-full transition-all duration-500" 
+                <div
+                  className="bg-indigo-600 dark:bg-indigo-400 h-full rounded-full transition-all duration-500"
                   style={{ width: `${(completedChecklistCount / 7) * 100}%` }}
                 />
               </div>
@@ -978,7 +976,7 @@ export default function ProjectDetailPage() {
                       </span>
                     </div>
                     {!item.isCompleted && (
-                      <button 
+                      <button
                         onClick={item.action}
                         className="text-[10px] bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 font-bold px-2 py-1 rounded transition-colors text-slate-605"
                       >
@@ -994,9 +992,9 @@ export default function ProjectDetailPage() {
             <div className="lg:col-span-2 space-y-4">
               <h3 className="font-bold text-slate-900 dark:text-slate-50 text-base">Key Metrics Overview</h3>
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-3">
-                
+
                 {/* 1. Test Cases */}
-                <div 
+                <div
                   onClick={() => setActiveTab("design")}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 hover:shadow-md hover:border-indigo-150 transition-all cursor-pointer group"
                 >
@@ -1010,7 +1008,7 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* 2. Test Runs */}
-                <div 
+                <div
                   onClick={() => setActiveTab("execution")}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 hover:shadow-md hover:border-indigo-150 transition-all cursor-pointer group"
                 >
@@ -1024,7 +1022,7 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* 3. Requirements */}
-                <div 
+                <div
                   onClick={() => {
                     if (userMode === "beginner") {
                       router.push(`/projects/${project.id}/requirements`)
@@ -1044,7 +1042,7 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* 4. Coverage Percentage */}
-                <div 
+                <div
                   onClick={() => {
                     if (userMode === "beginner") {
                       router.push(`/projects/${project.id}/coverage-matrix`)
@@ -1066,7 +1064,7 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* 5. Open Bugs */}
-                <div 
+                <div
                   onClick={() => {
                     if (userMode === "beginner") {
                       router.push(`/projects/${project.id}/bug-reports`)
@@ -1086,7 +1084,7 @@ export default function ProjectDetailPage() {
                 </div>
 
                 {/* 6. Failed Runs */}
-                <div 
+                <div
                   onClick={() => setActiveTab("execution")}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 hover:shadow-md hover:border-indigo-150 transition-all cursor-pointer group"
                 >
@@ -1111,7 +1109,7 @@ export default function ProjectDetailPage() {
                 <Layers className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
                 <h3 className="font-bold text-slate-900 dark:text-slate-50 text-base">Module Coverage & Test Metrics</h3>
               </div>
-              
+
               {getModuleStats().length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-6">
                   No modules or test cases defined to analyze coverage.
@@ -1133,8 +1131,8 @@ export default function ProjectDetailPage() {
                           <span className="font-bold text-slate-850 dark:text-slate-100">{Math.round(m.passRate)}%</span>
                         </div>
                         <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className="bg-green-500 h-full rounded-full transition-all duration-500" 
+                          <div
+                            className="bg-green-500 h-full rounded-full transition-all duration-500"
                             style={{ width: `${m.passRate}%` }}
                           />
                         </div>
@@ -1159,7 +1157,7 @@ export default function ProjectDetailPage() {
                 <ShieldCheck className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                 <h3 className="font-bold text-slate-900 dark:text-slate-50 text-base">Requirements Coverage by Module</h3>
               </div>
-              
+
               {!requirementsSummary?.moduleCoverage || requirementsSummary.moduleCoverage.length === 0 ? (
                 <p className="text-sm text-slate-400 text-center py-6">
                   No requirement coverage data available. Add modules to requirements.
@@ -1181,8 +1179,8 @@ export default function ProjectDetailPage() {
                           <span className="font-bold text-slate-855 dark:text-slate-100">{m.percent}%</span>
                         </div>
                         <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
-                          <div 
-                            className="bg-emerald-500 h-full rounded-full transition-all duration-500" 
+                          <div
+                            className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                             style={{ width: `${m.percent}%` }}
                           />
                         </div>
@@ -1228,7 +1226,7 @@ export default function ProjectDetailPage() {
               >
                 <Sparkles className="h-4 w-4" /> AI Generate Case
               </Button>
-              <Button 
+              <Button
                 onClick={() => router.push(`/projects/${project.id}/test-cases/new`)}
                 className="bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold h-9"
               >
@@ -1267,7 +1265,7 @@ export default function ProjectDetailPage() {
 
           {/* Grouped QA Design Tools cards */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div 
+            <div
               onClick={() => router.push(`/projects/${project.id}/locators`)}
               className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 hover:shadow-md cursor-pointer hover:border-indigo-200 transition-all group"
             >
@@ -1281,7 +1279,7 @@ export default function ProjectDetailPage() {
               <p className="text-xs text-slate-400 mt-1">Capture selector paths (IDs, CSS, expected roles) from your target app.</p>
             </div>
 
-            <div 
+            <div
               onClick={() => router.push(`/projects/${project.id}/test-data`)}
               className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 hover:shadow-md cursor-pointer hover:border-indigo-200 transition-all group"
             >
@@ -1295,7 +1293,7 @@ export default function ProjectDetailPage() {
               <p className="text-xs text-slate-400 mt-1">Configure inputs, credentials placeholders, and data profiles tables.</p>
             </div>
 
-            <div 
+            <div
               onClick={() => router.push(`/projects/${project.id}/reusable-flows`)}
               className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 hover:shadow-md cursor-pointer hover:border-indigo-200 transition-all group"
             >
@@ -1323,23 +1321,23 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 pt-1">
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => router.push(`/projects/${project.id}/test-cases/new`)}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs"
                 >
                   Create Case
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => router.push(`/projects/${project.id}/record`)}
                   className="border-slate-250 font-semibold text-xs text-slate-700 hover:bg-slate-50"
                 >
                   Record Case
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setIsImportModalOpen(true)}
                   className="border-slate-250 font-semibold text-xs text-slate-700 hover:bg-slate-50"
@@ -1415,13 +1413,12 @@ export default function ProjectDetailPage() {
                     </div>
                     <div className="flex items-center justify-between sm:justify-end gap-4">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border ${
-                          run.status === "Passed" ? "bg-green-50 text-green-700 border-green-200" :
-                          run.status === "Failed" ? "bg-red-50 text-red-700 border-red-200" :
-                          run.status === "Running" ? "bg-blue-50 text-blue-700 border-blue-200 animate-pulse" :
-                          run.status === "Queued" ? "bg-slate-50 text-slate-700 border-slate-200" :
-                          "bg-yellow-50 text-yellow-750 border-yellow-200"
-                        }`}>
+                        <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold border ${run.status === "Passed" ? "bg-green-50 text-green-700 border-green-200" :
+                            run.status === "Failed" ? "bg-red-50 text-red-700 border-red-200" :
+                              run.status === "Running" ? "bg-blue-50 text-blue-700 border-blue-200 animate-pulse" :
+                                run.status === "Queued" ? "bg-slate-50 text-slate-700 border-slate-200" :
+                                  "bg-yellow-50 text-yellow-750 border-yellow-200"
+                          }`}>
                           {run.status}
                         </span>
                         <span className="text-[11px] font-mono text-slate-400">
@@ -1468,7 +1465,7 @@ export default function ProjectDetailPage() {
               >
                 <GitBranch className="h-4 w-4" /> Requirement Traceability
               </Button>
-              <Button 
+              <Button
                 onClick={() => router.push(`/projects/${project.id}/requirements`)}
                 className="bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold h-9 flex items-center gap-1.5"
               >
@@ -1489,15 +1486,15 @@ export default function ProjectDetailPage() {
                 </p>
               </div>
               <div className="flex items-center justify-center gap-2 pt-1">
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => router.push(`/projects/${project.id}/requirements`)}
                   className="bg-indigo-650 hover:bg-indigo-700 text-white font-semibold text-xs"
                 >
                   Add Requirement
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => router.push(`/projects/${project.id}/requirements`)}
                   className="border-slate-250 font-semibold text-xs text-slate-700 hover:bg-slate-50"
@@ -1546,12 +1543,12 @@ export default function ProjectDetailPage() {
                                       const status = getComponentStatus(comp.id)
                                       const badgeColor =
                                         status === "Passed" ? "bg-green-50 text-green-750 border-green-200" :
-                                        status === "Failed" ? "bg-red-50 text-red-750 border-red-200" :
-                                        status === "Blocked" ? "bg-orange-50 text-orange-755 border-orange-200" :
-                                        status === "Warning" ? "bg-amber-50 text-amber-750 border-amber-200" :
-                                        status === "Partially Tested" ? "bg-yellow-50 text-yellow-750 border-yellow-250" :
-                                        status === "Not Executed" ? "bg-blue-50 text-blue-750 border-blue-200" :
-                                        "bg-slate-50 text-slate-600 border-slate-200"
+                                          status === "Failed" ? "bg-red-50 text-red-750 border-red-200" :
+                                            status === "Blocked" ? "bg-orange-50 text-orange-755 border-orange-200" :
+                                              status === "Warning" ? "bg-amber-50 text-amber-750 border-amber-200" :
+                                                status === "Partially Tested" ? "bg-yellow-50 text-yellow-750 border-yellow-250" :
+                                                  status === "Not Executed" ? "bg-blue-50 text-blue-750 border-blue-200" :
+                                                    "bg-slate-50 text-slate-600 border-slate-200"
 
                                       return (
                                         <div
@@ -1580,7 +1577,7 @@ export default function ProjectDetailPage() {
               <div className="space-y-6">
                 <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 bg-white dark:bg-slate-900 space-y-4">
                   <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">Coverage Warnings</h3>
-                  
+
                   <div className="space-y-2 text-xs">
                     <div className="p-3 bg-slate-50 dark:bg-slate-850 border border-slate-100 dark:border-slate-800 rounded-xl flex items-center justify-between">
                       <span className="text-slate-600 dark:text-slate-350">Components with No Cases</span>
@@ -1644,7 +1641,7 @@ export default function ProjectDetailPage() {
               >
                 <Eye className="h-4 w-4" /> Figma Visual Check
               </Button>
-              <Button 
+              <Button
                 onClick={() => router.push(`/projects/${project.id}/bug-reports`)}
                 className="bg-indigo-650 hover:bg-indigo-700 text-white text-xs font-bold h-9 flex items-center gap-1.5"
               >
@@ -1658,8 +1655,8 @@ export default function ProjectDetailPage() {
             {bugReports.length === 0 ? (
               <div className="text-center py-12 border border-dashed rounded-xl bg-white dark:bg-slate-900 space-y-3">
                 <p className="text-slate-400 text-sm">No bugs reported for this project.</p>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={() => setActiveTab("execution")}
                   className="text-xs font-semibold"
@@ -1682,18 +1679,16 @@ export default function ProjectDetailPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded font-bold ${
-                        bug.severity === "Critical" ? "bg-red-50 text-red-700 border border-red-100" :
-                        bug.severity === "High" ? "bg-orange-50 text-orange-700 border border-orange-100" :
-                        "bg-blue-50 text-blue-700 border border-blue-100"
-                      }`}>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded font-bold ${bug.severity === "Critical" ? "bg-red-50 text-red-700 border border-red-100" :
+                          bug.severity === "High" ? "bg-orange-50 text-orange-700 border border-orange-100" :
+                            "bg-blue-50 text-blue-700 border border-blue-100"
+                        }`}>
                         {bug.severity}
                       </span>
-                      <span className={`text-[10px] px-2.5 py-0.5 rounded font-bold ${
-                        bug.priority === "Critical" ? "bg-red-50 text-red-700 border border-red-100" :
-                        bug.priority === "High" ? "bg-orange-50 text-orange-700 border border-orange-100" :
-                        "bg-blue-50 text-blue-700 border border-blue-100"
-                      }`}>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded font-bold ${bug.priority === "Critical" ? "bg-red-50 text-red-700 border border-red-100" :
+                          bug.priority === "High" ? "bg-orange-50 text-orange-700 border border-orange-100" :
+                            "bg-blue-50 text-blue-700 border border-blue-100"
+                        }`}>
                         Priority: {bug.priority}
                       </span>
                     </div>
@@ -1709,7 +1704,7 @@ export default function ProjectDetailPage() {
       {activeTab === "settings" && (
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 space-y-6">
-            
+
             {/* Credentials vault section */}
             <div id="credentials-section" className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 bg-white dark:bg-slate-900 space-y-4 shadow-sm">
               <div className="border-b dark:border-slate-800 pb-2">
@@ -1778,7 +1773,7 @@ export default function ProjectDetailPage() {
                   <span className="font-bold text-slate-700 dark:text-slate-200 mt-0.5 block uppercase">{project.environment}</span>
                 </div>
               </div>
-              <Button 
+              <Button
                 variant="outline"
                 className="w-full text-xs font-semibold border-slate-250 hover:bg-slate-50"
                 onClick={() => router.push(`/projects/${project.id}/edit`)}
@@ -1817,8 +1812,8 @@ export default function ProjectDetailPage() {
       {/* Start Testing Mode Selection Dialog */}
       {showStartTestingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div 
-            className="fixed inset-0" 
+          <div
+            className="fixed inset-0"
             onClick={() => setShowStartTestingModal(false)}
           />
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 z-10 animate-in zoom-in-95 duration-200 space-y-4">
@@ -1826,20 +1821,20 @@ export default function ProjectDetailPage() {
               <h3 className="text-base font-extrabold text-slate-900 dark:text-slate-50 flex items-center gap-2">
                 <Play className="h-5 w-5 text-indigo-650" /> Select Testing Activity
               </h3>
-              <button 
+              <button
                 onClick={() => setShowStartTestingModal(false)}
                 className="text-slate-400 hover:text-slate-650 p-1 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-lg transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            
+
             <p className="text-xs text-slate-500 leading-normal">
               Choose how you would like to run or create tests in the project <strong>{project.name}</strong>.
             </p>
 
             <div className="grid gap-3 pt-1">
-              <Link 
+              <Link
                 href={`/projects/${project.id}/manual-sessions/new`}
                 onClick={() => setShowStartTestingModal(false)}
                 className="flex items-start gap-3.5 p-3.5 rounded-xl border border-slate-150 hover:bg-slate-50 hover:border-indigo-150 transition-all text-left group"
@@ -1853,7 +1848,7 @@ export default function ProjectDetailPage() {
                 </div>
               </Link>
 
-              <Link 
+              <Link
                 href={`/projects/${project.id}/record`}
                 onClick={() => setShowStartTestingModal(false)}
                 className="flex items-start gap-3.5 p-3.5 rounded-xl border border-slate-150 hover:bg-slate-50 hover:border-indigo-150 transition-all text-left group"
@@ -1867,9 +1862,9 @@ export default function ProjectDetailPage() {
                 </div>
               </Link>
             </div>
-            
+
             <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3 mt-4">
-              <Button 
+              <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowStartTestingModal(false)}
@@ -1885,8 +1880,8 @@ export default function ProjectDetailPage() {
       {/* Command Palette Modal (Cmd + K) */}
       {commandPaletteOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div 
-            className="fixed inset-0" 
+          <div
+            className="fixed inset-0"
             onClick={() => setCommandPaletteOpen(false)}
           />
           <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200 flex flex-col">
@@ -1900,7 +1895,7 @@ export default function ProjectDetailPage() {
                 onChange={(e) => setCommandSearch(e.target.value)}
                 className="w-full py-4 bg-transparent border-0 outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 text-sm font-semibold"
               />
-              <button 
+              <button
                 onClick={() => setCommandPaletteOpen(false)}
                 className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-650 transition-colors"
               >
@@ -1935,7 +1930,7 @@ export default function ProjectDetailPage() {
                 ))
               )}
             </div>
-            
+
             <div className="bg-slate-50 dark:bg-slate-850 px-4 py-2 border-t border-slate-100 dark:border-slate-800 flex justify-between text-[10px] text-slate-400 font-semibold">
               <span>Use <kbd className="font-sans font-bold bg-white dark:bg-slate-800 px-1 border rounded shadow-sm">↑</kbd> <kbd className="font-sans font-bold bg-white dark:bg-slate-800 px-1 border rounded shadow-sm">↓</kbd> to navigate</span>
               <span>Press <kbd className="font-sans font-bold bg-white dark:bg-slate-800 px-1 border rounded shadow-sm">esc</kbd> to close</span>

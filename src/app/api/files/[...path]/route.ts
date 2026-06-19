@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 import fs from "node:fs"
 import path from "node:path"
 
@@ -8,6 +9,9 @@ export async function GET(
   _request: Request,
   { params }: { params: { path: string[] } }
 ) {
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
+
   // Resolve absolute workspace directory
   const workspaceRoot = process.cwd()
 

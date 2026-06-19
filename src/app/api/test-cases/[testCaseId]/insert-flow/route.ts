@@ -1,23 +1,37 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { z } from "zod"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+
+const bodySchema = z.object({
+  flowId: z.string().min(1, "flowId is required"),
+  insertAtStepNumber: z.number().int().optional(),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { testCaseId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
+  }
+
+  const entity = await prisma.testCase.findFirst({
+    where: { id: params.testCaseId, project: { userId: auth.session!.user.id } },
+    select: { projectId: true }
+  })
+  if (!entity) {
+    return notFoundResponse("Not found")
   }
 
   try {
     const body = await request.json()
-    const { flowId, insertAtStepNumber } = body // 1-indexed
-
-    if (!flowId) {
-      return NextResponse.json({ error: "flowId is required" }, { status: 400 })
+    const parse = bodySchema.safeParse(body)
+    if (!parse.success) {
+      return badRequestResponse(parse.error.errors[0].message)
     }
+    const { flowId, insertAtStepNumber } = parse.data
 
     const flow = await prisma.reusableStepFlow.findUnique({
       where: { id: flowId },

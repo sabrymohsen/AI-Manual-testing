@@ -1,14 +1,23 @@
 import { NextResponse } from "next/server"
-import { getSession } from "@/lib/auth"
+import { prisma } from "@/lib/db"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 import { generateMarkdownReport } from "@/lib/reports/markdown-generator"
 
 export async function GET(
   _request: Request,
   { params }: { params: { runId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) {
+    return unauthorizedResponse(auth.error)
+  }
+
+  const entity = await prisma.testRun.findFirst({
+    where: { id: params.runId, project: { userId: auth.session!.user.id } },
+    select: { projectId: true }
+  })
+  if (!entity) {
+    return notFoundResponse("Not found")
   }
 
   try {

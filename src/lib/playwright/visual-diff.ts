@@ -44,7 +44,7 @@ export async function compareImages(
   let diffImagePath: string | null = null
   if (mismatchedPixels > 0) {
     const diffBuffer = PNG.sync.write(diff)
-    diffImagePath = await saveFile("diffs", `diff-${Date.now()}.png`, diffBuffer)
+    diffImagePath = await saveFile("visual-checks/diff", `diff-${Date.now()}.png`, diffBuffer)
   }
 
   return { mismatchPercent, diffImagePath, width, height }

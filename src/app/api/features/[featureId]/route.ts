@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function PUT(
   request: Request,
   { params }: { params: { featureId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const body = await request.json()
     if (!body.name) {
-      return NextResponse.json({ error: "Feature name is required" }, { status: 400 })
+      return badRequestResponse("Feature name is required")
+    }
+
+    const feature = await prisma.projectFeature.findFirst({
+      where: { id: params.featureId, project: { userId: auth.session!.user.id } }
+    })
+    if (!feature) {
+      return notFoundResponse("Feature not found")
     }
 
     const updated = await prisma.projectFeature.update({
@@ -35,12 +40,17 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { featureId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    const feature = await prisma.projectFeature.findFirst({
+      where: { id: params.featureId, project: { userId: auth.session!.user.id } }
+    })
+    if (!feature) {
+      return notFoundResponse("Feature not found")
+    }
+
     await prisma.projectFeature.delete({
       where: { id: params.featureId }
     })

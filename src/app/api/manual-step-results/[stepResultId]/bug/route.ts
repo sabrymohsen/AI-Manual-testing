@@ -1,18 +1,34 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { getSession } from "@/lib/auth"
+import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { z } from "zod"
+
+const bodySchema = z.object({
+  title: z.string().optional(),
+  severity: z.string().optional(),
+  priority: z.string().optional(),
+  stepsToReproduce: z.string().optional(),
+  expectedResult: z.string().optional(),
+  actualResult: z.string().optional(),
+  screenshotPath: z.string().optional(),
+  consoleLogs: z.string().optional(),
+  networkErrors: z.string().optional(),
+})
 
 export async function POST(
   request: Request,
   { params }: { params: { stepResultId: string } }
 ) {
-  const session = await getSession()
-  if (!session) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    const body = await request.json()
+    const rawBody = await request.json()
+    const parseResult = bodySchema.safeParse(rawBody)
+    if (!parseResult.success) {
+      return NextResponse.json({ error: parseResult.error.errors.map(e => e.message).join(", ") }, { status: 400 })
+    }
+    const body = rawBody
     const {
       title,
       severity,
@@ -30,7 +46,11 @@ export async function POST(
       include: {
         sessionCase: {
           include: {
-            session: true,
+            session: {
+              include: {
+                project: { select: { userId: true } }
+              }
+            },
             testCase: true
           }
         }
@@ -38,7 +58,11 @@ export async function POST(
     })
 
     if (!stepResult || !stepResult.sessionCase) {
-      return NextResponse.json({ error: "Manual step result not found" }, { status: 404 })
+      return notFoundResponse("Manual step result not found")
+    }
+
+    if (stepResult.sessionCase.session.project.userId !== auth.session!.user.id) {
+      return unauthorizedResponse("Access denied")
     }
 
     const manualSession = stepResult.sessionCase.session
