@@ -12,7 +12,7 @@ import { FigmaConfig } from "@/components/figma/figma-config"
 import { IntegrationConfig } from "@/components/integrations/integration-config"
 import { ImportModal } from "@/components/test-cases/import-modal"
 import { HierarchyExplorer } from "@/components/hierarchy/hierarchy-explorer"
-import { Play, FileText, Bug, Settings, Layers, ShieldCheck, Sparkles, RefreshCw, Eye, Compass, Video, Trash2, FileSpreadsheet, Key, FileCheck, GitBranch, Search, ChevronRight, CheckCircle2, AlertCircle, X, ChevronDown, ListFilter, HelpCircle, ArrowRight, Home, LayoutGrid, Check, Plus, AlertTriangle, Shield, User } from "lucide-react"
+import { Play, FileText, Bug, Settings, Layers, ShieldCheck, Sparkles, RefreshCw, Eye, Compass, Video, Trash2, FileSpreadsheet, Key, FileCheck, GitBranch, Search, ChevronRight, CheckCircle2, AlertCircle, X, ChevronDown, ListFilter, HelpCircle, ArrowRight, Home, LayoutGrid, Check, Plus, AlertTriangle, Shield, User, Brain } from "lucide-react"
 
 interface Project {
   id: string
@@ -403,6 +403,18 @@ export default function ProjectDetailPage() {
   const getFilteredActions = () => {
     const allActions = [
       {
+        title: "Agent Brain Cognitive",
+        description: "Explore, Plan, and Execute E2E tests with Persistent Memory",
+        icon: Brain,
+        onClick: () => router.push(`/projects/${project.id}/agent-brain`),
+      },
+      {
+        title: "Autonomous QA Agent",
+        description: "Run autonomous QA agent to discover & test app",
+        icon: Sparkles,
+        onClick: () => router.push(`/projects/${project.id}/autonomous-runs`),
+      },
+      {
         title: "Create Case",
         description: "Write a new manual functional test case",
         icon: Plus,
@@ -702,6 +714,20 @@ export default function ProjectDetailPage() {
                   <div className="px-3 py-1 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-50 dark:border-slate-800/60 pb-1 mb-1">
                     Quick Actions
                   </div>
+                  <Link
+                    href={`/projects/${project.id}/autonomous-runs`}
+                    onClick={() => setIsMoreActionsOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors font-semibold"
+                  >
+                    <Sparkles className="h-4 w-4 text-indigo-500 fill-indigo-100" /> Autonomous QA Agent
+                  </Link>
+                  <Link
+                    href={`/projects/${project.id}/agent-brain`}
+                    onClick={() => setIsMoreActionsOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-slate-750 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors font-semibold text-indigo-650"
+                  >
+                    <Brain className="h-4 w-4 text-indigo-600 fill-indigo-100" /> Agent Brain Cognitive
+                  </Link>
                   <Link
                     href={`/projects/${project.id}/record`}
                     onClick={() => setIsMoreActionsOpen(false)}

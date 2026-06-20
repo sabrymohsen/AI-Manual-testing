@@ -40,4 +40,11 @@ storage/diffs/*
 storage/traces/*
 storage/videos/*
 storage/exports/*
+storage/dom_snapshots/*
+storage/recordings/*
 !storage/.gitkeep
+
+# playwright and testing temp files
+playwright-report/
+test-results/
+

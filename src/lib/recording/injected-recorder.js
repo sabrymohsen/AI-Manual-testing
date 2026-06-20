@@ -108,19 +108,30 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
 
   function calculateReliabilityScore(locators) {
     let score = 0;
-    if (locators.testIdSelector) score += 100;
-    else if (locators.idSelector) score += 90;
-    else if (locators.labelSelector) score += 80;
-    else if (locators.placeholderSelector) score += 75;
-    else if (locators.roleSelector) score += 70;
-    else if (locators.textSelector && locators.textSelector.length < 40) score += 60;
-    else if (locators.cssSelector) score += 40;
-    else score += 10;
+    if (locators.testIdSelector) score = 100;
+    else if (locators.roleSelector) {
+      const parts = locators.roleSelector.split(":");
+      if (parts[1] && parts[1].trim()) {
+        score = 95;
+      } else {
+        score = 70;
+      }
+    }
+    else if (locators.ariaLabelSelector) score = 90;
+    else if (locators.idSelector) score = 85;
+    else if (locators.labelSelector) score = 80;
+    else if (locators.placeholderSelector) score = 75;
+    else if (locators.textSelector && locators.textSelector.length < 50) score = 70;
+    else if (locators.cssSelector) score = 60;
+    else score = 20;
 
-    if (locators.cssSelector && locators.cssSelector.includes("nth-of-type")) score -= 15;
-    if (locators.xpathSelector && locators.xpathSelector.includes("/")) {
+    // Apply penalties
+    if (score === 60 && locators.cssSelector && locators.cssSelector.includes("nth-of-type")) {
+      score -= 15;
+    }
+    if (score === 20 && locators.xpathSelector && locators.xpathSelector.includes("/")) {
       const depth = locators.xpathSelector.split("/").length;
-      if (depth > 5) score -= Math.min(25, depth * 2);
+      if (depth > 5) score -= Math.min(10, depth);
     }
     return Math.max(0, Math.min(100, score));
   }
@@ -131,6 +142,25 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         locatorType: "test_id",
         locatorValue: locators.attributes["data-testid"] || locators.attributes["data-test"] || locators.attributes["data-qa"] || "",
         recommendedSelector: locators.testIdSelector,
+      };
+    }
+    if (locators.roleSelector) {
+      const parts = locators.roleSelector.split(":");
+      const role = parts[0];
+      const name = parts.slice(1).join(":");
+      if (name && name.trim()) {
+        return {
+          locatorType: "role",
+          locatorValue: role + ', name: "' + name + '"',
+          recommendedSelector: "Role: " + role + " (" + name + ")",
+        };
+      }
+    }
+    if (locators.ariaLabelSelector) {
+      return {
+        locatorType: "label",
+        locatorValue: locators.ariaLabelSelector,
+        recommendedSelector: "aria-label=" + locators.ariaLabelSelector,
       };
     }
     if (locators.idSelector) {
@@ -155,16 +185,6 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         recommendedSelector: "Placeholder: " + locators.placeholderSelector,
       };
     }
-    if (locators.roleSelector) {
-      const parts = locators.roleSelector.split(":");
-      const role = parts[0];
-      const name = parts.slice(1).join(":");
-      return {
-        locatorType: "role",
-        locatorValue: role + ', name: "' + name + '"',
-        recommendedSelector: "Role: " + role + " (" + name + ")",
-      };
-    }
     if (locators.textSelector && locators.textSelector.length < 50) {
       return {
         locatorType: "text",
@@ -184,6 +204,63 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       locatorValue: locators.xpathSelector || "",
       recommendedSelector: locators.xpathSelector || "",
     };
+  }
+
+  function getParentContextInfo(element) {
+    if (!element) return "";
+    
+    // 1. Table row check
+    const row = element.closest("tr");
+    if (row) {
+      const firstCell = row.querySelector("td, th");
+      const text = firstCell ? firstCell.textContent?.trim() : "";
+      if (text) {
+        return "in row '" + text.substring(0, 30) + "'";
+      }
+      return "in table row";
+    }
+
+    // 2. Modal/dialog check
+    const modal = element.closest("[role='dialog'], .modal, dialog");
+    if (modal) {
+      const header = modal.querySelector("h1, h2, h3, h4, h5, h6, .modal-title, [id*='title']");
+      const text = header ? header.textContent?.trim() : "";
+      if (text) {
+        return "in '" + text.substring(0, 30) + "' dialog";
+      }
+      return "in modal dialog";
+    }
+
+    // 3. Form check
+    const form = element.closest("form");
+    if (form) {
+      const heading = form.querySelector("h1, h2, h3, h4, h5, h6, legend, .form-title");
+      const text = heading ? heading.textContent?.trim() : "";
+      if (text) {
+        return "in '" + text.substring(0, 30) + "' form";
+      }
+      const formId = form.id || form.getAttribute("name");
+      if (formId) {
+        return "in '" + formId + "' form";
+      }
+      return "in form";
+    }
+
+    // 4. Tab check
+    const tabPanel = element.closest("[role='tabpanel'], .tabpanel, .tab-content");
+    if (tabPanel) {
+      const id = tabPanel.id || tabPanel.getAttribute("aria-labelledby");
+      if (id) {
+        const tabTrigger = document.querySelector("#" + id + ", [aria-controls='" + tabPanel.id + "']");
+        const text = tabTrigger ? tabTrigger.textContent?.trim() : "";
+        if (text) {
+          return "in '" + text + "' tab";
+        }
+      }
+      return "in tab container";
+    }
+
+    return "";
   }
 
   function generateLocatorsForElement(element) {
@@ -215,6 +292,9 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
 
     const id = element.id;
     const idSelector = id && !isDynamicValue(id) ? '#' + id : undefined;
+
+    const ariaLabel = element.getAttribute("aria-label");
+    const ariaLabelSelector = ariaLabel ? ariaLabel : undefined;
 
     const placeholder = isPasswordInput ? undefined : element.getAttribute("placeholder");
     const placeholderSelector = placeholder ? placeholder : undefined;
@@ -268,6 +348,7 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       visibleText,
       idSelector,
       testIdSelector,
+      ariaLabelSelector,
       roleSelector,
       textSelector,
       labelSelector,
@@ -291,13 +372,68 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       placeholder: placeholderSelector
     };
 
+    const primaryPrefixType = best.locatorType === "test_id" ? "testid" : best.locatorType;
+    const primaryLocatorString = primaryPrefixType + "=" + best.locatorValue;
+
+    const parentContext = getParentContextInfo(element);
+    const contextType = parentContext ? parentContext : "general";
+
+    const fallbackLocators = [];
+    if (partialLocators.testIdSelector) {
+      const val = element.getAttribute("data-testid") || element.getAttribute("data-test") || element.getAttribute("data-qa");
+      fallbackLocators.push("testid=" + val);
+    }
+    if (partialLocators.roleSelector) {
+      const parts = partialLocators.roleSelector.split(":");
+      const role = parts[0];
+      const name = parts.slice(1).join(":");
+      if (name && name.trim()) {
+        fallbackLocators.push("role=" + role + ', name: "' + name + '"');
+      }
+    }
+    if (partialLocators.ariaLabelSelector) {
+      fallbackLocators.push("label=" + partialLocators.ariaLabelSelector);
+    }
+    if (partialLocators.idSelector) {
+      const rawId = partialLocators.idSelector.startsWith("#") ? partialLocators.idSelector.substring(1) : partialLocators.idSelector;
+      fallbackLocators.push("css=#" + rawId);
+    }
+    if (partialLocators.labelSelector) {
+      fallbackLocators.push("label=" + partialLocators.labelSelector);
+    }
+    if (partialLocators.placeholderSelector) {
+      fallbackLocators.push("placeholder=" + partialLocators.placeholderSelector);
+    }
+    if (partialLocators.textSelector && partialLocators.textSelector.length < 50) {
+      fallbackLocators.push("text=" + partialLocators.textSelector);
+    }
+    if (partialLocators.cssSelector) {
+      fallbackLocators.push("css=" + partialLocators.cssSelector);
+    }
+    if (partialLocators.xpathSelector) {
+      fallbackLocators.push("xpath=" + partialLocators.xpathSelector);
+    }
+
+    const uniqueFallbacks = [...new Set(fallbackLocators)].filter(loc => loc !== primaryLocatorString);
+    const confidence = score >= 90 ? "high" : score >= 70 ? "medium" : "low";
+
+    const locatorCandidatesObj = {
+      primaryLocator: primaryLocatorString,
+      fallbackLocators: uniqueFallbacks,
+      score: score,
+      type: best.locatorType === "test_id" ? "testid" : best.locatorType,
+      context: contextType,
+      confidence: confidence
+    };
+
     return {
       ...partialLocators,
       reliabilityScore: score,
       targetType: best.locatorType,
       targetValue: best.locatorValue,
       recommendedSelector: best.recommendedSelector,
-      alternativeLocators
+      alternativeLocators,
+      locatorCandidates: locatorCandidatesObj
     };
   }
 
@@ -1317,28 +1453,28 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     overlay.className = "qa-modal-overlay";
     
     function renderMainView(savedCount, draftCount, draftStepCount) {
-      overlay.innerHTML = `
+      overlay.innerHTML = \`
         <div class="qa-dialog" style="width: 400px;">
           <div class="qa-dialog-title">🏁 Finish Recording Session</div>
           <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 15px; line-height: 1.5;">
             <p>Are you sure you want to finish the entire recording session? This will close the browser.</p>
             <div style="background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; margin-top: 10px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 6px;">
-              <div>📁 Saved test cases: <strong style="color: #34d399;">\${savedCount}</strong></div>
-              <div>📝 Unsaved drafts: <strong style="color: #f59e0b;">\${draftCount}</strong> (with <strong>\${draftStepCount}</strong> steps)</div>
+              <div>📁 Saved test cases: <strong style="color: #34d399;">\\\${savedCount}</strong></div>
+              <div>📝 Unsaved drafts: <strong style="color: #f59e0b;">\\\${draftCount}</strong> (with <strong>\\\${draftStepCount}</strong> steps)</div>
             </div>
             <div id="qa-finish-error" style="color: #f87171; font-weight: bold; margin-top: 10px; font-size: 12px; display: none;"></div>
           </div>
           <div class="qa-dialog-actions" style="display: flex; flex-direction: column; gap: 8px;">
             <button class="qa-btn qa-btn-finish" id="qa-btn-finish-save" style="width:100%; margin-left:0;">💾 Save Current Case & Finish</button>
-            \${draftStepCount > 0 ? `
+            \\\${draftStepCount > 0 ? \\\`
               <button class="qa-btn" id="qa-btn-finish-discard" style="width:100%; margin-left:0; background: #ef4444; border-color: #ef4444; color: white;">🗑️ Finish Without Saving Drafts</button>
-            ` : `
+            \\\` : \\\`
               <button class="qa-btn" id="qa-btn-finish-discard" style="width:100%; margin-left:0;">🗑️ Finish Session (No Draft)</button>
-            `}
+            \\\`}
             <button class="qa-btn qa-btn-cancel" id="qa-btn-finish-cancel" style="width:100%; margin-left:0;">Cancel</button>
           </div>
         </div>
-      `;
+      \`;
 
       shadow.getElementById("qa-btn-finish-cancel").addEventListener("click", (e) => {
         e.preventDefault();
@@ -1386,7 +1522,7 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     }
 
     function renderDiscardConfirmView(savedCount, draftCount, draftStepCount) {
-      overlay.innerHTML = `
+      overlay.innerHTML = \`
         <div class="qa-dialog" style="width: 400px;">
           <div class="qa-dialog-title" style="color: #ef4444;">⚠️ Discard Unsaved Steps?</div>
           <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px; line-height: 1.5;">
@@ -1398,7 +1534,7 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
             <button class="qa-btn" id="qa-btn-discard-cancel" style="width:100%; margin-left:0;">Cancel</button>
           </div>
         </div>
-      `;
+      \`;
 
       shadow.getElementById("qa-btn-discard-cancel").addEventListener("click", (e) => {
         e.preventDefault();
@@ -1444,12 +1580,12 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     }
 
     // Initial fetch of stats
-    overlay.innerHTML = `
+    overlay.innerHTML = \`
       <div class="qa-dialog" style="width: 400px; text-align: center; padding: 30px 20px;">
         <div class="qa-dialog-title" style="margin-bottom:10px;">Loading Session Stats...</div>
         <div style="font-size: 12px; color: #94a3b8;">Please wait while we retrieve the latest counts.</div>
       </div>
-    `;
+    \`;
     shadow.appendChild(overlay);
 
     window.qaRecordAction({ actionType: "get_stats" }).then(res => {
@@ -1798,12 +1934,43 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     const shadow = host.shadowRoot;
     if (shadow.getElementById("qa-locator-overlay")) return;
 
+    let badgeColor = "#3b82f6"; // Blue
+    let badgeText = "Medium";
+    let showWarning = false;
+
+    if (locatorData.reliabilityScore >= 90) {
+      badgeColor = "#10b981"; // Green (Stable)
+      badgeText = "Stable";
+    } else if (locatorData.reliabilityScore >= 70) {
+      badgeColor = "#f59e0b"; // Yellow (Medium)
+      badgeText = "Medium";
+    } else if (locatorData.reliabilityScore >= 50) {
+      badgeColor = "#f97316"; // Orange (Weak)
+      badgeText = "Weak";
+      showWarning = true;
+    } else {
+      badgeColor = "#ef4444"; // Red (Unstable)
+      badgeText = "Unstable";
+      showWarning = true;
+    }
+
+    const warningHtml = showWarning 
+      ? \`<div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; border-radius: 6px; padding: 10px; margin-top: 10px; font-size: 11px; line-height: 1.4; text-align: left;">
+           ⚠️ <strong>Warning:</strong> This element's locator is classified as <strong>\${badgeText.toLowerCase()}</strong> (score: \${locatorData.reliabilityScore}%). Consider adding a unique <code>data-testid</code> attribute to the element to improve reliability.
+         </div>\`
+      : "";
+
     const overlay = document.createElement("div");
     overlay.id = "qa-locator-overlay";
     overlay.className = "qa-modal-overlay";
     overlay.innerHTML = \`
       <div class="qa-dialog" style="width: 450px;">
-        <div class="qa-dialog-title">🔍 Capture Element Locator</div>
+        <div class="qa-dialog-title" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>🔍 Capture Element Locator</span>
+          <span style="background: \${badgeColor}; color: white; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">
+            \${badgeText} (\${locatorData.reliabilityScore}%)
+          </span>
+        </div>
         <div class="qa-form-group">
           <label>Element Tag</label>
           <div class="qa-case-info">\${locatorData.tagName}</div>
@@ -1812,6 +1979,7 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
           <label>Recommended Locator</label>
           <div class="qa-case-info" style="font-family:monospace; color:#38bdf8;">\${locatorData.recommendedSelector}</div>
         </div>
+        \${warningHtml}
         <div class="qa-form-group">
           <label>Locator Value (Type: \${locatorData.targetType})</label>
           <input type="text" id="qa-input-locator-val" class="qa-input" value="\${locatorData.targetValue}" />
@@ -2178,21 +2346,24 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     }
 
     // Resolve component-specific actions
+    const contextInfo = getParentContextInfo(target);
+    const suffix = contextInfo ? " " + contextInfo : "";
+
     let actionType = "click";
-    let actionDescription = 'Click "' + friendlyName + '" ' + (tagName === "a" ? "link" : tagName === "button" ? "button" : "element");
+    let actionDescription = 'Click "' + friendlyName + '" ' + (tagName === "a" ? "link" : tagName === "button" ? "button" : "element") + suffix;
     let actionMetadata = null;
 
     if (detectedType === "checkbox") {
       const checked = target.checked !== undefined ? !target.checked : target.getAttribute("aria-checked") !== "true";
       actionType = checked ? "check" : "uncheck";
-      actionDescription = (checked ? "Check " : "Uncheck ") + '"' + friendlyName + '" checkbox';
+      actionDescription = (checked ? "Check " : "Uncheck ") + '"' + friendlyName + '" checkbox' + suffix;
     } else if (detectedType === "toggle") {
       const active = target.getAttribute("aria-checked") === "true" || target.classList.contains("active") || target.classList.contains("checked");
       actionType = active ? "toggle_off" : "toggle_on";
-      actionDescription = (active ? "Toggle off " : "Toggle on ") + '"' + friendlyName + '"';
+      actionDescription = (active ? "Toggle off " : "Toggle on ") + '"' + friendlyName + '"' + suffix;
     } else if (detectedType === "radio") {
       actionType = "radio_select";
-      actionDescription = 'Select "' + friendlyName + '" radio option';
+      actionDescription = 'Select "' + friendlyName + '" radio option' + suffix;
     } else if (detectedType === "table") {
       const row = target.closest("tr");
       let rowContext = "";
@@ -2319,6 +2490,8 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       
       const locatorData = generateLocatorsForElement(target);
       const friendlyName = getElementFriendlyName(target);
+      const contextInfo = getParentContextInfo(target);
+      const suffix = contextInfo ? " " + contextInfo : "";
       
       let val = target.value;
       if (isPasswordInput(target)) {
@@ -2328,8 +2501,8 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       const actionData = {
         actionType: target.type === "file" ? "upload_file" : "fill",
         actionDescription: target.type === "file" 
-          ? 'Upload file "' + val.split("\\\\").pop() + '" to "' + friendlyName + '"'
-          : 'Fill "' + friendlyName + '" with "' + val + '"',
+          ? 'Upload file "' + val.split("\\\\").pop() + '" to "' + friendlyName + '"' + suffix
+          : 'Fill "' + friendlyName + '" with "' + val + '"' + suffix,
         pageUrl: window.location.href,
         inputValue: val,
         ...locatorData
@@ -2340,13 +2513,15 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     } else if (tagName === "select") {
       const locatorData = generateLocatorsForElement(target);
       const friendlyName = getElementFriendlyName(target);
+      const contextInfo = getParentContextInfo(target);
+      const suffix = contextInfo ? " " + contextInfo : "";
       const selectedOption = target.options[target.selectedIndex];
       const optionText = selectedOption ? selectedOption.text.trim() : "";
       const optionValue = target.value;
 
       const actionData = {
         actionType: "select",
-        actionDescription: 'Select "' + optionText + '" from dropdown "' + friendlyName + '"',
+        actionDescription: 'Select "' + optionText + '" from dropdown "' + friendlyName + '"' + suffix,
         pageUrl: window.location.href,
         inputValue: optionValue,
         ...locatorData

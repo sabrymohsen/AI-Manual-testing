@@ -11,6 +11,7 @@ interface StepResult {
   durationMs: number
   screenshotBefore: string | null
   screenshotAfter: string | null
+  actionMetadata?: any
 }
 
 interface ProgressData {

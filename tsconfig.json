@@ -14,6 +14,7 @@
     "jsx": "preserve",
     "incremental": true,
     "downlevelIteration": true,
+    "removeComments": false,
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"]

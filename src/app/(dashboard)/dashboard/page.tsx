@@ -206,8 +206,9 @@ export default function DashboardPage() {
     try {
       const res = await fetch("/api/projects")
       const d = await res.json()
-      if (d.projects) {
-        setProjectsList(d.projects)
+      const proj = d.items || d.projects
+      if (proj) {
+        setProjectsList(proj)
       }
     } catch (err) {
       console.error("Error fetching projects", err)

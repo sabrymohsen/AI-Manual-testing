@@ -1,9 +1,16 @@
-import { chromium, Browser, Page } from "playwright"
+import { chromium, firefox, webkit, Browser, BrowserType as PlaywrightBrowserType, Page } from "playwright"
 import { prisma } from "@/lib/db"
 import { INJECTED_RECORDER_SCRIPT } from "./injected-recorder"
 import { saveFile } from "@/lib/storage"
 import { decryptSecret } from "@/lib/crypto"
 import { handleLogin } from "@/lib/playwright/login-handler"
+import { resolveLocatorString, executeStep } from "@/lib/playwright/step-executor"
+import {
+  getSessionStats,
+  saveRecordedCaseAsTestCase,
+} from "@/lib/recording/session-store"
+
+export { getSessionStats } from "@/lib/recording/session-store"
 
 export interface ActiveSession {
   browser: Browser
@@ -13,6 +20,16 @@ export interface ActiveSession {
   sessionId: string
   consoleErrors: string[]
   networkErrors: string[]
+  toolbarInjected: boolean
+  connectionStatus: "Connected" | "Disconnected" | "Reconnecting" | "BrowserClosed" | "ToolbarNotInjected" | "WorkerOffline"
+}
+
+export type SessionConnectionStatus = {
+  connectionStatus: ActiveSession["connectionStatus"]
+  browserOpen: boolean
+  toolbarInjected: boolean
+  sessionStatus: string
+  lastError: string | null
 }
 
 const globalForRecording = global as unknown as {
@@ -24,6 +41,120 @@ export const activeSessions =
 
 if (process.env.NODE_ENV !== "production") {
   globalForRecording.activeSessions = activeSessions
+}
+
+function getPlaywrightBrowser(type: string): PlaywrightBrowserType {
+  switch (type) {
+    case "Firefox":
+      return firefox
+    case "WebKit":
+      return webkit
+    default:
+      return chromium
+  }
+}
+
+async function saveRecordingScreenshot(
+  sessionId: string,
+  caseId: string,
+  stepNumber: number,
+  buffer: Buffer
+): Promise<string> {
+  return saveFile(
+    "recordings",
+    `${sessionId}/${caseId}/step-${stepNumber}.png`,
+    buffer
+  )
+}
+
+function attachBrowserLifecycleHandlers(sessionId: string, browser: Browser, page: Page) {
+  browser.on("disconnected", async () => {
+    const activeSess = activeSessions.get(sessionId)
+    if (activeSess) {
+      activeSess.connectionStatus = "BrowserClosed"
+    }
+    await prisma.recordingSession.update({
+      where: { id: sessionId },
+      data: {
+        connectionStatus: "BrowserClosed",
+        lastError: "Recording browser was closed unexpectedly.",
+      },
+    }).catch(() => {})
+    activeSessions.delete(sessionId)
+  })
+
+  page.on("close", async () => {
+    const activeSess = activeSessions.get(sessionId)
+    if (activeSess) {
+      activeSess.connectionStatus = "BrowserClosed"
+    }
+    await prisma.recordingSession.update({
+      where: { id: sessionId },
+      data: {
+        connectionStatus: "BrowserClosed",
+        lastError: "Recording browser tab was closed.",
+      },
+    }).catch(() => {})
+  })
+
+  page.on("framenavigated", async () => {
+    try {
+      await page.waitForLoadState("domcontentloaded", { timeout: 5000 }).catch(() => {})
+      const injected = await page.evaluate(() => !!(window as any).__qa_recorder_injected).catch(() => false)
+      const activeSess = activeSessions.get(sessionId)
+      if (activeSess) {
+        activeSess.toolbarInjected = injected
+        if (!injected) {
+          activeSess.connectionStatus = "ToolbarNotInjected"
+          await prisma.recordingSession.update({
+            where: { id: sessionId },
+            data: { connectionStatus: "ToolbarNotInjected" },
+          }).catch(() => {})
+        } else if (activeSess.connectionStatus === "ToolbarNotInjected") {
+          activeSess.connectionStatus = "Connected"
+          await prisma.recordingSession.update({
+            where: { id: sessionId },
+            data: { connectionStatus: "Connected", lastError: null },
+          }).catch(() => {})
+        }
+      }
+    } catch {
+      // ignore navigation probe errors
+    }
+  })
+}
+
+export async function getSessionConnectionStatus(sessionId: string): Promise<SessionConnectionStatus> {
+  const sessionDb = await prisma.recordingSession.findUnique({ where: { id: sessionId } })
+  const activeSess = activeSessions.get(sessionId)
+
+  if (!sessionDb) {
+    return {
+      connectionStatus: "WorkerOffline",
+      browserOpen: false,
+      toolbarInjected: false,
+      sessionStatus: "Failed",
+      lastError: "Session not found",
+    }
+  }
+
+  if (!activeSess) {
+    return {
+      connectionStatus: (sessionDb.connectionStatus as SessionConnectionStatus["connectionStatus"]) || "WorkerOffline",
+      browserOpen: false,
+      toolbarInjected: false,
+      sessionStatus: sessionDb.status,
+      lastError: sessionDb.lastError,
+    }
+  }
+
+  return {
+    connectionStatus: activeSess.connectionStatus,
+    browserOpen: !activeSess.page.isClosed(),
+    toolbarInjected: activeSess.toolbarInjected,
+    sessionStatus: sessionDb.status,
+    lastError: sessionDb.lastError,
+  }
 }
 
 function maskSensitiveInput(fieldName: string | null, value: string | null): string | null {
@@ -55,6 +186,7 @@ export async function startSession(
     startUrl: string
     browserType: string
     viewport: string
+    recordingMode?: string
     moduleId?: string | null
     featureId?: string | null
     componentId?: string | null
@@ -70,9 +202,18 @@ export async function startSession(
     }
   }
 
-  // 1. Launch Playwright browser (non-headless)
-  const browser = await chromium.launch({ headless: false })
-  
+  const existingActive = await prisma.recordingSession.findFirst({
+    where: {
+      projectId,
+      status: { in: ["Starting", "Active", "Paused", "Saving"] },
+    },
+  })
+  if (existingActive) {
+    throw new Error(
+      "This project already has an active recording session. Finish or cancel it before starting a new one."
+    )
+  }
+
   let width = 1280
   let height = 800
   if (options.viewport === "Tablet") {
@@ -83,12 +224,51 @@ export async function startSession(
     height = 667
   }
 
+  const dbSession = await prisma.recordingSession.create({
+    data: {
+      projectId,
+      credentialId: options.requiredCredentialId || null,
+      status: "Starting",
+      browserType: options.browserType as any,
+      viewport: options.viewport as any,
+      startUrl: options.startUrl,
+      currentUrl: options.startUrl,
+      recordingMode: options.recordingMode || "Fast",
+      connectionStatus: "Reconnecting",
+    },
+  })
+
+  const sessionId = dbSession.id
+  let browser: Browser
+  let page: Page
+
+  try {
+    const launcher = getPlaywrightBrowser(options.browserType)
+    browser = await launcher.launch({ headless: false })
+  } catch (err: any) {
+    console.error("[RECORDER] Playwright browser launch failed. Actual error:", err.message, err.stack)
+    const actualError = err.message || "Unknown browser launch error"
+    await prisma.recordingSession.update({
+      where: { id: sessionId },
+      data: {
+        status: "Failed",
+        connectionStatus: "WorkerOffline",
+        lastError: `Browser launch failed: ${actualError}`,
+        finishedAt: new Date(),
+      },
+    })
+    throw new Error(
+      `Recorder failed to start because Playwright browser could not launch: ${actualError}`
+    )
+  }
+
   const context = await browser.newContext({
     viewport: { width, height },
     bypassCSP: true,
   })
 
-  const page = await context.newPage()
+  page = await context.newPage()
+  attachBrowserLifecycleHandlers(sessionId, browser, page)
 
   // 2. Setup error collectors
   const consoleErrors: string[] = []
@@ -115,18 +295,7 @@ export async function startSession(
     }
   })
 
-  // 3. Create RecordingSession in DB
-  const dbSession = await prisma.recordingSession.create({
-    data: {
-      projectId,
-      credentialId: options.requiredCredentialId || null,
-      status: "Active",
-      browserType: options.browserType as any,
-      viewport: options.viewport as any,
-      startUrl: options.startUrl,
-      currentUrl: options.startUrl,
-    },
-  })
+  // 3. Create RecordingSession in DB (already created above with Starting status)
 
   let resolvedModuleName = options.module || "General"
   if (options.moduleId) {
@@ -152,8 +321,6 @@ export async function startSession(
     },
   })
 
-  const sessionId = dbSession.id
-
   // 5. Save to global sessions list
   activeSessions.set(sessionId, {
     browser,
@@ -163,6 +330,17 @@ export async function startSession(
     sessionId,
     consoleErrors,
     networkErrors,
+    toolbarInjected: false,
+    connectionStatus: "Connected",
+  })
+
+  await prisma.recordingSession.update({
+    where: { id: sessionId },
+    data: {
+      currentRecordedTestCaseId: dbCase.id,
+      status: "Active",
+      connectionStatus: "Connected",
+    },
   })
 
   // 6. Expose action listener callback
@@ -380,15 +558,24 @@ export async function startSession(
         return { success: false, error: "Session is not active" }
       }
 
+      const stepCount = await prisma.recordedStep.count({
+        where: { recordedTestCaseId: activeSess.currentTestCaseId },
+      })
+
       // Take screenshot after the action is registered with a 1500ms safety timeout to prevent hanging during navigations
       let screenshotPath: string | null = null
       try {
         const screenshotPromise = page.screenshot({ type: "png" })
-        const timeoutPromise = new Promise<never>((_, reject) => 
+        const timeoutPromise = new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error("Screenshot timeout")), 1500)
         )
         const screenshotBuffer = await Promise.race([screenshotPromise, timeoutPromise])
-        screenshotPath = await saveFile("screenshots", `record-${sessionId}-${Date.now()}.png`, screenshotBuffer)
+        screenshotPath = await saveRecordingScreenshot(
+          sessionId,
+          activeSess.currentTestCaseId,
+          stepCount + 1,
+          screenshotBuffer
+        )
       } catch (err) {
         console.error("Screenshot error during recording:", err)
       }
@@ -436,11 +623,6 @@ export async function startSession(
           return { success: true, consoleErrorsCount: activeSess.consoleErrors.length, networkErrorsCount: activeSess.networkErrors.length }
         }
       }
-
-      // Count step number
-      const stepCount = await prisma.recordedStep.count({
-        where: { recordedTestCaseId: activeSess.currentTestCaseId },
-      })
 
       // Create RecordedStep in database
       await prisma.recordedStep.create({
@@ -533,7 +715,27 @@ export async function startSession(
 
   // 9. Go to starting page
   try {
-    await page.goto(options.startUrl, { waitUntil: "load" })
+    await page.goto(options.startUrl, { waitUntil: "load", timeout: 60000 })
+
+    const toolbarInjected = await page
+      .waitForFunction(() => !!(window as any).__qa_recorder_injected, { timeout: 10000 })
+      .then(() => true)
+      .catch(() => false)
+
+    const activeSess = activeSessions.get(sessionId)
+    if (activeSess) {
+      activeSess.toolbarInjected = toolbarInjected
+      if (!toolbarInjected) {
+        activeSess.connectionStatus = "ToolbarNotInjected"
+        await prisma.recordingSession.update({
+          where: { id: sessionId },
+          data: {
+            connectionStatus: "ToolbarNotInjected",
+            lastError: "Recorder toolbar could not be injected on the target page.",
+          },
+        })
+      }
+    }
 
     // Check if there are already steps for this test case
     const stepCount = await prisma.recordedStep.count({
@@ -544,7 +746,7 @@ export async function startSession(
       let screenshotPath: string | null = null
       try {
         const screenshotBuffer = await page.screenshot({ type: "png" })
-        screenshotPath = await saveFile("screenshots", `record-${sessionId}-${Date.now()}.png`, screenshotBuffer)
+        screenshotPath = await saveRecordingScreenshot(sessionId, dbCase.id, 1, screenshotBuffer)
       } catch (err) {
         console.error("Screenshot error during initial navigation:", err)
       }
@@ -568,11 +770,27 @@ export async function startSession(
         data: { currentUrl: options.startUrl },
       })
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("Initial navigation failed:", err)
+    await prisma.recordingSession.update({
+      where: { id: sessionId },
+      data: {
+        status: "Failed",
+        connectionStatus: "Disconnected",
+        lastError: `Target URL could not be opened: ${err.message || options.startUrl}`,
+        finishedAt: new Date(),
+      },
+    })
+    try {
+      await browser.close()
+    } catch {
+      // ignore
+    }
+    activeSessions.delete(sessionId)
+    throw new Error(`Target URL could not be opened: ${options.startUrl}`)
   }
 
-  return { session: dbSession, testCase: dbCase }
+  return { session: await prisma.recordingSession.findUnique({ where: { id: sessionId } }), testCase: dbCase }
 }
 
 export async function pauseSession(sessionId: string) {
@@ -590,6 +808,11 @@ export async function resumeSession(sessionId: string) {
 }
 
 export async function finishSession(sessionId: string) {
+  await prisma.recordingSession.update({
+    where: { id: sessionId },
+    data: { status: "Saving" },
+  })
+
   const activeSess = activeSessions.get(sessionId)
   if (activeSess) {
     try {
@@ -602,9 +825,11 @@ export async function finishSession(sessionId: string) {
 
   await prisma.recordingSession.update({
     where: { id: sessionId },
-    data: { 
+    data: {
       status: "Finished",
-      finishedAt: new Date()
+      finishedAt: new Date(),
+      connectionStatus: "BrowserClosed",
+      lastError: null,
     },
   })
 }
@@ -682,6 +907,11 @@ export async function startNewRecordedTestCase(
   // Update in-memory session current test case ID pointer
   activeSess.currentTestCaseId = dbCase.id
 
+  await prisma.recordingSession.update({
+    where: { id: sessionId },
+    data: { currentRecordedTestCaseId: dbCase.id },
+  })
+
   // Navigate Playwright browser to project startUrl or clear state if starting fresh
   // We keep page open on current URL by default, which matches "Start new test case from current page"
   // If the starting URL is requested to reload, we do it:
@@ -706,71 +936,12 @@ export async function saveCurrentRecordedTestCase(
   sessionId: string,
   recordedTestCaseId: string
 ) {
-  const draft = await prisma.recordedTestCase.findUnique({
-    where: { id: recordedTestCaseId },
-    include: {
-      steps: {
-        where: { includeInFinalTestCase: true },
-        orderBy: { stepNumber: "asc" },
-      },
-      session: true,
-    },
-  })
-
-  if (!draft) throw new Error("Draft recorded test case not found")
-
-  // Create real structured test case
-  const realTestCase = await prisma.testCase.create({
-    data: {
-      projectId: draft.session.projectId,
-      title: draft.title,
-      module: draft.module || "General",
-      moduleId: draft.moduleId,
-      featureId: draft.featureId,
-      componentId: draft.componentId,
-      priority: draft.priority,
-      preconditions: draft.preconditions,
-      requiredCredentialId: draft.requiredCredentialId,
-      source: "Manual",
-      steps: {
-        create: draft.steps.map((step, idx) => ({
-          stepNumber: idx + 1,
-          actionDescription: step.actionDescription,
-          expectedResult: step.expectedResult || "Action completes successfully",
-          actionType: step.actionType,
-          targetType: step.targetType,
-          targetValue: step.targetValue,
-          inputValue: step.inputValue,
-          timeoutMs: 10000,
-          assertions: step.assertions || [],
-          componentType: step.componentType,
-          groupId: step.groupId,
-          rawEvents: step.rawEvents || undefined,
-          actionMetadata: step.actionMetadata || undefined,
-          locatorCandidates: step.locatorCandidates || undefined,
-          selectedOptionText: step.selectedOptionText,
-          selectedOptionValue: step.selectedOptionValue,
-          validationStatus: step.validationStatus,
-          validationMessage: step.validationMessage,
-        })),
-      },
-    },
-  })
-
-  // Update draft status
-  await prisma.recordedTestCase.update({
-    where: { id: recordedTestCaseId },
-    data: {
-      status: "SavedAsTestCase",
-      finalTestCaseId: realTestCase.id,
-      savedAt: new Date()
-    },
-  })
-
-  return realTestCase
+  return saveRecordedCaseAsTestCase(recordedTestCaseId)
 }
 
-export async function validateStepLocator(stepId: string): Promise<{ success: boolean; matches: number }> {
+export async function validateStepLocator(
+  stepId: string
+): Promise<{ success: boolean; matches: number; healed?: boolean; healedSelector?: string }> {
   const step = await prisma.recordedStep.findUnique({
     where: { id: stepId },
     include: {
@@ -788,12 +959,73 @@ export async function validateStepLocator(stepId: string): Promise<{ success: bo
   const selector = step.recommendedSelector || step.cssSelector
   if (!selector) return { success: false, matches: 0 }
 
+  // 1. Try primary locator
   try {
     const el = await activeSess.page.$(selector)
-    return { success: true, matches: el ? 1 : 0 }
-  } catch {
-    return { success: false, matches: 0 }
+    if (el) {
+      await prisma.recordedStep.update({
+        where: { id: stepId },
+        data: {
+          validationStatus: "Passed",
+          validationMessage: "Primary selector resolved successfully"
+        }
+      })
+      return { success: true, matches: 1 }
+    }
+  } catch (err) {
+    console.warn(`[validateStepLocator] Primary selector failed:`, err)
   }
+
+  // 2. Try fallbacks for auto-healing validation
+  let candidatesObj = step.locatorCandidates as any
+  if (typeof candidatesObj === "string") {
+    try {
+      candidatesObj = JSON.parse(candidatesObj)
+    } catch {
+      candidatesObj = null
+    }
+  }
+
+  if (candidatesObj && Array.isArray(candidatesObj.fallbackLocators)) {
+    console.log(`[validateStepLocator] Primary locator failed. Evaluating ${candidatesObj.fallbackLocators.length} fallback candidates...`)
+    for (const fallback of candidatesObj.fallbackLocators) {
+      try {
+        const locator = resolveLocatorString(activeSess.page, fallback)
+        if (await locator.count() > 0) {
+          console.log(`[validateStepLocator] HEALED: fallback locator "${fallback}" found a matching element!`)
+          
+          const eqIndex = fallback.indexOf("=")
+          const fallbackVal = eqIndex === -1 ? fallback : fallback.substring(eqIndex + 1)
+          const fallbackType = eqIndex === -1 ? "css" : fallback.substring(0, eqIndex)
+
+          await prisma.recordedStep.update({
+            where: { id: stepId },
+            data: {
+              recommendedSelector: fallbackVal,
+              targetType: (fallbackType === "testid" ? "test_id" : fallbackType) as any,
+              targetValue: fallbackVal,
+              validationStatus: "Passed",
+              validationMessage: `Primary selector failed. Auto-healed with fallback: ${fallback}`
+            }
+          })
+
+          return { success: true, matches: 1, healed: true, healedSelector: fallback }
+        }
+      } catch (err: any) {
+        console.warn(`[validateStepLocator] Fallback candidate "${fallback}" failed check:`, err.message)
+      }
+    }
+  }
+
+  await prisma.recordedStep.update({
+    where: { id: stepId },
+    data: {
+      validationStatus: "Failed",
+      validationMessage: "Element not found. Primary and fallback locators both failed to locate the element."
+    }
+  })
+
+  return { success: false, matches: 0 }
 }
 
 export async function createBugFromSession(sessionId: string, bugData: any) {
@@ -866,54 +1098,98 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
 
 export interface FlowValidationReport {
   success: boolean
+  overallStatus: "Passed" | "Failed" | "NeedsReview"
   steps: {
     stepId: string
     stepNumber: number
     validationStatus: string
     validationMessage: string
+    screenshotPath?: string | null
+    suggestedFix?: string | null
   }[]
 }
 
-export async function validateRecordedFlow(sessionId: string): Promise<FlowValidationReport> {
+export async function validateRecordedFlow(
+  sessionId: string,
+  options: { replay?: boolean } = {}
+): Promise<FlowValidationReport> {
   const activeSess = activeSessions.get(sessionId)
   if (!activeSess) {
-    throw new Error("Active session not found")
+    throw new Error("Active session not found. Ensure the recorder browser is still open.")
   }
 
   const steps = await prisma.recordedStep.findMany({
-    where: { 
+    where: {
       recordedTestCaseId: activeSess.currentTestCaseId,
+      includeInFinalTestCase: true,
     },
-    orderBy: { stepNumber: "asc" }
+    orderBy: { stepNumber: "asc" },
   })
 
-  const reportSteps: {
-    stepId: string
-    stepNumber: number
-    validationStatus: string
-    validationMessage: string
-  }[] = []
-
+  const reportSteps: FlowValidationReport["steps"] = []
   let overallSuccess = true
+  let replayPage: Page | null = null
+
+  if (options.replay !== false) {
+    try {
+      const context = activeSess.page.context()
+      replayPage = await context.newPage()
+      await replayPage.addInitScript(INJECTED_RECORDER_SCRIPT)
+    } catch (err) {
+      console.warn("[validateRecordedFlow] Could not create replay page, falling back to locator-only validation", err)
+    }
+  }
 
   for (const step of steps) {
     let status = "Passed"
-    let message = "Locator resolved successfully"
+    let message = "Step validated successfully"
+    let screenshotPath: string | null = null
+    let suggestedFix: string | null = null
 
     const isUrlAction = ["open_url", "wait_for_url", "assert_url"].includes(step.actionType)
     const isCustomAction = step.actionType === "custom_instruction"
 
-    if (!isUrlAction && !isCustomAction) {
+    if (replayPage && !isCustomAction) {
+      try {
+        await executeStep(replayPage, {
+          actionType: step.actionType,
+          targetType: step.targetType,
+          targetValue: step.targetValue,
+          inputValue: step.inputValue,
+          timeoutMs: 10000,
+          locatorCandidates: step.locatorCandidates,
+        })
+        message = "Replay executed successfully"
+      } catch (err: any) {
+        status = "Failed"
+        message = err.message || "Replay execution failed"
+        suggestedFix = step.recommendedSelector
+          ? `Try validating locator "${step.recommendedSelector}" or add a data-testid`
+          : "Add a stronger locator such as data-testid or role+name"
+        try {
+          screenshotPath = await saveRecordingScreenshot(
+            sessionId,
+            activeSess.currentTestCaseId,
+            step.stepNumber,
+            await replayPage.screenshot({ type: "png" })
+          )
+        } catch {
+          // ignore screenshot errors
+        }
+      }
+    } else if (!isUrlAction && !isCustomAction) {
       const selector = step.recommendedSelector || step.cssSelector
       if (!selector) {
         status = "Failed"
         message = "No locator configured for this action"
+        suggestedFix = "Pick element again or add data-testid on the target element"
       } else {
         try {
           const element = await activeSess.page.$(selector)
           if (!element) {
             status = "Failed"
             message = `Element with locator '${selector}' not found on active page`
+            suggestedFix = "Re-record this step or validate locator with fallback healing"
           }
         } catch (err: any) {
           status = "Failed"
@@ -930,39 +1206,38 @@ export async function validateRecordedFlow(sessionId: string): Promise<FlowValid
       where: { id: step.id },
       data: {
         validationStatus: status,
-        validationMessage: message
-      }
+        validationMessage: message,
+      },
     })
 
     reportSteps.push({
       stepId: step.id,
       stepNumber: step.stepNumber,
       validationStatus: status,
-      validationMessage: message
+      validationMessage: message,
+      screenshotPath,
+      suggestedFix,
     })
   }
 
+  if (replayPage) {
+    try {
+      await replayPage.close()
+    } catch {
+      // ignore
+    }
+  }
+
+  const overallStatus: FlowValidationReport["overallStatus"] = overallSuccess
+    ? "Passed"
+    : reportSteps.some((s) => s.validationStatus === "Failed")
+      ? "Failed"
+      : "NeedsReview"
+
   return {
     success: overallSuccess,
-    steps: reportSteps
-  }
-}
-
-export async function getSessionStats(sessionId: string) {
-  const cases = await prisma.recordedTestCase.findMany({
-    where: { sessionId },
-    include: { steps: true }
-  })
-  
-  const savedCount = cases.filter(c => c.status === "SavedAsTestCase").length
-  const draftCases = cases.filter(c => c.status === "Draft")
-  const draftCount = draftCases.length
-  const draftStepCount = draftCases.reduce((acc, c) => acc + c.steps.length, 0)
-  
-  return {
-    savedCount,
-    draftCount,
-    draftStepCount
+    overallStatus,
+    steps: reportSteps,
   }
 }
 

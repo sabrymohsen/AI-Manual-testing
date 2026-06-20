@@ -2,121 +2,205 @@ import { Worker } from "bullmq"
 import { redisConnection, registerWorkerHeartbeat } from "@/lib/queue"
 import { runTestCase } from "@/lib/playwright/runner"
 import { prisma } from "@/lib/db"
+import { runQAAgentPipeline } from "@/lib/agent/brain"
 
-console.log("[WORKER STARTUP] Starting test runner worker process...")
+console.log("[WORKER STARTUP] Initializing background runner workers...")
 
 const workerId = process.env.HOSTNAME || `worker-${Math.random().toString(36).substring(2, 11)}`
 let currentJobId: string | null = null
 let workerStatus: "idle" | "busy" | "error" = "idle"
 
-const worker = new Worker(
-  "test-execution-queue",
-  async (job) => {
-    const { testRunId } = job.data
-    console.log(`[WORKER JOB] Received testRunId: ${testRunId}`)
-    currentJobId = testRunId
-    workerStatus = "busy"
+export function startTestRunWorker() {
+  console.log("Test Run Worker started")
+  const testRunWorker = new Worker(
+    "test-execution-queue",
+    async (job) => {
+      const { testRunId } = job.data
+      console.log(`[TEST RUN WORKER JOB] Received testRunId: ${testRunId}`)
+      currentJobId = testRunId
+      workerStatus = "busy"
 
+      try {
+        await prisma.testJob.upsert({
+          where: { testRunId },
+          update: {
+            status: "Running",
+            startedAt: new Date(),
+            attempts: job.attemptsMade + 1,
+            workerId: workerId,
+          },
+          create: {
+            testRunId,
+            status: "Running",
+            attempts: 1,
+            workerId: workerId,
+          },
+        })
+
+        await runTestCase({ testRunId, headless: true })
+      } catch (err: any) {
+        workerStatus = "error"
+        console.error(`[TEST RUN WORKER JOB ERROR] Failed run ${testRunId}:`, err.message)
+        throw err
+      } finally {
+        currentJobId = null
+        workerStatus = "idle"
+      }
+    },
+    {
+      connection: redisConnection,
+      concurrency: 3,
+    }
+  )
+
+  testRunWorker.on("completed", async (job) => {
+    const { testRunId } = job.data
     try {
-      await prisma.testJob.upsert({
+      await prisma.testJob.update({
         where: { testRunId },
-        update: {
-          status: "Running",
-          startedAt: new Date(),
-          attempts: job.attemptsMade + 1,
-          workerId: workerId,
-        },
-        create: {
-          testRunId,
-          status: "Running",
-          attempts: 1,
-          workerId: workerId,
+        data: { status: "Completed", completedAt: new Date() },
+      })
+    } catch (err) {
+      console.error("Worker failed to update TestJob to Completed:", err)
+    }
+  })
+
+  testRunWorker.on("failed", async (job, error) => {
+    if (!job) return
+    const { testRunId } = job.data
+    try {
+      await prisma.testJob.update({
+        where: { testRunId },
+        data: {
+          status: "Failed",
+          error: error.message,
+          completedAt: new Date(),
         },
       })
 
-      await runTestCase({ testRunId, headless: true })
-    } catch (err: any) {
-      workerStatus = "error"
-      throw err
-    } finally {
-      currentJobId = null
-      workerStatus = "idle"
+      await prisma.testRun.update({
+        where: { id: testRunId },
+        data: {
+          status: "Failed",
+          completedAt: new Date(),
+        },
+      })
+    } catch (err) {
+      console.error("Worker failed to update test run status on failure:", err)
     }
-  },
-  {
-    connection: redisConnection,
-    concurrency: 3,
-  }
-)
+  })
 
-worker.on("completed", async (job) => {
-  const { testRunId } = job.data
-  try {
-    await prisma.testJob.update({
-      where: { testRunId },
-      data: { status: "Completed", completedAt: new Date() },
-    })
-  } catch (err) {
-    console.error("Worker failed to update TestJob to Completed:", err)
-  }
-})
+  testRunWorker.on("error", (error) => {
+    console.error("[TEST RUN WORKER ERROR] Global error:", error.message)
+  })
 
-worker.on("failed", async (job, error) => {
-  if (!job) return
-  const { testRunId } = job.data
-  try {
-    await prisma.testJob.update({
-      where: { testRunId },
-      data: {
-        status: "Failed",
-        error: error.message,
-        completedAt: new Date(),
-      },
-    })
+  return testRunWorker
+}
 
-    await prisma.testRun.update({
-      where: { id: testRunId },
-      data: {
-        status: "Failed",
-        completedAt: new Date(),
-      },
-    })
-  } catch (err) {
-    console.error("Worker failed to update test run status on failure:", err)
-  }
-})
+export function startVisualCheckWorker() {
+  console.log("[VISUAL WORKER] Starting visual comparison queue processor...")
+  const visualCheckWorker = new Worker(
+    "visual-check-queue",
+    async (job) => {
+      const { runId } = job.data
+      console.log(`[VISUAL WORKER JOB] Received runId: ${runId}`)
+      try {
+        const { runVisualCheck } = await import("@/lib/playwright/visual-runner")
+        await runVisualCheck({ runId })
+      } catch (err: any) {
+        console.error(`[VISUAL WORKER JOB ERROR] Failed visual check ${runId}:`, err.message)
+        throw err
+      }
+    },
+    {
+      connection: redisConnection,
+      concurrency: 2,
+    }
+  )
 
-worker.on("error", (error) => {
-  console.error("Worker error:", error.message)
-})
+  visualCheckWorker.on("completed", (job) => {
+    console.log(`[VISUAL WORKER] Completed runId: ${job.data.runId}`)
+  })
 
-// Visual Check Worker
-const visualCheckWorker = new Worker(
-  "visual-check-queue",
-  async (job) => {
+  visualCheckWorker.on("failed", (job, error) => {
+    console.error(`[VISUAL WORKER] Failed runId: ${job?.data.runId}. Error: ${error.message}`)
+  })
+
+  visualCheckWorker.on("error", (error) => {
+    console.error("[VISUAL WORKER ERROR] Global error:", error.message)
+  })
+
+  return visualCheckWorker
+}
+
+export function startAgentRunWorker() {
+  console.log("Agent Run Worker started")
+  console.log("Listening to queue: agent-run-queue")
+  const agentRunWorker = new Worker(
+    "qa-agent-queue",
+    async (job) => {
+      const { runId } = job.data
+      console.log(`[AgentRunWorker] Picked job: ${runId}`)
+      try {
+        await runQAAgentPipeline(runId)
+      } catch (err: any) {
+        console.error(`[AgentRunWorker] Failed agent run ${runId}:`, err.message)
+        throw err
+      }
+    },
+    {
+      connection: redisConnection,
+      concurrency: 1,
+    }
+  )
+
+  agentRunWorker.on("completed", (job) => {
+    console.log(`[AGENT WORKER] Completed agent runId: ${job.data.runId}`)
+  })
+
+  agentRunWorker.on("failed", async (job, error) => {
+    if (!job) return
     const { runId } = job.data
-    console.log(`[VISUAL WORKER] Received runId: ${runId}`)
+    console.error(`[AgentRunWorker] Failed job for runId: ${runId}. Error: ${error.message}`)
+    try {
+      await prisma.qAAgentRun.update({
+        where: { id: runId },
+        data: {
+          status: "Failed",
+          completedAt: new Date(),
+          currentPhase: "Failed",
+          currentMessage: `Agent execution failed: ${error.message}`,
+          failedReason: error.message,
+          failedAt: new Date(),
+          errorStack: error.stack || null
+        }
+      })
+      await prisma.qAAgentFinding.create({
+        data: {
+          agentRunId: runId,
+          type: "Risk",
+          severity: "High",
+          title: "Agent execution failed",
+          description: error.message,
+          evidence: { error: error.message, stack: error.stack }
+        }
+      })
+    } catch (err) {
+      console.error("Worker failed to update QA Agent Run status on failure:", err)
+    }
+  })
 
-    const { runVisualCheck } = await import("@/lib/playwright/visual-runner")
-    await runVisualCheck({ runId })
-  },
-  {
-    connection: redisConnection,
-    concurrency: 2,
-  }
-)
+  agentRunWorker.on("error", (error) => {
+    console.error("[AGENT WORKER ERROR] Global error:", error.message)
+  })
 
-visualCheckWorker.on("completed", (job) => {
-  console.log(`[VISUAL WORKER] Completed runId: ${job.data.runId}`)
-})
+  return agentRunWorker
+}
 
-visualCheckWorker.on("failed", (job, error) => {
-  console.error(`[VISUAL WORKER] Failed runId: ${job?.data.runId}. Error: ${error.message}`)
-})
-
-visualCheckWorker.on("error", (error) => {
-  console.error("Visual Worker error:", error.message)
-})
+// Instantiate and start all isolated workers
+const testRunWorker = startTestRunWorker()
+const visualCheckWorker = startVisualCheckWorker()
+const agentRunWorker = startAgentRunWorker()
 
 // Heartbeat Loop (5 seconds interval)
 const heartbeatInterval = setInterval(async () => {
@@ -133,11 +217,12 @@ const heartbeatInterval = setInterval(async () => {
   }
 }, 5000)
 
-console.log(`Test runner worker (${workerId}) and visual check worker started`)
+console.log(`All background workers initialized successfully under process: ${workerId}`)
 
 process.on("SIGTERM", async () => {
   clearInterval(heartbeatInterval)
-  await worker.close()
-  await visualCheckWorker.close()
+  await testRunWorker.close().catch(() => {})
+  await visualCheckWorker.close().catch(() => {})
+  await agentRunWorker.close().catch(() => {})
   process.exit(0)
 })

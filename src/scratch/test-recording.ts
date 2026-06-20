@@ -24,6 +24,9 @@ async function main() {
   })
 
   const { session, testCase } = result
+  if (!session) {
+    throw new Error("Session was not created in database")
+  }
   const sessionId = session.id
   const testCaseId = testCase.id
   console.log(`Started session: ${sessionId}, Test Case Draft: ${testCaseId}`)

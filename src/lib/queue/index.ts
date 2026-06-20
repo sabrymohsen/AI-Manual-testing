@@ -94,10 +94,58 @@ export const recorderValidationQueue = new Queue("recorder-validation-queue", {
   },
 })
 
+export const autonomousAgentQueue = new Queue("autonomous-agent-queue", {
+  connection: conn,
+  defaultJobOptions: {
+    attempts: 1,
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  },
+})
+
+export const agentBrainQueue = new Queue("agent-brain-queue", {
+  connection: conn,
+  defaultJobOptions: {
+    attempts: 1,
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  },
+})
+
+export const qaAgentQueue = new Queue("qa-agent-queue", {
+  connection: conn,
+  defaultJobOptions: {
+    attempts: 1,
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  },
+})
+
 // 2. Job Add/Cancel Helpers
 export async function addTestRunJob(testRunId: string): Promise<string> {
   const job = await testExecutionQueue.add("execute-test-run", { testRunId }, {
     jobId: testRunId,
+  })
+  return job.id!
+}
+
+export async function addAutonomousAgentJob(agentRunId: string): Promise<string> {
+  const job = await autonomousAgentQueue.add("execute-autonomous-run", { agentRunId }, {
+    jobId: agentRunId,
+  })
+  return job.id!
+}
+
+export async function addAgentBrainJob(runId: string): Promise<string> {
+  const job = await agentBrainQueue.add("execute-agent-brain-run", { runId }, {
+    jobId: runId,
+  })
+  return job.id!
+}
+
+export async function addQAAgentJob(runId: string): Promise<string> {
+  const job = await qaAgentQueue.add("execute-qa-agent-run", { runId }, {
+    jobId: runId,
   })
   return job.id!
 }
@@ -144,6 +192,26 @@ export async function publishTestRunEvent(testRunId: string, event: string, data
   await redisClient.publish("test-run-events", payload)
 }
 
+export async function publishAgentRunEvent(agentRunId: string, event: string, data: any = {}) {
+  const payload = JSON.stringify({
+    agentRunId,
+    event,
+    data,
+    timestamp: new Date().toISOString(),
+  })
+  await redisClient.publish("agent-run-events", payload)
+}
+
+export async function publishAgentBrainEvent(runId: string, event: string, data: any = {}) {
+  const payload = JSON.stringify({
+    runId,
+    event,
+    data,
+    timestamp: new Date().toISOString(),
+  })
+  await redisClient.publish("agent-brain-events", payload)
+}
+
 // 4. Cancellation Signal Helpers
 export async function setCancelSignal(testRunId: string): Promise<void> {
   await redisClient.set(`test-run:cancel:${testRunId}`, "true", "EX", 3600) // 1 hour expiration
@@ -156,6 +224,27 @@ export async function isCancelSignalSet(testRunId: string): Promise<boolean> {
 
 export async function clearCancelSignal(testRunId: string): Promise<void> {
   await redisClient.del(`test-run:cancel:${testRunId}`)
+}
+
+export async function setQAAgentCancelSignal(runId: string): Promise<void> {
+  await redisClient.set(`qa-agent:cancel:${runId}`, "true", "EX", 3600)
+}
+
+export async function isQAAgentCancelSignalSet(runId: string): Promise<boolean> {
+  const res = await redisClient.get(`qa-agent:cancel:${runId}`)
+  return res === "true"
+}
+
+export async function clearQAAgentCancelSignal(runId: string): Promise<void> {
+  await redisClient.del(`qa-agent:cancel:${runId}`)
+}
+
+export async function cancelQAAgentJob(runId: string): Promise<void> {
+  const job = await qaAgentQueue.getJob(runId)
+  if (job) {
+    await job.remove()
+  }
+  await setQAAgentCancelSignal(runId)
 }
 
 // 5. Worker Heartbeat Helpers

@@ -6,12 +6,14 @@ const STORAGE_ROOT = process.env.STORAGE_ROOT || "./storage"
 
 export type StorageDir =
   | "screenshots"
+  | "recordings"
   | "figma"
   | "diffs"
   | "traces"
   | "videos"
   | "exports"
   | "crops"
+  | "dom_snapshots"
   | "visual-checks/figma"
   | "visual-checks/actual"
   | "visual-checks/diff"
@@ -32,9 +34,9 @@ export async function saveFile(
   buffer: Buffer
 ): Promise<string> {
   const fullDir = path.join(STORAGE_ROOT, dir)
-  await ensureDir(fullDir)
-  const uniqueName = `${uuidv4()}-${filename}`
-  const filePath = path.join(fullDir, uniqueName)
+  const filePath = path.join(fullDir, filename)
+  // Ensure the full parent directory tree exists (filename may contain subdirs)
+  await ensureDir(path.dirname(filePath))
   await fs.writeFile(filePath, buffer)
   return filePath
 }

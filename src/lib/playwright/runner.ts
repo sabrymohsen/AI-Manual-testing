@@ -25,6 +25,7 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       },
       credential: true,
       project: true,
+      autonomousAgentRun: true,
     },
   })
 
@@ -221,22 +222,43 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         console.warn(`[runner.ts] Failed to capture screenshot before step ${step.stepNumber}:`, e instanceof Error ? e.message : e)
       }
 
+      let stepToExecute: any = {
+        ...step,
+        executionMode: testRun.executionMode,
+      }
+      if (step.inputValue === "***MASKED***" && decryptedPassword) {
+        stepToExecute.inputValue = decryptedPassword
+      }
+
       let actualResult = ""
       let status: string = "Passed"
       let errorDetails: string | null = null
       let attempts = 0
       const maxAttempts = 3 // 1 initial + 2 retries
 
-      while (attempts < maxAttempts) {
+      // Destructive Action Safety Check
+      let isSafetyBlocked = false
+      if ((testRun as any).autonomousAgentRun && (testRun as any).autonomousAgentRun.safetyDoNotDelete) {
+        const destructiveRegexp = /\b(delete|destroy|wipe|purge|pay|purchase|payment|terminate_account|cancel_account)\b/i
+        const checkStr = `${step.actionDescription} ${step.actionType} ${step.targetValue || ""} ${step.inputValue || ""}`
+        if (destructiveRegexp.test(checkStr)) {
+          isSafetyBlocked = true
+          status = "Skipped"
+          actualResult = "Step skipped due to Autonomous Agent safety rules: destructive action detected."
+          errorDetails = "Safety Check Blocked: Destructive action filter matched."
+          logs.push({
+            source: "playwright",
+            level: "Warning",
+            message: `Safety Block: Step ${step.stepNumber} was skipped because it matched destructive keywords (delete/payment).`,
+            timestamp: new Date().toISOString()
+          })
+          console.warn(`[runner.ts] Safety Block on step ${step.stepNumber}: destructive action detected.`)
+        }
+      }
+
+      while (attempts < maxAttempts && !isSafetyBlocked) {
         try {
           if (page) {
-            let stepToExecute = step
-            if (step.inputValue === "***MASKED***" && decryptedPassword) {
-              stepToExecute = {
-                ...step,
-                inputValue: decryptedPassword,
-              }
-            }
             await executeStep(page, stepToExecute)
           }
 
@@ -252,7 +274,33 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
           }
 
           status = "Passed"
-          actualResult = "Step completed successfully"
+          if (stepToExecute.actionMetadata?.healed) {
+            status = "SelfHealed"
+            const confidence = stepToExecute.actionMetadata.confidence || 100
+            const healMsg = `HEALED: Primary locator failed. Strategy: ${stepToExecute.actionMetadata.healingMethod || "fallback_locator"}, New: ${stepToExecute.actionMetadata.newLocator}, Confidence: ${confidence}%`
+            logs.push({
+              source: "playwright",
+              level: "Warning",
+              message: healMsg,
+              timestamp: new Date().toISOString()
+            })
+            actualResult = healMsg
+            console.log(`[runner.ts] ${healMsg}`)
+          } else {
+            actualResult = "Step completed successfully"
+          }
+
+          // Push healing attempts/resolution log if any
+          if (stepToExecute.actionMetadata?.healingLogs) {
+            for (const logMsg of stepToExecute.actionMetadata.healingLogs) {
+              logs.push({
+                source: "playwright",
+                level: stepToExecute.actionMetadata.healed ? "Warning" : "Error",
+                message: logMsg,
+                timestamp: new Date().toISOString()
+              })
+            }
+          }
           break // Success - break retry loop
         } catch (error: any) {
           attempts++
@@ -273,8 +321,20 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
             if (page) await page.waitForTimeout(1000)
           } else {
             status = "Failed"
-            errorDetails = errorMessage
+            errorDetails = `${errorMessage}. Suggestion: Manual re-recording of this step may be required.`
             actualResult = errorDetails || "Unknown error"
+            
+            // Push healing attempts/resolution log if any
+            if (stepToExecute.actionMetadata?.healingLogs) {
+              for (const logMsg of stepToExecute.actionMetadata.healingLogs) {
+                logs.push({
+                  source: "playwright",
+                  level: "Error",
+                  message: logMsg,
+                  timestamp: new Date().toISOString()
+                })
+              }
+            }
             break
           }
         }
@@ -291,6 +351,24 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         console.warn(`[runner.ts] Failed to capture screenshot after step ${step.stepNumber}:`, e instanceof Error ? e.message : e)
       }
 
+      // DOM snapshot on failure
+      let domSnapshotPath: string | null = null
+      if (status === "Failed" && page) {
+        try {
+          const domHtml = await page.content()
+          domSnapshotPath = await saveFile("dom_snapshots", `step-${step.stepNumber}-dom.html`, Buffer.from(domHtml))
+          console.log(`[runner.ts] Saved DOM snapshot on failure to: ${domSnapshotPath}`)
+          
+          if (!stepToExecute.actionMetadata) {
+            stepToExecute.actionMetadata = {}
+          }
+          stepToExecute.actionMetadata.domSnapshotPath = domSnapshotPath
+          stepToExecute.actionMetadata.suggestManualRerecord = true
+        } catch (e) {
+          console.warn(`[runner.ts] Failed to capture DOM snapshot:`, e instanceof Error ? e.message : e)
+        }
+      }
+
       const stepDuration = Date.now() - stepStartTime
 
       await prisma.testStepResult.update({
@@ -302,6 +380,7 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
           screenshotAfter: screenshotAfterPath,
           errorDetails,
           durationMs: stepDuration,
+          actionMetadata: stepToExecute.actionMetadata || null,
         },
       })
 

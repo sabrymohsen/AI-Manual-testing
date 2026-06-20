@@ -53,7 +53,7 @@ export async function POST(
     return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
 
-  const { testCaseId, credentialId } = parsed.data
+  const { testCaseId, credentialId, executionMode } = parsed.data
 
   const testCase = await prisma.testCase.findFirst({
     where: { id: testCaseId, projectId: params.projectId },
@@ -112,6 +112,7 @@ export async function POST(
       viewportWidth,
       viewportHeight,
       triggeredBy: "Manual",
+      executionMode: executionMode || "SelfHealing",
     },
   })
 

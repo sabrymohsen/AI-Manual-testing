@@ -263,7 +263,7 @@ export default function BugReportsHubPage() {
   useEffect(() => {
     fetch("/api/projects")
       .then((res) => res.json())
-      .then((data) => setProjects(data.projects || []))
+      .then((data) => setProjects(data.items || data.projects || []))
       .catch((err) => console.error("Error fetching projects list:", err))
   }, [])
 

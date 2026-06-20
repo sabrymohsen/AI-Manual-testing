@@ -39,6 +39,7 @@ export async function GET(
       durationMs: true,
       screenshotBefore: true,
       screenshotAfter: true,
+      actionMetadata: true,
     },
   })
 

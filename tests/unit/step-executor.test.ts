@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { executeStep } from "@/lib/playwright/step-executor"
+import { executeStep, resolveLocatorString } from "@/lib/playwright/step-executor"
 import { Page } from "playwright"
+
+vi.mock("@/lib/db", () => ({
+  prisma: {
+    testStep: {
+      update: vi.fn().mockResolvedValue({}),
+    },
+  },
+}))
 
 describe("step-executor", () => {
   let mockLocator: any
@@ -44,6 +52,7 @@ describe("step-executor", () => {
       waitForFunction: vi.fn().mockResolvedValue(undefined),
       waitForURL: vi.fn().mockResolvedValue(undefined),
       waitForTimeout: vi.fn().mockResolvedValue(undefined),
+      evaluate: vi.fn().mockResolvedValue(null),
     }
   })
 
@@ -59,7 +68,7 @@ describe("step-executor", () => {
 
     expect(mockPage.goto).toHaveBeenCalledWith("https://example.com", {
       waitUntil: "domcontentloaded",
-      timeout: 45000, // min default is 45000 in executeStep
+      timeout: 10000, // min default is 10000 in executeStep
     })
   })
 
@@ -74,7 +83,7 @@ describe("step-executor", () => {
     await executeStep(mockPage as unknown as Page, step)
 
     expect(mockPage.locator).toHaveBeenCalledWith("button.submit")
-    expect(mockLocator.waitFor).toHaveBeenCalledWith({ state: "visible", timeout: 45000 })
+    expect(mockLocator.waitFor).toHaveBeenCalledWith({ state: "visible", timeout: 10000 })
     expect(mockLocator.click).toHaveBeenCalled()
   })
 
@@ -223,5 +232,177 @@ describe("step-executor", () => {
     }
     await executeStep(mockPage as unknown as Page, stepOffChecked)
     expect(mockLocator.click).toHaveBeenCalledTimes(2) // 1 from previous, 1 now
+  })
+
+  describe("resolveLocatorString", () => {
+    it("should parse testid prefix and return getByTestId", () => {
+      resolveLocatorString(mockPage as unknown as Page, "testid=submit-btn")
+      expect(mockPage.getByTestId).toHaveBeenCalledWith("submit-btn")
+    })
+
+    it("should parse css prefix and return locator", () => {
+      resolveLocatorString(mockPage as unknown as Page, "css=.btn-primary")
+      expect(mockPage.locator).toHaveBeenCalledWith(".btn-primary")
+    })
+
+    it("should parse label prefix and return getByLabel", () => {
+      resolveLocatorString(mockPage as unknown as Page, "label=Username")
+      expect(mockPage.getByLabel).toHaveBeenCalledWith("Username")
+    })
+
+    it("should parse role prefix and return getByRole with structured parameters", () => {
+      resolveLocatorString(mockPage as unknown as Page, "role=button, name: \"Login\"")
+      expect(mockPage.getByRole).toHaveBeenCalledWith("button", { name: "Login", exact: false })
+    })
+
+    it("should default to css when no prefix is found", () => {
+      resolveLocatorString(mockPage as unknown as Page, ".simple-class")
+      expect(mockPage.locator).toHaveBeenCalledWith(".simple-class")
+    })
+  })
+
+  describe("auto-healing", () => {
+    it("should attempt auto-healing if primary locator fails and successfully recover", async () => {
+      // Primary locator fails (throws error)
+      mockLocator.waitFor.mockRejectedValueOnce(new Error("Timeout waiting for primary element"))
+      
+      // Fallback locator exists in candidates
+      const step = {
+        actionType: "click",
+        targetType: "css",
+        targetValue: "#nonexistent",
+        timeoutMs: 1000,
+        locatorCandidates: JSON.stringify({
+          fallbackLocators: ["testid=fallback-id"]
+        })
+      }
+
+      await executeStep(mockPage as unknown as Page, step)
+
+      // Verified that attemptAutoHealing triggered, tried the fallback locator, and clicked it
+      expect(mockPage.getByTestId).toHaveBeenCalledWith("fallback-id")
+      expect(mockLocator.click).toHaveBeenCalled()
+      expect((step as any).actionMetadata).toBeDefined()
+      expect((step as any).actionMetadata.healed).toBe(true)
+      expect((step as any).actionMetadata.healedLocator).toBe("testid=fallback-id")
+    })
+
+    it("should fail step if both primary and fallback locators fail", async () => {
+      // Primary locator fails
+      mockLocator.waitFor.mockRejectedValue(new Error("Primary element not found"))
+      
+      const step = {
+        actionType: "click",
+        targetType: "css",
+        targetValue: "#nonexistent",
+        timeoutMs: 1000,
+        locatorCandidates: JSON.stringify({
+          fallbackLocators: ["testid=fallback-id"]
+        })
+      }
+
+      await expect(executeStep(mockPage as unknown as Page, step)).rejects.toThrow("Primary element not found")
+    })
+
+    it("should attempt context recovery (Layer 2) and succeed when primary and fallbacks fail directly but container is found", async () => {
+      mockLocator.waitFor.mockRejectedValueOnce(new Error("Timeout waiting for primary element"))
+      
+      const mockHealedLocator = {
+        waitFor: vi.fn().mockResolvedValue(undefined),
+        click: vi.fn().mockResolvedValue(undefined),
+        evaluate: vi.fn().mockResolvedValue(false),
+      }
+
+      const mockContainer = {
+        count: vi.fn().mockResolvedValue(1),
+        filter: vi.fn().mockReturnThis(),
+        first: vi.fn().mockReturnValue({
+          getByTestId: vi.fn().mockReturnValue(mockHealedLocator),
+          getByRole: vi.fn().mockReturnValue(mockHealedLocator),
+          getByText: vi.fn().mockReturnValue(mockHealedLocator),
+          getByLabel: vi.fn().mockReturnValue(mockHealedLocator),
+          getByPlaceholder: vi.fn().mockReturnValue(mockHealedLocator),
+          locator: vi.fn().mockReturnValue(mockHealedLocator),
+        }),
+      }
+
+      mockPage.locator.mockImplementation((selector: string) => {
+        if (selector === "tr") {
+          return mockContainer
+        }
+        return mockLocator
+      })
+
+      const step = {
+        actionType: "click",
+        targetType: "css",
+        targetValue: "#nonexistent",
+        timeoutMs: 1000,
+        locatorCandidates: JSON.stringify({
+          fallbackLocators: [],
+          context: "in row \"RowText\""
+        })
+      }
+
+      await executeStep(mockPage as unknown as Page, step)
+
+      expect(mockPage.locator).toHaveBeenCalledWith("tr")
+      expect(mockHealedLocator.click).toHaveBeenCalled()
+      expect((step as any).actionMetadata.healingMethod).toBe("dom_context_recovery")
+      expect((step as any).actionMetadata.confidence).toBe(75)
+    })
+
+    it("should attempt semantic matching (Layer 3) and succeed when page evaluate returns a valid candidate", async () => {
+      mockLocator.waitFor.mockRejectedValueOnce(new Error("Timeout waiting for primary element"))
+      
+      mockPage.evaluate.mockResolvedValueOnce({
+        selector: ".healed-btn",
+        score: 65,
+        tagName: "button",
+        role: "button",
+        text: "Submit",
+        hasTextScore: true
+      })
+
+      const step = {
+        actionType: "click",
+        targetType: "css",
+        targetValue: "#nonexistent",
+        timeoutMs: 1000,
+      }
+
+      await executeStep(mockPage as unknown as Page, step)
+
+      expect(mockPage.locator).toHaveBeenCalledWith(".healed-btn")
+      expect(mockLocator.click).toHaveBeenCalled()
+      expect((step as any).actionMetadata.healingMethod).toBe("semantic_match")
+      expect((step as any).actionMetadata.confidence).toBe(70)
+    })
+
+    it("should trigger learning layer (Layer 5) and update DB when confidence >= 90%", async () => {
+      mockLocator.waitFor.mockRejectedValueOnce(new Error("Timeout waiting for primary element"))
+      
+      const step = {
+        id: "step-12345",
+        actionType: "click",
+        targetType: "css",
+        targetValue: "#nonexistent",
+        timeoutMs: 1000,
+        locatorCandidates: JSON.stringify({
+          fallbackLocators: ["testid=healed-test-id"]
+        })
+      }
+
+      await executeStep(mockPage as unknown as Page, step)
+
+      const { prisma } = await import("@/lib/db")
+      expect(prisma.testStep.update).toHaveBeenCalledWith({
+        where: { id: "step-12345" },
+        data: {
+          targetType: "test_id",
+          targetValue: "healed-test-id"
+        }
+      })
+    })
   })
 })

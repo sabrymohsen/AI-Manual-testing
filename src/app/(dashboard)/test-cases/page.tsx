@@ -225,6 +225,36 @@ function TestCasesHubContent() {
   const [targetPriority, setTargetPriority] = useState("Medium")
   const [prioritySaving, setPrioritySaving] = useState(false)
 
+  // Recorder global modal states
+  const [showRecorderModal, setShowRecorderModal] = useState(false)
+  const [recorderProjectId, setRecorderProjectId] = useState("")
+  const [recorderTitle, setRecorderTitle] = useState("")
+  const [recorderStartUrl, setRecorderStartUrl] = useState("")
+  const [recorderModuleId, setRecorderModuleId] = useState("")
+  const [recorderFeatureId, setRecorderFeatureId] = useState("")
+  const [recorderComponentId, setRecorderComponentId] = useState("")
+  const [recorderCredentialId, setRecorderCredentialId] = useState("")
+  const [recorderPriority, setRecorderPriority] = useState("Medium")
+  const [recorderPreconditions, setRecorderPreconditions] = useState("")
+  const [recorderBrowserType, setRecorderBrowserType] = useState<"Chromium" | "Firefox" | "WebKit">("Chromium")
+  const [recorderViewport, setRecorderViewport] = useState<"Desktop" | "Tablet" | "Mobile" | "Custom">("Desktop")
+  const [recorderMode, setRecorderMode] = useState<"Fast" | "Detailed" | "Assertion">("Fast")
+
+  const [recorderLoadingConfig, setRecorderLoadingConfig] = useState(false)
+  const [recorderProjectConfig, setRecorderProjectConfig] = useState<{
+    project: { id: string; name: string; baseUrl: string | null }
+    environments: string[]
+    credentials: Array<{ id: string; roleName: string; username: string }>
+    modules: Array<{ id: string; name: string }>
+    features: Array<{ id: string; name: string; moduleId: string }>
+    components: Array<{ id: string; name: string; featureId: string }>
+  } | null>(null)
+
+  const [activeSessionInfo, setActiveSessionInfo] = useState<any>(null)
+  const [recorderStarting, setRecorderStarting] = useState(false)
+  const [recorderStartError, setRecorderStartError] = useState("")
+  const [recorderLaunchStatus, setRecorderLaunchStatus] = useState("")
+
   // Hierarchy tree view state
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
@@ -244,11 +274,179 @@ function TestCasesHubContent() {
     setComponentId("")
   }, [projectId])
 
+  // Load configuration for the selected project in recorder modal
+  useEffect(() => {
+    if (!recorderProjectId) {
+      setRecorderProjectConfig(null)
+      setActiveSessionInfo(null)
+      setRecorderStartUrl("")
+      return
+    }
+
+    setRecorderLoadingConfig(true)
+    setRecorderStartError("")
+    
+    // Fetch project's recording configuration and active session status
+    Promise.all([
+      fetch(`/api/projects/${recorderProjectId}/recording-config`).then((res) => {
+        if (!res.ok) throw new Error("Failed to load project config")
+        return res.json()
+      }),
+      fetch(`/api/recording/sessions/active?projectId=${recorderProjectId}`).then((res) => {
+        if (!res.ok) throw new Error("Failed to check active sessions")
+        return res.json()
+      })
+    ])
+      .then(([configData, activeSessionData]) => {
+        setRecorderProjectConfig(configData)
+        setRecorderStartUrl(configData.project?.baseUrl || "")
+        setActiveSessionInfo(activeSessionData.session || null)
+      })
+      .catch((err) => {
+        console.error(err)
+        setRecorderStartError("Failed to fetch project configuration details.")
+      })
+      .finally(() => {
+        setRecorderLoadingConfig(false)
+      })
+  }, [recorderProjectId])
+
+  async function handleCancelActiveSession() {
+    if (!activeSessionInfo) return
+    setRecorderLoadingConfig(true)
+    setRecorderStartError("")
+    try {
+      const res = await fetch(`/api/recording/${activeSessionInfo.id}/cancel`, {
+        method: "POST"
+      })
+      if (res.ok) {
+        setActiveSessionInfo(null)
+        setToast({ message: "Active recording session cancelled successfully.", type: "success" })
+      } else {
+        const data = await res.json()
+        setRecorderStartError(data.error || "Failed to cancel active session.")
+      }
+    } catch {
+      setRecorderStartError("Network error cancelling session.")
+    } finally {
+      setRecorderLoadingConfig(false)
+    }
+  }
+
+  async function handleStartRecorderSession(e: React.FormEvent) {
+    e.preventDefault()
+    if (!recorderProjectId) return
+    if (!recorderTitle.trim()) {
+      setRecorderStartError("Test case title is required")
+      return
+    }
+    if (!recorderStartUrl.trim()) {
+      setRecorderStartError("Target URL is required")
+      return
+    }
+
+    setRecorderStarting(true)
+    setRecorderStartError("")
+    setRecorderLaunchStatus("Validating inputs...")
+
+    // Simulate logs sequence
+    const statuses = [
+      "Checking project permissions...",
+      "Creating recording session...",
+      "Launching external Playwright browser...",
+      "Injecting recorder toolbar..."
+    ]
+
+    let currentLogIndex = 0
+    const logInterval = setInterval(() => {
+      if (currentLogIndex < statuses.length) {
+        setRecorderLaunchStatus(statuses[currentLogIndex])
+        currentLogIndex++
+      }
+    }, 1500)
+
+    try {
+      const body = {
+        projectId: recorderProjectId,
+        title: recorderTitle,
+        moduleId: recorderModuleId || null,
+        featureId: recorderFeatureId || null,
+        componentId: recorderComponentId || null,
+        priority: recorderPriority,
+        preconditions: recorderPreconditions || null,
+        requiredCredentialId: recorderCredentialId || null,
+        startUrl: recorderStartUrl,
+        browserType: recorderBrowserType,
+        viewport: recorderViewport,
+        recordingMode: recorderMode,
+      }
+
+      const res = await fetch("/api/recording/sessions/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      })
+
+      clearInterval(logInterval)
+
+      if (res.ok) {
+        setRecorderLaunchStatus("Success! Redirecting to workspace...")
+        setTimeout(() => {
+          setShowRecorderModal(false)
+          setRecorderProjectId("")
+          setRecorderTitle("")
+          setRecorderStartUrl("")
+          setRecorderModuleId("")
+          setRecorderFeatureId("")
+          setRecorderComponentId("")
+          setRecorderCredentialId("")
+          setRecorderPreconditions("")
+          setRecorderStarting(false)
+          router.push(`/projects/${recorderProjectId}/record`)
+        }, 1000)
+      } else {
+        const data = await res.json()
+        setRecorderStartError(data.error || "Failed to start recording session.")
+        setRecorderStarting(false)
+      }
+    } catch {
+      clearInterval(logInterval)
+      setRecorderStartError("Network error starting recorder session.")
+      setRecorderStarting(false)
+    }
+  }
+
+  function openRecorderModal() {
+    if (projectId && projectId !== "all") {
+      setRecorderProjectId(projectId)
+    } else if (projects.length === 1) {
+      setRecorderProjectId(projects[0].id)
+    } else {
+      setRecorderProjectId("")
+    }
+    
+    setRecorderTitle("")
+    setRecorderModuleId("")
+    setRecorderFeatureId("")
+    setRecorderComponentId("")
+    setRecorderCredentialId("")
+    setRecorderPriority("Medium")
+    setRecorderPreconditions("")
+    setRecorderBrowserType("Chromium")
+    setRecorderViewport("Desktop")
+    setRecorderMode("Fast")
+    setRecorderStartError("")
+    setRecorderStarting(false)
+    setRecorderLaunchStatus("")
+    
+    setShowRecorderModal(true)
+  }
+
   // Fetch all projects on mount
   useEffect(() => {
     fetch("/api/projects")
       .then((res) => res.json())
-      .then((data) => setProjects(data.projects || []))
+      .then((data) => setProjects(data.items || data.projects || []))
       .catch((err) => console.error("Error fetching projects:", err))
   }, [])
 
@@ -1095,6 +1293,14 @@ function TestCasesHubContent() {
           </Button>
 
           <Button
+            onClick={openRecorderModal}
+            className="flex items-center gap-1.5 font-semibold bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-600 border-indigo-500/20 hover:border-indigo-500/30 shadow-md"
+            variant="outline"
+          >
+            <Play className="h-4 w-4 text-indigo-500" /> Create by Recorder
+          </Button>
+
+          <Button
             variant="outline"
             onClick={() => {
               if (projectId && projectId !== "all") {
@@ -1620,6 +1826,13 @@ function TestCasesHubContent() {
                   <Button onClick={() => { setCreateProjectId(projectId); setShowCreateModal(true) }}>
                     Create Test Case
                   </Button>
+                  <Button
+                    variant="outline"
+                    onClick={openRecorderModal}
+                    className="flex items-center gap-1 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-600 border-indigo-500/20 hover:border-indigo-500/30 font-medium"
+                  >
+                    <Play className="h-4.5 w-4.5" /> Create by Recorder
+                  </Button>
                   <Button variant="outline" onClick={() => { setImportProjectId(projectId); setShowImportModal(true) }}>
                     Import Excel
                   </Button>
@@ -1645,6 +1858,13 @@ function TestCasesHubContent() {
                 </p>
                 <div className="flex justify-center gap-2">
                   <Button onClick={() => setShowCreateModal(true)}>Create Test Case</Button>
+                  <Button
+                    variant="outline"
+                    onClick={openRecorderModal}
+                    className="flex items-center gap-1 bg-indigo-500/5 hover:bg-indigo-500/10 text-indigo-600 border-indigo-500/20 hover:border-indigo-500/30 font-medium"
+                  >
+                    <Play className="h-4.5 w-4.5" /> Create by Recorder
+                  </Button>
                   <Button variant="outline" onClick={() => setShowImportProjectSelectModal(true)}>Import Excel</Button>
                 </div>
               </div>
@@ -2343,6 +2563,299 @@ function TestCasesHubContent() {
               >
                 Continue
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. CREATE BY RECORDER MODAL */}
+      {showRecorderModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-background border rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b flex items-center justify-between bg-accent/20">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Play className="h-5 w-5 text-indigo-600 animate-pulse" /> Start Browser Recorder
+              </h3>
+              <button onClick={() => setShowRecorderModal(false)} className="text-muted-foreground hover:text-foreground" disabled={recorderStarting}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleStartRecorderSession} className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Project selection */}
+              <div className="space-y-2">
+                <Label htmlFor="recorder-project" className="font-bold">Project *</Label>
+                <select
+                  id="recorder-project"
+                  required
+                  disabled={recorderStarting}
+                  value={recorderProjectId}
+                  onChange={(e) => {
+                    setRecorderProjectId(e.target.value)
+                    setRecorderModuleId("")
+                    setRecorderFeatureId("")
+                    setRecorderComponentId("")
+                    setRecorderCredentialId("")
+                  }}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                >
+                  <option value="">-- Select Project --</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {recorderLoadingConfig && (
+                <div className="flex flex-col items-center justify-center py-10 space-y-2">
+                  <Loader2 className="h-8 w-8 text-indigo-600 animate-spin" />
+                  <p className="text-sm text-muted-foreground">Loading project details and credentials...</p>
+                </div>
+              )}
+
+              {recorderProjectId && !recorderLoadingConfig && (
+                <div className="space-y-6 animate-in fade-in duration-200">
+                  {/* Collision Handling: Active session info banner */}
+                  {activeSessionInfo ? (
+                    <div className="border border-orange-500/20 bg-orange-500/5 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start gap-2.5">
+                        <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-bold text-sm text-orange-800 dark:text-orange-400">
+                            Active Recording Session Exists
+                          </h4>
+                          <p className="text-xs text-orange-700/80 dark:text-orange-400/80 mt-1">
+                            This project already has an active recording session (Status: <span className="font-semibold">{activeSessionInfo.status}</span>).
+                            You can resume the current session or start a new one (cancelling the existing one).
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            setShowRecorderModal(false)
+                            router.push(`/projects/${recorderProjectId}/record`)
+                          }}
+                          className="bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Play className="h-4 w-4" /> Resume Session
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCancelActiveSession}
+                          className="border-orange-500/20 hover:bg-orange-500/10 text-orange-700 dark:text-orange-400 font-semibold"
+                        >
+                          Cancel & Start New
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Test case title and priority */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="recorder-title" className="font-bold">Test Case Title *</Label>
+                          <Input
+                            id="recorder-title"
+                            required
+                            disabled={recorderStarting}
+                            placeholder="e.g. Verify checkout process"
+                            value={recorderTitle}
+                            onChange={(e) => setRecorderTitle(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="recorder-priority" className="font-bold">Priority</Label>
+                          <select
+                            id="recorder-priority"
+                            disabled={recorderStarting}
+                            value={recorderPriority}
+                            onChange={(e) => setRecorderPriority(e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                          >
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Start url & required credentials */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2 col-span-2 md:col-span-1">
+                          <Label htmlFor="recorder-start-url" className="font-bold">Start URL *</Label>
+                          <Input
+                            id="recorder-start-url"
+                            required
+                            type="url"
+                            disabled={recorderStarting}
+                            placeholder="https://example.com"
+                            value={recorderStartUrl}
+                            onChange={(e) => setRecorderStartUrl(e.target.value)}
+                          />
+                        </div>
+
+                        <div className="space-y-2 col-span-2 md:col-span-1">
+                          <Label htmlFor="recorder-credential" className="font-bold">Prefill Credential</Label>
+                          <select
+                            id="recorder-credential"
+                            disabled={recorderStarting}
+                            value={recorderCredentialId}
+                            onChange={(e) => setRecorderCredentialId(e.target.value)}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                          >
+                            <option value="">-- No Credential (Start Anonymous) --</option>
+                            {recorderProjectConfig?.credentials.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.roleName} ({c.username})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Preconditions */}
+                      <div className="space-y-2">
+                        <Label htmlFor="recorder-preconditions" className="font-bold">Preconditions</Label>
+                        <Input
+                          id="recorder-preconditions"
+                          disabled={recorderStarting}
+                          placeholder="e.g. User should be logged out, clean database state"
+                          value={recorderPreconditions}
+                          onChange={(e) => setRecorderPreconditions(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Hierarchy selector */}
+                      <div className="border p-5 rounded-2xl bg-accent/5 space-y-3 shadow-sm border-accent/20">
+                        <h3 className="font-bold text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Test Suite Hierarchy</h3>
+                        <HierarchySelector
+                          projectId={recorderProjectId}
+                          moduleId={recorderModuleId}
+                          onChangeModuleId={setRecorderModuleId}
+                          featureId={recorderFeatureId}
+                          onChangeFeatureId={setRecorderFeatureId}
+                          componentId={recorderComponentId}
+                          onChangeComponentId={setRecorderComponentId}
+                        />
+                      </div>
+
+                      {/* Advanced Settings Section */}
+                      <div className="border border-input rounded-xl p-4 space-y-4">
+                        <h4 className="text-sm font-bold text-muted-foreground flex items-center gap-1">
+                          <Settings className="h-4 w-4" /> Advanced Browser Configuration
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="recorder-browser-type" className="font-semibold text-xs text-muted-foreground uppercase">Browser</Label>
+                            <select
+                              id="recorder-browser-type"
+                              disabled={recorderStarting}
+                              value={recorderBrowserType}
+                              onChange={(e) => setRecorderBrowserType(e.target.value as any)}
+                              className="flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1 text-xs focus:outline-none"
+                            >
+                              <option value="Chromium">Google Chrome (Chromium)</option>
+                              <option value="Firefox">Mozilla Firefox</option>
+                              <option value="WebKit">Apple Safari (WebKit)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="recorder-viewport" className="font-semibold text-xs text-muted-foreground uppercase">Viewport Size</Label>
+                            <select
+                              id="recorder-viewport"
+                              disabled={recorderStarting}
+                              value={recorderViewport}
+                              onChange={(e) => setRecorderViewport(e.target.value as any)}
+                              className="flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1 text-xs focus:outline-none"
+                            >
+                              <option value="Desktop">Desktop (1280x800)</option>
+                              <option value="Tablet">Tablet (768x1024)</option>
+                              <option value="Mobile">Mobile (375x667)</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="recorder-mode" className="font-semibold text-xs text-muted-foreground uppercase">Capture Density</Label>
+                            <select
+                              id="recorder-mode"
+                              disabled={recorderStarting}
+                              value={recorderMode}
+                              onChange={(e) => setRecorderMode(e.target.value as any)}
+                              className="flex h-9 w-full rounded-md border border-input bg-background px-2.5 py-1 text-xs focus:outline-none"
+                            >
+                              <option value="Fast">Fast (Actions only)</option>
+                              <option value="Detailed">Detailed (DOM changes)</option>
+                              <option value="Assertion">Assertion-Ready (Full trace)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {recorderStartError && (
+                <div className="bg-destructive/5 border border-destructive/20 text-destructive text-sm rounded-xl p-4 flex items-start gap-2">
+                  <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Failed to launch:</span>
+                    <p className="mt-0.5 text-xs text-destructive/90">{recorderStartError}</p>
+                    {recorderStartError.includes("recorder-worker") && (
+                      <code className="block mt-2 bg-background p-1.5 rounded text-[10px] border font-mono text-muted-foreground">
+                        npm run recorder-worker
+                      </code>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {recorderStarting && (
+                <div className="bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 rounded-xl p-5 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="h-5 w-5 text-indigo-600 animate-spin shrink-0" />
+                    <span className="font-bold text-indigo-900 dark:text-indigo-300 text-sm">Launching Recording Session...</span>
+                  </div>
+                  <div className="pl-8 space-y-1">
+                    <p className="text-xs text-indigo-700/80 dark:text-indigo-400/80 font-medium font-mono">{recorderLaunchStatus}</p>
+                  </div>
+                </div>
+              )}
+            </form>
+
+            <div className="px-6 py-4 border-t flex justify-end gap-3 bg-accent/20">
+              <Button
+                variant="ghost"
+                onClick={() => setShowRecorderModal(false)}
+                disabled={recorderStarting}
+              >
+                Close
+              </Button>
+              {recorderProjectId && !recorderLoadingConfig && !activeSessionInfo && (
+                <Button
+                  onClick={handleStartRecorderSession}
+                  disabled={recorderStarting || !recorderTitle.trim() || !recorderStartUrl.trim()}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-600/10"
+                >
+                  {recorderStarting ? (
+                    <>
+                      <Loader2 className="h-4.5 w-4.5 animate-spin" /> Launching...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-4 w-4" /> Start Recorder
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </div>

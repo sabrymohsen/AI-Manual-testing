@@ -82,6 +82,13 @@ enum StepStatus {
   Blocked
   Warning
   Skipped
+  SelfHealed
+}
+
+enum ExecutionMode {
+  Normal
+  SelfHealing
+  Debug
 }
 
 enum TestCaseSource {
@@ -89,6 +96,7 @@ enum TestCaseSource {
   AIGenerated
   Imported
   Exploratory
+  Recorder
 }
 
 enum ActionType {
@@ -216,6 +224,10 @@ model Project {
   visualCheckMappings     VisualCheckMapping[]
   visualToleranceProfiles VisualToleranceProfile[]
   visualCheckRuns         VisualCheckRun[]
+  autonomousAgentRuns     AutonomousAgentRun[]
+  agentBrainRuns          AgentBrainRun[]
+  agentMemories           AgentMemory[]
+  qaAgentRuns             QAAgentRun[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -360,6 +372,7 @@ model TestRun {
 
   status        TestRunStatus      @default(Queued)
   roleUsed      String             @default("None")
+  executionMode ExecutionMode      @default(SelfHealing)
 
   browserType   BrowserType
   viewport      ViewportType
@@ -371,6 +384,11 @@ model TestRun {
   startedAt     DateTime?
   completedAt   DateTime?
   durationMs    Int                @default(0)
+
+  autonomousAgentRunId String?
+  autonomousAgentRun   AutonomousAgentRun? @relation(fields: [autonomousAgentRunId], references: [id], onDelete: SetNull)
+  agentBrainRunId      String?
+  agentBrainRun        AgentBrainRun?      @relation(fields: [agentBrainRunId], references: [id], onDelete: SetNull)
 
   jobs          TestJob?
   logs          Log[]
@@ -386,6 +404,8 @@ model TestRun {
   @@index([projectId])
   @@index([testCaseId])
   @@index([status])
+  @@index([autonomousAgentRunId])
+  @@index([agentBrainRunId])
   @@index([createdAt])
 }
 
@@ -425,6 +445,7 @@ model TestStepResult {
   errorDetails      String?
   notes             String?
   durationMs        Int         @default(0)
+  actionMetadata    Json?
 
   logs              Log[]
   networkLogs       NetworkLog[]
@@ -535,6 +556,11 @@ model BugReport {
   testRunId        String?
   testRun          TestRun?     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
+  autonomousAgentRunId String?
+  autonomousAgentRun   AutonomousAgentRun? @relation(fields: [autonomousAgentRunId], references: [id], onDelete: SetNull)
+  agentBrainRunId      String?
+  agentBrainRun        AgentBrainRun?      @relation(fields: [agentBrainRunId], references: [id], onDelete: SetNull)
+
   testStepResultId String?
   testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: SetNull)
 
@@ -577,6 +603,8 @@ model BugReport {
   @@index([status])
   @@index([testCaseId])
   @@index([testRunId])
+  @@index([autonomousAgentRunId])
+  @@index([agentBrainRunId])
   @@index([createdAt])
 }
 
@@ -667,11 +695,15 @@ model RecordingSession {
   project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   credentialId String?
   credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
-  status       RecordingSessionStatus @default(Active)
+  status       RecordingSessionStatus @default(Starting)
   browserType  BrowserType
   viewport     ViewportType
   startUrl     String
   currentUrl   String?
+  recordingMode String?           @default("Fast")
+  currentRecordedTestCaseId String?
+  connectionStatus String?       @default("Connected")
+  lastError    String?
   keepBrowserOpen Boolean         @default(true)
   startedAt    DateTime           @default(now())
   finishedAt   DateTime?
@@ -680,6 +712,8 @@ model RecordingSession {
 
   recordedTestCases RecordedTestCase[]
   notes             RecordingSessionNote[]
+
+  @@index([projectId, status])
 }
 
 model RecordedTestCase {
@@ -1086,9 +1120,12 @@ model RecordingSessionNote {
 }
 
 enum RecordingSessionStatus {
+  Starting
   Active
   Paused
+  Saving
   Finished
+  Failed
   Cancelled
 }
 
@@ -1299,6 +1336,220 @@ enum VisualDifferenceCategory {
   ResponsiveIssue
   Unknown
 }
+
+enum AgentRunStatus {
+  Queued
+  Analyzing
+  Generating
+  Executing
+  Reporting
+  Completed
+  Failed
+  Cancelled
+}
+
+enum AgentRunMode {
+  Fast
+  Balanced
+  Full
+}
+
+model AutonomousAgentRun {
+  id                String         @id @default(uuid())
+  projectId         String
+  project           Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  status            AgentRunStatus @default(Queued)
+  mode              AgentRunMode   @default(Balanced)
+  
+  safetyDoNotDelete Boolean        @default(true)
+  safetyDoNotModify Boolean        @default(false)
+  
+  summary           String?
+  coverageReport    Json?
+  metrics           Json?
+  
+  testRuns          TestRun[]
+  bugReports        BugReport[]
+  
+  startedAt         DateTime?
+  completedAt       DateTime?
+  durationMs        Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum AgentBrainMode {
+  Exploration
+  Planning
+  Execution
+  Autonomous
+}
+
+enum AgentBrainStatus {
+  Queued
+  Understanding
+  Planning
+  Executing
+  Reporting
+  Completed
+  Failed
+  Cancelled
+}
+
+model AgentMemory {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  key       String   
+  value     Json     
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, key])
+  @@index([projectId])
+}
+
+model AgentBrainRun {
+  id                 String           @id @default(uuid())
+  projectId          String
+  project            Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  status             AgentBrainStatus @default(Queued)
+  mode               AgentBrainMode   @default(Autonomous)
+  
+  safetyDoNotDelete  Boolean          @default(true)
+  safetyDoNotModify  Boolean          @default(false)
+  userInstruction    String?          
+  
+  appUnderstanding   Json?            
+  executionPlan      Json?            
+  memorySnapshot     Json?            
+  
+  summary            String?
+  metrics            Json?            
+  
+  testRuns           TestRun[]
+  bugReports         BugReport[]
+  
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum QAAgentMode {
+  Guided
+  SemiAutonomous
+  Autonomous
+}
+
+enum QAAgentRunStatus {
+  Queued
+  Scanning
+  Planning
+  WaitingForApproval
+  Running
+  Reporting
+  Completed
+  Failed
+  Cancelled
+}
+
+enum QAAgentSafetyLevel {
+  ReadOnly
+  AllowFormFill
+  AllowCreateUpdate
+  AllowDestructiveWithConfirmation
+}
+
+enum QAAgentFindingType {
+  TestFailure
+  BrokenElement
+  MissingValidation
+  ConsoleError
+  NetworkError
+  AccessibilityIssue
+  CoverageGap
+  LocatorHealed
+  Risk
+}
+
+model QAAgentRun {
+  id            String             @id @default(uuid())
+  projectId     String
+  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mode          QAAgentMode
+  goal          String
+  scope         Json?
+  status        QAAgentRunStatus   @default(Queued)
+  credentialId  String?
+  browserType   BrowserType?
+  viewport      String?
+  safetyLevel   QAAgentSafetyLevel @default(ReadOnly)
+  plan          Json?
+  scannerResult Json?
+  summary       Json?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  durationMs    Int                @default(0)
+  steps           QAAgentRunStep[]
+  findings        QAAgentFinding[]
+  currentPhase    String?
+  currentMessage  String?
+  lastHeartbeatAt DateTime?
+  failedReason    String?
+  failedAt        DateTime?
+  errorStack      String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model QAAgentRunStep {
+  id             String      @id @default(uuid())
+  agentRunId     String
+  agentRun       QAAgentRun  @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  stepNumber     Int
+  name           String
+  type           String
+  status         String
+  details        Json?
+  screenshotPath String?
+  error          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+}
+
+model QAAgentFinding {
+  id          String             @id @default(uuid())
+  agentRunId  String
+  agentRun    QAAgentRun         @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  type        QAAgentFindingType
+  severity    Priority           @default(Medium)
+  title       String
+  description String?
+  evidence    Json?
+  bugReportId String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
 
 
 

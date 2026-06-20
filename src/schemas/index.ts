@@ -64,6 +64,7 @@ export const createTestCaseSchema = z.object({
 export const createTestRunSchema = z.object({
   testCaseId: z.string().min(1, "Test case ID is required"),
   credentialId: z.string().optional().nullable(),
+  executionMode: z.enum(["Normal", "SelfHealing", "Debug"]).optional(),
 })
 
 export const createBugReportSchema = z.object({

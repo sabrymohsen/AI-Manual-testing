@@ -2,18 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import {
-  pauseSession,
-  resumeSession,
-  finishSession,
-  cancelSession,
-  startNewRecordedTestCase,
-  saveCurrentRecordedTestCase,
-  validateStepLocator,
-  createBugFromSession,
-  validateRecordedFlow,
-  getSessionStats
-} from "@/lib/recording/session-manager"
+import { getSessionStats, saveRecordedCaseAsTestCase } from "@/lib/recording/session-store"
+import { recorderWorkerRequest, RecorderWorkerError } from "@/lib/recording/worker-client"
 
 async function verifyRecordingSession(sessionId: string, userId: string) {
   const rec = await prisma.recordingSession.findUnique({
@@ -92,6 +82,37 @@ const appendStepSchema = z.object({
   recommendedSelector: z.string().optional().nullable(),
 })
 
+const startGlobalRecordingSchema = z.object({
+  projectId: z.string().min(1, "Project ID is required"),
+  title: z.string().min(1, "Test case title is required"),
+  module: z.string().optional(),
+  moduleId: z.string().nullable().optional(),
+  featureId: z.string().nullable().optional(),
+  componentId: z.string().nullable().optional(),
+  priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
+  preconditions: z.string().nullable().optional(),
+  requiredCredentialId: z.string().nullable().optional(),
+  startUrl: z.string().url("Target URL must be a valid URL"),
+  browserType: z.enum(["Chromium", "Firefox", "WebKit"]).optional(),
+  viewport: z.enum(["Desktop", "Tablet", "Mobile", "Custom"]).optional(),
+  recordingMode: z.enum(["Fast", "Detailed", "Assertion"]).optional(),
+})
+
+function workerErrorResponse(err: unknown) {
+  if (err instanceof RecorderWorkerError) {
+    return NextResponse.json(
+      {
+        error: err.message,
+        code: err.code,
+        details: err.details,
+      },
+      { status: err.status || 503 }
+    )
+  }
+  const message = err instanceof Error ? err.message : "Recorder operation failed"
+  return NextResponse.json({ error: message }, { status: 500 })
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { path: string[] } }
@@ -102,6 +123,93 @@ export async function GET(
   const path = params.path
   if (!path || path.length === 0) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 })
+  }
+
+  // GET /api/recording/sessions/active
+  if (path.length === 2 && path[0] === "sessions" && path[1] === "active") {
+    const { searchParams } = new URL(request.url)
+    const projectId = searchParams.get("projectId")
+    if (!projectId) return badRequestResponse("projectId is required")
+
+    // Verify owner
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, userId: auth.session!.user.id }
+    })
+    if (!project) return unauthorizedResponse("Access denied")
+
+    const session = await prisma.recordingSession.findFirst({
+      where: {
+        projectId,
+        status: { in: ["Starting", "Active", "Paused", "Saving"] },
+      },
+      orderBy: { startedAt: "desc" },
+      include: {
+        recordedTestCases: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            steps: {
+              orderBy: { stepNumber: "asc" },
+            },
+          },
+        },
+      },
+    })
+
+    if (!session) {
+      return NextResponse.json({ session: null, connection: null })
+    }
+
+    let connection = null
+    try {
+      connection = await recorderWorkerRequest(`/sessions/${session.id}/connection`, {
+        method: "GET",
+      })
+    } catch (err) {
+      if (err instanceof RecorderWorkerError) {
+        connection = {
+          connectionStatus: "WorkerOffline",
+          browserOpen: false,
+          toolbarInjected: false,
+          sessionStatus: session.status,
+          lastError: session.lastError,
+        }
+      }
+    }
+
+    const currentCase =
+      session.recordedTestCases.find((c) => c.id === session.currentRecordedTestCaseId) ||
+      session.recordedTestCases.find((c) => c.status === "Draft") ||
+      session.recordedTestCases[0] ||
+      null
+
+    return NextResponse.json({
+      session,
+      currentTestCase: currentCase,
+      connection,
+    })
+  }
+
+  // GET /api/recording/[sessionId]/connection
+  if (path.length === 2 && path[1] === "connection") {
+    const sessionId = path[0]
+    const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+    if (guard) return guard
+    try {
+      const status = await recorderWorkerRequest(`/sessions/${sessionId}/connection`, { method: "GET" })
+      return NextResponse.json(status)
+    } catch (err) {
+      if (err instanceof RecorderWorkerError) {
+        const sessionDb = await prisma.recordingSession.findUnique({ where: { id: sessionId } })
+        return NextResponse.json({
+          connectionStatus: "WorkerOffline",
+          browserOpen: false,
+          toolbarInjected: false,
+          sessionStatus: sessionDb?.status || "Failed",
+          lastError: sessionDb?.lastError,
+        })
+      }
+      return workerErrorResponse(err)
+    }
   }
 
   // 1. GET /api/recording/[sessionId]/stats
@@ -118,10 +226,21 @@ export async function GET(
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
-    const activeCase = await prisma.recordedTestCase.findFirst({
-      where: { sessionId, status: "Draft" },
-      orderBy: { createdAt: "desc" }
+    const session = await prisma.recordingSession.findUnique({
+      where: { id: sessionId },
     })
+    if (!session) {
+      return NextResponse.json({ error: "Session not found" }, { status: 404 })
+    }
+
+    const activeCase = session.currentRecordedTestCaseId
+      ? await prisma.recordedTestCase.findFirst({
+          where: { id: session.currentRecordedTestCaseId, sessionId },
+        })
+      : await prisma.recordedTestCase.findFirst({
+          where: { sessionId, status: "Draft" },
+          orderBy: { createdAt: "desc" },
+        })
     
     if (!activeCase) {
       return NextResponse.json({ steps: [] })
@@ -173,6 +292,109 @@ export async function POST(
   const firstArg = path[0]
 
   try {
+    // POST /api/recording/sessions/start
+    if (path.length === 2 && path[0] === "sessions" && path[1] === "start") {
+      const rawBody = await request.json()
+      const parseResult = startGlobalRecordingSchema.safeParse(rawBody)
+      if (!parseResult.success) {
+        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
+      }
+      const data = parseResult.data
+      const { projectId } = data
+
+      // Verify project ownership (permission audit)
+      const project = await prisma.project.findFirst({
+        where: { id: projectId, userId: auth.session!.user.id }
+      })
+      if (!project) {
+        return unauthorizedResponse("Access denied or project not found")
+      }
+
+      // Verify credentials and hierarchy objects match the project scope
+      if (data.requiredCredentialId) {
+        const cred = await prisma.projectCredential.findFirst({
+          where: { id: data.requiredCredentialId, projectId }
+        })
+        if (!cred) {
+          return badRequestResponse("Credential does not belong to this project")
+        }
+      }
+      if (data.moduleId) {
+        const m = await prisma.projectModule.findFirst({
+          where: { id: data.moduleId, projectId }
+        })
+        if (!m) {
+          return badRequestResponse("Module does not belong to this project")
+        }
+      }
+      if (data.featureId) {
+        const f = await prisma.projectFeature.findFirst({
+          where: { id: data.featureId, module: { projectId } }
+        })
+        if (!f) {
+          return badRequestResponse("Feature does not belong to this project")
+        }
+      }
+      if (data.componentId) {
+        const c = await prisma.projectComponent.findFirst({
+          where: { id: data.componentId, feature: { module: { projectId } } }
+        })
+        if (!c) {
+          return badRequestResponse("Component does not belong to this project")
+        }
+      }
+
+      const options = {
+        title: data.title,
+        module: data.module || "General",
+        moduleId: data.moduleId || null,
+        featureId: data.featureId || null,
+        componentId: data.componentId || null,
+        priority: data.priority || "Medium",
+        preconditions: data.preconditions || undefined,
+        requiredCredentialId: data.requiredCredentialId || undefined,
+        startUrl: data.startUrl,
+        browserType: data.browserType || "Chromium",
+        viewport: data.viewport || "Desktop",
+        recordingMode: data.recordingMode || "Fast",
+      }
+
+      try {
+        const result = await recorderWorkerRequest<{ session: unknown; testCase: unknown }>(
+          "/sessions/start",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              projectId,
+              userId: auth.session!.user.id,
+              options,
+            }),
+          }
+        )
+        return NextResponse.json(result, { status: 201 })
+      } catch (err: any) {
+        console.error("Error starting global recording session:", err)
+        if (err instanceof RecorderWorkerError) {
+          return NextResponse.json(
+            {
+              error: err.message,
+              code: err.code,
+              details: err.details,
+              troubleshooting:
+                err.code === "WORKER_OFFLINE"
+                  ? "Start the recorder worker: npm run recorder-worker"
+                  : undefined,
+            },
+            { status: err.status || 503 }
+          )
+        }
+        return NextResponse.json(
+          { error: err.message || "Failed to start recording session" },
+          { status: 500 }
+        )
+      }
+    }
+
     // 1. POST /api/recording/steps/[stepId]/expected-result
     if (path.length === 3 && firstArg === "steps" && path[2] === "expected-result") {
       const stepId = path[1]
@@ -244,9 +466,12 @@ export async function POST(
       if (!step) {
         return NextResponse.json({ error: "Step not found" }, { status: 404 })
       }
-      const bug = await createBugFromSession(step.recordedTestCase.sessionId, {
-        ...body,
-        screenshotPath: step.screenshotAfter || undefined
+      const bug = await recorderWorkerRequest(`/sessions/${step.recordedTestCase.sessionId}/bug`, {
+        method: "POST",
+        body: JSON.stringify({
+          ...body,
+          screenshotPath: step.screenshotAfter || undefined,
+        }),
       })
       return NextResponse.json({ bug })
     }
@@ -256,43 +481,69 @@ export async function POST(
       const stepId = path[1]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
-      const result = await validateStepLocator(stepId)
+      const result = await recorderWorkerRequest(`/steps/${stepId}/validate-locator`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })
       return NextResponse.json(result)
     }
 
     // Dynamic session operations (firstArg is sessionId)
     const sessionId = firstArg
 
-    // 6. POST /api/recording/[sessionId]/pause
     if (path.length === 2 && path[1] === "pause") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      await pauseSession(sessionId)
-      return NextResponse.json({ success: true })
+      try {
+        await recorderWorkerRequest(`/sessions/${sessionId}/pause`, { method: "POST", body: "{}" })
+        await prisma.recordingSession.update({
+          where: { id: sessionId },
+          data: { status: "Paused" },
+        })
+        return NextResponse.json({ success: true })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
     }
 
     // 7. POST /api/recording/[sessionId]/resume
     if (path.length === 2 && path[1] === "resume") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      await resumeSession(sessionId)
-      return NextResponse.json({ success: true })
+      try {
+        await recorderWorkerRequest(`/sessions/${sessionId}/resume`, { method: "POST", body: "{}" })
+        await prisma.recordingSession.update({
+          where: { id: sessionId },
+          data: { status: "Active" },
+        })
+        return NextResponse.json({ success: true })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
     }
 
     // 8. POST /api/recording/[sessionId]/finish
     if (path.length === 2 && path[1] === "finish") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      await finishSession(sessionId)
-      return NextResponse.json({ success: true })
+      try {
+        await recorderWorkerRequest(`/sessions/${sessionId}/finish`, { method: "POST", body: "{}" })
+        return NextResponse.json({ success: true })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
     }
 
     // 9. POST /api/recording/[sessionId]/cancel
     if (path.length === 2 && path[1] === "cancel") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      await cancelSession(sessionId)
-      return NextResponse.json({ success: true })
+      try {
+        await recorderWorkerRequest(`/sessions/${sessionId}/cancel`, { method: "POST", body: "{}" })
+        return NextResponse.json({ success: true })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
     }
 
     // 10. POST /api/recording/[sessionId]/test-case/start-new
@@ -300,8 +551,15 @@ export async function POST(
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json()
-      const newCase = await startNewRecordedTestCase(sessionId, body)
-      return NextResponse.json({ testCase: newCase })
+      try {
+        const data = await recorderWorkerRequest<{ testCase: unknown }>(
+          `/sessions/${sessionId}/test-case/start-new`,
+          { method: "POST", body: JSON.stringify(body) }
+        )
+        return NextResponse.json({ testCase: data.testCase })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
     }
 
     // 11. POST /api/recording/[sessionId]/test-case/save-current
@@ -318,8 +576,12 @@ export async function POST(
       if (!testCaseId) {
         return NextResponse.json({ error: "testCaseId is required" }, { status: 400 })
       }
-      const savedCase = await saveCurrentRecordedTestCase(sessionId, testCaseId)
-      return NextResponse.json({ testCase: savedCase })
+      try {
+        const savedCase = await saveRecordedCaseAsTestCase(testCaseId)
+        return NextResponse.json({ testCase: savedCase })
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message || "Failed to save test case" }, { status: 500 })
+      }
     }
 
     // 12. POST /api/recording/[sessionId]/steps (append step manually)
@@ -356,12 +618,18 @@ export async function POST(
       return NextResponse.json({ step })
     }
 
-    // 13. POST /api/recording/[sessionId]/validate-flow
     if (path.length === 2 && path[1] === "validate-flow") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      const result = await validateRecordedFlow(sessionId)
-      return NextResponse.json(result)
+      try {
+        const result = await recorderWorkerRequest(`/sessions/${sessionId}/validate-flow`, {
+          method: "POST",
+          body: JSON.stringify({ replay: true }),
+        })
+        return NextResponse.json(result)
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
     }
 
     // 14. POST /api/recording/[sessionId]/steps/merge

@@ -134,7 +134,17 @@ export default function RecorderWorkspacePage() {
   const [startUrl, setStartUrl] = useState("")
   const [browserType, setBrowserType] = useState("Chromium")
   const [viewport, setViewport] = useState("Desktop")
+  const [recordingMode, setRecordingMode] = useState("Fast")
   const [isStartingSession, setIsStartingSession] = useState(false)
+  const [startError, setStartError] = useState<string | null>(null)
+  const [startErrorDetails, setStartErrorDetails] = useState<string | null>(null)
+  const [workerOnline, setWorkerOnline] = useState<boolean | null>(null)
+  const [playwrightInstalled, setPlaywrightInstalled] = useState<boolean | null>(null)
+  const [connectionStatus, setConnectionStatus] = useState<string>("Unknown")
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [showDebugPanel, setShowDebugPanel] = useState(false)
+  const [finishStats, setFinishStats] = useState<{ savedCount: number; draftCount: number; draftStepCount: number } | null>(null)
+  const [showFinishModal, setShowFinishModal] = useState(false)
 
   // Workspace interface controls
   const [isSavingCase, setIsSavingCase] = useState(false)
@@ -213,18 +223,79 @@ export default function RecorderWorkspacePage() {
     })
   }
 
-  // Fetch project details
+  // Fetch project details + recover active session
   useEffect(() => {
     fetchProjectDetails()
+    recoverActiveSession()
+    fetchRecorderStatus()
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)
     }
   }, [params.id])
 
+  async function fetchRecorderStatus() {
+    try {
+      const res = await fetch(`/api/projects/${params.id}/recording/status`)
+      if (res.ok) {
+        const data = await res.json()
+        setWorkerOnline(data.worker?.online ?? false)
+        setPlaywrightInstalled(data.worker?.playwrightInstalled ?? false)
+      }
+    } catch {
+      setWorkerOnline(false)
+    }
+  }
+
+  async function recoverActiveSession() {
+    try {
+      const res = await fetch(`/api/projects/${params.id}/recording/active`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (!data.session) return
+
+      setSessionId(data.session.id)
+      setSessionStatus(data.session.status)
+      setCurrentTestCase(data.currentTestCase || data.session.recordedTestCases?.[0] || null)
+      setSavedCasesList(data.session.recordedTestCases || [])
+      if (data.currentTestCase) {
+        setRecordedSteps(data.currentTestCase.steps || [])
+      }
+      if (data.connection) {
+        setConnectionStatus(data.connection.connectionStatus || "Unknown")
+        setConnectionError(data.connection.lastError || null)
+      }
+    } catch (err) {
+      console.error("Failed to recover recording session:", err)
+    }
+  }
+
+  async function fetchConnectionHealth() {
+    if (!sessionId) return
+    try {
+      const res = await fetch(`/api/recording/${sessionId}/connection`)
+      if (res.ok) {
+        const data = await res.json()
+        setConnectionStatus(data.connectionStatus || "Unknown")
+        setConnectionError(data.lastError || null)
+        if (data.sessionStatus && data.sessionStatus !== sessionStatus) {
+          setSessionStatus(data.sessionStatus)
+        }
+      }
+    } catch {
+      setConnectionStatus("Disconnected")
+    }
+  }
+
   // Poll for steps if session is active
   useEffect(() => {
-    if (sessionId && sessionStatus === "Active") {
+    if (sessionId && (sessionStatus === "Active" || sessionStatus === "Paused")) {
       startStepsPolling()
+      fetchConnectionHealth()
+      const healthInterval = setInterval(fetchConnectionHealth, 4000)
+      return () => {
+        stopStepsPolling()
+        clearInterval(healthInterval)
+      }
     } else {
       stopStepsPolling()
     }
@@ -285,15 +356,22 @@ export default function RecorderWorkspacePage() {
   // 1. Initial Start session
   async function handleStartSession() {
     if (!startUrl.trim()) {
-      alert("Starting URL is required.")
+      setStartError("Starting URL is required.")
       return
     }
     if (!title.trim()) {
-      alert("Test Case Title is required.")
+      setStartError("Test Case Title is required.")
+      return
+    }
+    if (workerOnline === false) {
+      setStartError("Recorder worker is offline.")
+      setStartErrorDetails("Start the recorder service in a terminal: npm run recorder-worker")
       return
     }
 
     setIsStartingSession(true)
+    setStartError(null)
+    setStartErrorDetails(null)
     try {
       const res = await fetch(`/api/projects/${params.id}/recording/start`, {
         method: "POST",
@@ -310,22 +388,24 @@ export default function RecorderWorkspacePage() {
           startUrl,
           browserType,
           viewport,
+          recordingMode,
         }),
       })
 
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json()
         setSessionId(data.session.id)
-        setSessionStatus("Active")
+        setSessionStatus(data.session.status || "Active")
         setCurrentTestCase(data.testCase)
         setRecordedSteps([])
         setSavedCasesList([data.testCase])
+        setConnectionStatus("Connected")
       } else {
-        const err = await res.json()
-        alert(err.error || "Failed to start recording session.")
+        setStartError(data.error || "Failed to start recording session.")
+        setStartErrorDetails(data.details || data.troubleshooting || null)
       }
     } catch {
-      alert("Network error starting recorder.")
+      setStartError("Network error starting recorder.")
     } finally {
       setIsStartingSession(false)
     }
@@ -453,34 +533,17 @@ export default function RecorderWorkspacePage() {
   // 6. Finish all sessions
   async function handleFinishAll() {
     if (!sessionId) return
-
-    const shouldSave = currentTestCase && currentTestCase.status === "Draft" && recordedSteps.length > 0
-    
-    if (shouldSave) {
-      const missingExpected = recordedSteps.filter(s => s.includeInFinalTestCase && !s.expectedResult)
-      if (missingExpected.length > 0) {
-        triggerConfirm({
-          title: "Save & Exit?",
-          message: `Warning: ${missingExpected.length} step(s) do not have Expected Results. Do you want to save the test case and exit anyway?`,
-          confirmLabel: "Save & Exit",
-          onConfirm: () => proceedFinishAll(true)
-        })
+    try {
+      const statsRes = await fetch(`/api/recording/${sessionId}/stats`)
+      if (statsRes.ok) {
+        setFinishStats(await statsRes.json())
       } else {
-        triggerConfirm({
-          title: "Save & Exit?",
-          message: "Are you sure you want to save the current test case and finish recording? This will close the browser window.",
-          confirmLabel: "Save & Exit",
-          onConfirm: () => proceedFinishAll(true)
-        })
+        setFinishStats({ savedCount: 0, draftCount: 1, draftStepCount: recordedSteps.length })
       }
-    } else {
-      triggerConfirm({
-        title: "Finish Recording?",
-        message: "Are you sure you want to finish recording? This will close the browser window.",
-        confirmLabel: "Finish & Exit",
-        onConfirm: () => proceedFinishAll(false)
-      })
+    } catch {
+      setFinishStats({ savedCount: 0, draftCount: 1, draftStepCount: recordedSteps.length })
     }
+    setShowFinishModal(true)
   }
 
   async function proceedFinishAll(shouldSave: boolean) {
@@ -502,9 +565,11 @@ export default function RecorderWorkspacePage() {
 
       const res = await fetch(`/api/recording/${sessionId}/finish`, { method: "POST" })
       if (res.ok) {
+        setShowFinishModal(false)
         router.push(`/projects/${params.id}/test-cases`)
       } else {
-        alert("Failed to finish recording session.")
+        const err = await res.json()
+        alert(err.error || "Failed to finish recording session.")
       }
     } catch {
       alert("Network error finishing recording.")
@@ -663,9 +728,9 @@ export default function RecorderWorkspacePage() {
       if (res.ok) {
         const data = await res.json()
         if (data.success) {
-          alert("Flow validation completed: All steps successfully resolved!")
+          alert(`Flow validation: ${data.overallStatus || (data.success ? "Passed" : "Failed")}`)
         } else {
-          alert("Flow validation completed with errors. Some steps failed resolving in the active browser window.")
+          alert(`Flow validation completed with errors (${data.overallStatus || "Failed"}). Review failed steps below.`)
         }
         fetchSessionSteps()
       } else {
@@ -925,9 +990,9 @@ export default function RecorderWorkspacePage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Manual Test Recording Workspace</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Project: <span className="font-semibold text-foreground">{project.name}</span>
+            <h1 className="text-2xl font-bold tracking-tight">Test Case Recorder</h1>
+            <p className="text-xs text-muted-foreground mt-0.5 max-w-xl">
+              Record manual actions in a real browser, capture smart locators, add expected results, and save executable test cases.
             </p>
           </div>
         </div>
@@ -954,8 +1019,45 @@ export default function RecorderWorkspacePage() {
               <Video className="h-5 w-5 text-red-500" /> Start Recording Session
             </h3>
             <p className="text-xs text-muted-foreground">
-              Configure your recording scope. Playwright will launch a local browser session to automatically record your steps.
+              Configure your recording scope. A dedicated recorder worker launches Playwright in an external browser window.
             </p>
+
+            <div className="rounded-xl border bg-accent/10 p-3 text-xs space-y-1.5">
+              <div className="font-bold text-muted-foreground uppercase tracking-wide">Pre-flight checklist</div>
+              <div className={startUrl.trim() ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}>
+                {startUrl.trim() ? "✓" : "○"} Target URL configured
+              </div>
+              <div className={requiredCredentialId || !requiredCredentialId ? "text-green-700 dark:text-green-400" : ""}>
+                ✓ Credentials {requiredCredentialId ? "selected" : "optional (public test)"}
+              </div>
+              <div className={workerOnline ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                {workerOnline ? "✓" : "✗"} Recorder worker {workerOnline ? "online" : "offline — run npm run recorder-worker"}
+              </div>
+              <div className={playwrightInstalled !== false ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                {playwrightInstalled !== false ? "✓" : "✗"} Playwright {playwrightInstalled === false ? "not installed" : "ready"}
+              </div>
+            </div>
+
+            {startError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-900/40 p-3 text-sm text-red-700 dark:text-red-400">
+                <div className="font-semibold flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4" /> {startError}
+                </div>
+                {startErrorDetails && (
+                  <p className="text-xs mt-1 opacity-90">{startErrorDetails}</p>
+                )}
+                <button
+                  type="button"
+                  className="text-xs underline mt-2"
+                  onClick={() => setShowDebugPanel(!showDebugPanel)}
+                >
+                  {showDebugPanel ? "Hide" : "Show"} debug details
+                </button>
+                {showDebugPanel && startErrorDetails && (
+                  <pre className="mt-2 text-[10px] overflow-auto bg-black/5 p-2 rounded">{startErrorDetails}</pre>
+                )}
+              </div>
+            )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
@@ -1031,6 +1133,32 @@ export default function RecorderWorkspacePage() {
               </div>
 
               <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground">Browser</Label>
+                <select
+                  value={browserType}
+                  onChange={(e) => setBrowserType(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                >
+                  <option value="Chromium">Chromium</option>
+                  <option value="Firefox">Firefox</option>
+                  <option value="WebKit">WebKit</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-muted-foreground">Recording Mode</Label>
+                <select
+                  value={recordingMode}
+                  onChange={(e) => setRecordingMode(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
+                >
+                  <option value="Fast">Fast Recording</option>
+                  <option value="Detailed">Detailed Recording</option>
+                  <option value="Assertion">Assertion Recording</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-muted-foreground">Viewport Size</Label>
                 <select
                   value={viewport}
@@ -1073,10 +1201,21 @@ export default function RecorderWorkspacePage() {
             <div className="p-4 border rounded-xl bg-card shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b pb-2">
                 <span className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Session Controls</span>
-                <span className="text-[10px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full dark:bg-green-950/20 dark:text-green-400">
-                  External Browser Open
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  connectionStatus === "Connected"
+                    ? "text-green-600 bg-green-50 dark:bg-green-950/20 dark:text-green-400"
+                    : connectionStatus === "BrowserClosed"
+                      ? "text-red-600 bg-red-50 dark:bg-red-950/20 dark:text-red-400"
+                      : "text-yellow-600 bg-yellow-50 dark:bg-yellow-950/20 dark:text-yellow-400"
+                }`}>
+                  {connectionStatus === "Connected" ? "Browser Connected" : connectionStatus}
                 </span>
               </div>
+              {connectionError && connectionStatus !== "Connected" && (
+                <div className="text-[11px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/10 border border-red-200 dark:border-red-900/40 rounded-lg p-2">
+                  {connectionError}
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 {sessionStatus === "Active" ? (
                   <Button variant="outline" size="sm" onClick={handlePauseSession} className="flex-1 flex items-center gap-1.5 text-xs">
@@ -1740,6 +1879,42 @@ export default function RecorderWorkspacePage() {
               </Button>
               <Button size="sm" onClick={handleSaveAnnotation} className="bg-primary hover:bg-primary/95 text-white">
                 Save & Link Annotated Screenshot
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FINISH SESSION MODAL */}
+      {showFinishModal && finishStats && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <h3 className="text-lg font-bold">Finish Recording Session?</h3>
+            <p className="text-sm text-muted-foreground">
+              You have:
+            </p>
+            <ul className="text-sm space-y-1 bg-accent/10 rounded-lg p-3 border">
+              <li>Saved test cases: <strong>{finishStats.savedCount}</strong></li>
+              <li>Unsaved draft steps: <strong>{finishStats.draftStepCount}</strong> across <strong>{finishStats.draftCount}</strong> draft case(s)</li>
+            </ul>
+            <div className="flex flex-col gap-2">
+              <Button
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                disabled={isFinishing}
+                onClick={() => proceedFinishAll(true)}
+              >
+                Save Current Case & Finish
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={isFinishing}
+                onClick={() => proceedFinishAll(false)}
+              >
+                Finish Without Saving Draft
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setShowFinishModal(false)}>
+                Cancel
               </Button>
             </div>
           </div>

@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
   const hasOpenBugs = searchParams.get("hasOpenBugs") === "true"
   const hasUncoveredRequirements = searchParams.get("hasUncoveredRequirements") === "true"
   const setupStatus = searchParams.get("setupStatus") // "complete" | "incomplete"
-  const statusFilter = searchParams.get("status") || "Active" // "Active" | "Archived" | "All"
+  const activeOnly = searchParams.get("active") === "true"
+  const statusFilter = activeOnly ? "Active" : (searchParams.get("status") || "Active") // "Active" | "Archived" | "All"
   
   // Sorting
   const sortBy = searchParams.get("sortBy") || "RecentlyUpdated" // RecentlyUpdated, ProjectName, LowestPassRate, HighestFailedTests, MostOpenBugs, LowestCoverage, Newest, Oldest
@@ -261,6 +262,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     items: paginatedItems,
+    projects: paginatedItems,
     summary: {
       totalProjects,
       activeProjects,

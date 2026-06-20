@@ -10,7 +10,7 @@ test.describe("Auth Flow", () => {
 
   test("successful login redirects to dashboard", async ({ page }) => {
     // Register a new user via the UI, then login
-    const uniqueEmail = `e2e-${Date.now()}@example.com`
+    const uniqueEmail = `e2e-${Date.now()}-${Math.random().toString(36).substring(2, 7)}@example.com`
 
     await page.goto("/register")
     await page.fill('input[name="name"]', "E2E Test User")

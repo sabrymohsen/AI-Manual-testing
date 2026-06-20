@@ -31,12 +31,20 @@ export async function POST(request: Request) {
 
     const { email, password, name } = parsed.data
     const session = await registerUser(email, password, name)
-    setSessionCookie(session.token)
 
     // Generate CSRF token for subsequent requests
     const csrfToken = generateCsrfToken()
 
     const response = NextResponse.json({ user: session.user, csrfToken }, { status: 201 })
+    
+    response.cookies.set("session_token", session.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    })
+
     response.cookies.set("csrf_token", csrfToken, {
       httpOnly: false,
       secure: process.env.NODE_ENV === "production",

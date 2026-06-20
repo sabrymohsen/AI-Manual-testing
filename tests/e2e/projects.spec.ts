@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test"
 test.describe("Projects Flow", () => {
   test.beforeEach(async ({ page }) => {
     // Register and login before each project test
-    const uniqueEmail = `project-test-${Date.now()}@example.com`
+    const uniqueEmail = `project-test-${Date.now()}-${Math.random().toString(36).substring(2, 7)}@example.com`
 
     await page.goto("/register")
     await page.fill('input[name="name"]', "Project Test User")
@@ -19,11 +19,11 @@ test.describe("Projects Flow", () => {
     await page.fill('input[name="name"]', "E2E Test Project")
     await page.fill('input[name="webAppUrl"]', "https://example.com")
     await page.selectOption('select[name="environment"]', "Staging")
-    await page.click('button[type="submit"]')
+    await page.click('main form button[type="submit"]')
 
     // After creation, app redirects to the project detail page
     await page.waitForURL(/\/projects\/[^/]+$/)
-    await expect(page.locator("text=E2E Test Project")).toBeVisible()
+    await expect(page.locator("h1", { hasText: "E2E Test Project" })).toBeVisible()
   })
 
   test("project list displays created project", async ({ page }) => {
@@ -33,7 +33,7 @@ test.describe("Projects Flow", () => {
     await page.goto("/projects/new")
     await page.fill('input[name="name"]', projectName)
     await page.fill('input[name="webAppUrl"]', "https://example.com")
-    await page.click('button[type="submit"]')
+    await page.click('main form button[type="submit"]')
     await page.waitForURL(/\/projects\/[^/]+$/)
 
     // Navigate to projects list
