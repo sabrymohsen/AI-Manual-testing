@@ -24,6 +24,7 @@ import {
   Check,
   ChevronLeft
 } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface Requirement {
   id: string
@@ -111,6 +112,7 @@ export default function RequirementDetails() {
   const [draftCases, setDraftCases] = useState<GeneratedCase[]>([])
   const [selectedDraftIndices, setSelectedDraftIndices] = useState<number[]>([])
   const [savingDrafts, setSavingDrafts] = useState(false)
+  const [caseToUnlink, setCaseToUnlink] = useState<string | null>(null)
 
   useEffect(() => {
     fetchRequirementDetails()
@@ -171,23 +173,23 @@ export default function RequirementDetails() {
     }
   }
 
-  const handleUnlinkTestCase = async (caseId: string) => {
-    if (!confirm("Remove connection with this test case?")) return
-    try {
-      const res = await fetch(`/api/requirements/${requirementId}/unlink-test-cases`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ testCaseIds: [caseId] })
-      })
+  const handleUnlinkTestCase = (caseId: string) => {
+    setCaseToUnlink(caseId)
+  }
 
-      if (res.ok) {
-        fetchRequirementDetails()
-      } else {
-        alert("Failed to unlink test case")
-      }
-    } catch {
-      alert("Network error unlinking test case")
+  const confirmUnlinkTestCase = async () => {
+    if (!caseToUnlink) return
+    const res = await fetch(`/api/requirements/${requirementId}/unlink-test-cases`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ testCaseIds: [caseToUnlink] })
+    })
+
+    if (!res.ok) {
+      throw new Error("Failed to unlink test case")
     }
+    setCaseToUnlink(null)
+    fetchRequirementDetails()
   }
 
   // AI Test Case draft compiler
@@ -743,6 +745,15 @@ export default function RequirementDetails() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={caseToUnlink !== null}
+        title="Unlink Test Case"
+        description="Are you sure you want to remove the connection between this requirement and the test case?"
+        variant="warning"
+        confirmLabel="Unlink"
+        onConfirm={confirmUnlinkTestCase}
+        onCancel={() => setCaseToUnlink(null)}
+      />
     </div>
   )
 }

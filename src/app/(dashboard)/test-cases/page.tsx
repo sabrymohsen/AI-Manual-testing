@@ -10,6 +10,7 @@ import { StepBuilder } from "@/components/test-cases/step-builder"
 import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { ImportModal } from "@/components/test-cases/import-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Play,
   FileText,
@@ -167,6 +168,7 @@ function TestCasesHubContent() {
   const [deleteBugCount, setDeleteBugCount] = useState(0)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
 
   // Active run tracking
   const [activeRuns, setActiveRuns] = useState<Map<string, ActiveRun>>(new Map())
@@ -681,35 +683,24 @@ function TestCasesHubContent() {
   // Execute permanent delete
   async function executePermanentDelete() {
     if (!deleteTarget) return
-    if (deleteTypedTitle !== deleteTarget.title) return
+    const res = await fetch(`/api/test-cases/${deleteTarget.id}/permanent-delete`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmTitle: deleteTarget.title })
+    })
 
-    setDeleteLoading(true)
-    setDeleteError("")
-
-    try {
-      const res = await fetch(`/api/test-cases/${deleteTarget.id}/permanent-delete`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmTitle: deleteTypedTitle })
+    if (res.ok) {
+      const data = await res.json()
+      setDeleteModalOpen(false)
+      setDeleteTarget(null)
+      setToast({ 
+        message: `Test case and all related history were permanently deleted. (${data.deleted?.testRuns || 0} runs, ${data.deleted?.steps || 0} steps, ${data.deleted?.bugReports || 0} bugs removed)`,
+        type: "success"
       })
-
-      if (res.ok) {
-        const data = await res.json()
-        setDeleteModalOpen(false)
-        setDeleteTarget(null)
-        setToast({ 
-          message: `Test case and all related history were permanently deleted. (${data.deleted?.testRuns || 0} runs, ${data.deleted?.steps || 0} steps, ${data.deleted?.bugReports || 0} bugs removed)`,
-          type: "success"
-        })
-        fetchData()
-      } else {
-        const errData = await res.json()
-        setDeleteError(errData.error || "Failed to delete test case")
-      }
-    } catch {
-      setDeleteError("Network error deleting test case")
-    } finally {
-      setDeleteLoading(false)
+      fetchData()
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || "Failed to delete test case")
     }
   }
 
@@ -1151,39 +1142,37 @@ function TestCasesHubContent() {
   // Delete all selected test cases
   async function handleDeleteSelected() {
     if (selectedIds.size === 0) return
-    if (confirm(`Are you sure you want to PERMANENTLY delete ${selectedIds.size} selected test cases and ALL related data (execution runs, steps, results, attachments, bugs, files)? This cannot be undone.`)) {
-      try {
-        const projectGroups: Record<string, string[]> = {}
-        const selectedCases = testCases.filter((tc) => selectedIds.has(tc.id))
-        for (const tc of selectedCases) {
-          if (!projectGroups[tc.projectId]) projectGroups[tc.projectId] = []
-          projectGroups[tc.projectId].push(tc.id)
-        }
+    setShowBulkDeleteModal(true)
+  }
 
-        let totalDeleted = 0
-        for (const [pId, ids] of Object.entries(projectGroups)) {
-          const res = await fetch(`/api/projects/${pId}/test-cases`, {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids })
-          })
-          if (res.ok) {
-            const data = await res.json()
-            totalDeleted += data.count || ids.length
-          }
-        }
+  async function proceedBulkDelete() {
+    const projectGroups: Record<string, string[]> = {}
+    const selectedCases = testCases.filter((tc) => selectedIds.has(tc.id))
+    for (const tc of selectedCases) {
+      if (!projectGroups[tc.projectId]) projectGroups[tc.projectId] = []
+      projectGroups[tc.projectId].push(tc.id)
+    }
 
-        const count = selectedIds.size
-        setSelectedIds(new Set())
-        setToast({
-          message: `Successfully permanently deleted ${count} selected test cases and all related history.`,
-          type: "success"
-        })
-        fetchData()
-      } catch {
-        setToast({ message: "Error executing bulk delete", type: "error" })
+    for (const [pId, ids] of Object.entries(projectGroups)) {
+      const res = await fetch(`/api/projects/${pId}/test-cases`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids })
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Failed to execute bulk delete")
       }
     }
+
+    const count = selectedIds.size
+    setSelectedIds(new Set())
+    setToast({
+      message: `Successfully permanently deleted ${count} selected test cases and all related history.`,
+      type: "success"
+    })
+    setShowBulkDeleteModal(false)
+    fetchData()
   }
 
   // Smart routing helpers for More Actions
@@ -3129,78 +3118,36 @@ function TestCasesHubContent() {
       )}
 
       {/* Permanent Delete Confirmation Modal */}
-      {deleteModalOpen && deleteTarget && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!deleteLoading) { setDeleteModalOpen(false); setDeleteTarget(null) } }}>
-          <div className="bg-card border border-red-300 dark:border-red-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5 mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-red-100 dark:bg-red-950/40 rounded-xl shrink-0">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Permanently delete this test case?</h3>
-                <p className="text-sm text-muted-foreground mt-1">This action will permanently delete:</p>
-              </div>
-            </div>
-
-            <ul className="text-sm text-muted-foreground space-y-1 pl-4 list-disc">
-              <li>The test case</li>
-              <li>All test steps</li>
-              <li>All execution history</li>
-              <li>All test runs</li>
-              <li>All step results</li>
-              <li>All screenshots</li>
-              <li>All logs</li>
-              <li>All attachments</li>
-              <li>Related bug reports if they belong only to this test case</li>
-            </ul>
-
-            {(deleteRunCount > 0 || deleteBugCount > 0) && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Warning: This test case has {deleteRunCount} execution run{deleteRunCount !== 1 ? "s" : ""} and {deleteBugCount} linked bug{deleteBugCount !== 1 ? "s" : ""}. Deleting it will remove all related evidence permanently.
-                </p>
-              </div>
-            )}
-
-            <p className="text-sm font-bold text-red-600 dark:text-red-400">This action cannot be undone.</p>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                To confirm, type the test case title: <span className="font-bold text-red-600 dark:text-red-400">"{deleteTarget.title}"</span>
-              </label>
-              <Input
-                value={deleteTypedTitle}
-                onChange={(e) => setDeleteTypedTitle(e.target.value)}
-                placeholder="Type the test case title to confirm"
-                className="border-red-300 dark:border-red-700 focus-visible:ring-red-500"
-                disabled={deleteLoading}
-              />
-            </div>
-
-            {deleteError && (
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{deleteError}</p>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="ghost"
-                disabled={deleteLoading}
-                onClick={() => { setDeleteModalOpen(false); setDeleteTarget(null) }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={deleteLoading || deleteTypedTitle !== deleteTarget.title}
-                onClick={executePermanentDelete}
-              >
-                {deleteLoading ? "Deleting..." : "Delete Permanently"}
-              </Button>
-            </div>
-          </div>
-        </div>
+      {deleteTarget && (
+        <ConfirmDialog
+          open={deleteModalOpen}
+          title={`Permanently delete test case "${deleteTarget.title}"?`}
+          description={`This action will permanently delete:\n- The test case\n- All test steps\n- All execution history & test runs\n- All step results, screenshots, logs, and attachments\n\n${
+            (deleteRunCount > 0 || deleteBugCount > 0)
+              ? `Warning: This test case has ${deleteRunCount} execution run(s) and ${deleteBugCount} linked bug(s). Deleting it will remove all related evidence permanently.`
+              : ""
+          }`}
+          confirmLabel="Delete Permanently"
+          cancelLabel="Cancel"
+          variant="danger"
+          requireTextConfirmation={deleteTarget.title}
+          onConfirm={executePermanentDelete}
+          onCancel={() => { setDeleteModalOpen(false); setDeleteTarget(null) }}
+        />
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmDialog
+        open={showBulkDeleteModal}
+        title={`Permanently Delete ${selectedIds.size} Selected Test Cases?`}
+        description={`Are you absolutely sure you want to permanently delete all ${selectedIds.size} selected test cases along with all of their execution runs, steps, screenshots, bug reports, and logs? This action is irreversible.`}
+        confirmLabel="Bulk Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        requireTextConfirmation="DELETE"
+        onConfirm={proceedBulkDelete}
+        onCancel={() => setShowBulkDeleteModal(false)}
+      />
 
     </div>
   )

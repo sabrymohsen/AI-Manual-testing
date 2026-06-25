@@ -10,6 +10,7 @@ import { executeStep } from "../playwright/step-executor"
 import { decryptSecret } from "../crypto"
 import { handleLogin } from "../playwright/login-handler"
 import { saveFile } from "../storage"
+import { isAgentBrainCancelSignalSet } from "@/lib/queue"
 
 export interface AgentExecutionOptions {
   agentBrainRunId: string
@@ -54,6 +55,11 @@ export async function runExecutionPlan(
     page = await context.newPage()
 
     for (const item of planItems) {
+      // Check cancellation signal between scenarios
+      if (await isAgentBrainCancelSignalSet(agentBrainRunId)) {
+        console.warn(`[AgentExecutor] Cancellation signal set for run ${agentBrainRunId}. Aborting execution plan.`);
+        break;
+      }
       console.log(`[AgentExecutor] Running scenario: ${item.testName}`)
 
       // 1. Create TestCase in DB linked to agentBrainRun

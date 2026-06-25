@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Label } from "@/components/ui/label"
 import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
@@ -177,6 +178,8 @@ export default function BugReportsHubPage() {
 
   // Drawer / Modal visibility controls
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [bugToDelete, setBugToDelete] = useState<BugReport | null>(null)
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
   const [quickDetailId, setQuickDetailId] = useState<string | null>(null)
   const [activeDetailTab, setActiveDetailTab] = useState<"overview" | "steps" | "evidence" | "logs" | "activity">("overview")
   const [showBulkStatusModal, setShowBulkStatusModal] = useState(false)
@@ -564,22 +567,21 @@ export default function BugReportsHubPage() {
   }
 
   // Delete bug report
-  async function handleDeleteBug(bug: BugReport) {
-    if (confirm(`Are you sure you want to delete bug report ${bug.bugKey || bug.title}?`)) {
-      try {
-        const res = await fetch(`/api/bug-reports/${bug.id}`, {
-          method: "DELETE"
-        })
-        if (res.ok) {
-          setQuickDetailId(null)
-          fetchBugsData()
-        } else {
-          alert("Failed to delete bug report")
-        }
-      } catch {
-        alert("Network error deleting bug report")
-      }
+  function handleDeleteBug(bug: BugReport) {
+    setBugToDelete(bug)
+  }
+
+  async function confirmDeleteBug() {
+    if (!bugToDelete) return
+    const res = await fetch(`/api/bug-reports/${bugToDelete.id}`, {
+      method: "DELETE"
+    })
+    if (!res.ok) {
+      throw new Error("Failed to delete bug report")
     }
+    setQuickDetailId(null)
+    setBugToDelete(null)
+    fetchBugsData()
   }
 
   // Submit comment in detail drawer
@@ -855,19 +857,22 @@ export default function BugReportsHubPage() {
     }
   }
 
-  async function handleDeleteSelected() {
+  function handleDeleteSelected() {
     if (selectedIds.size === 0) return
-    if (confirm(`Are you sure you want to delete ${selectedIds.size} selected bug reports?`)) {
-      try {
-        for (const id of Array.from(selectedIds)) {
-          await fetch(`/api/bug-reports/${id}`, { method: "DELETE" })
-        }
-        setSelectedIds(new Set())
-        fetchBugsData()
-      } catch {
-        alert("Error executing bulk delete")
+    setShowBulkDeleteConfirm(true)
+  }
+
+  async function confirmDeleteSelected() {
+    if (selectedIds.size === 0) return
+    for (const id of Array.from(selectedIds)) {
+      const res = await fetch(`/api/bug-reports/${id}`, { method: "DELETE" })
+      if (!res.ok) {
+        throw new Error("Failed to delete one of the selected bug reports")
       }
     }
+    setSelectedIds(new Set())
+    setShowBulkDeleteConfirm(false)
+    fetchBugsData()
   }
 
   // Export Single bug details as Markdown file
@@ -2581,7 +2586,26 @@ ${bug.actualResult || "N/A"}
           </div>
         </div>
       )}
+      {/* Confirm dialogs */}
+      <ConfirmDialog
+        open={bugToDelete !== null}
+        title="Delete Bug Report"
+        description={bugToDelete ? `Are you sure you want to delete bug report ${bugToDelete.bugKey || bugToDelete.title}? This action cannot be undone.` : ""}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteBug}
+        onCancel={() => setBugToDelete(null)}
+      />
 
+      <ConfirmDialog
+        open={showBulkDeleteConfirm}
+        title="Delete Selected Bug Reports"
+        description={`Are you sure you want to delete the ${selectedIds.size} selected bug reports? This action is permanent and cannot be undone.`}
+        variant="danger"
+        confirmLabel="Delete Selected"
+        onConfirm={confirmDeleteSelected}
+        onCancel={() => setShowBulkDeleteConfirm(false)}
+      />
     </div>
   )
 }

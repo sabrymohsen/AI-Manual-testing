@@ -46,6 +46,21 @@ export async function POST(
   }
   const { provider, enabled, host, projectKey, username, token, triggerOn } = parsed.data
 
+  // Normalize OpenProject host and project key before storing
+  let cleanHost = host || null
+  let cleanProjectKey = projectKey || null
+  if (provider === "openproject") {
+    if (cleanHost) {
+      const m = cleanHost.trim().match(/^(https?:\/\/[^\/\?#]+)/)
+      cleanHost = m ? m[1] : cleanHost.trim().replace(/[\/\?#].*/g, "")
+      if (cleanHost && !cleanHost.startsWith("http")) cleanHost = `https://${cleanHost}`
+    }
+    if (cleanProjectKey) {
+      const p = cleanProjectKey.trim().match(/\/projects\/([^\/\?#]+)/)
+      cleanProjectKey = p ? p[1] : cleanProjectKey.trim().replace(/[\/\?#].*/g, "")
+    }
+  }
+
   let tokenData: Record<string, string> = {}
   if (token) {
     try {
@@ -68,8 +83,8 @@ export async function POST(
       projectId: params.projectId,
       provider,
       enabled: !!enabled,
-      host: host || null,
-      projectKey: projectKey || null,
+      host: cleanHost,
+      projectKey: cleanProjectKey,
       username: username || null,
       triggerOn: triggerOn || "Failed",
       ...tokenData
@@ -77,8 +92,8 @@ export async function POST(
     update: {
       provider,
       enabled: !!enabled,
-      host: host || null,
-      projectKey: projectKey || null,
+      host: cleanHost,
+      projectKey: cleanProjectKey,
       username: username || null,
       triggerOn: triggerOn || "Failed",
       ...tokenData

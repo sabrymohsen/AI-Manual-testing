@@ -97,6 +97,8 @@ enum TestCaseSource {
   Imported
   Exploratory
   Recorder
+  QAAgentBrain
+  RequirementFile
 }
 
 enum ActionType {
@@ -219,6 +221,7 @@ model Project {
   reusableStepFlows   ReusableStepFlow[]
   testDataVariables   TestDataVariable[]
   requirements        Requirement[]
+  requirementImports  RequirementImport[]
   bugReports          BugReport[]
   figmaFrames             FigmaFrame[]
   visualCheckMappings     VisualCheckMapping[]
@@ -595,6 +598,7 @@ model BugReport {
   recordedTestCaseId  String?
   recordedTestCase    RecordedTestCase?  @relation(fields: [recordedTestCaseId], references: [id], onDelete: SetNull)
   visualIssues        VisualDifferenceIssue[]
+  occurrences         BugOccurrence[]
 
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
@@ -1036,6 +1040,9 @@ model Requirement {
   externalSystem   String? // Jira, Azure DevOps, GitHub, Manual, Other
   testCases        TestCaseRequirement[]
   bugReports       BugReportRequirement[]
+  sourceImportId   String?
+  sourceImport     RequirementImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+  sourceLocation   Json?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -1047,6 +1054,32 @@ model Requirement {
   @@index([componentId])
 }
 
+enum RequirementImportStatus {
+  Uploaded
+  Parsed
+  Generated
+  Saved
+  Failed
+}
+
+model RequirementImport {
+  id           String                  @id @default(uuid())
+  projectId    String
+  project      Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fileName     String
+  fileType     String
+  language     String?
+  status       RequirementImportStatus @default(Parsed)
+  rawText      String?
+  parsedItems  Json?                   // Array of normalized requirement items
+  summary      Json?                   // Parsing/generation summary metadata
+  requirements Requirement[]
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  @@index([projectId])
+}
+
 model TestCaseRequirement {
   id             String      @id @default(uuid())
   requirementId  String
@@ -1056,6 +1089,47 @@ model TestCaseRequirement {
   createdAt      DateTime    @default(now())
 
   @@unique([requirementId, testCaseId])
+}
+
+// ─── External sync mapping (TestCase / BugReport ↔ OpenProject work package) ─
+enum ExternalProvider {
+  OpenProject
+}
+
+model ExternalSyncMapping {
+  id              String           @id @default(uuid())
+  projectId       String
+
+  provider        ExternalProvider
+  localEntityType String           // "TestCase" | "BugReport"
+  localEntityId   String
+
+  externalId      String           // OpenProject work package ID (numeric as string)
+  externalUrl     String?          // Direct URL to the work package
+  externalType    String?          // work package type name
+
+  lastSyncedAt    DateTime?
+  lastSyncStatus  String?          // "success" | "failed" | "pending"
+  lastSyncError   String?
+
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@unique([provider, localEntityType, localEntityId])
+  @@index([projectId])
+  @@index([localEntityId])
+}
+
+// ─── Bug occurrence — re-run of same failure links here instead of new bug ───
+model BugOccurrence {
+  id          String    @id @default(uuid())
+  bugReportId String
+  bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
+  testRunId   String
+  occurredAt  DateTime  @default(now())
+  evidence    Json?     // screenshot paths, error details snapshot
+
+  @@index([bugReportId])
 }
 
 model BugReportRequirement {
@@ -1486,31 +1560,38 @@ enum QAAgentFindingType {
 }
 
 model QAAgentRun {
-  id            String             @id @default(uuid())
-  projectId     String
-  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  mode          QAAgentMode
-  goal          String
-  scope         Json?
-  status        QAAgentRunStatus   @default(Queued)
-  credentialId  String?
-  browserType   BrowserType?
-  viewport      String?
-  safetyLevel   QAAgentSafetyLevel @default(ReadOnly)
-  plan          Json?
-  scannerResult Json?
-  summary       Json?
-  startedAt     DateTime?
-  completedAt   DateTime?
-  durationMs    Int                @default(0)
+  id              String             @id @default(uuid())
+  projectId       String
+  project         Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mode            QAAgentMode
+  goal            String
+  scope           Json?
+  status          QAAgentRunStatus   @default(Queued)
+  credentialId    String?
+  browserType     BrowserType?
+  viewport        String?
+  safetyLevel     QAAgentSafetyLevel @default(ReadOnly)
+  plan            Json?
+  scannerResult   Json?
+  executionResult Json?
+  summary         Json?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  durationMs      Int                @default(0)
+  progress        Int                @default(0)
   steps           QAAgentRunStep[]
   findings        QAAgentFinding[]
-  currentPhase    String?
-  currentMessage  String?
-  lastHeartbeatAt DateTime?
+  events          QAAgentRunEvent[]
+  currentPhase          String?
+  currentPhaseStartedAt DateTime?
+  currentMessage        String?
+  lastHeartbeatAt       DateTime?
   failedReason    String?
   failedAt        DateTime?
   errorStack      String?
+  jobId           String?
+  cancelRequested Boolean            @default(false)
+  cancelRequestedAt DateTime?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
@@ -1524,30 +1605,47 @@ model QAAgentRunStep {
   agentRunId     String
   agentRun       QAAgentRun  @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
   stepNumber     Int
+  phase          String?
   name           String
   type           String
   status         String
+  message        String?
   details        Json?
   screenshotPath String?
   error          String?
   startedAt      DateTime?
   completedAt    DateTime?
+  durationMs     Int         @default(0)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 }
 
 model QAAgentFinding {
-  id          String             @id @default(uuid())
+  id             String             @id @default(uuid())
+  agentRunId     String
+  agentRun       QAAgentRun         @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  type           QAAgentFindingType
+  severity       Priority           @default(Medium)
+  title          String
+  description    String?
+  evidence       Json?
+  screenshotPath String?
+  bugReportId    String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model QAAgentRunEvent {
+  id          String     @id @default(uuid())
   agentRunId  String
-  agentRun    QAAgentRun         @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
-  type        QAAgentFindingType
-  severity    Priority           @default(Medium)
-  title       String
-  description String?
-  evidence    Json?
-  bugReportId String?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  agentRun    QAAgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  level       String
+  phase       String?
+  message     String
+  details     Json?
+  createdAt   DateTime   @default(now())
+
+  @@index([agentRunId])
 }
 
 

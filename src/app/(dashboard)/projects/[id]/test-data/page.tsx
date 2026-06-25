@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
 import { Eye, EyeOff, Plus, Trash2, Edit, Save, ShieldAlert, Sparkles, RefreshCw, Key } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface TestDataVariable {
   id: string
@@ -45,6 +46,7 @@ export default function TestDataPage() {
   // Modals & edits
   const [editingId, setEditingId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
+  const [variableToDelete, setVariableToDelete] = useState<string | null>(null)
 
   // Form inputs
   const [key, setKey] = useState("")
@@ -147,19 +149,19 @@ export default function TestDataPage() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this variable?")) return
+  const handleDelete = (id: string) => {
+    setVariableToDelete(id)
+  }
 
+  const confirmDeleteVariable = async () => {
+    if (!variableToDelete) return
     setError(null)
-    try {
-      const res = await fetch(`/api/test-data/${id}`, {
-        method: "DELETE"
-      })
-      if (!res.ok) throw new Error("Failed to delete variable")
-      fetchVariables()
-    } catch (err: any) {
-      setError(err.message || "Failed to delete variable")
-    }
+    const res = await fetch(`/api/test-data/${variableToDelete}`, {
+      method: "DELETE"
+    })
+    if (!res.ok) throw new Error("Failed to delete variable")
+    setVariableToDelete(null)
+    fetchVariables()
   }
 
   const handleResolveText = async () => {
@@ -440,6 +442,15 @@ export default function TestDataPage() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={variableToDelete !== null}
+        title="Delete Variable"
+        description="Are you sure you want to delete this variable? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteVariable}
+        onCancel={() => setVariableToDelete(null)}
+      />
     </div>
   )
 }

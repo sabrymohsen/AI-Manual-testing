@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Layers,
   Settings,
@@ -121,6 +122,7 @@ export default function VisualComparisonPage() {
   // State Management
   const [activeTab, setActiveTab] = useState<"mappings" | "sync" | "history">("mappings")
   const [project, setProject] = useState<any>(null)
+  const [mappingToDelete, setMappingToDelete] = useState<string | null>(null)
   const [credentials, setCredentials] = useState<any[]>([])
   const [hierarchy, setHierarchy] = useState<any[]>([])
   const [mappings, setMappings] = useState<VisualMapping[]>([])
@@ -357,16 +359,18 @@ export default function VisualComparisonPage() {
   }
 
   // Delete mapping
-  const handleDeleteMapping = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this visual check mapping?")) return
-    try {
-      const res = await fetch(`/api/visual-mappings/${id}`, { method: "DELETE" })
-      if (res.ok) {
-        await fetchProjectData()
-      }
-    } catch (err) {
-      console.error(err)
+  const handleDeleteMapping = (id: string) => {
+    setMappingToDelete(id)
+  }
+
+  const confirmDeleteMapping = async () => {
+    if (!mappingToDelete) return
+    const res = await fetch(`/api/visual-mappings/${mappingToDelete}`, { method: "DELETE" })
+    if (!res.ok) {
+      throw new Error("Failed to delete mapping")
     }
+    setMappingToDelete(null)
+    await fetchProjectData()
   }
 
   // Trigger bulk visual checks
@@ -1784,6 +1788,16 @@ ${selectedRunIssues.map((issue, idx) => `
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={mappingToDelete !== null}
+        title="Delete Visual Mapping"
+        description="Are you sure you want to delete this visual check mapping? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteMapping}
+        onCancel={() => setMappingToDelete(null)}
+      />
     </div>
   )
 }

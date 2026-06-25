@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { HierarchyFormModal } from "./hierarchy-form-modal"
 import { MoveCaseModal } from "./move-case-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface ComponentNode {
   id: string
@@ -96,6 +97,10 @@ export function HierarchyExplorer({
   const [moveCurrentFeatureId, setMoveCurrentFeatureId] = useState<string | null>(null)
   const [moveCurrentComponentId, setMoveCurrentComponentId] = useState<string | null>(null)
 
+  // Delete modal states
+  const [nodeToDelete, setNodeToDelete] = useState<{ level: "module" | "feature" | "component"; id: string; name: string } | null>(null)
+  const [testCaseToDelete, setTestCaseToDelete] = useState<{ id: string; title: string } | null>(null)
+
   // Fetch all hierarchy and cases
   const fetchData = async () => {
     try {
@@ -147,45 +152,41 @@ export function HierarchyExplorer({
   }
 
   // Node deletion handlers
-  const handleDeleteNode = async (level: "module" | "feature" | "component", id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete this ${level} "${name}"? Tests inside will be kept and marked as Unassigned.`)) {
-      return
-    }
-
-    try {
-      const res = await fetch(`/api/${level}s/${id}`, {
-        method: "DELETE"
-      })
-
-      if (res.ok) {
-        fetchData()
-      } else {
-        const err = await res.json()
-        alert(err.error || `Failed to delete ${level}`)
-      }
-    } catch {
-      alert(`Network error deleting ${level}`)
-    }
+  const handleDeleteNode = (level: "module" | "feature" | "component", id: string, name: string) => {
+    setNodeToDelete({ level, id, name })
   }
 
-  const handleDeleteTestCase = async (tcId: string, tcTitle: string) => {
-    if (!confirm(`Are you sure you want to delete test case "${tcTitle}"?`)) {
-      return
-    }
+  const handleDeleteTestCase = (tcId: string, tcTitle: string) => {
+    setTestCaseToDelete({ id: tcId, title: tcTitle })
+  }
 
-    try {
-      const res = await fetch(`/api/projects/${projectId}/test-cases/${tcId}`, {
-        method: "DELETE"
-      })
+  async function confirmDeleteNode() {
+    if (!nodeToDelete) return
+    const { level, id } = nodeToDelete
+    const res = await fetch(`/api/${level}s/${id}`, {
+      method: "DELETE"
+    })
 
-      if (res.ok) {
-        fetchData()
-      } else {
-        alert("Failed to delete testcase")
-      }
-    } catch {
-      alert("Network error deleting test case")
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || `Failed to delete ${level}`)
     }
+    setNodeToDelete(null)
+    fetchData()
+  }
+
+  async function confirmDeleteTestCase() {
+    if (!testCaseToDelete) return
+    const { id } = testCaseToDelete
+    const res = await fetch(`/api/projects/${projectId}/test-cases/${id}`, {
+      method: "DELETE"
+    })
+
+    if (!res.ok) {
+      throw new Error("Failed to delete test case")
+    }
+    setTestCaseToDelete(null)
+    fetchData()
   }
 
   // Modal open helpers
@@ -604,6 +605,26 @@ export function HierarchyExplorer({
         currentModuleId={moveCurrentModuleId}
         currentFeatureId={moveCurrentFeatureId}
         currentComponentId={moveCurrentComponentId}
+      />
+
+      <ConfirmDialog
+        open={nodeToDelete !== null}
+        title={`Delete ${nodeToDelete?.level || "Item"}`}
+        description={nodeToDelete ? `Are you sure you want to delete the ${nodeToDelete.level} "${nodeToDelete.name}"? Tests inside will be kept and marked as Unassigned.` : ""}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteNode}
+        onCancel={() => setNodeToDelete(null)}
+      />
+
+      <ConfirmDialog
+        open={testCaseToDelete !== null}
+        title="Delete Test Case"
+        description={testCaseToDelete ? `Are you sure you want to delete test case "${testCaseToDelete.title}"? This action cannot be undone.` : ""}
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteTestCase}
+        onCancel={() => setTestCaseToDelete(null)}
       />
     </div>
   )

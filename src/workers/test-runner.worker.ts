@@ -1,8 +1,9 @@
 import { Worker } from "bullmq"
-import { redisConnection, registerWorkerHeartbeat } from "@/lib/queue"
+import { redisConnection, registerWorkerHeartbeat, AGENT_RUN_QUEUE_NAME } from "@/lib/queue"
 import { runTestCase } from "@/lib/playwright/runner"
 import { prisma } from "@/lib/db"
 import { runQAAgentPipeline } from "@/lib/agent/brain"
+import { startAgentBrainWorker } from "./agent-brain.worker"
 
 console.log("[WORKER STARTUP] Initializing background runner workers...")
 
@@ -11,7 +12,7 @@ let currentJobId: string | null = null
 let workerStatus: "idle" | "busy" | "error" = "idle"
 
 export function startTestRunWorker() {
-  console.log("Test Run Worker started")
+  console.log("[TestRunWorker] started")
   const testRunWorker = new Worker(
     "test-execution-queue",
     async (job) => {
@@ -134,17 +135,40 @@ export function startVisualCheckWorker() {
 }
 
 export function startAgentRunWorker() {
-  console.log("Agent Run Worker started")
-  console.log("Listening to queue: agent-run-queue")
+  console.log("[AgentRunWorker] started")
+  console.log(`[AgentRunWorker] listening to queue: ${AGENT_RUN_QUEUE_NAME}`)
   const agentRunWorker = new Worker(
-    "qa-agent-queue",
+    AGENT_RUN_QUEUE_NAME,
     async (job) => {
       const { runId } = job.data
-      console.log(`[AgentRunWorker] Picked job: ${runId}`)
+      console.log(`[AgentRunWorker] picked job: ${job.id}, agentRunId=${runId}`)
+      
       try {
+        // Update database immediately to Scanning / Analyzing
+        await prisma.qAAgentRun.update({
+          where: { id: runId },
+          data: {
+            status: "Scanning",
+            currentPhase: "Analyzing",
+            currentMessage: "Worker picked up job. Starting page analysis...",
+            startedAt: new Date(),
+            lastHeartbeatAt: new Date(),
+            currentPhaseStartedAt: new Date()
+          }
+        })
+
+        await prisma.qAAgentRunEvent.create({
+          data: {
+            agentRunId: runId,
+            level: "info",
+            phase: "Scanning",
+            message: "Worker picked job"
+          }
+        })
+        
         await runQAAgentPipeline(runId)
       } catch (err: any) {
-        console.error(`[AgentRunWorker] Failed agent run ${runId}:`, err.message)
+        console.error(`[AgentRunWorker] failed QAAgentRun ${runId}: ${err.message}`)
         throw err
       }
     },
@@ -155,13 +179,13 @@ export function startAgentRunWorker() {
   )
 
   agentRunWorker.on("completed", (job) => {
-    console.log(`[AGENT WORKER] Completed agent runId: ${job.data.runId}`)
+    console.log(`[AgentRunWorker] completed QAAgentRun ${job.data.runId}`)
   })
 
   agentRunWorker.on("failed", async (job, error) => {
     if (!job) return
     const { runId } = job.data
-    console.error(`[AgentRunWorker] Failed job for runId: ${runId}. Error: ${error.message}`)
+    console.log(`[AgentRunWorker] failed QAAgentRun ${runId}: ${error.message}`)
     try {
       await prisma.qAAgentRun.update({
         where: { id: runId },
@@ -172,7 +196,8 @@ export function startAgentRunWorker() {
           currentMessage: `Agent execution failed: ${error.message}`,
           failedReason: error.message,
           failedAt: new Date(),
-          errorStack: error.stack || null
+          errorStack: error.stack || null,
+          currentPhaseStartedAt: new Date()
         }
       })
       await prisma.qAAgentFinding.create({
@@ -201,6 +226,7 @@ export function startAgentRunWorker() {
 const testRunWorker = startTestRunWorker()
 const visualCheckWorker = startVisualCheckWorker()
 const agentRunWorker = startAgentRunWorker()
+const agentBrainWorker = startAgentBrainWorker()
 
 // Heartbeat Loop (5 seconds interval)
 const heartbeatInterval = setInterval(async () => {
@@ -224,5 +250,7 @@ process.on("SIGTERM", async () => {
   await testRunWorker.close().catch(() => {})
   await visualCheckWorker.close().catch(() => {})
   await agentRunWorker.close().catch(() => {})
+  clearInterval(agentBrainWorker.heartbeatInterval)
+  await agentBrainWorker.worker.close().catch(() => {})
   process.exit(0)
 })

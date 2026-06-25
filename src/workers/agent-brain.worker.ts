@@ -1,5 +1,5 @@
 import { Worker } from "bullmq"
-import { redisConnection, registerWorkerHeartbeat, publishAgentBrainEvent } from "@/lib/queue"
+import { redisConnection, registerWorkerHeartbeat, publishAgentBrainEvent, isAgentBrainCancelSignalSet, clearAgentBrainCancelSignal } from "@/lib/queue"
 import { prisma } from "@/lib/db"
 import { analyzeApplicationContext } from "@/lib/agent-brain/brain"
 import { generateExecutionPlan } from "@/lib/agent-brain/planner"
@@ -42,6 +42,11 @@ async function runAgentBrainPipeline(runId: string) {
 
   // 1. Understanding Layer
   console.log(`[AgentBrain] Transitioning to: Understanding`)
+  if (await isAgentBrainCancelSignalSet(runId)) {
+    console.log(`[AgentBrain] Cancellation signal detected for run ${runId} before Understanding Layer.`)
+    await clearAgentBrainCancelSignal(runId)
+    return
+  }
   await prisma.agentBrainRun.update({
     where: { id: runId },
     data: { status: "Understanding" }
@@ -84,6 +89,11 @@ async function runAgentBrainPipeline(runId: string) {
 
   // 2. Planning Layer
   console.log(`[AgentBrain] Transitioning to: Planning`)
+  if (await isAgentBrainCancelSignalSet(runId)) {
+    console.log(`[AgentBrain] Cancellation signal detected for run ${runId} before Planning Layer.`)
+    await clearAgentBrainCancelSignal(runId)
+    return
+  }
   await prisma.agentBrainRun.update({
     where: { id: runId },
     data: { status: "Planning" }
@@ -125,6 +135,11 @@ async function runAgentBrainPipeline(runId: string) {
 
   // 3. Executing Layer (Execution & Autonomous Mode)
   console.log(`[AgentBrain] Transitioning to: Executing`)
+  if (await isAgentBrainCancelSignalSet(runId)) {
+    console.log(`[AgentBrain] Cancellation signal detected for run ${runId} before Executing Layer.`)
+    await clearAgentBrainCancelSignal(runId)
+    return
+  }
   await prisma.agentBrainRun.update({
     where: { id: runId },
     data: { status: "Executing" }
@@ -189,55 +204,64 @@ Avg memory lookup: ${executorMetrics.memoryLookupMs.toFixed(1)}ms.`
   console.log(`[AgentBrain] Pipeline completed successfully for run: ${runId}`)
 }
 
-const worker = new Worker(
-  "agent-brain-queue",
-  async (job) => {
-    const { runId } = job.data
-    console.log(`[AGENT BRAIN WORKER JOB] Processing runId: ${runId}`)
-    currentJobId = runId
-    workerStatus = "busy"
+export function startAgentBrainWorker() {
+  console.log("[AgentBrainWorker] starting queue processor...")
+  const worker = new Worker(
+    "agent-brain-queue",
+    async (job) => {
+      const { runId } = job.data
+      console.log(`[AGENT BRAIN WORKER JOB] Processing runId: ${runId}`)
+      currentJobId = runId
+      workerStatus = "busy"
 
-    try {
-      await runAgentBrainPipeline(runId)
-    } catch (err: any) {
-      workerStatus = "error"
-      await prisma.agentBrainRun.update({
-        where: { id: runId },
-        data: { status: "Failed", completedAt: new Date() }
-      })
-      await publishAgentBrainEvent(runId, "failed", { error: err.message })
-      throw err
-    } finally {
-      currentJobId = null
-      workerStatus = "idle"
+      try {
+        await runAgentBrainPipeline(runId)
+      } catch (err: any) {
+        workerStatus = "error"
+        const currentRun = await prisma.agentBrainRun.findUnique({
+          where: { id: runId }
+        })
+        if (currentRun?.status === "Cancelled") {
+          console.log(`[AgentBrainWorker] Run ${runId} was cancelled. Skipping status: "Failed" update.`)
+        } else {
+          await prisma.agentBrainRun.update({
+            where: { id: runId },
+            data: { status: "Failed", completedAt: new Date() }
+          })
+          await publishAgentBrainEvent(runId, "failed", { error: err.message })
+          throw err
+        }
+      } finally {
+        currentJobId = null
+        workerStatus = "idle"
+      }
+    },
+    {
+      connection: redisConnection,
+      concurrency: 1,
     }
-  },
-  {
-    connection: redisConnection,
-    concurrency: 1,
+  )
+
+  worker.on("error", (error) => {
+    console.error("[Agent Brain Worker] Global error:", error.message)
+  })
+
+  const heartbeatInterval = setInterval(async () => {
+    try {
+      const memoryUsage = process.memoryUsage().rss
+      await registerWorkerHeartbeat(workerId, {
+        status: workerStatus,
+        currentJobId,
+        memoryUsage,
+        browserStatus: "Active",
+      })
+    } catch (err: any) {
+      console.error("[Agent Brain Worker] Heartbeat registration failed:", err.message)
+    }
+  }, 5000)
+
+  return {
+    worker,
+    heartbeatInterval
   }
-)
-
-worker.on("error", (error) => {
-  console.error("[Agent Brain Worker] Global error:", error.message)
-})
-
-const heartbeatInterval = setInterval(async () => {
-  try {
-    const memoryUsage = process.memoryUsage().rss
-    await registerWorkerHeartbeat(workerId, {
-      status: workerStatus,
-      currentJobId,
-      memoryUsage,
-      browserStatus: "Active",
-    })
-  } catch (err: any) {
-    console.error("[Agent Brain Worker] Heartbeat registration failed:", err.message)
-  }
-}, 5000)
-
-process.on("SIGTERM", async () => {
-  clearInterval(heartbeatInterval)
-  await worker.close()
-  process.exit(0)
-})
+}

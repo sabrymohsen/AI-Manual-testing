@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Shield, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react"
+import { Shield, CheckCircle2, AlertCircle, RefreshCw, CloudUpload, Loader2 } from "lucide-react"
 
 interface IntegrationConfigProps {
   projectId: string
@@ -27,6 +27,8 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
   const [error, setError] = useState<string>("")
   const [success, setSuccess] = useState<string>("")
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [syncing, setSyncing] = useState<boolean>(false)
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null)
 
   useEffect(() => {
     async function loadSettings() {
@@ -58,6 +60,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
     setError("")
     setSuccess("")
     setTestResult(null)
+    setSyncResult(null)
 
     try {
       const res = await fetch(`/api/projects/${projectId}/integrations/test`, {
@@ -85,8 +88,30 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
     }
   }
 
-  async function handleSave() {
-    setSaving(true)
+  async function handleSync() {
+    setSyncing(true)
+    setSyncResult(null)
+    setError("")
+    try {
+      const res = await fetch(`/api/projects/${projectId}/integrations/sync-test-cases`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setSyncResult({ success: true, message: data.message || `${data.created} test case(s) synced to OpenProject.` })
+      } else {
+        setSyncResult({ success: false, message: data.error || "Sync failed." })
+      }
+    } catch {
+      setSyncResult({ success: false, message: "Network error during sync." })
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  async function handleSave() {    setSaving(true)
     setError("")
     setSuccess("")
     setTestResult(null)
@@ -201,13 +226,18 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                     "https://openproject.example.com"
                   }
                 />
+                {provider === "openproject" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Enter only the root URL, e.g. <code className="bg-accent px-1 rounded">https://openproject.roaa.tech</code>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="integration-project">
                   {provider === "jira" ? "Project Key" :
                    provider === "azure_devops" ? "Project Name / Key" :
-                   "Project Identifier (Slug or ID)"}
+                   "Project Identifier (slug)"}
                 </Label>
                 <Input
                   id="integration-project"
@@ -216,9 +246,14 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                   placeholder={
                     provider === "jira" ? "PROJ" :
                     provider === "azure_devops" ? "MyProject" :
-                    "my-project-slug"
+                    "shd"
                   }
                 />
+                {provider === "openproject" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    The short slug from the project URL: <code className="bg-accent px-1 rounded">/projects/<strong>shd</strong></code>
+                  </p>
+                )}
               </div>
 
               {provider !== "azure_devops" && (
@@ -241,7 +276,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 <Label htmlFor="integration-token">
                   {provider === "jira" ? "Atlassian API Token" :
                    provider === "azure_devops" ? "Personal Access Token (PAT)" :
-                   "API Token / Key"}
+                   "API Token"}
                 </Label>
                 <Input
                   id="integration-token"
@@ -250,6 +285,11 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                   onChange={(e) => setToken(e.target.value)}
                   placeholder={hasToken ? "•••••••••••••••• (Leave blank to keep saved)" : "Enter API token"}
                 />
+                {provider === "openproject" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Generate from OpenProject: <strong>My Account → Access Tokens → API token</strong>. Starts with <code className="bg-accent px-1 rounded">opapi-</code>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -284,7 +324,25 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
               </div>
             )}
 
-            <div className="flex gap-2">
+            {syncResult && (
+              <div className={`flex items-start gap-2.5 p-3 rounded-lg border text-sm ${
+                syncResult.success
+                  ? "bg-blue-50 border-blue-200 text-blue-800"
+                  : "bg-destructive/10 border-destructive/20 text-destructive-foreground"
+              }`}>
+                {syncResult.success ? (
+                  <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />
+                )}
+                <div>
+                  <p className="font-semibold">{syncResult.success ? "Sync Complete" : "Sync Failed"}</p>
+                  <p className="text-xs opacity-90 mt-0.5">{syncResult.message}</p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap">
               <Button
                 type="button"
                 variant="outline"
@@ -293,6 +351,21 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
               >
                 {testing ? "Testing..." : "Test Connection"}
               </Button>
+              {provider === "openproject" && hasToken && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400"
+                >
+                  {syncing ? (
+                    <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Syncing...</>
+                  ) : (
+                    <><CloudUpload className="h-4 w-4 mr-1.5" /> Sync All Test Cases to OpenProject</>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         )}

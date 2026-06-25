@@ -51,13 +51,21 @@ export async function POST(
         continue
       }
 
+      const runScope = (run.scope || {}) as any
+      const preconditions = `Created by QA Agent Brain. Tested on Environment: ${runScope.environment || "Development"}. Target URL: ${runScope.targetUrl || "None"}.`
+
       // Create new test case and steps
       await prisma.testCase.create({
         data: {
           projectId: run.projectId,
           title: test.name,
-          source: "AIGenerated",
+          source: "QAAgentBrain",
           priority: "Medium",
+          preconditions,
+          requiredCredentialId: run.credentialId || null,
+          moduleId: test.moduleId || null,
+          featureId: test.featureId || null,
+          componentId: test.componentId || null,
           steps: {
             create: test.steps.map((s: any, idx: number) => ({
               stepNumber: idx + 1,

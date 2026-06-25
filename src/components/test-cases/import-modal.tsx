@@ -3,7 +3,7 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Upload, ChevronRight, Check, AlertCircle, FileSpreadsheet, Settings2, Eye, Loader2, ArrowLeft } from "lucide-react"
+import { Upload, ChevronRight, Check, AlertCircle, FileSpreadsheet, Settings2, Eye, Loader2, ArrowLeft, Download } from "lucide-react"
 import * as XLSX from "xlsx"
 
 interface ImportModalProps {
@@ -90,7 +90,8 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
         const workbook = XLSX.read(data, { type: "array" })
         const sheetName = workbook.SheetNames[0]
         const worksheet = workbook.Sheets[sheetName]
-        const rawJson = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1 })
+        // defval:"" ensures empty cells don't become undefined in rows
+        const rawJson = XLSX.utils.sheet_to_json<any[]>(worksheet, { header: 1, defval: "" })
 
         if (rawJson.length === 0) {
           setErrorMsg("The selected spreadsheet is empty.")
@@ -105,91 +106,160 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
         setRows(dataRows)
 
         // Premium UX: Guess column mapping based on keywords (English & Arabic support)
+        // Process in order of specificity — more specific patterns first to avoid overwriting
         const autoMapping = { ...mapping }
         sheetHeaders.forEach((header, index) => {
           const colIndex = String(index)
-          const lowerHeader = header.toLowerCase()
+          const lowerHeader = header.toLowerCase().trim()
 
+          // ── Title ──────────────────────────────────────────────────────────
           if (
-            lowerHeader.includes("title") || 
-            lowerHeader.includes("name") || 
+            lowerHeader === "test case title" ||
+            lowerHeader === "title" ||
+            lowerHeader === "test case name" ||
             lowerHeader === "tc" ||
-            lowerHeader.includes("سيناريو") ||
+            lowerHeader.includes("عنوان حالة") ||
+            lowerHeader.includes("عنوان الاختبار") ||
             lowerHeader.includes("عنوان") ||
-            lowerHeader.includes("اسم") ||
-            lowerHeader.includes("معرف")
+            lowerHeader.includes("اسم حالة") ||
+            lowerHeader.includes("سيناريو")
           ) {
             autoMapping.title = colIndex
+
+          // ── Module ─────────────────────────────────────────────────────────
           } else if (
-            lowerHeader.includes("module name") || 
-            lowerHeader.includes("category") || 
+            lowerHeader === "module name" ||
             lowerHeader === "module" ||
+            lowerHeader.includes("module name") ||
             lowerHeader.includes("قسم") ||
-            lowerHeader.includes("السيناريو") ||
+            lowerHeader.includes("الوحدة") ||
             lowerHeader.includes("موديل")
           ) {
             autoMapping.module = colIndex
+
+          // ── Feature ────────────────────────────────────────────────────────
           } else if (
-            lowerHeader.includes("feature name") || 
-            lowerHeader === "feature" || 
+            lowerHeader === "feature name" ||
+            lowerHeader === "feature" ||
+            lowerHeader.includes("feature name") ||
+            lowerHeader.includes("الميزة") ||
             lowerHeader.includes("فيتشر") ||
-            lowerHeader.includes("خاصية") ||
-            lowerHeader.includes("خاصيه")
+            lowerHeader.includes("خاصية")
           ) {
             autoMapping.featureName = colIndex
+
+          // ── Component ──────────────────────────────────────────────────────
           } else if (
-            lowerHeader.includes("component name") || 
-            lowerHeader === "component" || 
+            lowerHeader === "component name" ||
+            lowerHeader === "component" ||
+            lowerHeader.includes("component name") ||
             lowerHeader.includes("مكون") ||
             lowerHeader.includes("عنصر")
           ) {
             autoMapping.componentName = colIndex
+
+          // ── Priority ───────────────────────────────────────────────────────
           } else if (
-            lowerHeader.includes("priority") || 
+            lowerHeader === "priority" ||
+            lowerHeader.includes("priority") ||
             lowerHeader.includes("severity") ||
             lowerHeader.includes("أولوية") ||
             lowerHeader.includes("اولوية")
           ) {
             autoMapping.priority = colIndex
+
+          // ── Preconditions ──────────────────────────────────────────────────
           } else if (
-            lowerHeader.includes("precondition") || 
+            lowerHeader.includes("precondition") ||
             lowerHeader.includes("prereq") ||
             lowerHeader.includes("شروط مسبقة") ||
             lowerHeader.includes("شرط مسبق") ||
             lowerHeader.includes("شروط مسبقه")
           ) {
             autoMapping.preconditions = colIndex
+
+          // ── Requirement Keys ───────────────────────────────────────────────
           } else if (
-            lowerHeader.includes("action") || 
-            lowerHeader.includes("desc") || 
+            lowerHeader.includes("requirement key") ||
+            lowerHeader.includes("req key") ||
+            lowerHeader === "requirement keys" ||
+            lowerHeader.includes("متطلب") ||
+            lowerHeader.includes("متطلبات")
+          ) {
+            autoMapping.requirementKeys = colIndex
+
+          // ── Step Action Type (MUST come before actionDescription) ──────────
+          } else if (
+            lowerHeader === "step action type" ||
+            lowerHeader === "action type" ||
+            lowerHeader.includes("action type") ||
+            lowerHeader.includes("نوع الإجراء") ||
+            lowerHeader.includes("نوع الخطوة")
+          ) {
+            autoMapping.actionType = colIndex
+
+          // ── Step Action Description ────────────────────────────────────────
+          } else if (
+            lowerHeader === "step action description" ||
+            lowerHeader === "action description" ||
+            lowerHeader === "step description" ||
+            lowerHeader === "action" ||
             lowerHeader === "step" ||
+            lowerHeader.includes("action description") ||
+            lowerHeader.includes("step action desc") ||
             lowerHeader.includes("خطوات") ||
             lowerHeader.includes("خطوه") ||
+            lowerHeader.includes("الإجراء") ||
             lowerHeader.includes("إجراء") ||
             lowerHeader.includes("اجراء")
           ) {
             autoMapping.actionDescription = colIndex
+
+          // ── Step Expected Result ───────────────────────────────────────────
           } else if (
-            lowerHeader.includes("expect") || 
-            lowerHeader.includes("result") || 
+            lowerHeader === "step expected result" ||
+            lowerHeader === "expected result" ||
+            lowerHeader === "expected" ||
             lowerHeader === "outcome" ||
+            lowerHeader.includes("expected result") ||
             lowerHeader.includes("نتيجة متوقعة") ||
-            lowerHeader.includes("النتيجة") ||
-            lowerHeader.includes("نتيجه متوقعه")
+            lowerHeader.includes("النتيجة المتوقعة") ||
+            lowerHeader.includes("نتيجه متوقعه") ||
+            lowerHeader.includes("نتيجة") ||
+            lowerHeader.includes("النتائج")
           ) {
             autoMapping.expectedResult = colIndex
-          } else if (lowerHeader.includes("action type") || lowerHeader.includes("type")) {
-            autoMapping.actionType = colIndex
-          } else if (lowerHeader.includes("target type") || lowerHeader.includes("selector type")) {
+
+          // ── Target Type ────────────────────────────────────────────────────
+          } else if (
+            lowerHeader.includes("target type") ||
+            lowerHeader.includes("selector type")
+          ) {
             autoMapping.targetType = colIndex
-          } else if (lowerHeader.includes("target value") || lowerHeader.includes("selector value") || lowerHeader === "selector" || lowerHeader === "value") {
+
+          // ── Target Value ───────────────────────────────────────────────────
+          } else if (
+            lowerHeader.includes("target value") ||
+            lowerHeader.includes("selector value") ||
+            lowerHeader === "selector" ||
+            lowerHeader === "value"
+          ) {
             autoMapping.targetValue = colIndex
-          } else if (lowerHeader.includes("input") || lowerHeader.includes("text to type")) {
+
+          // ── Input Value ────────────────────────────────────────────────────
+          } else if (
+            lowerHeader.includes("input value") ||
+            lowerHeader.includes("input") ||
+            lowerHeader.includes("text to type")
+          ) {
             autoMapping.inputValue = colIndex
-          } else if (lowerHeader.includes("timeout") || lowerHeader.includes("wait")) {
+
+          // ── Timeout ────────────────────────────────────────────────────────
+          } else if (
+            lowerHeader.includes("timeout") ||
+            lowerHeader.includes("wait")
+          ) {
             autoMapping.timeoutMs = colIndex
-          } else if (lowerHeader.includes("requirement") || lowerHeader.includes("req") || lowerHeader.includes("متطلب") || lowerHeader.includes("متطلبات")) {
-            autoMapping.requirementKeys = colIndex
           }
         })
         
@@ -288,34 +358,53 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
 
       // Parse multi-line steps and expected results
       if (currentTestCase) {
-        // Regex helper to strip numbered lists (1. 2- 3) ) or bullet list symbols (- * • +)
-        const cleanPrefix = (str: string) => {
-          return str.replace(/^(\d+[\.\-)]|[\-\*•\+])\s*/, "").trim()
+        // Splits a cell value into individual step lines.
+        // Handles: \n, \r\n, and inline numbered lists "1. x\n2. y" or "1. x 2. y"
+        function splitLines(raw: string): string[] {
+          if (!raw || !raw.trim()) return []
+
+          // Normalize all newline variants
+          const normalized = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+
+          // Split on real newlines first
+          let parts = normalized.split("\n").map(l => l.trim()).filter(l => l.length > 0)
+
+          // If still just 1 part, try splitting on inline numbered list pattern
+          // e.g. "1. step one 2. step two 3. step three"
+          if (parts.length === 1) {
+            // Split before each "number. " or "number) " pattern
+            const inlineParts = normalized
+              .split(/(?=\d+[\.\)]\s)/)
+              .map(l => l.trim())
+              .filter(l => l.length > 0)
+            if (inlineParts.length > 1) parts = inlineParts
+          }
+
+          return parts
         }
 
-        const stepLines = stepDesc
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0)
+        // Strip numbered prefix (1. / 1) / 1- ) or bullet (- * • +)
+        const cleanPrefix = (str: string) =>
+          str.replace(/^\d+[\.\)\-]\s+/, "").replace(/^[\-\*•\+]\s+/, "").trim()
 
-        const expectedLines = expectedRes
-          .split(/\r?\n/)
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0)
+        const stepLines = splitLines(stepDesc)
+        const expectedLines = splitLines(expectedRes)
 
         if (stepLines.length > 0) {
           stepLines.forEach((line, i) => {
             const cleanStep = cleanPrefix(line)
-            
-            // Map corresponding expected result line
+            if (!cleanStep) return // skip blank lines
+
+            // Match each step to its corresponding expected result.
+            // If steps > expected results, reuse the last expected result.
             let cleanExpected = "Expected result satisfied"
             if (expectedLines.length > 0) {
-              const matchedExpected = expectedLines[i] !== undefined 
-                ? expectedLines[i] 
+              const rawExpected = i < expectedLines.length
+                ? expectedLines[i]
                 : expectedLines[expectedLines.length - 1]
-              cleanExpected = cleanPrefix(matchedExpected)
-            } else if (expectedRes) {
-              cleanExpected = cleanPrefix(expectedRes)
+              cleanExpected = cleanPrefix(rawExpected)
+            } else if (expectedRes.trim()) {
+              cleanExpected = cleanPrefix(expectedRes.trim())
             }
 
             currentTestCase.steps.push({
@@ -325,19 +414,19 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
               targetType: targetTypeVal || "none",
               targetValue: targetValueVal || null,
               inputValue: inputValueVal || null,
-              timeoutMs: timeoutMsVal || 10000
+              timeoutMs: timeoutMsVal || 10000,
             })
           })
-        } else if (stepDesc || expectedRes) {
-          // Fallback to single step if no multi-line structure found
+        } else if (stepDesc.trim() || expectedRes.trim()) {
+          // Fallback: single step
           currentTestCase.steps.push({
-            actionDescription: stepDesc || "No description provided",
-            expectedResult: expectedRes || "No expected result",
+            actionDescription: stepDesc.trim() || "No description provided",
+            expectedResult: expectedRes.trim() || "No expected result",
             actionType: actionTypeVal || "custom_instruction",
             targetType: targetTypeVal || "none",
             targetValue: targetValueVal || null,
             inputValue: inputValueVal || null,
-            timeoutMs: timeoutMsVal || 10000
+            timeoutMs: timeoutMsVal || 10000,
           })
         }
       }
@@ -441,6 +530,31 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                   <span>{errorMsg}</span>
                 </div>
               )}
+
+              {/* Template Download */}
+              <div className="p-4 bg-accent/10 border border-dashed rounded-xl flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
+                    <FileSpreadsheet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Don&apos;t have a file yet?</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Download our ready-made template with sample data, instructions, and valid value references.
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href="/api/test-cases/template"
+                  download="test-cases-template.xlsx"
+                  className="shrink-0"
+                >
+                  <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap">
+                    <Download className="h-4 w-4" />
+                    Download Template
+                  </Button>
+                </a>
+              </div>
             </div>
           )}
 

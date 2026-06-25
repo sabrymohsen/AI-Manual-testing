@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Brain,
   ChevronLeft,
@@ -112,6 +113,8 @@ export default function AgentBrainTelemetryDetailPage() {
 
   const [run, setRun] = useState<AgentBrainRun | null>(null)
   const [loading, setLoading] = useState(true)
+  const [cancelling, setCancelling] = useState(false)
+  const [showCancelModal, setShowCancelModal] = useState(false)
 
   // Sub-accordions open state
   const [expandedRuns, setExpandedRuns] = useState<Record<string, boolean>>({})
@@ -146,6 +149,19 @@ export default function AgentBrainTelemetryDetailPage() {
       console.error(err)
     } finally {
       if (showLoader) setLoading(false)
+    }
+  }
+
+  async function handleConfirmCancel() {
+    const res = await fetch(`/api/projects/${params.id}/agent-brain/run/${params.runId}/cancel`, {
+      method: "POST"
+    })
+    if (res.ok) {
+      setShowCancelModal(false)
+      fetchRunDetails(true)
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || "Failed to cancel run")
     }
   }
 
@@ -206,9 +222,14 @@ export default function AgentBrainTelemetryDetailPage() {
 
         <div className="flex items-center gap-2">
           {["Queued", "Understanding", "Planning", "Executing", "Reporting"].includes(run.status) && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-955/10 border border-indigo-100/50 dark:border-indigo-900/50 text-xs font-bold text-indigo-650 dark:text-indigo-400 animate-pulse">
-              <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Stream Sync Active
-            </div>
+            <>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50/50 dark:bg-indigo-955/10 border border-indigo-100/50 dark:border-indigo-900/50 text-xs font-bold text-indigo-650 dark:text-indigo-400 animate-pulse">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Stream Sync Active
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setShowCancelModal(true)} disabled={cancelling} className="h-9 rounded-xl text-xs font-semibold">
+                Cancel Run
+              </Button>
+            </>
           )}
           <Button variant="outline" size="sm" onClick={() => fetchRunDetails(true)} className="h-9 rounded-xl text-xs font-semibold">
             Force Sync
@@ -555,7 +576,17 @@ export default function AgentBrainTelemetryDetailPage() {
             {run.summary}
           </p>
         </div>
-      )}
+      )}      {/* Cancel Confirmation Modal */}
+      <ConfirmDialog
+        open={showCancelModal}
+        title="Cancel Agent Run?"
+        description="Are you sure you want to cancel the Agent Brain run? Any running tests will be aborted."
+        confirmLabel="Confirm Cancel Run"
+        cancelLabel="Keep Running"
+        variant="warning"
+        onConfirm={handleConfirmCancel}
+        onCancel={() => setShowCancelModal(false)}
+      />
     </div>
   )
 }

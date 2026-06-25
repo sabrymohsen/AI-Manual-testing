@@ -112,7 +112,9 @@ export const agentBrainQueue = new Queue("agent-brain-queue", {
   },
 })
 
-export const qaAgentQueue = new Queue("qa-agent-queue", {
+export const AGENT_RUN_QUEUE_NAME = "agent-run-queue"
+
+export const qaAgentQueue = new Queue(AGENT_RUN_QUEUE_NAME, {
   connection: conn,
   defaultJobOptions: {
     attempts: 1,
@@ -245,6 +247,48 @@ export async function cancelQAAgentJob(runId: string): Promise<void> {
     await job.remove()
   }
   await setQAAgentCancelSignal(runId)
+}
+
+export async function setAgentBrainCancelSignal(runId: string): Promise<void> {
+  await redisClient.set(`agent-brain:cancel:${runId}`, "true", "EX", 3600)
+}
+
+export async function isAgentBrainCancelSignalSet(runId: string): Promise<boolean> {
+  const res = await redisClient.get(`agent-brain:cancel:${runId}`)
+  return res === "true"
+}
+
+export async function clearAgentBrainCancelSignal(runId: string): Promise<void> {
+  await redisClient.del(`agent-brain:cancel:${runId}`)
+}
+
+export async function cancelAgentBrainJob(runId: string): Promise<void> {
+  const job = await agentBrainQueue.getJob(runId)
+  if (job) {
+    await job.remove()
+  }
+  await setAgentBrainCancelSignal(runId)
+}
+
+export async function setAutonomousAgentCancelSignal(runId: string): Promise<void> {
+  await redisClient.set(`autonomous-agent:cancel:${runId}`, "true", "EX", 3600)
+}
+
+export async function isAutonomousAgentCancelSignalSet(runId: string): Promise<boolean> {
+  const res = await redisClient.get(`autonomous-agent:cancel:${runId}`)
+  return res === "true"
+}
+
+export async function clearAutonomousAgentCancelSignal(runId: string): Promise<void> {
+  await redisClient.del(`autonomous-agent:cancel:${runId}`)
+}
+
+export async function cancelAutonomousAgentJob(runId: string): Promise<void> {
+  const job = await autonomousAgentQueue.getJob(runId)
+  if (job) {
+    await job.remove()
+  }
+  await setAutonomousAgentCancelSignal(runId)
 }
 
 // 5. Worker Heartbeat Helpers

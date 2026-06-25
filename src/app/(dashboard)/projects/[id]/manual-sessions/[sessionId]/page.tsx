@@ -28,6 +28,7 @@ import {
   Camera
 } from "lucide-react"
 import { ScreenshotAnnotator } from "@/components/ui/screenshot-annotator"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface StepResult {
   id: string
@@ -105,6 +106,8 @@ export default function ManualSessionWorkspace() {
   const [failureActualResult, setFailureActualResult] = useState("")
   const [failureNotes, setFailureNotes] = useState("")
   const [createBugWithFailure, setCreateBugWithFailure] = useState(true)
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
 
   // General sidebar/feed states
   const [sessionNotes, setSessionNotes] = useState("")
@@ -484,30 +487,30 @@ export default function ManualSessionWorkspace() {
     }
   }
 
-  const handleCompleteSession = async () => {
-    if (!confirm("Complete this session and calculate elapsed duration?")) return
-    try {
-      const res = await fetch(`/api/manual-sessions/${sessionId}/complete`, {
-        method: "POST"
-      })
-      if (!res.ok) throw new Error("Failed to complete session")
-      router.push(`/projects/${projectId}`)
-    } catch (err: any) {
-      alert(err.message)
-    }
+  const handleCompleteSession = () => {
+    setShowCompleteConfirm(true)
   }
 
-  const handleCancelSession = async () => {
-    if (!confirm("Cancel current manual session?")) return
-    try {
-      const res = await fetch(`/api/manual-sessions/${sessionId}/cancel`, {
-        method: "POST"
-      })
-      if (!res.ok) throw new Error("Failed to cancel session")
-      router.push(`/projects/${projectId}`)
-    } catch (err: any) {
-      alert(err.message)
-    }
+  const confirmCompleteSession = async () => {
+    const res = await fetch(`/api/manual-sessions/${sessionId}/complete`, {
+      method: "POST"
+    })
+    if (!res.ok) throw new Error("Failed to complete session")
+    setShowCompleteConfirm(false)
+    router.push(`/projects/${projectId}`)
+  }
+
+  const handleCancelSession = () => {
+    setShowCancelConfirm(true)
+  }
+
+  const confirmCancelSession = async () => {
+    const res = await fetch(`/api/manual-sessions/${sessionId}/cancel`, {
+      method: "POST"
+    })
+    if (!res.ok) throw new Error("Failed to cancel session")
+    setShowCancelConfirm(false)
+    router.push(`/projects/${projectId}`)
   }
 
   const handleSuggestExpected = async (step: StepResult) => {
@@ -852,6 +855,25 @@ export default function ManualSessionWorkspace() {
             }}
           />
         )}
+
+        <ConfirmDialog
+          open={showCompleteConfirm}
+          title="Complete Session"
+          description="Are you sure you want to complete this session and calculate elapsed duration?"
+          confirmLabel="Complete"
+          onConfirm={confirmCompleteSession}
+          onCancel={() => setShowCompleteConfirm(false)}
+        />
+
+        <ConfirmDialog
+          open={showCancelConfirm}
+          title="Cancel Session"
+          description="Are you sure you want to cancel the current manual session? All progress will be lost."
+          variant="danger"
+          confirmLabel="Yes, Cancel Session"
+          onConfirm={confirmCancelSession}
+          onCancel={() => setShowCancelConfirm(false)}
+        />
       </div>
     )
   }
@@ -1367,6 +1389,24 @@ export default function ManualSessionWorkspace() {
         </div>
       )}
 
+      <ConfirmDialog
+        open={showCompleteConfirm}
+        title="Complete Run"
+        description="Are you sure you want to complete this session and calculate elapsed duration?"
+        confirmLabel="Complete"
+        onConfirm={confirmCompleteSession}
+        onCancel={() => setShowCompleteConfirm(false)}
+      />
+
+      <ConfirmDialog
+        open={showCancelConfirm}
+        title="Cancel Session"
+        description="Are you sure you want to cancel the current manual session? All progress will be lost."
+        variant="danger"
+        confirmLabel="Yes, Cancel Session"
+        onConfirm={confirmCancelSession}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </div>
   )
 }

@@ -12,7 +12,8 @@ import { FigmaConfig } from "@/components/figma/figma-config"
 import { IntegrationConfig } from "@/components/integrations/integration-config"
 import { ImportModal } from "@/components/test-cases/import-modal"
 import { HierarchyExplorer } from "@/components/hierarchy/hierarchy-explorer"
-import { Play, FileText, Bug, Settings, Layers, ShieldCheck, Sparkles, RefreshCw, Eye, Compass, Video, Trash2, FileSpreadsheet, Key, FileCheck, GitBranch, Search, ChevronRight, CheckCircle2, AlertCircle, X, ChevronDown, ListFilter, HelpCircle, ArrowRight, Home, LayoutGrid, Check, Plus, AlertTriangle, Shield, User, Brain } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Play, FileText, Bug, Settings, Layers, ShieldCheck, Sparkles, RefreshCw, Eye, Compass, Video, Trash2, FileSpreadsheet, Key, FileCheck, GitBranch, Search, ChevronRight, CheckCircle2, AlertCircle, X, ChevronDown, ListFilter, HelpCircle, ArrowRight, Home, LayoutGrid, Check, Plus, AlertTriangle, Shield, User, Brain, ClipboardList } from "lucide-react"
 
 interface Project {
   id: string
@@ -89,6 +90,7 @@ export default function ProjectDetailPage() {
   // Sub-data states
   const [testCases, setTestCases] = useState<TestCase[]>([])
   const [testRuns, setTestRuns] = useState<TestRun[]>([])
+  const [manualSessions, setManualSessions] = useState<any[]>([])
   const [bugReports, setBugReports] = useState<BugReport[]>([])
   const [hierarchyModules, setHierarchyModules] = useState<any[]>([])
   const [requirementsSummary, setRequirementsSummary] = useState<any>(null)
@@ -98,6 +100,7 @@ export default function ProjectDetailPage() {
   const [selectedTestCase, setSelectedTestCase] = useState<string | null>(null)
   const [showRoleModal, setShowRoleModal] = useState(false)
   const [runningTestId, setRunningTestId] = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   // AI states
   const [generatedCase, setGeneratedCase] = useState<any>(null)
@@ -148,6 +151,7 @@ export default function ProjectDetailPage() {
     fetchProject()
     fetchTestCases()
     fetchTestRuns()
+    fetchManualSessions()
     fetchHierarchy()
     fetchRequirementsSummary()
   }, [params.id])
@@ -158,6 +162,7 @@ export default function ProjectDetailPage() {
       fetchTestCases()
     } else if (activeTab === "execution") {
       fetchTestRuns()
+      fetchManualSessions()
     } else if (activeTab === "reports") {
       fetchBugReports()
     } else if (activeTab === "coverage") {
@@ -166,7 +171,7 @@ export default function ProjectDetailPage() {
     }
   }, [params.id, activeTab])
 
-  // Helper to compute module stats
+  // Helper to compute module stats combining automated runs + manual session results
   const getModuleStats = () => {
     const statsMap: Record<string, { total: number; passed: number; failed: number; untested: number }> = {}
 
@@ -177,23 +182,49 @@ export default function ProjectDetailPage() {
       }
       statsMap[modName].total++
 
+      // Latest automated run for this test case
       const runsForCase = testRuns.filter((r) => r.testCaseId === tc.id && r.status !== "Queued")
-      if (runsForCase.length === 0) {
-        statsMap[modName].untested++
-      } else {
-        const latestRun = runsForCase.reduce((latest, current) => {
-          const latestTime = latest.completedAt ? new Date(latest.completedAt).getTime() : 0
-          const currentTime = current.completedAt ? new Date(current.completedAt).getTime() : 0
-          return currentTime > latestTime ? current : latest
-        }, runsForCase[0])
+      const latestAutoRun = runsForCase.length > 0
+        ? runsForCase.reduce((latest, current) => {
+            const latestTime = latest.completedAt ? new Date(latest.completedAt).getTime() : 0
+            const currentTime = current.completedAt ? new Date(current.completedAt).getTime() : 0
+            return currentTime > latestTime ? current : latest
+          }, runsForCase[0])
+        : null
 
-        if (latestRun.status === "Passed") {
-          statsMap[modName].passed++
-        } else if (latestRun.status === "Failed") {
-          statsMap[modName].failed++
-        } else {
-          statsMap[modName].untested++
-        }
+      // Latest manual session case for this test case
+      const manualCasesForTc = manualSessions.flatMap((s: any) =>
+        (s.sessionCases || []).filter((c: any) => c.testCaseId === tc.id && c.status !== "Pending" && c.completedAt)
+      )
+      const latestManualCase = manualCasesForTc.length > 0
+        ? manualCasesForTc.reduce((latest: any, current: any) => {
+            const latestTime = latest.completedAt ? new Date(latest.completedAt).getTime() : 0
+            const currentTime = current.completedAt ? new Date(current.completedAt).getTime() : 0
+            return currentTime > latestTime ? current : latest
+          }, manualCasesForTc[0])
+        : null
+
+      // Pick the more recent of the two
+      let effectiveStatus: string | null = null
+      const autoTime = latestAutoRun?.completedAt ? new Date(latestAutoRun.completedAt).getTime() : 0
+      const manualTime = latestManualCase?.completedAt ? new Date(latestManualCase.completedAt).getTime() : 0
+
+      if (autoTime === 0 && manualTime === 0) {
+        effectiveStatus = null // untested
+      } else if (manualTime > autoTime) {
+        effectiveStatus = latestManualCase.status
+      } else {
+        effectiveStatus = latestAutoRun!.status
+      }
+
+      if (!effectiveStatus) {
+        statsMap[modName].untested++
+      } else if (effectiveStatus === "Passed") {
+        statsMap[modName].passed++
+      } else if (effectiveStatus === "Failed") {
+        statsMap[modName].failed++
+      } else {
+        statsMap[modName].untested++
       }
     })
 
@@ -227,6 +258,13 @@ export default function ProjectDetailPage() {
     fetch(`/api/projects/${params.id}/test-runs`)
       .then((res) => res.json())
       .then((data) => setTestRuns(data.testRuns || []))
+  }
+
+  function fetchManualSessions() {
+    fetch(`/api/projects/${params.id}/manual-sessions`)
+      .then((res) => res.json())
+      .then((data) => setManualSessions(Array.isArray(data) ? data : []))
+      .catch(() => {})
   }
 
   function fetchBugReports() {
@@ -1033,7 +1071,7 @@ export default function ProjectDetailPage() {
                   </p>
                 </div>
 
-                {/* 2. Test Runs */}
+                {/* 2. Test Runs (Automated + Manual) */}
                 <div
                   onClick={() => setActiveTab("execution")}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 hover:shadow-md hover:border-indigo-150 transition-all cursor-pointer group"
@@ -1042,9 +1080,32 @@ export default function ProjectDetailPage() {
                     <Play className="h-4 w-4 text-emerald-500" /> Test Runs
                   </p>
                   <p className="text-2xl font-black mt-2 text-slate-800 dark:text-slate-100">{project._count.testRuns}</p>
-                  <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-0.5 group-hover:text-indigo-600 transition-colors">
-                    View executions list <ChevronRight className="h-3 w-3" />
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-[10px] text-slate-400 flex items-center gap-0.5 group-hover:text-indigo-600 transition-colors">
+                      Automated <ChevronRight className="h-3 w-3" />
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2b. Manual Sessions */}
+                <div
+                  onClick={() => setActiveTab("execution")}
+                  className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 hover:shadow-md hover:border-indigo-150 transition-all cursor-pointer group"
+                >
+                  <p className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
+                    <ClipboardList className="h-4 w-4 text-blue-500" /> Manual Sessions
                   </p>
+                  <p className="text-2xl font-black mt-2 text-slate-800 dark:text-slate-100">
+                    {manualSessions.length}
+                  </p>
+                  <div className="flex gap-2 mt-1 text-[10px] font-semibold">
+                    <span className="text-emerald-600">
+                      {manualSessions.filter((s: any) => s.status === "Completed").length} done
+                    </span>
+                    <span className="text-amber-500">
+                      {manualSessions.filter((s: any) => s.status === "Active").length} active
+                    </span>
+                  </div>
                 </div>
 
                 {/* 3. Requirements */}
@@ -1109,20 +1170,28 @@ export default function ProjectDetailPage() {
                   </p>
                 </div>
 
-                {/* 6. Failed Runs */}
+                {/* 6. Failed Runs (automated + manual) */}
                 <div
                   onClick={() => setActiveTab("execution")}
                   className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 hover:shadow-md hover:border-indigo-150 transition-all cursor-pointer group"
                 >
                   <p className="text-xs text-slate-500 font-semibold flex items-center gap-1.5">
-                    <AlertCircle className="h-4 w-4 text-orange-500" /> Failed Runs
+                    <AlertCircle className="h-4 w-4 text-orange-500" /> Failed
                   </p>
                   <p className="text-2xl font-black mt-2 text-slate-800 dark:text-slate-100">
-                    {testRuns.filter((r) => r.status === "Failed").length}
+                    {testRuns.filter((r) => r.status === "Failed").length +
+                     manualSessions.reduce((acc: number, s: any) =>
+                       acc + (s.sessionCases || []).filter((c: any) => c.status === "Failed").length, 0)}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-0.5 group-hover:text-indigo-600 transition-colors">
-                    Review failed logs <ChevronRight className="h-3 w-3" />
-                  </p>
+                  <div className="flex gap-2 mt-1 text-[10px] font-semibold">
+                    <span className="text-orange-500">
+                      {testRuns.filter((r) => r.status === "Failed").length} auto
+                    </span>
+                    <span className="text-red-500">
+                      {manualSessions.reduce((acc: number, s: any) =>
+                        acc + (s.sessionCases || []).filter((c: any) => c.status === "Failed").length, 0)} manual
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1291,6 +1360,20 @@ export default function ProjectDetailPage() {
 
           {/* Grouped QA Design Tools cards */}
           <div className="grid gap-4 sm:grid-cols-3">
+            <div
+              onClick={() => router.push(`/projects/${project.id}/ai-test-cases`)}
+              className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 hover:shadow-md cursor-pointer hover:border-indigo-200 transition-all group"
+            >
+              <div className="flex items-start justify-between">
+                <div className="h-9 w-9 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg text-indigo-600 flex items-center justify-center">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-indigo-500 transition-colors" />
+              </div>
+              <h4 className="font-extrabold text-sm text-slate-850 dark:text-slate-200 mt-3">AI Test Case Generator</h4>
+              <p className="text-xs text-slate-400 mt-1">Upload BRD/PRD documents and let AI generate structured test cases automatically.</p>
+            </div>
+
             <div
               onClick={() => router.push(`/projects/${project.id}/locators`)}
               className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 hover:shadow-md cursor-pointer hover:border-indigo-200 transition-all group"
@@ -1471,6 +1554,69 @@ export default function ProjectDetailPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ---- Manual Sessions History section (inside Execution tab) ---- */}
+      {activeTab === "execution" && manualSessions.length > 0 && (
+        <div className="space-y-4 mt-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-50 flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-blue-500" />
+              Manual Session History ({manualSessions.length})
+            </h3>
+            <Button variant="outline" size="sm" onClick={fetchManualSessions} className="flex items-center gap-1 h-8 text-xs font-semibold">
+              <RefreshCw className="h-3.5 w-3.5" /> Refresh
+            </Button>
+          </div>
+          <div className="border border-slate-200/60 dark:border-slate-800 rounded-xl divide-y dark:divide-slate-800 overflow-hidden shadow-sm bg-white dark:bg-slate-900">
+            {manualSessions.map((session: any) => {
+              const cases = session.sessionCases || []
+              const passed = cases.filter((c: any) => c.status === "Passed").length
+              const failed = cases.filter((c: any) => c.status === "Failed").length
+              const blocked = cases.filter((c: any) => c.status === "Blocked").length
+              const pending = cases.filter((c: any) => c.status === "Pending").length
+              const total = cases.length
+
+              const statusColor =
+                session.status === "Completed" && failed === 0 ? "text-emerald-600 bg-emerald-50 border-emerald-200" :
+                session.status === "Completed" && failed > 0 ? "text-red-600 bg-red-50 border-red-200" :
+                session.status === "Active" ? "text-blue-600 bg-blue-50 border-blue-200" :
+                "text-slate-500 bg-slate-50 border-slate-200"
+
+              return (
+                <div
+                  key={session.id}
+                  onClick={() => router.push(`/projects/${project.id}/manual-sessions/${session.id}`)}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 cursor-pointer transition-colors gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{session.name}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {session.environment} · {session.browserType} · {total} case{total !== 1 ? "s" : ""}
+                      {session.startedAt && (
+                        <> · {new Date(session.startedAt).toLocaleDateString()}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Per-case result counts */}
+                    {total > 0 && (
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                        {passed > 0 && <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded">✓ {passed}</span>}
+                        {failed > 0 && <span className="bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded">✗ {failed}</span>}
+                        {blocked > 0 && <span className="bg-orange-50 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded">⊘ {blocked}</span>}
+                        {pending > 0 && <span className="bg-slate-50 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded">○ {pending}</span>}
+                      </div>
+                    )}
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded border ${statusColor}`}>
+                      {session.status}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -1819,12 +1965,7 @@ export default function ProjectDetailPage() {
               <Button
                 variant="destructive"
                 className="w-full mt-2 text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
-                onClick={async () => {
-                  if (confirm("Are you absolutely sure you want to delete this project?")) {
-                    const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" })
-                    if (res.ok) router.push("/projects")
-                  }
-                }}
+                onClick={() => setShowDeleteModal(true)}
               >
                 Delete Project Workspace
               </Button>
@@ -1981,6 +2122,28 @@ export default function ProjectDetailPage() {
           isOpen={isImportModalOpen}
           onClose={() => setIsImportModalOpen(false)}
           onImportSuccess={fetchTestCases}
+        />
+      )}
+
+      {project && (
+        <ConfirmDialog
+          open={showDeleteModal}
+          title={`Delete Project "${project.name}" Permanently?`}
+          description="Are you absolutely sure you want to delete this project workspace? This will permanently delete all associated test cases, steps, runs, screenshots, execution logs, and evidence. This action is irreversible."
+          confirmLabel="Delete Permanently"
+          cancelLabel="Cancel"
+          variant="danger"
+          requireTextConfirmation={project.name}
+          onConfirm={async () => {
+            const res = await fetch(`/api/projects/${project.id}`, { method: "DELETE" })
+            if (res.ok) {
+              router.push("/projects")
+            } else {
+              const err = await res.json().catch(() => ({}))
+              throw new Error(err.error || "Failed to delete project")
+            }
+          }}
+          onCancel={() => setShowDeleteModal(false)}
         />
       )}
     </div>

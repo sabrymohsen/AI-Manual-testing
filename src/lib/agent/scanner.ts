@@ -1,41 +1,36 @@
 import { Page } from "playwright"
+import { ScannerResult, ScannedElement } from "./types"
+import { saveAgentScreenshot } from "./artifacts"
 
-export interface ScannedElement {
-  tagName: string
-  type?: string
-  id?: string
-  name?: string
-  text?: string
-  placeholder?: string
-  label?: string
-  testid?: string
-  role?: string
-}
-
-export interface ScannerResult {
-  url: string
-  title: string
-  inputs: ScannedElement[]
-  buttons: ScannedElement[]
-  links: ScannedElement[]
-  tables: Array<{ id?: string; headers: string[]; rowCount: number }>
-  forms: Array<{ id?: string; action?: string; inputsCount: number }>
-  modals: Array<{ title?: string; id?: string }>
-  dropdowns: ScannedElement[]
-}
-
-export async function scanPage(page: Page, url: string): Promise<ScannerResult> {
+export async function scanPage(page: Page, url: string, agentRunId: string): Promise<ScannerResult> {
   console.log(`[QAAgentScanner] Navigating to and scanning: ${url}`)
   
-  // Go to URL with reasonable timeout
+  const consoleErrors: string[] = []
+  const networkErrors: string[] = []
+
+  // Hook console & network failure events
+  page.on("console", msg => {
+    if (msg.type() === "error") {
+      consoleErrors.push(msg.text())
+    }
+  })
+  page.on("pageerror", err => {
+    consoleErrors.push(err.message)
+  })
+  page.on("requestfailed", req => {
+    const errText = req.failure()?.errorText || "Network request failed"
+    networkErrors.push(`${req.method()} ${req.url()} failed: ${errText}`)
+  })
+
+  // Go to URL
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 })
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(2000)
   } catch (err: any) {
     throw new Error(`Target URL did not load within 45 seconds: ${err.message}`)
   }
 
-  // Evaluate script in context of browser to detect components
+  // Scan layout
   const scannerData = await page.evaluate(() => {
     const inputs: any[] = []
     const buttons: any[] = []
@@ -45,12 +40,10 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
     const modals: any[] = []
     const dropdowns: any[] = []
 
-    // Helper to get text content safely
     const getCleanText = (el: HTMLElement) => {
       return (el.textContent || el.innerText || "").trim().substring(0, 100)
     }
 
-    // Helper to get labels for an input element
     const getInputLabel = (el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement) => {
       if (el.labels && el.labels.length > 0) {
         return el.labels[0].textContent?.trim() || ""
@@ -60,11 +53,10 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
         const label = document.querySelector(`label[for="${id}"]`)
         if (label) return label.textContent?.trim() || ""
       }
-      // Try placeholder or aria-label as fallback label
       return el.getAttribute("aria-label") || el.getAttribute("placeholder") || ""
     }
 
-    // 1. Scan Inputs & Selects (dropdowns)
+    // 1. Scan inputs, textareas, selects
     const formControls = document.querySelectorAll("input, textarea, select")
     formControls.forEach((ctrl: any) => {
       const tagName = ctrl.tagName.toLowerCase()
@@ -87,7 +79,7 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
       }
     })
 
-    // 2. Scan Buttons
+    // 2. Scan buttons
     const buttonElements = document.querySelectorAll("button, [role='button']")
     buttonElements.forEach((btn: any) => {
       const text = getCleanText(btn) || btn.value || ""
@@ -96,12 +88,10 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
       const testid = btn.getAttribute("data-testid") || ""
       const role = btn.getAttribute("role") || "button"
       
-      // Avoid duplicate inputs added as buttons
       if (btn.tagName.toLowerCase() === "input" && ["text", "email", "password"].includes(btn.type)) {
         return
       }
 
-      // Check if button is already added
       const exists = buttons.some(b => b.id === id && b.text === text && id !== "")
       if (!exists) {
         buttons.push({
@@ -115,14 +105,13 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
       }
     })
 
-    // 3. Scan Links (A elements)
+    // 3. Scan Links
     const linkElements = document.querySelectorAll("a")
     linkElements.forEach((link: any) => {
       const text = getCleanText(link)
       const href = link.getAttribute("href") || ""
       const id = link.getAttribute("id") || ""
       
-      // Filter out links with no text or no useful href
       if (text && href && !href.startsWith("#") && !href.startsWith("javascript:")) {
         links.push({
           tagName: "a",
@@ -142,7 +131,7 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
       table.querySelectorAll("th").forEach((th: any) => {
         headers.push(getCleanText(th))
       })
-      const rowCount = table.querySelectorAll("tr").length - 1 // minus header row
+      const rowCount = table.querySelectorAll("tr").length - 1
       tables.push({ id, headers, rowCount: Math.max(0, rowCount) })
     })
 
@@ -155,10 +144,9 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
       forms.push({ id, action, inputsCount })
     })
 
-    // 6. Scan Modals/Dialogs
+    // 6. Scan Modals
     const modalElements = document.querySelectorAll("[role='dialog'], .modal, .dialog")
     modalElements.forEach((modal: any) => {
-      // Only record if visible
       const style = window.getComputedStyle(modal)
       if (style.display !== "none" && style.visibility !== "hidden") {
         const id = modal.getAttribute("id") || ""
@@ -168,8 +156,12 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
       }
     })
 
+    // 7. Headings Count
+    const headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6").length
+
     return {
       title: document.title,
+      headings,
       inputs,
       buttons,
       links,
@@ -180,15 +172,42 @@ export async function scanPage(page: Page, url: string): Promise<ScannerResult> 
     }
   })
 
+  // Capture screenshot
+  let screenshotPath = ""
+  try {
+    const scr = await page.screenshot({ type: "png", timeout: 4000 })
+    screenshotPath = await saveAgentScreenshot(agentRunId, "scan.png", scr)
+  } catch (err: any) {
+    console.error("[QAAgentScanner] Failed to capture page scan screenshot:", err.message)
+  }
+
+  // Construct standard output
   return {
-    url,
+    targetUrl: url,
     title: scannerData.title,
+    pagesDetected: [
+      {
+        url,
+        title: scannerData.title,
+        summary: {
+          headings: scannerData.headings,
+          buttons: scannerData.buttons.length,
+          inputs: scannerData.inputs.length,
+          forms: scannerData.forms.length,
+          tables: scannerData.tables.length,
+          links: scannerData.links.length
+        }
+      }
+    ],
     inputs: scannerData.inputs,
     buttons: scannerData.buttons,
     links: scannerData.links,
     tables: scannerData.tables,
     forms: scannerData.forms,
     modals: scannerData.modals,
-    dropdowns: scannerData.dropdowns
+    dropdowns: scannerData.dropdowns,
+    consoleErrors,
+    networkErrors,
+    screenshotPath
   }
 }

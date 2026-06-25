@@ -103,25 +103,69 @@ export async function POST(
     }
 
     if (provider === "openproject") {
-      let opHost = host.trim().replace(/\/$/, "")
+      // Normalize host: strip path, query, fragment — keep only scheme + domain
+      let opHost = host.trim()
+      const hostMatch = opHost.match(/^(https?:\/\/[^\/\?#]+)/)
+      opHost = hostMatch ? hostMatch[1] : opHost
+      opHost = opHost.replace(/\/$/, "")
       if (!opHost.startsWith("http")) {
         opHost = `https://${opHost}`
       }
-      const url = `${opHost}/api/v3/projects/${projectKey.trim()}`
-      // OpenProject supports Basic auth with username 'apikey' and API token as password
+
+      // Normalize project key — extract slug if user pasted full URL
+      let normalizedKey = projectKey.trim()
+      const projMatch = normalizedKey.match(/\/projects\/([^\/\?#]+)/)
+      if (projMatch) normalizedKey = projMatch[1]
+      else normalizedKey = normalizedKey.replace(/[\/\?#].*/g, "").trim()
+
+      const url = `${opHost}/api/v3/projects/${normalizedKey}`
+      // OpenProject: Basic auth with username "apikey" and token as password
       const credentials = Buffer.from(`apikey:${token.trim()}`).toString("base64")
 
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Authorization": `Basic ${credentials}`,
-          "Accept": "application/json"
-        }
-      })
+      let res: Response
+      try {
+        res = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Authorization": `Basic ${credentials}`,
+            "Accept": "application/json",
+          },
+        })
+      } catch (fetchErr) {
+        return NextResponse.json(
+          { error: `Could not reach OpenProject at ${opHost} — check the host URL and that the server is reachable.` },
+          { status: 400 }
+        )
+      }
+
+      // Try Bearer token fallback if Basic auth fails (OpenProject 14+ supports it)
+      if (res.status === 401 || res.status === 403) {
+        try {
+          const res2 = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token.trim()}`,
+              "Accept": "application/json",
+            },
+          })
+          if (res2.ok) {
+            return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!" })
+          }
+        } catch {}
+      }
 
       if (!res.ok) {
-        const text = await res.text()
-        return NextResponse.json({ error: `OpenProject returned status ${res.status}: ${text.slice(0, 100)}` }, { status: 400 })
+        const text = await res.text().catch(() => "")
+        let hint = ""
+        if (res.status === 404) {
+          hint = ` — Project identifier "${normalizedKey}" not found. Check the project slug in Settings > General.`
+        } else if (res.status === 401 || res.status === 403) {
+          hint = " — Invalid API token. Generate a new token from My Account → Access Tokens in OpenProject."
+        }
+        return NextResponse.json(
+          { error: `OpenProject returned ${res.status}${hint}` },
+          { status: 400 }
+        )
       }
 
       return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!" })

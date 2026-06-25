@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Brain,
   Play,
@@ -68,6 +69,8 @@ export default function AgentBrainDashboardPage() {
   const [memory, setMemory] = useState<AgentMemoryState | null>(null)
   const [loading, setLoading] = useState(true)
   const [triggering, setTriggering] = useState(false)
+  const [runToCancel, setRunToCancel] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   // Configure settings
   const [selectedMode, setSelectedMode] = useState<"Exploration" | "Planning" | "Execution" | "Autonomous">("Autonomous")
@@ -164,6 +167,19 @@ export default function AgentBrainDashboardPage() {
       alert("Error submitting correction.")
     } finally {
       setSubmittingCorrection(false)
+    }
+  }
+
+  async function handleConfirmCancel(runId: string) {
+    const res = await fetch(`/api/projects/${params.id}/agent-brain/run/${runId}/cancel`, {
+      method: "POST"
+    })
+    if (res.ok) {
+      setRunToCancel(null)
+      fetchProjectRunsAndMemory()
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || "Failed to cancel run")
     }
   }
 
@@ -627,12 +643,22 @@ export default function AgentBrainDashboardPage() {
                           <span className="text-xs text-slate-400">Pending</span>
                         )}
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-4 text-right flex items-center justify-end gap-2">
+                        {!["Completed", "Failed", "Cancelled"].includes(run.status) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setRunToCancel(run.id)}
+                            className="text-xs font-bold text-rose-650 hover:text-rose-750 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-955/25 rounded-xl border-rose-200 dark:border-rose-900"
+                          >
+                            Cancel
+                          </Button>
+                        )}
                         <Link href={`/projects/${project.id}/agent-brain/${run.id}`}>
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-750 dark:text-indigo-400 dark:hover:bg-slate-800 rounded-xl"
+                            className="text-xs font-bold text-indigo-650 hover:text-indigo-750 dark:text-indigo-400 dark:hover:bg-slate-800 rounded-xl"
                           >
                             Telemetry <ExternalLink className="h-3.5 w-3.5 ml-1" />
                           </Button>
@@ -646,6 +672,18 @@ export default function AgentBrainDashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      <ConfirmDialog
+        open={!!runToCancel}
+        title="Cancel Agent Run?"
+        description="Are you sure you want to cancel this Agent run? Any running tests or scanning jobs will be aborted."
+        confirmLabel="Confirm Cancel Run"
+        cancelLabel="Keep Running"
+        variant="warning"
+        onConfirm={() => handleConfirmCancel(runToCancel!)}
+        onCancel={() => setRunToCancel(null)}
+      />
     </div>
   )
 }

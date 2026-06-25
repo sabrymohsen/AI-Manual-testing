@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Folder,
   Layers,
@@ -230,19 +231,13 @@ export default function ProjectsPage() {
   // Perform delete operation
   async function handleDeleteConfirm() {
     if (!deleteProject) return
-    setIsDeleting(true)
-    try {
-      const res = await fetch(`/api/projects/${deleteProject.id}`, { method: "DELETE" })
-      if (res.ok) {
-        setDeleteProject(null)
-        fetchProjectsList()
-      } else {
-        alert("Failed to delete project.")
-      }
-    } catch (err) {
-      console.error("Delete project error", err)
-    } finally {
-      setIsDeleting(false)
+    const res = await fetch(`/api/projects/${deleteProject.id}`, { method: "DELETE" })
+    if (res.ok) {
+      setDeleteProject(null)
+      fetchProjectsList()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.error || "Failed to delete project")
     }
   }
 
@@ -981,71 +976,21 @@ export default function ProjectsPage() {
 
       {/* 6. Safe Delete Confirmation Modal */}
       {deleteProject && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="fixed inset-0" onClick={() => setDeleteProject(null)} />
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 z-10 animate-in zoom-in-95 duration-200 space-y-5">
-            <div className="flex justify-between items-center border-b dark:border-slate-800 pb-2.5">
-              <h3 className="text-base font-black text-rose-600 flex items-center gap-1.5">
-                <AlertTriangle className="h-5 w-5 text-rose-500" /> Delete Project: {deleteProject.name}
-              </h3>
-              <button
-                onClick={() => setDeleteProject(null)}
-                className="text-slate-450 hover:text-slate-750 p-1 hover:bg-slate-100 rounded-lg"
-              >
-                <X className="h-4.5 w-4.5" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="p-3 bg-rose-50/40 dark:bg-rose-950/10 border border-rose-100 dark:border-rose-900/50 rounded-xl space-y-2 text-rose-700 dark:text-rose-450">
-                <span className="font-extrabold block text-sm">Critical Warning:</span>
-                <p className="leading-normal">
-                  Deleting this project will permanently remove the project config and all related testing data. This action is irreversible.
-                </p>
-                {deleteDetails && (
-                  <div className="pt-2 text-[11px] space-y-1 font-semibold border-t border-rose-100 dark:border-rose-900/40">
-                    <p>— Test cases: <strong>{deleteDetails.testCases || 0}</strong> will be lost</p>
-                    <p>— Test runs: <strong>{deleteDetails.testRuns || 0}</strong> will be lost</p>
-                    <p>— Bug reports: <strong>{deleteDetails.bugReports || 0}</strong> will be lost</p>
-                    <p>— Backlog requirements: <strong>{deleteDetails.requirements || 0}</strong> will be lost</p>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="font-bold text-slate-650 dark:text-slate-300 block">
-                  Please type the project name <strong>{deleteProject.name}</strong> to confirm deletion:
-                </label>
-                <input
-                  type="text"
-                  value={deleteInputName}
-                  onChange={(e) => setDeleteInputName(e.target.value)}
-                  placeholder="Type project name..."
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-lg px-3 py-2 text-slate-750 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t dark:border-slate-800 pt-3 mt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteProject(null)}
-                className="text-xs font-bold text-slate-650"
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleDeleteConfirm}
-                disabled={isDeleting || deleteInputName !== deleteProject.name}
-                className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold"
-              >
-                {isDeleting ? "Deleting..." : "Permanently Delete"}
-              </Button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          open={!!deleteProject}
+          title={`Delete Project "${deleteProject.name}" Permanently?`}
+          description={`Critical Warning: Deleting this project will permanently remove the project configuration and all related testing data. This action is irreversible.\n\n${
+            deleteDetails 
+              ? `Associated data to be lost:\n— Test cases: ${deleteDetails.testCases || 0}\n— Test runs: ${deleteDetails.testRuns || 0}\n— Bug reports: ${deleteDetails.bugReports || 0}\n— Backlog requirements: ${deleteDetails.requirements || 0}`
+              : "Fetching associated records counts..."
+          }`}
+          confirmLabel="Delete Permanently"
+          cancelLabel="Cancel"
+          variant="danger"
+          requireTextConfirmation={deleteProject.name}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteProject(null)}
+        />
       )}
     </div>
   )

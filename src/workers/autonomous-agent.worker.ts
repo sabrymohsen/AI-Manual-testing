@@ -1,5 +1,5 @@
 import { Worker } from "bullmq"
-import { redisConnection, registerWorkerHeartbeat, publishAgentRunEvent, addTestRunJob } from "@/lib/queue"
+import { redisConnection, registerWorkerHeartbeat, publishAgentRunEvent, addTestRunJob, isAutonomousAgentCancelSignalSet, clearAutonomousAgentCancelSignal } from "@/lib/queue"
 import { prisma } from "@/lib/db"
 import { chromium } from "playwright"
 import { decryptSecret } from "@/lib/crypto"
@@ -13,6 +13,11 @@ let workerStatus: "idle" | "busy" | "error" = "idle"
 
 async function runAutonomousQA(agentRunId: string) {
   console.log(`[Autonomous Agent] Starting run for id: ${agentRunId}`)
+  if (await isAutonomousAgentCancelSignalSet(agentRunId)) {
+    console.log(`[Autonomous Agent] Cancellation signal detected before run start: ${agentRunId}`)
+    await clearAutonomousAgentCancelSignal(agentRunId)
+    return
+  }
   await publishAgentRunEvent(agentRunId, "status_changed", { status: "Analyzing" })
   await prisma.autonomousAgentRun.update({
     where: { id: agentRunId },
@@ -110,6 +115,11 @@ async function runAutonomousQA(agentRunId: string) {
   })
 
   // 3. Set Status: Generating
+  if (await isAutonomousAgentCancelSignalSet(agentRunId)) {
+    console.log(`[Autonomous Agent] Cancellation signal detected before Generating: ${agentRunId}`)
+    await clearAutonomousAgentCancelSignal(agentRunId)
+    return
+  }
   await publishAgentRunEvent(agentRunId, "status_changed", { status: "Generating", coverageReport })
   await prisma.autonomousAgentRun.update({
     where: { id: agentRunId },
@@ -180,6 +190,11 @@ async function runAutonomousQA(agentRunId: string) {
   }
 
   // 4. Set Status: Executing
+  if (await isAutonomousAgentCancelSignalSet(agentRunId)) {
+    console.log(`[Autonomous Agent] Cancellation signal detected before Executing: ${agentRunId}`)
+    await clearAutonomousAgentCancelSignal(agentRunId)
+    return
+  }
   await publishAgentRunEvent(agentRunId, "status_changed", { status: "Executing", testRunsCount: testRunIds.length })
   await prisma.autonomousAgentRun.update({
     where: { id: agentRunId },
@@ -468,12 +483,19 @@ const worker = new Worker(
       await runAutonomousQA(agentRunId)
     } catch (err: any) {
       workerStatus = "error"
-      await prisma.autonomousAgentRun.update({
-        where: { id: agentRunId },
-        data: { status: "Failed", completedAt: new Date() }
+      const currentRun = await prisma.autonomousAgentRun.findUnique({
+        where: { id: agentRunId }
       })
-      await publishAgentRunEvent(agentRunId, "failed", { error: err.message })
-      throw err
+      if (currentRun?.status === "Cancelled") {
+        console.log(`[AutonomousAgentWorker] Run ${agentRunId} was cancelled. Skipping status: "Failed" update.`)
+      } else {
+        await prisma.autonomousAgentRun.update({
+          where: { id: agentRunId },
+          data: { status: "Failed", completedAt: new Date() }
+        })
+        await publishAgentRunEvent(agentRunId, "failed", { error: err.message })
+        throw err
+      }
     } finally {
       currentJobId = null
       workerStatus = "idle"

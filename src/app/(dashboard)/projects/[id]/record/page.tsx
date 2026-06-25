@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Video,
   Pause,
@@ -194,7 +195,7 @@ export default function RecorderWorkspacePage() {
     message: string
     confirmLabel: string
     isDestructive?: boolean
-    onConfirm: () => void
+    onConfirm: () => Promise<void> | void
   }>({
     isOpen: false,
     title: "",
@@ -208,7 +209,7 @@ export default function RecorderWorkspacePage() {
     message: string
     confirmLabel: string
     isDestructive?: boolean
-    onConfirm: () => void
+    onConfirm: () => Promise<void> | void
   }) {
     setConfirmModal({
       isOpen: true,
@@ -216,8 +217,8 @@ export default function RecorderWorkspacePage() {
       message: options.message,
       confirmLabel: options.confirmLabel,
       isDestructive: options.isDestructive,
-      onConfirm: () => {
-        options.onConfirm()
+      onConfirm: async () => {
+        await options.onConfirm()
         setConfirmModal((prev) => ({ ...prev, isOpen: false }))
       },
     })
@@ -1922,46 +1923,16 @@ export default function RecorderWorkspacePage() {
       )}
 
       {/* CONFIRMATION DIALOG */}
-      {confirmModal.isOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div>
-              <h3 className="text-lg font-bold flex items-center gap-2">
-                {confirmModal.isDestructive ? (
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
-                ) : (
-                  <Sparkles className="h-5 w-5 text-primary" />
-                )}
-                {confirmModal.title}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                {confirmModal.message}
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={confirmModal.onConfirm}
-                className={
-                  confirmModal.isDestructive
-                    ? "bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                    : "bg-primary hover:bg-primary/90 text-white"
-                }
-              >
-                {confirmModal.confirmLabel}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.message}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel="Cancel"
+        variant={confirmModal.isDestructive ? "danger" : "default"}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+      />
 
     </div>
   )

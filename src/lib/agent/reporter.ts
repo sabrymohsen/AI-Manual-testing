@@ -3,6 +3,111 @@ import fs from "node:fs"
 import path from "node:path"
 import archiver from "archiver"
 
+export interface QAAgentSummary {
+  mode: string
+  targetUrl: string
+  runStatus: string
+  pagesScanned: number
+  elementsDetected: number
+  testsGenerated: number
+  testsExecuted: number
+  stepsPassed: number
+  stepsFailed: number
+  findingsCreated: number
+  bugsCreated: number
+  screenshotsCaptured: number
+  durationMs: number
+  recommendations: string[]
+}
+
+export async function generateQAAgentSummary(runId: string): Promise<QAAgentSummary> {
+  const run = await prisma.qAAgentRun.findUnique({
+    where: { id: runId },
+    include: {
+      project: true,
+      steps: true,
+      findings: true
+    }
+  })
+
+  if (!run) throw new Error("QAAgentRun not found")
+
+  // Extract counts from scanner result
+  const scannerData = (run.scannerResult || {}) as any
+  const pagesScanned = Array.isArray(scannerData.pagesDetected) ? scannerData.pagesDetected.length : 1
+  
+  let elementsDetected = 0
+  if (scannerData) {
+    elementsDetected += (scannerData.inputs?.length || 0)
+    elementsDetected += (scannerData.buttons?.length || 0)
+    elementsDetected += (scannerData.links?.length || 0)
+    elementsDetected += (scannerData.dropdowns?.length || 0)
+  }
+
+  // Extract counts from plan
+  const planData = (run.plan || {}) as any
+  const testsGenerated = Array.isArray(planData.tests) ? planData.tests.length : 0
+
+  // Extract counts from execution steps
+  const stepsPassed = run.steps.filter(s => s.status === "Passed" || s.status === "SelfHealed").length
+  const stepsFailed = run.steps.filter(s => s.status === "Failed").length
+  
+  // Find distinct test cases executed by looking at the steps names
+  const testNames = new Set<string>()
+  run.steps.forEach(s => {
+    // Step name is e.g. "click on login button" or generated step
+    // We can assume number of tests executed is based on executionResult or plan length if run status completed
+    if (s.name) {
+      testNames.add(s.name)
+    }
+  })
+  
+  const executionData = (run.executionResult || {}) as any
+  const testsExecuted = typeof executionData.testsExecuted === "number" ? executionData.testsExecuted : testsGenerated
+
+  // Findings & Bugs
+  const findingsCreated = run.findings.length
+  const bugsCreated = run.findings.filter(f => f.bugReportId !== null).length
+
+  // Screenshots count
+  let screenshotsCaptured = run.steps.filter(s => s.screenshotPath !== null).length
+  if (scannerData.screenshotPath) {
+    screenshotsCaptured++
+  }
+
+  // Recommendations generator
+  const recommendations: string[] = []
+  if (elementsDetected > 0 && !JSON.stringify(scannerData).includes("data-testid")) {
+    recommendations.push("Add data-testid attributes to interactive elements to improve locator reliability.")
+  }
+  if (run.findings.some(f => f.type === "TestFailure")) {
+    recommendations.push("Investigate the recorded test step failures and file bug reports.")
+  }
+  if (run.findings.some(f => f.type === "LocatorHealed")) {
+    recommendations.push("Review locator healing logs and update test selectors to prevent runtime healing delays.")
+  }
+  if (recommendations.length === 0) {
+    recommendations.push("Maintain current code quality. Continue periodic smoke checks.")
+  }
+
+  return {
+    mode: run.mode,
+    targetUrl: run.project.webAppUrl,
+    runStatus: run.status,
+    pagesScanned,
+    elementsDetected,
+    testsGenerated,
+    testsExecuted,
+    stepsPassed,
+    stepsFailed,
+    findingsCreated,
+    bugsCreated,
+    screenshotsCaptured,
+    durationMs: run.durationMs,
+    recommendations
+  }
+}
+
 export async function generateQAAgentMarkdown(runId: string): Promise<string> {
   const run = await prisma.qAAgentRun.findUnique({
     where: { id: runId },
@@ -52,7 +157,7 @@ ${run.steps.length === 0 ? "*No execution steps logged.*" : run.steps.map(s => {
 - **Status**: ${s.status}
 - **Started**: ${s.startedAt ? s.startedAt.toLocaleTimeString() : "-"}
 ${s.error ? `- **Error Details**: \`${s.error}\`\n` : ""}
-${s.screenshotPath ? `- **Screenshot**: [step-${s.stepNumber}.png](screenshots/step-${s.stepNumber}.png)\n` : ""}
+${s.screenshotPath ? `- **Screenshot**: [step-${s.stepNumber}.png](${s.screenshotPath})\n` : ""}
 `;
 }).join("\n")}
 
@@ -136,7 +241,7 @@ export async function generateQAAgentHTML(runId: string): Promise<string> {
         <span class="badge">${s.status}</span>
       </div>
       ${s.error ? `<p style="color:#ef4444; font-family:monospace; font-size:12px;">Error: ${s.error}</p>` : ""}
-      ${s.screenshotPath ? `<div style="margin-top:10px;"><img src="screenshots/step-${s.stepNumber}.png" style="max-height:180px; border-radius:6px; border:1px solid #cbd5e1;"/></div>` : ""}
+      ${s.screenshotPath ? `<div style="margin-top:10px;"><img src="${s.screenshotPath}" style="max-height:180px; border-radius:6px; border:1px solid #cbd5e1;"/></div>` : ""}
     </div>
   `).join("")}
 

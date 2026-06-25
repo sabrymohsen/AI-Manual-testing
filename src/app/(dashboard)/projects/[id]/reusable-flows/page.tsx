@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Plus, Trash2, Edit, Save, MoveUp, MoveDown, Layers, Folder, Play } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface ReusableStep {
   id?: string
@@ -74,6 +75,7 @@ export default function ReusableFlowsPage() {
   const [description, setDescription] = useState("")
   const [category, setCategory] = useState("General")
   const [steps, setSteps] = useState<ReusableStep[]>([])
+  const [flowToDelete, setFlowToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     fetchFlows()
@@ -224,19 +226,22 @@ export default function ReusableFlowsPage() {
     }
   }
 
-  const handleDelete = async (flowId: string) => {
-    if (!confirm("Are you sure you want to delete this flow? This cannot be undone.")) return
+  const handleDelete = (flowId: string) => {
+    setFlowToDelete(flowId)
+  }
 
+  const confirmDeleteFlow = async () => {
+    if (!flowToDelete) return
     setError(null)
-    try {
-      const res = await fetch(`/api/reusable-flows/${flowId}`, {
-        method: "DELETE"
-      })
-      if (!res.ok) throw new Error("Failed to delete flow")
-      fetchFlows()
-    } catch (err: any) {
-      setError(err.message || "Failed to delete flow")
+    const res = await fetch(`/api/reusable-flows/${flowToDelete}`, {
+      method: "DELETE"
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || "Failed to delete flow")
     }
+    setFlowToDelete(null)
+    fetchFlows()
   }
 
   return (
@@ -482,6 +487,15 @@ export default function ReusableFlowsPage() {
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={flowToDelete !== null}
+        title="Delete Reusable Flow"
+        description="Are you sure you want to delete this reusable flow? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteFlow}
+        onCancel={() => setFlowToDelete(null)}
+      />
     </div>
   )
 }

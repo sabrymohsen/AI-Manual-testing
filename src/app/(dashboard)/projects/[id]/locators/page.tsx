@@ -20,6 +20,7 @@ import {
   Zap
 } from "lucide-react"
 import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface SavedLocator {
   id: string
@@ -92,6 +93,7 @@ export default function ElementLocatorPickerPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isSelfValidating, setIsSelfValidating] = useState(false)
   const [selfValidationResult, setSelfValidationResult] = useState<any | null>(null)
+  const [locatorToDelete, setLocatorToDelete] = useState<string | null>(null)
 
   // Fetch initial project details and saved locators
   useEffect(() => {
@@ -250,22 +252,21 @@ export default function ElementLocatorPickerPage() {
   }
 
   // Delete saved locator
-  async function handleDeleteLocator(locatorId: string) {
-    if (!confirm("Are you sure you want to delete this locator?")) return
+  function handleDeleteLocator(locatorId: string) {
+    setLocatorToDelete(locatorId)
+  }
 
-    try {
-      const res = await fetch(`/api/projects/${params.id}/locators/${locatorId}`, {
-        method: "DELETE",
-      })
+  async function confirmDeleteLocator() {
+    if (!locatorToDelete) return
+    const res = await fetch(`/api/projects/${params.id}/locators/${locatorToDelete}`, {
+      method: "DELETE",
+    })
 
-      if (res.ok) {
-        fetchProjectAndLocators()
-      } else {
-        alert("Failed to delete locator.")
-      }
-    } catch {
-      alert("Network error deleting locator.")
+    if (!res.ok) {
+      throw new Error("Failed to delete locator.")
     }
+    setLocatorToDelete(null)
+    fetchProjectAndLocators()
   }
 
   // Copy locator value helper
@@ -747,6 +748,15 @@ export default function ElementLocatorPickerPage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={locatorToDelete !== null}
+        title="Delete Locator"
+        description="Are you sure you want to delete this locator? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteLocator}
+        onCancel={() => setLocatorToDelete(null)}
+      />
     </div>
   )
 }

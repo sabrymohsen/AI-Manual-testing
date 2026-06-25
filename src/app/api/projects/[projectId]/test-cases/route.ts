@@ -203,6 +203,31 @@ export async function GET(
   return NextResponse.json({ testCases })
 }
 
+const VALID_ACTION_TYPES = new Set([
+  "open_url", "click", "fill", "select", "select_custom", "select_searchable",
+  "multi_select", "remove_multi_select_value", "autocomplete_select", "date_select",
+  "time_select", "upload_file", "check", "uncheck", "radio_select", "tab_select",
+  "menu_select", "modal_open", "modal_close", "table_row_select", "pagination_next",
+  "pagination_previous", "accordion_expand", "accordion_collapse", "toggle_on",
+  "toggle_off", "slider_set", "wait_for_text", "wait_for_url", "assert_visible",
+  "assert_hidden", "assert_text", "assert_url", "assert_api_status", "screenshot",
+  "custom_instruction",
+])
+
+const VALID_TARGET_TYPES = new Set([
+  "test_id", "role", "text", "label", "placeholder", "css", "xpath", "url", "none",
+])
+
+function sanitizeActionType(value: any): string {
+  if (typeof value === "string" && VALID_ACTION_TYPES.has(value)) return value
+  return "custom_instruction"
+}
+
+function sanitizeTargetType(value: any): string {
+  if (typeof value === "string" && VALID_TARGET_TYPES.has(value)) return value
+  return "none"
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
@@ -253,6 +278,8 @@ export async function POST(
                 steps: {
                   create: (steps || []).map((step: any, index: number) => ({
                     ...step,
+                    actionType: sanitizeActionType(step.actionType),
+                    targetType: sanitizeTargetType(step.targetType),
                     stepNumber: index + 1,
                   })),
                 },
@@ -304,6 +331,8 @@ export async function POST(
       steps: {
         create: (steps || []).map((step: any, index: number) => ({
           ...step,
+          actionType: sanitizeActionType(step.actionType),
+          targetType: sanitizeTargetType(step.targetType),
           stepNumber: index + 1,
         })),
       },

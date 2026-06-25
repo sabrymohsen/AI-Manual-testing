@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { CredentialForm } from "./credential-form"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface Credential {
   id: string
@@ -21,15 +22,18 @@ interface CredentialsListProps {
 export function CredentialsList({ projectId, credentials, onUpdate }: CredentialsListProps) {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Credential | null>(null)
-  const [deleting, setDeleting] = useState<string | null>(null)
+  const [credentialToDelete, setCredentialToDelete] = useState<string | null>(null)
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this credential?")) return
-    setDeleting(id)
-    await fetch(`/api/projects/${projectId}/credentials/${id}`, {
+  async function handleDeleteConfirm() {
+    if (!credentialToDelete) return
+    const res = await fetch(`/api/projects/${projectId}/credentials/${credentialToDelete}`, {
       method: "DELETE",
     })
-    setDeleting(null)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data?.error || "Failed to delete credential")
+    }
+    setCredentialToDelete(null)
     onUpdate()
   }
 
@@ -66,8 +70,7 @@ export function CredentialsList({ projectId, credentials, onUpdate }: Credential
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => handleDelete(cred.id)}
-                  disabled={deleting === cred.id}
+                  onClick={() => setCredentialToDelete(cred.id)}
                 >
                   Delete
                 </Button>
@@ -85,6 +88,16 @@ export function CredentialsList({ projectId, credentials, onUpdate }: Credential
           onSaved={() => { setShowForm(false); setEditing(null); onUpdate() }}
         />
       )}
+
+      <ConfirmDialog
+        open={credentialToDelete !== null}
+        title="Delete Credential"
+        description="Are you sure you want to delete this credential? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setCredentialToDelete(null)}
+      />
     </div>
   )
 }

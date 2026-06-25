@@ -5,8 +5,9 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Trash2, FileSpreadsheet, Plus, CheckSquare, Square, Play, Loader2, ExternalLink, AlertTriangle, X } from "lucide-react"
+import { Trash2, FileSpreadsheet, Plus, CheckSquare, Play, Loader2, ExternalLink, X, Sparkles, ClipboardList, CheckCircle2, XCircle, AlertTriangle, Clock, CloudUpload, Link2 } from "lucide-react"
 import { ImportModal } from "@/components/test-cases/import-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface TestStep {
   id: string
@@ -32,11 +33,26 @@ interface ActiveRun {
   totalSteps: number
 }
 
+// Combined execution history entry (automated or manual)
+interface HistoryEntry {
+  lastStatus: string
+  lastRunAt: string
+  source: "automated" | "manual"
+  runId: string
+  sessionName?: string
+}
+
 export default function TestCasesPage() {
   const params = useParams()
   const router = useRouter()
   const [testCases, setTestCases] = useState<TestCase[]>([])
   const [loading, setLoading] = useState(true)
+  // Map of testCaseId → latest execution result
+  const [history, setHistory] = useState<Record<string, HistoryEntry>>({})
+  // OpenProject sync status map: testCaseId → mapping info
+  const [syncMap, setSyncMap] = useState<Record<string, { externalId: string; externalUrl: string | null; lastSyncStatus: string | null }>>({})
+  const [hasOpIntegration, setHasOpIntegration] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
   
   // Selection and action states
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -51,6 +67,7 @@ export default function TestCasesPage() {
   const [deleteBugCount, setDeleteBugCount] = useState(0)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
 
   // Run status tracking
   const [activeRuns, setActiveRuns] = useState<Map<string, ActiveRun>>(new Map())
@@ -60,6 +77,8 @@ export default function TestCasesPage() {
 
   useEffect(() => {
     fetchTestCases()
+    fetchHistory()
+    fetchSyncStatus()
   }, [params.id])
 
   // Poll active runs
@@ -77,7 +96,8 @@ export default function TestCasesPage() {
             if (terminal.includes(data.status)) {
               newRuns.delete(tcId)
               changed = true
-              fetchTestCases() // refresh after completion
+              fetchTestCases()
+              fetchHistory() // refresh history after run completes
             } else {
               const totalSteps = data.stepResults?.length || run.totalSteps
               newRuns.set(tcId, {
@@ -115,6 +135,64 @@ export default function TestCasesPage() {
     } finally {
       setLoading(false)
       setSelectedIds([])
+    }
+  }
+
+  async function fetchHistory() {
+    try {
+      const res = await fetch(`/api/projects/${params.id}/test-cases/history`)
+      if (res.ok) {
+        const data = await res.json()
+        setHistory(data.history || {})
+      }
+    } catch {
+      // non-critical — page still works without history
+    }
+  }
+
+  async function fetchSyncStatus() {
+    try {
+      const [statusRes, integRes] = await Promise.all([
+        fetch(`/api/projects/${params.id}/integrations/sync-status`),
+        fetch(`/api/projects/${params.id}/integrations`),
+      ])
+      if (statusRes.ok) {
+        const data = await statusRes.json()
+        setSyncMap(data.syncMap || {})
+      }
+      if (integRes.ok) {
+        const data = await integRes.json()
+        setHasOpIntegration(
+          data.integration?.provider === "openproject" &&
+          data.integration?.enabled === true &&
+          data.integration?.hasToken === true
+        )
+      }
+    } catch {
+      // non-critical
+    }
+  }
+
+  async function handleSyncToOpenProject(ids?: string[]) {
+    setIsSyncing(true)
+    setToast(null)
+    try {
+      const res = await fetch(`/api/projects/${params.id}/integrations/sync-test-cases`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(ids?.length ? { testCaseIds: ids } : {}),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setToast({ message: data.message || `Synced to OpenProject`, type: "success" })
+        fetchSyncStatus()
+      } else {
+        setToast({ message: data.error || "Sync failed", type: "error" })
+      }
+    } catch {
+      setToast({ message: "Network error syncing to OpenProject", type: "error" })
+    } finally {
+      setIsSyncing(false)
     }
   }
 
@@ -164,69 +242,59 @@ export default function TestCasesPage() {
   // Execute permanent delete
   async function executePermanentDelete() {
     if (!deleteTarget) return
-    if (deleteTypedTitle !== deleteTarget.title) return
+    const res = await fetch(`/api/test-cases/${deleteTarget.id}/permanent-delete`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmTitle: deleteTarget.title })
+    })
 
-    setDeleteLoading(true)
-    setDeleteError("")
-
-    try {
-      const res = await fetch(`/api/test-cases/${deleteTarget.id}/permanent-delete`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmTitle: deleteTypedTitle })
+    if (res.ok) {
+      const data = await res.json()
+      setDeleteModalOpen(false)
+      setDeleteTarget(null)
+      setToast({ 
+        message: `Test case and all related history were permanently deleted. (${data.deleted?.testRuns || 0} runs, ${data.deleted?.steps || 0} steps, ${data.deleted?.bugReports || 0} bugs removed)`,
+        type: "success"
       })
-
-      if (res.ok) {
-        const data = await res.json()
-        setDeleteModalOpen(false)
-        setDeleteTarget(null)
-        setToast({ 
-          message: `Test case and all related history were permanently deleted. (${data.deleted?.testRuns || 0} runs, ${data.deleted?.steps || 0} steps, ${data.deleted?.bugReports || 0} bugs removed)`,
-          type: "success"
-        })
-        fetchTestCases()
-      } else {
-        const errData = await res.json()
-        setDeleteError(errData.error || "Failed to delete test case")
-      }
-    } catch {
-      setDeleteError("Network error deleting test case")
-    } finally {
-      setDeleteLoading(false)
+      fetchTestCases()
+    } else {
+      const errData = await res.json().catch(() => ({}))
+      throw new Error(errData.error || "Failed to delete test case")
     }
   }
 
   // Handle bulk permanent delete
   async function handleBulkDelete() {
     if (selectedIds.length === 0) return
-    if (!confirm(`Are you sure you want to PERMANENTLY delete ${selectedIds.length} test cases and ALL related data? This cannot be undone.`)) return
+    setShowBulkDeleteModal(true)
+  }
 
-    setIsDeleting(true)
+  async function proceedBulkDelete() {
     let deletedCount = 0
     let failedCount = 0
 
     for (const id of selectedIds) {
       const tc = testCases.find(t => t.id === id)
       if (!tc) continue
-      try {
-        const res = await fetch(`/api/projects/${params.id}/test-cases/${id}`, {
-          method: "DELETE",
-        })
-        if (res.ok) {
-          deletedCount++
-        } else {
-          failedCount++
-        }
-      } catch {
+      const res = await fetch(`/api/projects/${params.id}/test-cases/${id}`, {
+        method: "DELETE",
+      })
+      if (res.ok) {
+        deletedCount++
+      } else {
         failedCount++
       }
     }
 
-    setIsDeleting(false)
+    if (failedCount > 0) {
+      throw new Error(`Failed to delete ${failedCount} test case(s).`)
+    }
+
     setToast({
-      message: `${deletedCount} test case(s) permanently deleted.${failedCount > 0 ? ` ${failedCount} failed.` : ""}`,
-      type: failedCount > 0 ? "error" : "success"
+      message: `${deletedCount} test case(s) permanently deleted.`,
+      type: "success"
     })
+    setShowBulkDeleteModal(false)
     fetchTestCases()
   }
 
@@ -275,6 +343,62 @@ export default function TestCasesPage() {
     return colors[status] || "bg-secondary text-secondary-foreground"
   }
 
+  function HistoryBadge({ entry }: { entry: HistoryEntry }) {
+    const icons: Record<string, React.ReactNode> = {
+      Passed: <CheckCircle2 className="h-3 w-3" />,
+      Failed: <XCircle className="h-3 w-3" />,
+      Blocked: <AlertTriangle className="h-3 w-3" />,
+      Warning: <AlertTriangle className="h-3 w-3" />,
+    }
+    const date = new Date(entry.lastRunAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    const sourceLabel = entry.source === "manual" ? "Manual" : "Auto"
+    const title = entry.source === "manual"
+      ? `Last manual: ${entry.sessionName || "session"} on ${date}`
+      : `Last automated run on ${date}`
+
+    return (
+      <span
+        title={title}
+        className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide flex items-center gap-1 border ${getStatusBadge(entry.lastStatus)}`}
+      >
+        {icons[entry.lastStatus] ?? <Clock className="h-3 w-3" />}
+        {entry.lastStatus}
+        <span className="font-normal opacity-70 ml-0.5 normal-case">· {sourceLabel}</span>
+      </span>
+    )
+  }
+
+  function SyncBadge({ tcId }: { tcId: string }) {
+    const m = syncMap[tcId]
+    if (!hasOpIntegration) return null
+    if (!m) {
+      return (
+        <span className="text-[9px] px-1.5 py-0.5 rounded border border-muted-foreground/20 text-muted-foreground/50 font-semibold flex items-center gap-0.5 shrink-0">
+          <CloudUpload className="h-2.5 w-2.5" /> Not Synced
+        </span>
+      )
+    }
+    if (m.lastSyncStatus === "failed") {
+      return (
+        <span title={`Sync failed`} className="text-[9px] px-1.5 py-0.5 rounded border border-red-200 text-red-600 bg-red-50 font-semibold flex items-center gap-0.5 shrink-0">
+          <XCircle className="h-2.5 w-2.5" /> Sync Failed
+        </span>
+      )
+    }
+    return (
+      <a
+        href={m.externalUrl || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={e => e.stopPropagation()}
+        title={`OpenProject WP #${m.externalId}`}
+        className="text-[9px] px-1.5 py-0.5 rounded border border-blue-200 text-blue-700 bg-blue-50 font-semibold flex items-center gap-0.5 shrink-0 hover:bg-blue-100"
+      >
+        <Link2 className="h-2.5 w-2.5" /> OP #{m.externalId}
+      </a>
+    )
+  }
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       
@@ -304,11 +428,29 @@ export default function TestCasesPage() {
         <div className="flex items-center gap-2">
           <Button 
             variant="outline"
+            onClick={() => router.push(`/projects/${params.id}/generate-from-file`)}
+            className="flex items-center gap-1.5 border-violet-500/30 text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-950/20"
+          >
+            <Sparkles className="h-4 w-4" /> Generate from File
+          </Button>
+          <Button 
+            variant="outline"
             onClick={() => setIsImportModalOpen(true)}
             className="flex items-center gap-1.5 border-green-500/30 text-green-600 hover:text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/20"
           >
             <FileSpreadsheet className="h-4 w-4" /> Import from Excel
           </Button>
+          {hasOpIntegration && (
+            <Button
+              variant="outline"
+              onClick={() => handleSyncToOpenProject()}
+              disabled={isSyncing}
+              className="flex items-center gap-1.5 border-blue-400/40 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/20"
+            >
+              {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudUpload className="h-4 w-4" />}
+              {isSyncing ? "Syncing..." : "Sync to OpenProject"}
+            </Button>
+          )}
           <Button 
             onClick={() => router.push(`/projects/${params.id}/test-cases/new`)}
             className="bg-primary hover:bg-primary/95 flex items-center gap-1.5"
@@ -325,6 +467,13 @@ export default function TestCasesPage() {
         <div className="text-center py-16 border border-dashed rounded-2xl bg-card/20">
           <p className="text-muted-foreground">No test cases created or imported for this project yet.</p>
           <div className="flex items-center justify-center gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/projects/${params.id}/generate-from-file`)}
+              className="flex items-center gap-1.5 border-violet-500/30 text-violet-600 hover:bg-violet-50"
+            >
+              <Sparkles className="h-4 w-4" /> Generate from File
+            </Button>
             <Button
               variant="outline"
               onClick={() => setIsImportModalOpen(true)}
@@ -344,19 +493,33 @@ export default function TestCasesPage() {
           
           {/* Bulk Action Bar */}
           {selectedIds.length > 0 && (
-            <div className="flex items-center justify-between p-3.5 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl animate-in slide-in-from-top duration-200">
-              <span className="text-xs font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
-                <CheckSquare className="h-4 w-4" /> {selectedIds.length} test cases selected
+            <div className="flex items-center justify-between p-3.5 bg-accent/20 border rounded-xl animate-in slide-in-from-top duration-200 gap-3 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-2">
+                <CheckSquare className="h-4 w-4" /> {selectedIds.length} selected
               </span>
-              <Button 
-                variant="destructive" 
-                size="sm"
-                onClick={handleBulkDelete}
-                disabled={isDeleting}
-                className="flex items-center gap-1.5 h-8 text-xs font-bold"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Delete Permanently ({selectedIds.length})
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {hasOpIntegration && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSyncToOpenProject(selectedIds)}
+                    disabled={isSyncing}
+                    className="flex items-center gap-1.5 h-8 text-xs font-bold text-blue-700 border-blue-300 hover:bg-blue-50"
+                  >
+                    {isSyncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CloudUpload className="h-3.5 w-3.5" />}
+                    Sync Selected to OpenProject
+                  </Button>
+                )}
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="flex items-center gap-1.5 h-8 text-xs font-bold"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete ({selectedIds.length})
+                </Button>
+              </div>
             </div>
           )}
 
@@ -370,15 +533,23 @@ export default function TestCasesPage() {
                 onChange={toggleSelectAll}
                 className="h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer ml-1"
               />
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex-1">
                 Select All ({testCases.length})
               </span>
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider hidden sm:block w-40 text-center">
+                Last Result
+              </span>
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider hidden sm:block w-20 text-center">
+                Priority
+              </span>
+              <span className="w-24" />
             </div>
 
             {/* Test Case Rows */}
             {testCases.map((tc) => {
               const activeRun = activeRuns.get(tc.id)
               const isRunning = !!activeRun
+              const lastResult = history[tc.id]
               
               return (
                 <div
@@ -386,59 +557,49 @@ export default function TestCasesPage() {
                   className="flex items-center justify-between p-4 hover:bg-accent/35 transition-colors gap-3 cursor-pointer"
                   onClick={() => router.push(`/projects/${params.id}/test-cases/${tc.id}/edit`)}
                 >
-                  <div className="flex items-center gap-3 flex-1" onClick={(e) => e.stopPropagation()}>
+                  {/* Left: checkbox + title */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                     <input 
                       type="checkbox"
                       checked={selectedIds.includes(tc.id)}
                       onChange={() => toggleSelect(tc.id)}
-                      className="h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer ml-1"
+                      className="h-4 w-4 rounded border-muted-foreground/30 text-primary focus:ring-primary cursor-pointer ml-1 shrink-0"
                     />
-                    <div className="cursor-pointer" onClick={() => router.push(`/projects/${params.id}/test-cases/${tc.id}/edit`)}>
-                      <p className="font-semibold text-foreground text-sm hover:underline">{tc.title}</p>
+                    <div className="min-w-0 cursor-pointer" onClick={() => router.push(`/projects/${params.id}/test-cases/${tc.id}/edit`)}>
+                      <p className="font-semibold text-foreground text-sm hover:underline truncate">{tc.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        Module: <span className="font-medium text-foreground">{tc.module}</span> · {tc.steps.length} steps · Source: <span className="font-medium text-foreground">{tc.source}</span>
+                        <span className="font-medium text-foreground">{tc.module || "General"}</span>
+                        {" · "}{tc.steps.length} steps
+                        {" · "}<span className="text-muted-foreground">{tc.source}</span>
                       </p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                    {/* Run status badge */}
-                    {isRunning && (
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide flex items-center gap-1 ${getStatusBadge(activeRun.status)}`}>
+
+                  {/* Center: last result history badge */}
+                  <div className="hidden sm:flex items-center justify-center w-40 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {isRunning ? (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide flex items-center gap-1 ${getStatusBadge(activeRun.status)}`}>
                         {activeRun.status === "Running" && <Loader2 className="h-3 w-3 animate-spin" />}
                         {activeRun.status}
                         {activeRun.status === "Running" && activeRun.currentStep && (
-                          <span className="ml-1">({activeRun.currentStep}/{activeRun.totalSteps})</span>
+                          <span className="ml-0.5">({activeRun.currentStep}/{activeRun.totalSteps})</span>
                         )}
                       </span>
+                    ) : lastResult ? (
+                      <HistoryBadge entry={lastResult} />
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/50 flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> Not run
+                      </span>
                     )}
-                    
-                    {/* Run test button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRunTest(tc)}
-                      disabled={isRunning || tc.steps.length === 0}
-                      className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/20"
-                      title={isRunning ? "Test is running..." : tc.steps.length === 0 ? "No steps to run" : "Run Test"}
-                    >
-                      {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                    </Button>
+                  </div>
 
-                    {/* Open run link */}
-                    {isRunning && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/projects/${params.id}/test-runs/${activeRun.testRunId}`)}
-                        className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400"
-                        title="Open Run"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
+                  {/* Right: OP sync badge + priority + actions */}
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    {/* OpenProject sync badge */}
+                    <SyncBadge tcId={tc.id} />
 
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${
+                    <span className={`hidden sm:inline-flex text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide w-20 justify-center ${
                       tc.priority === "Critical" ? "bg-red-100 text-red-700 dark:bg-red-950/20 dark:text-red-400" :
                       tc.priority === "High" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/20 dark:text-orange-400" :
                       tc.priority === "Medium" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400" :
@@ -446,14 +607,39 @@ export default function TestCasesPage() {
                     }`}>
                       {tc.priority}
                     </span>
-                    
+
+                    {/* Run test button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRunTest(tc)}
+                      disabled={isRunning || tc.steps.length === 0}
+                      className="h-8 px-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/20"
+                      title={isRunning ? "Test is running..." : tc.steps.length === 0 ? "No steps to run" : "Run automated test"}
+                    >
+                      {isRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                    </Button>
+
+                    {/* Open run link when active */}
+                    {isRunning && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/projects/${params.id}/test-runs/${activeRun.testRunId}`)}
+                        className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400"
+                        title="Open live run"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => openDeleteModal(tc)}
                       disabled={isDeleting}
                       className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0"
-                      title="Delete Permanently"
+                      title="Delete"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -465,81 +651,36 @@ export default function TestCasesPage() {
         </div>
       )}
 
-      {/* Permanent Delete Confirmation Modal */}
-      {deleteModalOpen && deleteTarget && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => { if (!deleteLoading) { setDeleteModalOpen(false); setDeleteTarget(null) } }}>
-          <div className="bg-card border border-red-300 dark:border-red-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 space-y-5 mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-red-100 dark:bg-red-950/40 rounded-xl shrink-0">
-                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Permanently delete this test case?</h3>
-                <p className="text-sm text-muted-foreground mt-1">This action will permanently delete:</p>
-              </div>
-            </div>
-
-            <ul className="text-sm text-muted-foreground space-y-1 pl-4 list-disc">
-              <li>The test case</li>
-              <li>All test steps</li>
-              <li>All execution history</li>
-              <li>All test runs</li>
-              <li>All step results</li>
-              <li>All screenshots</li>
-              <li>All logs</li>
-              <li>All attachments</li>
-              <li>Related bug reports if they belong only to this test case</li>
-            </ul>
-
-            {(deleteRunCount > 0 || deleteBugCount > 0) && (
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  Warning: This test case has {deleteRunCount} execution run{deleteRunCount !== 1 ? "s" : ""} and {deleteBugCount} linked bug{deleteBugCount !== 1 ? "s" : ""}. Deleting it will remove all related evidence permanently.
-                </p>
-              </div>
-            )}
-
-            <p className="text-sm font-bold text-red-600 dark:text-red-400">This action cannot be undone.</p>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                To confirm, type the test case title: <span className="font-bold text-red-600 dark:text-red-400">"{deleteTarget.title}"</span>
-              </label>
-              <Input
-                value={deleteTypedTitle}
-                onChange={(e) => setDeleteTypedTitle(e.target.value)}
-                placeholder="Type the test case title to confirm"
-                className="border-red-300 dark:border-red-700 focus-visible:ring-red-500"
-                disabled={deleteLoading}
-              />
-            </div>
-
-            {deleteError && (
-              <p className="text-sm text-red-600 dark:text-red-400 font-medium">{deleteError}</p>
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => { setDeleteModalOpen(false); setDeleteTarget(null) }}
-                disabled={deleteLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={executePermanentDelete}
-                disabled={deleteTypedTitle !== deleteTarget.title || deleteLoading}
-                className="flex items-center gap-2"
-              >
-                {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                Delete Permanently
-              </Button>
-            </div>
-          </div>
-        </div>
+      {deleteTarget && (
+        <ConfirmDialog
+          open={deleteModalOpen}
+          title={`Permanently delete test case "${deleteTarget.title}"?`}
+          description={`This action will permanently delete:\n- The test case\n- All test steps\n- All execution history & test runs\n- All step results, screenshots, logs, and attachments\n\n${
+            (deleteRunCount > 0 || deleteBugCount > 0)
+              ? `Warning: This test case has ${deleteRunCount} execution run(s) and ${deleteBugCount} linked bug(s). Deleting it will remove all related evidence permanently.`
+              : ""
+          }`}
+          confirmLabel="Delete Permanently"
+          cancelLabel="Cancel"
+          variant="danger"
+          requireTextConfirmation={deleteTarget.title}
+          onConfirm={executePermanentDelete}
+          onCancel={() => { setDeleteModalOpen(false); setDeleteTarget(null) }}
+        />
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmDialog
+        open={showBulkDeleteModal}
+        title={`Permanently Delete ${selectedIds.length} Selected Test Cases?`}
+        description={`Are you absolutely sure you want to permanently delete all ${selectedIds.length} selected test cases along with all of their execution runs, steps, screenshots, bug reports, and logs? This action is irreversible.`}
+        confirmLabel="Bulk Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        requireTextConfirmation="DELETE"
+        onConfirm={proceedBulkDelete}
+        onCancel={() => setShowBulkDeleteModal(false)}
+      />
 
       {/* Excel Import Modal */}
       <ImportModal

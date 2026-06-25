@@ -9,10 +9,10 @@ import {
 import { executeStep } from "../playwright/step-executor"
 import { decryptSecret } from "../crypto"
 import { handleLogin } from "../playwright/login-handler"
-import { saveFile } from "../storage"
+import { saveAgentScreenshot } from "./artifacts"
 import { checkActionSafety } from "./safety"
-import { QAAgentPlan, QAAgentTest, QAAgentStep } from "./planner"
-import { publishAgentBrainEvent, isQAAgentCancelSignalSet } from "../queue"
+import { QAAgentPlan } from "./types"
+import { assertNotCancelled } from "./brain"
 
 export interface ExecutorOptions {
   agentRunId: string
@@ -23,7 +23,7 @@ export interface ExecutorOptions {
 export async function executeQAAgentPlan(
   plan: QAAgentPlan,
   options: ExecutorOptions
-): Promise<{ success: boolean; errorCount: number }> {
+): Promise<{ success: boolean; errorCount: number; executionResult: any }> {
   const { agentRunId, projectId, safetyLevel } = options
   console.log(`[QAAgentExecutor] Starting execution for run: ${agentRunId}`)
 
@@ -42,19 +42,24 @@ export async function executeQAAgentPlan(
   let page: Page | null = null
   let stepCounter = 0
   let errorCount = 0
+  let passedCount = 0
+  const screenshots: string[] = []
 
   try {
     browser = await chromium.launch({ headless: true })
     context = await browser.newContext({
       viewport: { width: 1280, height: 800 }
     })
+    
+    // Inject the window.__name polyfill to browser scope
+    await context.addInitScript("window.__name = (t) => t;")
     page = await context.newPage()
 
     for (const test of plan.tests) {
       console.log(`[QAAgentExecutor] Running test case: ${test.name}`)
       
       // Check cancellation signal
-      await assertAgentRunNotCancelled(agentRunId, browser)
+      await assertNotCancelled(agentRunId, browser)
 
       // Resolve login credential if needed for Authentication module
       if (test.module === "Authentication" && project.credentials.length > 0) {
@@ -85,7 +90,7 @@ export async function executeQAAgentPlan(
         console.log(`[QAAgentExecutor] Step ${stepCounter}: ${step.action} - ${step.target}`)
 
         // Check cancellation signal
-        await assertAgentRunNotCancelled(agentRunId, browser)
+        await assertNotCancelled(agentRunId, browser)
 
         const stepRecord = await prisma.qAAgentRunStep.create({
           data: {
@@ -193,7 +198,7 @@ export async function executeQAAgentPlan(
               await recordSuccessfulLocator(projectId, step.targetValue, targetValueToUse)
             }
           }
-
+          passedCount++
         } catch (err: any) {
           finalStatus = "Failed"
           executionError = err.message || "Execution timeout or element not interactable."
@@ -203,7 +208,21 @@ export async function executeQAAgentPlan(
           if (step.targetValue && targetValueToUse) {
             await recordFailedLocator(projectId, step.targetValue, targetValueToUse)
           }
+        }
 
+        // Capture Evidence Screenshot
+        let screenshotPath: string | null = null
+        try {
+          const scr = await page.screenshot({ type: "png", timeout: 4000 })
+          screenshotPath = await saveAgentScreenshot(agentRunId, `qa-agent-step-${stepCounter}.png`, scr)
+          if (screenshotPath) {
+            screenshots.push(screenshotPath)
+          }
+        } catch (err: any) {
+          console.error("[QAAgentExecutor] Failed to capture step screenshot:", err.message)
+        }
+
+        if (finalStatus === "Failed") {
           // Log finding for failure
           await prisma.qAAgentFinding.create({
             data: {
@@ -212,17 +231,10 @@ export async function executeQAAgentPlan(
               severity: Priority.High,
               title: `Step Failure: ${test.name}`,
               description: `Execution failed at step: "${step.action} on ${step.target}". Reason: ${executionError}`,
-              evidence: { step: step.action, target: step.target, error: executionError }
+              evidence: { step: step.action, target: step.target, error: executionError, screenshotPath }
             }
           })
         }
-
-        // Capture Evidence Screenshot
-        let screenshotPath: string | null = null
-        try {
-          const scr = await page.screenshot({ type: "png", timeout: 4000 })
-          screenshotPath = await saveFile("screenshots", `qa-agent-step-${stepCounter}.png`, scr)
-        } catch {}
 
         // Update step run record
         await prisma.qAAgentRunStep.update({
@@ -260,19 +272,15 @@ export async function executeQAAgentPlan(
     }
   }
 
-  return { success: errorCount === 0, errorCount }
+  const executionResult = {
+    testsExecuted: plan.tests.length,
+    stepsExecuted: stepCounter,
+    stepsPassed: passedCount,
+    stepsFailed: errorCount,
+    screenshots
+  }
+
+  return { success: errorCount === 0, errorCount, executionResult }
 }
 
-async function assertAgentRunNotCancelled(agentRunId: string, browser?: Browser) {
-  const isCancelledInRedis = await isQAAgentCancelSignalSet(agentRunId)
-  const currentRun = await prisma.qAAgentRun.findUnique({
-    where: { id: agentRunId },
-    select: { status: true }
-  })
-  if (isCancelledInRedis || currentRun?.status === "Cancelled") {
-    if (browser) {
-      await browser.close().catch(() => {})
-    }
-    throw new Error("CANCELLED")
-  }
-}
+

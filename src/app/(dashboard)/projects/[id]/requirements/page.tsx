@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import { ImportRequirementsModal } from "@/components/requirements/import-modal"
 import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface Requirement {
   id: string
@@ -82,6 +83,7 @@ export default function RequirementsDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showLinkModal, setShowLinkModal] = useState(false)
   const [selectedReq, setSelectedReq] = useState<Requirement | null>(null)
+  const [requirementToDelete, setRequirementToDelete] = useState<string | null>(null)
 
   // Create Form states
   const [newReqKey, setNewReqKey] = useState("")
@@ -203,19 +205,19 @@ export default function RequirementsDashboard() {
     }
   }
 
-  const handleDeleteRequirement = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this requirement?")) return
-    try {
-      const res = await fetch(`/api/requirements/${id}`, { method: "DELETE" })
-      if (res.ok) {
-        fetchRequirementsData()
-        fetchStatsData()
-      } else {
-        alert("Failed to delete requirement")
-      }
-    } catch {
-      alert("Error deleting requirement")
+  const handleDeleteRequirement = (id: string) => {
+    setRequirementToDelete(id)
+  }
+
+  const confirmDeleteRequirement = async () => {
+    if (!requirementToDelete) return
+    const res = await fetch(`/api/requirements/${requirementToDelete}`, { method: "DELETE" })
+    if (!res.ok) {
+      throw new Error("Failed to delete requirement")
     }
+    setRequirementToDelete(null)
+    fetchRequirementsData()
+    fetchStatsData()
   }
 
   const openLinkTestCasesModal = async (req: Requirement) => {
@@ -334,6 +336,11 @@ export default function RequirementsDashboard() {
           <Button onClick={() => setShowImportModal(true)} variant="outline" className="border-blue-200 hover:bg-blue-50/50 text-blue-700 font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
             <FileSpreadsheet size={16} /> Import Excel
           </Button>
+          <Link href={`/projects/${projectId}/generate-from-file`}>
+            <Button variant="outline" className="border-violet-200 hover:bg-violet-50/50 text-violet-700 font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
+              <Sparkles size={16} /> Generate Test Cases
+            </Button>
+          </Link>
           <Link href={`/projects/${projectId}/coverage-matrix`}>
             <Button variant="outline" className="border-indigo-200 hover:bg-indigo-50/50 text-indigo-700 font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
               <Layers size={16} /> Traceability Matrix
@@ -781,6 +788,15 @@ export default function RequirementsDashboard() {
         }}
       />
 
+      <ConfirmDialog
+        open={requirementToDelete !== null}
+        title="Delete Requirement"
+        description="Are you sure you want to delete this requirement? This action cannot be undone."
+        variant="danger"
+        confirmLabel="Delete"
+        onConfirm={confirmDeleteRequirement}
+        onCancel={() => setRequirementToDelete(null)}
+      />
     </div>
   )
 }
