@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Trash2, FileSpreadsheet, Plus, CheckSquare, Play, Loader2, ExternalLink, X, Sparkles, ClipboardList, CheckCircle2, XCircle, AlertTriangle, Clock, CloudUpload, Link2 } from "lucide-react"
 import { ImportModal } from "@/components/test-cases/import-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { OpenProjectModuleGroupsSection } from "@/components/integrations/openproject-module-groups-section"
 
 interface TestStep {
   id: string
@@ -152,14 +153,24 @@ export default function TestCasesPage() {
 
   async function fetchSyncStatus() {
     try {
-      const [statusRes, integRes] = await Promise.all([
+      const [statusRes, integRes, opRes] = await Promise.all([
         fetch(`/api/projects/${params.id}/integrations/sync-status`),
         fetch(`/api/projects/${params.id}/integrations`),
+        fetch(`/api/projects/${params.id}/integrations/openproject`),
       ])
       if (statusRes.ok) {
         const data = await statusRes.json()
         setSyncMap(data.syncMap || {})
       }
+      // Check dedicated OpenProject integration first
+      if (opRes.ok) {
+        const data = await opRes.json()
+        if (data.integration?.hasToken) {
+          setHasOpIntegration(true)
+          return
+        }
+      }
+      // Fallback to legacy IntegrationConfig
       if (integRes.ok) {
         const data = await integRes.json()
         setHasOpIntegration(
@@ -177,7 +188,7 @@ export default function TestCasesPage() {
     setIsSyncing(true)
     setToast(null)
     try {
-      const res = await fetch(`/api/projects/${params.id}/integrations/sync-test-cases`, {
+      const res = await fetch(`/api/projects/${params.id}/integrations/openproject/sync-test-cases`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(ids?.length ? { testCaseIds: ids } : {}),
@@ -459,6 +470,12 @@ export default function TestCasesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Module Groups & OpenProject Sync Section */}
+      <div style={{background:"#1d4ed8",color:"#fff",padding:"12px 16px",borderRadius:"8px",fontWeight:"bold",fontSize:"14px"}}>
+        ✓ Page updated — Module Coverage section loading below
+      </div>
+      <OpenProjectModuleGroupsSection projectId={params.id as string} />
 
       {/* Main Content Area */}
       {loading ? (

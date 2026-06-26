@@ -231,6 +231,7 @@ model Project {
   agentBrainRuns          AgentBrainRun[]
   agentMemories           AgentMemory[]
   qaAgentRuns             QAAgentRun[]
+  openProjectIntegration  OpenProjectIntegration?
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -1648,7 +1649,168 @@ model QAAgentRunEvent {
   @@index([agentRunId])
 }
 
+// ─── OpenProject Integration ─────────────────────────────────────────────────
 
+enum OpenProjectParentStrategy {
+  None
+  SingleParent
+  ByModule
+  ByFeature
+  ByRequirement
+  ByTestSuite
+}
 
+enum OpenProjectBoardStrategy {
+  StatusBased
+  ParentChildBased
+  TypeBased
+  VersionBased
+  CustomFieldBased
+}
 
+model OpenProjectIntegration {
+  id                            String   @id @default(uuid())
 
+  projectId                     String   @unique
+  project                       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  baseUrl                       String
+  openProjectProjectIdentifier  String
+
+  // Encrypted API token (AES-256-GCM)
+  apiTokenEncrypted             String
+  apiTokenIv                    String
+  apiTokenAuthTag               String
+  apiTokenKeyVersion            String   @default("v1")
+
+  // Type mapping (IDs loaded dynamically from OpenProject)
+  testCaseTypeId                String?
+  bugTypeId                     String?
+
+  // Status mapping (local status → OpenProject status ID)
+  defaultStatusId               String?
+  notExecutedStatusId           String?
+  runningStatusId               String?
+  passedStatusId                String?
+  failedStatusId                String?
+  blockedStatusId               String?
+
+  // Parent strategy
+  parentStrategy                OpenProjectParentStrategy @default(None)
+  defaultParentWorkPackageId    String?
+
+  // Board strategy
+  boardStrategy                 OpenProjectBoardStrategy  @default(StatusBased)
+  targetBoardId                 String?
+  targetColumnStatusId          String?   // status ID of the board column to place WPs in
+  targetVersionId               String?
+  targetAssigneeId              String?
+  customFieldMapping            Json?
+
+  // Auto-sync toggles
+  autoSyncTestCases             Boolean  @default(false)
+  autoSyncResults               Boolean  @default(true)
+  autoCreateBugOnFailure        Boolean  @default(true)
+  autoSyncBugToOpenProject      Boolean  @default(false)
+
+  // Monitoring
+  lastConnectionStatus          String?
+  lastConnectionCheckedAt       DateTime?
+  lastSyncAt                    DateTime?
+
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+}
+
+model OpenProjectParentMapping {
+  id                        String    @id @default(uuid())
+  projectId                 String
+  mappingType               String    // "Module" | "Feature" | "Requirement" | "TestSuite"
+  localEntityId             String
+  localEntityName           String?
+
+  openProjectParentId       String
+  openProjectParentSubject  String?
+  openProjectParentUrl      String?
+
+  validationStatus          String?   // "valid" | "invalid" | "unchecked"
+  lastValidatedAt           DateTime?
+
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@unique([projectId, mappingType, localEntityId])
+  @@index([projectId])
+}
+
+model OpenProjectSyncRun {
+  id            String    @id @default(uuid())
+  projectId     String
+  operation     String    // "bulk-sync-test-cases" | "apply-parent" | "sync-to-board" | "check-board" | etc.
+  status        String    // "Queued" | "Running" | "Completed" | "Failed"
+
+  totalCount    Int       @default(0)
+  createdCount  Int       @default(0)
+  updatedCount  Int       @default(0)
+  skippedCount  Int       @default(0)
+  failedCount   Int       @default(0)
+
+  details       Json?     // Array of per-item results
+  error         String?
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
+// ─── Per-module OpenProject config ───────────────────────────────────────────
+// Each module can override (or inherit) the project-level OpenProjectIntegration.
+// null fields mean "inherit from project config".
+// moduleId is a ProjectModule.id UUID or the literal string "unassigned".
+
+model OpenProjectModuleConfig {
+  id        String @id @default(uuid())
+  projectId String
+  moduleId  String // ProjectModule.id | "unassigned"
+
+  // Connection overrides (null = inherit from OpenProjectIntegration)
+  baseUrl                      String?
+  openProjectProjectIdentifier String?
+
+  // Encrypted API token override (null = inherit from project token)
+  apiTokenEncrypted  String?
+  apiTokenIv         String?
+  apiTokenAuthTag    String?
+  apiTokenKeyVersion String  @default("v1")
+
+  // Type mapping override
+  testCaseTypeId String?
+
+  // Status mapping overrides (null = inherit from project config)
+  passedStatusId  String?
+  failedStatusId  String?
+  blockedStatusId String?
+  defaultStatusId String?
+
+  // Board & version targeting (null = inherit from project config)
+  targetBoardId         String?
+  targetBoardType       String? // "status" | "version" | "assignee" | "basic"
+  targetColumnStatusId  String? // status ID of the board column to place WPs in
+  targetVersionId       String?
+
+  // Last sync outcome for this module
+  lastSyncAt     DateTime?
+  lastSyncStatus String?   // "success" | "failed"
+  lastSyncError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, moduleId])
+  @@index([projectId])
+}

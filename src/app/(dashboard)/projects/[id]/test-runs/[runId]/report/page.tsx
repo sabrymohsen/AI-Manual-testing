@@ -7,7 +7,7 @@ import { StepResultItem } from "@/components/test-runs/step-result"
 import { ConsoleLogsPanel } from "@/components/test-runs/console-logs-panel"
 import { NetworkLogsPanel } from "@/components/test-runs/network-logs-panel"
 import { BugReportForm } from "@/components/bug-reports/bug-report-form"
-import { Bug, Play, Edit } from "lucide-react"
+import { Bug, Play, Edit, CloudUpload, CheckCircle2, XCircle, RefreshCw, ExternalLink, Loader2 } from "lucide-react"
 
 export default function ReportPage() {
   const params = useParams()
@@ -17,6 +17,8 @@ export default function ReportPage() {
   const [showBugForm, setShowBugForm] = useState(false)
   const [failedStep, setFailedStep] = useState<any>(null)
   const [rerunning, setRerunning] = useState(false)
+  const [opSync, setOpSync] = useState<{ status: string; externalUrl: string | null; externalId: string | null } | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     fetch(`/api/projects/${params.id}/test-runs/${params.runId}`)
@@ -26,6 +28,43 @@ export default function ReportPage() {
         setLoading(false)
       })
   }, [params.id, params.runId])
+
+  // Load OpenProject sync status for the test run's test case
+  useEffect(() => {
+    if (!testRun?.testCase?.id) return
+    async function loadSync() {
+      try {
+        const res = await fetch(`/api/projects/${params.id}/integrations/sync-status`)
+        if (res.ok) {
+          const data = await res.json()
+          const mapping = data.syncMap?.[testRun.testCase.id]
+          if (mapping) {
+            setOpSync({ status: mapping.lastSyncStatus || "synced", externalUrl: mapping.externalUrl, externalId: mapping.externalId })
+          } else {
+            setOpSync({ status: "not_synced", externalUrl: null, externalId: null })
+          }
+        }
+      } catch { /* non-critical */ }
+    }
+    loadSync()
+  }, [testRun, params.id])
+
+  async function handleSyncResult() {
+    setSyncing(true)
+    try {
+      const res = await fetch(`/api/test-runs/${params.runId}/sync/openproject`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok) {
+        setOpSync({ status: "success", externalUrl: data.externalUrl || opSync?.externalUrl || null, externalId: data.externalId || opSync?.externalId || null })
+      } else {
+        setOpSync((prev) => prev ? { ...prev, status: "failed" } : { status: "failed", externalUrl: null, externalId: null })
+      }
+    } catch {
+      setOpSync((prev) => prev ? { ...prev, status: "failed" } : { status: "failed", externalUrl: null, externalId: null })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function handleRerun() {
     if (!testRun?.testCase?.id) return
@@ -126,6 +165,35 @@ export default function ReportPage() {
           <p className="font-semibold">{testRun.stepResults?.length || 0}</p>
         </div>
       </div>
+
+      {/* OpenProject Sync Status */}
+      {opSync && (
+        <div className={`flex items-center justify-between rounded-lg border p-3 text-sm ${
+          opSync.status === "success" ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800" :
+          opSync.status === "failed" ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800" :
+          opSync.status === "not_synced" ? "bg-muted/50 border-muted" :
+          "bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
+        }`}>
+          <div className="flex items-center gap-2">
+            {opSync.status === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
+             opSync.status === "failed" ? <XCircle className="h-4 w-4 text-red-600" /> :
+             opSync.status === "not_synced" ? <CloudUpload className="h-4 w-4 text-muted-foreground" /> :
+             <CloudUpload className="h-4 w-4 text-blue-600" />}
+            <span className="font-medium">
+              OpenProject: {opSync.status === "success" ? "Result Synced" : opSync.status === "failed" ? "Sync Failed" : opSync.status === "not_synced" ? "Not Synced" : "Pending"}
+            </span>
+            {opSync.externalUrl && (
+              <a href={opSync.externalUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-0.5">
+                WP #{opSync.externalId} <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleSyncResult} disabled={syncing}>
+            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span className="ml-1">{opSync.status === "not_synced" ? "Sync" : "Retry"}</span>
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-3">
         <h2 className="text-xl font-semibold">Step Results</h2>

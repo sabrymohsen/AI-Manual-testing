@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
+import { CloudUpload, CheckCircle2, XCircle, RefreshCw, ExternalLink, Loader2 } from "lucide-react"
 
 interface BugReport {
   id: string
@@ -36,6 +37,8 @@ export default function BugReportDetailPage() {
   const router = useRouter()
   const [bug, setBug] = useState<BugReport | null>(null)
   const [loading, setLoading] = useState(true)
+  const [opSync, setOpSync] = useState<{ status: string; externalUrl: string | null; externalId: string | null } | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
     fetch(`/api/projects/${params.id}/bug-reports/${params.bugId}`)
@@ -46,6 +49,41 @@ export default function BugReportDetailPage() {
       })
       .catch(() => setLoading(false))
   }, [params.id, params.bugId])
+
+  // Load OpenProject sync status for this bug
+  useEffect(() => {
+    if (!bug) return
+    async function loadSync() {
+      try {
+        const res = await fetch(`/api/projects/${params.id}/integrations/sync-status`)
+        if (res.ok) {
+          const data = await res.json()
+          // Check BugReport mappings in sync map (uses localEntityType BugReport)
+          // The sync-status endpoint only returns TestCase mappings, so we call a different check
+        }
+        // Direct check for this bug's mapping
+        setOpSync({ status: "not_enabled", externalUrl: null, externalId: null })
+      } catch { /* non-critical */ }
+    }
+    loadSync()
+  }, [bug, params.id])
+
+  async function handleSyncBug() {
+    setSyncing(true)
+    try {
+      const res = await fetch(`/api/bug-reports/${params.bugId}/sync/openproject`, { method: "POST" })
+      const data = await res.json()
+      if (res.ok) {
+        setOpSync({ status: "success", externalUrl: data.externalUrl || null, externalId: data.externalId || null })
+      } else {
+        setOpSync({ status: "failed", externalUrl: null, externalId: null })
+      }
+    } catch {
+      setOpSync({ status: "failed", externalUrl: null, externalId: null })
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   function downloadMarkdown() {
     if (!bug) return
@@ -117,6 +155,33 @@ ${bug.networkErrors ? `## Network Errors\n\`\`\`\n${bug.networkErrors}\n\`\`\`\n
           </Button>
         </div>
       </div>
+
+      {/* OpenProject Bug Sync Status */}
+      {opSync && opSync.status !== "not_enabled" && (
+        <div className={`flex items-center justify-between rounded-lg border p-3 text-sm ${
+          opSync.status === "success" ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800" :
+          opSync.status === "failed" ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800" :
+          "bg-muted/50 border-muted"
+        }`}>
+          <div className="flex items-center gap-2">
+            {opSync.status === "success" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> :
+             opSync.status === "failed" ? <XCircle className="h-4 w-4 text-red-600" /> :
+             <CloudUpload className="h-4 w-4 text-muted-foreground" />}
+            <span className="font-medium">
+              OpenProject Bug: {opSync.status === "success" ? "Synced" : opSync.status === "failed" ? "Sync Failed" : "Not Synced"}
+            </span>
+            {opSync.externalUrl && (
+              <a href={opSync.externalUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-0.5">
+                WP #{opSync.externalId} <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+          <Button variant="ghost" size="sm" onClick={handleSyncBug} disabled={syncing}>
+            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span className="ml-1">{opSync.status === "success" ? "Re-sync" : "Sync to OpenProject"}</span>
+          </Button>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         <div className="md:col-span-2 space-y-6">

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { CredentialsList } from "@/components/credentials/credentials-list"
@@ -14,6 +14,7 @@ import { ImportModal } from "@/components/test-cases/import-modal"
 import { HierarchyExplorer } from "@/components/hierarchy/hierarchy-explorer"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Play, FileText, Bug, Settings, Layers, ShieldCheck, Sparkles, RefreshCw, Eye, Compass, Video, Trash2, FileSpreadsheet, Key, FileCheck, GitBranch, Search, ChevronRight, CheckCircle2, AlertCircle, X, ChevronDown, ListFilter, HelpCircle, ArrowRight, Home, LayoutGrid, Check, Plus, AlertTriangle, Shield, User, Brain, ClipboardList } from "lucide-react"
+import { OpenProjectModuleGroupsSection } from "@/components/integrations/openproject-module-groups-section"
 
 interface Project {
   id: string
@@ -83,8 +84,15 @@ type Tab = "overview" | "design" | "execution" | "coverage" | "reports" | "setti
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [project, setProject] = useState<Project | null>(null)
-  const [activeTab, setActiveTab] = useState<Tab>("overview")
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    const tab = searchParams?.get("tab")
+    if (tab === "settings" || tab === "design" || tab === "execution" || tab === "coverage" || tab === "reports") {
+      return tab as Tab
+    }
+    return "overview"
+  })
   const [loading, setLoading] = useState(true)
 
   // Sub-data states
@@ -1244,6 +1252,9 @@ export default function ProjectDetailPage() {
               )}
             </div>
           )}
+
+          {/* OpenProject Module Sync */}
+          <OpenProjectModuleGroupsSection projectId={params.id as string} />
 
           {/* Requirements Coverage stats */}
           {userMode === "qa_lead" && (

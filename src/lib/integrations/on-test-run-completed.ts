@@ -12,47 +12,9 @@
 
 import { prisma } from "@/lib/db"
 import { decryptSecret } from "@/lib/crypto"
+import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
 
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
-
-// ─── Host helpers ─────────────────────────────────────────────────────────────
-function normalizeOpHost(raw: string): string {
-  const match = raw.trim().match(/^(https?:\/\/[^\/\?#]+)/)
-  let host = match ? match[1] : raw.trim()
-  host = host.replace(/\/$/, "")
-  if (!host.startsWith("http")) host = `https://${host}`
-  return host
-}
-function normalizeOpKey(raw: string): string {
-  const m = raw.trim().match(/\/projects\/([^\/\?#]+)/)
-  return m ? m[1] : raw.replace(/[\/\?#].*/g, "").trim()
-}
-
-// ─── Resolve type href from OpenProject project types list ────────────────────
-async function resolveOpType(
-  opHost: string,
-  opKey: string,
-  auth: string,
-  preferBug: boolean
-): Promise<string> {
-  try {
-    const res = await fetch(`${opHost}/api/v3/projects/${opKey}/types`, {
-      headers: { Authorization: auth, Accept: "application/json" },
-    })
-    if (!res.ok) return "/api/v3/types/1"
-    const data = await res.json()
-    const types: Array<{ id: number; name: string }> = data?._embedded?.elements || []
-    if (preferBug) {
-      const bug = types.find(t => /bug|defect|خطأ|عيب/i.test(t.name))
-      if (bug) return `/api/v3/types/${bug.id}`
-    }
-    const task = types.find(t => /task|test|مهمة/i.test(t.name))
-    if (task) return `/api/v3/types/${task.id}`
-    return types.length > 0 ? `/api/v3/types/${types[0].id}` : "/api/v3/types/1"
-  } catch {
-    return "/api/v3/types/1"
-  }
-}
 
 // ─── Auto-generate a sequential bug key ──────────────────────────────────────
 async function nextBugKey(projectId: string): Promise<string> {
@@ -88,47 +50,63 @@ export async function onTestRunCompleted(testRunId: string): Promise<void> {
     }
 
     const isFailed = testRun.status === "Failed"
-    const config = testRun.project.integrationConfig
+
+    // ── Load dedicated OpenProject integration ────────────────────────────────
+    let opIntegration: any = null
+    try {
+      opIntegration = await prisma.openProjectIntegration.findUnique({
+        where: { projectId: testRun.projectId },
+      })
+    } catch {
+      // Model might not exist yet — graceful
+    }
 
     // ── Step 1: Auto-create/update bug report if failed ───────────────────────
     let autoBugId: string | null = null
-    if (isFailed && testRun.testCaseId) {
+    const shouldCreateBug = opIntegration
+      ? opIntegration.autoCreateBugOnFailure
+      : true // Default behavior if no dedicated integration
+
+    if (isFailed && testRun.testCaseId && shouldCreateBug) {
       autoBugId = await autoCreateOrUpdateBug(testRun)
     }
 
     // ── Step 2: Sync to OpenProject if configured ─────────────────────────────
-    if (config && config.enabled && config.provider === "openproject" && config.encryptedToken) {
+    if (opIntegration?.apiTokenEncrypted) {
       let token = ""
       try {
         token = decryptSecret({
-          encrypted: config.encryptedToken,
-          iv: config.encryptionIv || "",
-          authTag: config.encryptionAuthTag || "",
-          keyVersion: config.keyVersion || "v1",
+          encrypted: opIntegration.apiTokenEncrypted,
+          iv: opIntegration.apiTokenIv,
+          authTag: opIntegration.apiTokenAuthTag,
+          keyVersion: opIntegration.apiTokenKeyVersion,
         })
       } catch {
         console.error("[onTestRunCompleted] Token decrypt failed")
         return
       }
 
-      const triggerOn = config.triggerOn || "Failed"
-      if (triggerOn === "Failed" && !isFailed) {
-        // Only trigger on failures — skip
-      } else {
-        const opHost = normalizeOpHost(config.host || "")
-        const opKey = normalizeOpKey(config.projectKey || "")
-        const auth = `Basic ${Buffer.from(`apikey:${token.trim()}`).toString("base64")}`
+      // Check if we should sync results
+      if (opIntegration.autoSyncResults !== false) {
+        const client = new OpenProjectClient(
+          opIntegration.baseUrl,
+          opIntegration.openProjectProjectIdentifier,
+          token
+        )
 
         // Sync result comment to linked test-case work package
         if (testRun.testCaseId) {
-          await syncRunResultToOpenProject(testRun, opHost, opKey, auth)
+          await syncRunResultToOpenProject(testRun, client, opIntegration)
         }
 
-        // If failed, sync bug to OpenProject as a separate work package
-        if (isFailed && autoBugId) {
-          await syncBugToOpenProject(autoBugId, testRun, opHost, opKey, auth)
+        // If failed and bug sync enabled, sync bug to OpenProject
+        if (isFailed && autoBugId && opIntegration.autoSyncBugToOpenProject) {
+          await syncBugToOpenProject(autoBugId, testRun, client, opIntegration)
         }
       }
+    } else {
+      // Fallback to legacy IntegrationConfig for non-OpenProject providers
+      // (This path is for Jira/Azure DevOps — handled by legacyNotify in notifier.ts)
     }
   } catch (err) {
     // Never block test run completion
@@ -137,7 +115,7 @@ export async function onTestRunCompleted(testRunId: string): Promise<void> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  AUTO-CREATE OR UPDATE BUG REPORT
+//  AUTO-CREATE OR UPDATE BUG REPORT (idempotent)
 // ─────────────────────────────────────────────────────────────────────────────
 async function autoCreateOrUpdateBug(testRun: any): Promise<string | null> {
   try {
@@ -231,13 +209,12 @@ async function autoCreateOrUpdateBug(testRun: any): Promise<string | null> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SYNC TEST RUN RESULT → OPENPROJECT (comment on linked work package)
+//  SYNC TEST RUN RESULT → OPENPROJECT (comment + status update)
 // ─────────────────────────────────────────────────────────────────────────────
 async function syncRunResultToOpenProject(
   testRun: any,
-  opHost: string,
-  opKey: string,
-  auth: string
+  client: OpenProjectClient,
+  integration: any
 ): Promise<void> {
   try {
     // Look up mapping for this test case
@@ -252,7 +229,8 @@ async function syncRunResultToOpenProject(
     })
 
     if (!mapping) {
-      // No mapping — test case was never synced to OpenProject, nothing to update
+      // If autoSyncTestCases is enabled, we could sync it first
+      // But for safety, just skip — user should sync test cases explicitly
       console.log(`[op-sync] No mapping for test case ${testRun.testCaseId} — skipping result sync`)
       return
     }
@@ -265,32 +243,58 @@ async function syncRunResultToOpenProject(
     commentBody += `**Result:** ${testRun.status}\n`
     commentBody += `**Run ID:** \`${testRun.id}\`\n`
     commentBody += `**Executed At:** ${testRun.completedAt ? new Date(testRun.completedAt).toLocaleString() : "N/A"}\n`
-    commentBody += `**Duration:** ${(testRun.durationMs / 1000).toFixed(2)}s\n`
+    commentBody += `**Duration:** ${((testRun.durationMs || 0) / 1000).toFixed(2)}s\n`
     commentBody += `**Environment:** ${testRun.project?.environment || "N/A"}\n`
     commentBody += `**Browser:** ${testRun.browserType}\n`
     commentBody += `**Report:** [View Report](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
-    commentBody += `### Steps\n`
-    for (const sr of testRun.stepResults || []) {
-      const icon = sr.status === "Passed" ? "✅" : sr.status === "Failed" ? "❌" : "⏳"
-      commentBody += `${icon} **Step ${sr.stepNumber}:** ${sr.actionDescription} — *${sr.status}*\n`
-      if (sr.errorDetails) {
-        commentBody += `\n\`\`\`\n${sr.errorDetails}\n\`\`\`\n`
-      }
+
+    // Steps summary
+    const passedSteps = (testRun.stepResults || []).filter((s: any) => s.status === "Passed").length
+    const failedSteps = (testRun.stepResults || []).filter((s: any) => s.status === "Failed").length
+    commentBody += `### Summary\n- Steps Passed: ${passedSteps}\n- Steps Failed: ${failedSteps}\n\n`
+
+    // Failed steps detail
+    const failedStep = testRun.stepResults.find((s: any) => s.status === "Failed")
+    if (failedStep) {
+      commentBody += `### Failed Step\nStep ${failedStep.stepNumber}: ${failedStep.actionDescription}\n\n`
+      commentBody += `**Expected:** ${failedStep.expectedResult || "N/A"}\n`
+      commentBody += `**Actual:** ${failedStep.actualResult || failedStep.errorDetails || "N/A"}\n\n`
     }
 
-    // POST comment to work package
-    const commentUrl = `${opHost}/api/v3/work_packages/${wpId}/activities`
-    const commentRes = await fetch(commentUrl, {
-      method: "POST",
-      headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ comment: { format: "markdown", raw: commentBody } }),
-    })
+    commentBody += `*Synced from AI Manual QA Tester*`
 
-    if (commentRes.ok) {
+    // POST comment to work package
+    const commentOk = await client.addWorkPackageComment(wpId, commentBody)
+
+    if (commentOk) {
       console.log(`[op-sync] Commented on WP #${wpId} for run ${testRun.id}`)
     } else {
-      const text = await commentRes.text().catch(() => "")
-      console.error(`[op-sync] Comment failed on WP #${wpId}: ${commentRes.status} — ${text.slice(0, 200)}`)
+      console.error(`[op-sync] Comment failed on WP #${wpId}`)
+    }
+
+    // Update status if mapped
+    const statusMap: Record<string, string | null> = {
+      Passed: integration.passedStatusId,
+      Failed: integration.failedStatusId,
+      Blocked: integration.blockedStatusId,
+      Running: integration.runningStatusId,
+      Error: integration.failedStatusId, // Map Error to Failed status
+    }
+    const mappedStatusId = statusMap[testRun.status]
+
+    if (mappedStatusId) {
+      try {
+        const wp = await client.getWorkPackage(wpId)
+        await client.updateWorkPackage(
+          wpId,
+          { _links: { status: { href: client.statusHref(mappedStatusId) } } },
+          wp.lockVersion
+        )
+        console.log(`[op-sync] Status updated on WP #${wpId} to ${mappedStatusId}`)
+      } catch (statusErr: any) {
+        // Status update failed but comment was posted — don't fail the whole sync
+        console.warn(`[op-sync] Status update failed on WP #${wpId}: ${statusErr.message}`)
+      }
     }
 
     // Update sync mapping timestamp
@@ -298,8 +302,8 @@ async function syncRunResultToOpenProject(
       where: { id: mapping.id },
       data: {
         lastSyncedAt: new Date(),
-        lastSyncStatus: commentRes.ok ? "success" : "failed",
-        lastSyncError: commentRes.ok ? null : `HTTP ${commentRes.status}`,
+        lastSyncStatus: commentOk ? "success" : "failed",
+        lastSyncError: commentOk ? null : "Comment post failed",
       },
     })
   } catch (err) {
@@ -308,14 +312,13 @@ async function syncRunResultToOpenProject(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SYNC BUG REPORT → OPENPROJECT (create work package for the bug)
+//  SYNC BUG REPORT → OPENPROJECT (create/update work package for the bug)
 // ─────────────────────────────────────────────────────────────────────────────
 async function syncBugToOpenProject(
   bugId: string,
   testRun: any,
-  opHost: string,
-  opKey: string,
-  auth: string
+  client: OpenProjectClient,
+  integration: any
 ): Promise<void> {
   try {
     const bug = await prisma.bugReport.findUnique({
@@ -337,23 +340,17 @@ async function syncBugToOpenProject(
 
     if (existing) {
       // Already synced — just add a comment about the new occurrence
-      const commentUrl = `${opHost}/api/v3/work_packages/${existing.externalId}/activities`
-      await fetch(commentUrl, {
-        method: "POST",
-        headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          comment: {
-            format: "markdown",
-            raw: `## 🔁 Failure Recurrence\n\nRun ID: \`${testRun.id}\` — **${testRun.status}** at ${new Date().toLocaleString()}\n\n[View Run](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)`,
-          },
-        }),
-      }).catch(() => {})
+      await client.addWorkPackageComment(
+        existing.externalId,
+        `## 🔁 Failure Recurrence\n\nRun ID: \`${testRun.id}\` — **${testRun.status}** at ${new Date().toLocaleString()}\n\n[View Run](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)`
+      )
       return
     }
 
     // Build bug work package description
     const tc = bug.testCase
     let description = `## Auto-Created Bug from Failed Test\n\n`
+    description += `**Bug ID:** \`${bug.bugKey}\`\n`
     description += `**Test Case:** ${tc?.title || "N/A"}\n`
     description += `**Test Run:** \`${testRun.id}\`\n`
     description += `**Failure Status:** ${testRun.status}\n`
@@ -364,46 +361,39 @@ async function syncBugToOpenProject(
     description += `## Expected Result\n${bug.expectedResult}\n\n`
     description += `## Actual Result\n${bug.actualResult}\n\n`
     description += `[View Report](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
-    description += `*Created automatically by AI Manual QA Tester*`
+    description += `*Created automatically by AI Manual QA Tester*\n\n`
+    description += `<!-- AI-Manual-QA-Tester:BugReport:${bug.id} -->`
 
-    const typeHref = await resolveOpType(opHost, opKey, auth, true)
-    const wpUrl = `${opHost}/api/v3/projects/${opKey}/work_packages`
+    // Build _links
+    const links: Record<string, { href: string }> = {}
+    if (integration.bugTypeId) {
+      links.type = { href: client.typeHref(integration.bugTypeId) }
+    }
 
-    const res = await fetch(wpUrl, {
-      method: "POST",
-      headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        subject: `[BUG] ${bug.title}`,
-        description: { format: "markdown", raw: description },
-        _links: { type: { href: typeHref } },
-      }),
+    const wp = await client.createWorkPackage({
+      subject: `[BUG] ${bug.title}`,
+      description: { format: "markdown", raw: description },
+      _links: links,
     })
 
-    if (res.ok) {
-      const data = await res.json()
-      const wpId = String(data.id)
-      const wpUrl2 = `${opHost}/work_packages/${wpId}`
+    const wpUrl = client.workPackageUrl(wp.id)
 
-      // Save mapping
-      await prisma.externalSyncMapping.create({
-        data: {
-          projectId: testRun.projectId,
-          provider: "OpenProject",
-          localEntityType: "BugReport",
-          localEntityId: bugId,
-          externalId: wpId,
-          externalUrl: wpUrl2,
-          externalType: "Bug",
-          lastSyncedAt: new Date(),
-          lastSyncStatus: "success",
-        },
-      })
+    // Save mapping
+    await prisma.externalSyncMapping.create({
+      data: {
+        projectId: testRun.projectId,
+        provider: "OpenProject",
+        localEntityType: "BugReport",
+        localEntityId: bugId,
+        externalId: String(wp.id),
+        externalUrl: wpUrl,
+        externalType: "Bug",
+        lastSyncedAt: new Date(),
+        lastSyncStatus: "success",
+      },
+    })
 
-      console.log(`[op-sync] Bug WP #${wpId} created for bug ${bug.bugKey}`)
-    } else {
-      const text = await res.text().catch(() => "")
-      console.error(`[op-sync] Bug WP creation failed: ${res.status} — ${text.slice(0, 200)}`)
-    }
+    console.log(`[op-sync] Bug WP #${wp.id} created for bug ${bug.bugKey}`)
   } catch (err) {
     console.error("[op-sync] syncBugToOpenProject error:", err)
   }
