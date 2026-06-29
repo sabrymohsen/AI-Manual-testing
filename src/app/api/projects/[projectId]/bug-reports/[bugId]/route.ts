@@ -32,8 +32,14 @@ export async function GET(
             include: {
               moduleRelation: true,
               feature: true,
-              component: true
+              component: true,
+              steps: {
+                orderBy: { stepNumber: "asc" }
+              }
             }
+          },
+          stepResults: {
+            orderBy: { stepNumber: "asc" }
           }
         }
       },

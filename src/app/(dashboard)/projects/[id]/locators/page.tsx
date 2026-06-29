@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { MultiElementPicker } from "@/components/locators/multi-element-picker"
 
 interface SavedLocator {
   id: string
@@ -295,7 +296,14 @@ export default function ElementLocatorPickerPage() {
         </div>
       </div>
 
-      {/* Control Panel / Starting Picker */}
+      {/* Multi-Element Session (session-based DOM capture) */}
+      <MultiElementPicker
+        projectId={project.id}
+        credentials={project.credentials}
+        defaultUrl={project.webAppUrl}
+      />
+
+      {/* Control Panel / Starting Picker (single-element, original) */}
       <div className="grid gap-6 md:grid-cols-3">
         <div className="p-6 md:col-span-1 space-y-4 border rounded-xl bg-card/50 backdrop-blur-sm shadow-sm">
           <h3 className="text-lg font-bold flex items-center gap-2">

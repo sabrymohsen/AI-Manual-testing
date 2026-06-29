@@ -350,6 +350,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
           priority: cleanPriority,
           preconditions: preconditionsVal || null,
           source: "Imported",
+          executionType: "Manual",
           requirementKeys,
           steps: []
         }

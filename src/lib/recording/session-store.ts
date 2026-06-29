@@ -32,6 +32,12 @@ export async function saveRecordedCaseAsTestCase(recordedTestCaseId: string) {
 
   if (!draft) throw new Error("Draft recorded test case not found")
 
+  // Idempotency guard — if already saved, return the existing TestCase
+  if (draft.status === "SavedAsTestCase" && draft.finalTestCaseId) {
+    const existing = await prisma.testCase.findUnique({ where: { id: draft.finalTestCaseId } })
+    if (existing) return existing
+  }
+
   const realTestCase = await prisma.testCase.create({
     data: {
       projectId: draft.session.projectId,
@@ -44,6 +50,7 @@ export async function saveRecordedCaseAsTestCase(recordedTestCaseId: string) {
       preconditions: draft.preconditions,
       requiredCredentialId: draft.requiredCredentialId,
       source: "Recorder",
+      executionType: "Automated",
       steps: {
         create: draft.steps.map((step, idx) => ({
           stepNumber: idx + 1,

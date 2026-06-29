@@ -880,8 +880,19 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         const host = document.getElementById("__qa_recorder_host");
         if (!host || !host.shadowRoot) return;
 
+        if (!qaTimerStart) qaTimerStart = Date.now();
+
         const countSpan = host.shadowRoot.getElementById("qa-step-count");
-        if (countSpan) countSpan.textContent = res.currentStepCount || "1";
+        if (countSpan) {
+          const prevCount = parseInt(countSpan.textContent || "0", 10);
+          const newCount = res.currentStepCount || 1;
+          countSpan.textContent = String(newCount);
+          if (newCount > prevCount) {
+            countSpan.classList.remove("qa-step-count-flash");
+            void countSpan.offsetWidth;
+            countSpan.classList.add("qa-step-count-flash");
+          }
+        }
 
         const titleSpan = host.shadowRoot.getElementById("qa-case-title");
         if (titleSpan) titleSpan.textContent = res.caseTitle || "Draft Case";
@@ -895,6 +906,18 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         localConsoleErrorsCount = res.consoleErrorsCount || 0;
         localNetworkErrorsCount = res.networkErrorsCount || 0;
         updateToolbarBadgeCount();
+
+        const miniSteps = host.shadowRoot.getElementById("qa-mini-steps");
+        if (miniSteps && res.lastSteps && res.lastSteps.length > 0) {
+          miniSteps.innerHTML = res.lastSteps.map(function(s) {
+            const desc = s.actionDescription.length > 42
+              ? s.actionDescription.substring(0, 42) + "…"
+              : s.actionDescription;
+            return '<div style="padding:3px 8px;border-radius:5px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:#94a3b8;" title="' + s.actionDescription + '">' +
+              '<span style="color:#60a5fa;font-weight:bold;font-family:monospace;margin-right:5px;font-size:9px;">' + s.stepNumber + '</span>' + desc +
+              '</div>';
+          }).join("");
+        }
       }
     } catch (e) {}
   }
@@ -942,6 +965,19 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     if (tooltip) tooltip.style.display = "none";
   }
 
+  // Live timer
+  let qaTimerStart = null;
+  function qaUpdateTimer() {
+    if (!qaTimerStart) return;
+    const host = document.getElementById("__qa_recorder_host");
+    if (!host || !host.shadowRoot) return;
+    const el = host.shadowRoot.getElementById("qa-timer");
+    if (!el) return;
+    const secs = Math.floor((Date.now() - qaTimerStart) / 1000);
+    el.textContent = String(Math.floor(secs / 60)).padStart(2, "0") + ":" + String(secs % 60).padStart(2, "0");
+  }
+  setInterval(qaUpdateTimer, 1000);
+
   // Shadow DOM Injections & Drag/Draggable setup
   function injectToolbar() {
     if (window.self !== window.top) return;
@@ -955,269 +991,279 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     const shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("style");
     style.textContent = \`
+      /* ── Panel shell ── */
       .qa-glass-panel {
         position: fixed;
-        bottom: 30px;
-        right: 30px;
-        width: 320px;
-        background: rgba(15, 23, 42, 0.96);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 20px;
+        bottom: 24px;
+        right: 24px;
+        width: 300px;
+        background: rgba(10, 15, 30, 0.97);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 18px;
         color: #f8fafc;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         font-size: 13px;
-        box-shadow: 0 20px 40px -10px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+        box-shadow: 0 24px 48px -10px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04);
         z-index: 2147483647;
         overflow: hidden;
-        transition: height 0.2s ease, opacity 0.15s ease;
       }
+
+      /* ── Header (draggable) ── */
       .qa-header {
-        padding: 12px 16px;
-        background: rgba(30, 41, 59, 0.5);
-        border-b: 1px solid rgba(255,255,255,0.1);
+        padding: 10px 14px;
+        background: rgba(255,255,255,0.04);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
         cursor: move;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 8px;
+        user-select: none;
       }
-      .qa-title-area {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-      }
-      .qa-title-row {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
+      .qa-title-area { display: flex; flex-direction: column; gap: 2px; }
+      .qa-title-row { display: flex; align-items: center; gap: 6px; }
       .qa-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #ef4444;
-        animation: pulse 1.5s infinite;
+        width: 7px; height: 7px; border-radius: 50%;
+        background: #ef4444; animation: pulse 1.5s infinite; flex-shrink: 0;
       }
-      .qa-dot-paused {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #eab308;
-      }
+      .qa-dot-paused { width: 7px; height: 7px; border-radius: 50%; background: #eab308; flex-shrink: 0; }
       .qa-logo {
-        font-weight: 700;
-        font-size: 14px;
+        font-weight: 700; font-size: 13px;
         background: linear-gradient(135deg, #38bdf8, #818cf8);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       }
       .qa-badge-state {
-        font-size: 9px;
-        font-weight: bold;
-        padding: 2px 6px;
-        border-radius: 6px;
-        text-transform: uppercase;
-        background: rgba(56, 189, 248, 0.15);
-        color: #38bdf8;
+        font-size: 8px; font-weight: 700; padding: 2px 5px;
+        border-radius: 5px; text-transform: uppercase; letter-spacing: 0.5px;
+        background: rgba(56,189,248,0.15); color: #38bdf8;
       }
-      .qa-badge-recording { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
-      .qa-badge-paused { background: rgba(234, 179, 8, 0.15); color: #eab308; }
-      .qa-badge-picker { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
-      .qa-badge-verify { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+      .qa-badge-recording { background: rgba(239,68,68,0.15); color: #f87171; }
+      .qa-badge-paused    { background: rgba(234,179,8,0.15);  color: #fbbf24; }
+      .qa-badge-picker    { background: rgba(59,130,246,0.15); color: #60a5fa; }
+      .qa-badge-verify    { background: rgba(139,92,246,0.15); color: #a78bfa; }
 
+      /* ── Body ── */
       .qa-body {
-        padding: 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+        padding: 12px 14px 14px;
+        display: flex; flex-direction: column; gap: 10px;
+        max-height: 80vh; overflow-y: auto;
       }
+
+      /* ── Section labels ── */
+      .qa-section-label {
+        font-size: 9px; font-weight: 700; letter-spacing: 0.8px;
+        text-transform: uppercase; color: rgba(148,163,184,0.6);
+        padding-bottom: 4px;
+      }
+
+      /* ── Case info strip ── */
       .qa-case-info {
-        font-size: 11px;
-        color: #94a3b8;
-        background: rgba(255,255,255,0.03);
-        padding: 6px 10px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.05);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        font-size: 11px; color: #94a3b8;
+        background: rgba(255,255,255,0.04);
+        padding: 7px 10px; border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.06);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
-      .qa-actions-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
+
+      /* ── Base button ── */
       .qa-btn {
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #f1f5f9;
-        padding: 8px 10px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        transition: all 0.15s ease;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #e2e8f0;
+        padding: 7px 10px; border-radius: 8px;
+        cursor: pointer; font-size: 12px; font-weight: 500;
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        transition: background 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+        line-height: 1.3;
       }
       .qa-btn:hover {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(255,255,255,0.2);
+        background: rgba(255,255,255,0.12);
+        border-color: rgba(255,255,255,0.18);
         transform: translateY(-1px);
       }
+      .qa-btn:active { transform: translateY(0); }
       .qa-btn-active {
-        background: rgba(59, 130, 246, 0.25) !important;
-        border-color: #3b82f6 !important;
-        color: #60a5fa !important;
+        background: rgba(59,130,246,0.2) !important;
+        border-color: rgba(59,130,246,0.6) !important;
+        color: #93c5fd !important;
       }
-      .qa-btn-finish {
-        background: linear-gradient(135deg, #10b981, #059669);
-        border: none;
-        color: white;
-        font-weight: 600;
+
+      /* Tier 1 — Primary control */
+      .qa-btn-primary {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.14);
+        color: #f1f5f9;
+        padding: 9px 12px; border-radius: 9px;
+        cursor: pointer; font-size: 13px; font-weight: 600;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        transition: all 0.12s ease; width: 100%;
       }
-      .qa-btn-finish:hover {
-        background: linear-gradient(135deg, #059669, #047857);
+      .qa-btn-primary:hover {
+        background: rgba(255,255,255,0.14);
+        border-color: rgba(255,255,255,0.22);
+        transform: translateY(-1px);
       }
-      .qa-btn-cancel {
-        background: transparent;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #f87171;
-      }
-      .qa-btn-cancel:hover {
-        background: rgba(239, 68, 68, 0.1);
-        border-color: #ef4444;
-      }
-      .qa-divider {
-        height: 1px;
-        background: rgba(255, 255, 255, 0.08);
-      }
-      .qa-warning-panel {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        border-radius: 8px;
-        padding: 6px 10px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        font-size: 11px;
+      .qa-btn-primary.qa-paused-state {
+        background: rgba(239,68,68,0.12);
+        border-color: rgba(239,68,68,0.35);
         color: #fca5a5;
       }
+      .qa-btn-primary.qa-paused-state:hover {
+        background: rgba(239,68,68,0.2);
+      }
+
+      /* Danger — Finish Session */
+      .qa-btn-danger {
+        background: rgba(239,68,68,0.12);
+        border: 1px solid rgba(239,68,68,0.35);
+        color: #fca5a5; padding: 9px 12px; border-radius: 9px;
+        cursor: pointer; font-size: 13px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center; gap: 6px;
+        transition: all 0.12s ease; width: 100%;
+      }
+      .qa-btn-danger:hover {
+        background: rgba(239,68,68,0.22);
+        border-color: rgba(239,68,68,0.55);
+        transform: translateY(-1px);
+      }
+
+      /* Tier 2 — Secondary actions (2-column grid) */
+      .qa-actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+      .qa-actions-grid-1 { display: grid; grid-template-columns: 1fr; gap: 7px; }
+
+      /* Tier 3 — Compact tool buttons */
+      .qa-tools-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
+      .qa-util-btn {
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #94a3b8; padding: 6px 4px; border-radius: 7px;
+        cursor: pointer; font-size: 11px; font-weight: 500;
+        display: flex; align-items: center; justify-content: center; gap: 3px;
+        transition: all 0.12s ease;
+      }
+      .qa-util-btn:hover {
+        background: rgba(255,255,255,0.1); color: #e2e8f0;
+        border-color: rgba(255,255,255,0.15); transform: translateY(-1px);
+      }
+      .qa-util-btn.qa-btn-active {
+        background: rgba(139,92,246,0.18) !important;
+        border-color: rgba(139,92,246,0.45) !important;
+        color: #c4b5fd !important;
+      }
+
+      /* Inline grouping status */
+      .qa-grouping-row {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      }
+      .qa-grouping-status-text {
+        font-size: 10px; color: #94a3b8; font-style: italic;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+
+      /* Modal finisher (keep green for dialogs) */
+      .qa-btn-finish {
+        background: linear-gradient(135deg, #10b981, #059669);
+        border: none; color: white; font-weight: 600;
+        padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        transition: all 0.12s ease;
+      }
+      .qa-btn-finish:hover { background: linear-gradient(135deg, #059669, #047857); }
+      .qa-btn-cancel {
+        background: transparent;
+        border: 1px solid rgba(239,68,68,0.3); color: #f87171;
+        padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px;
+        display: flex; align-items: center; justify-content: center; gap: 5px;
+        transition: all 0.12s ease;
+      }
+      .qa-btn-cancel:hover { background: rgba(239,68,68,0.1); border-color: #ef4444; }
+
+      /* Divider */
+      .qa-divider { height: 1px; background: rgba(255,255,255,0.07); }
+
+      /* Warning panel */
+      .qa-warning-panel {
+        background: rgba(239,68,68,0.08);
+        border: 1px solid rgba(239,68,68,0.18);
+        border-radius: 8px; padding: 6px 10px;
+        display: flex; align-items: center; justify-content: space-between;
+        font-size: 11px; color: #fca5a5;
+      }
       .qa-link {
-        color: #38bdf8;
-        background: none;
-        border: none;
-        cursor: pointer;
-        padding: 0;
-        font-size: 11px;
-        font-weight: bold;
-        text-decoration: underline;
+        color: #38bdf8; background: none; border: none; cursor: pointer;
+        padding: 0; font-size: 11px; font-weight: bold; text-decoration: underline;
       }
       .qa-link:hover { color: #60a5fa; }
-      
-      /* In-browser Modals */
+
+      /* Modals */
       .qa-modal-overlay {
-        position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.65);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        display: flex; align-items: center; justify-content: center;
         z-index: 2147483647;
       }
       .qa-dialog {
-        background: #0f172a;
-        border: 1px solid rgba(255,255,255,0.15);
-        border-radius: 16px;
-        width: 380px;
-        padding: 20px;
-        display: flex;
-        flex-direction: column;
-        gap: 14px;
+        background: #0f172a; border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 16px; width: 380px; padding: 20px;
+        display: flex; flex-direction: column; gap: 14px;
         box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
       }
       .qa-dialog-title {
-        font-weight: bold;
-        font-size: 15px;
-        color: #f8fafc;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        font-weight: bold; font-size: 15px; color: #f8fafc;
+        display: flex; align-items: center; gap: 8px;
       }
-      .qa-form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-      .qa-form-group label {
-        font-size: 11px;
-        font-weight: bold;
-        color: #94a3b8;
-      }
+      .qa-form-group { display: flex; flex-direction: column; gap: 6px; }
+      .qa-form-group label { font-size: 11px; font-weight: bold; color: #94a3b8; }
       .qa-input, .qa-select, .qa-textarea {
-        background: #1e293b;
-        border: 1px solid rgba(255,255,255,0.1);
-        border-radius: 8px;
-        color: white;
-        padding: 8px 12px;
-        font-size: 13px;
-        font-family: inherit;
-        outline: none;
+        background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 8px; color: white; padding: 8px 12px;
+        font-size: 13px; font-family: inherit; outline: none;
       }
-      .qa-input:focus, .qa-select:focus, .qa-textarea:focus {
-        border-color: #3b82f6;
-      }
+      .qa-input:focus, .qa-select:focus, .qa-textarea:focus { border-color: #3b82f6; }
       .qa-dialog-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: 8px;
+        display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;
       }
+
+      /* Inspector tooltip */
       .qa-hover-tooltip {
         position: fixed;
-        background: rgba(15, 23, 42, 0.95);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 8px 12px;
-        color: white;
-        font-size: 11px;
-        z-index: 2147483647;
-        box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-        pointer-events: none;
-        display: none;
+        background: rgba(15,23,42,0.95); border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px; padding: 8px 12px; color: white; font-size: 11px;
+        z-index: 2147483647; box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        pointer-events: none; display: none;
       }
+
+      /* Collapsed FAB */
       .qa-circle-trigger {
-        position: fixed;
-        bottom: 30px;
-        right: 30px;
-        width: 52px;
-        height: 52px;
-        border-radius: 50%;
+        position: fixed; bottom: 24px; right: 24px;
+        width: 48px; height: 48px; border-radius: 50%;
         background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        color: white;
-        font-weight: bold;
-        font-size: 13px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4);
-        z-index: 2147483647;
-        border: 1px solid rgba(255,255,255,0.25);
+        color: white; font-weight: bold; font-size: 12px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; box-shadow: 0 10px 25px rgba(139,92,246,0.4);
+        z-index: 2147483647; border: 1px solid rgba(255,255,255,0.25);
         transition: transform 0.2s ease;
       }
-      .qa-circle-trigger:hover {
-        transform: scale(1.08);
-      }
-      
+      .qa-circle-trigger:hover { transform: scale(1.1); }
+
       @keyframes pulse {
-        0% { transform: scale(0.9); opacity: 0.8; }
-        50% { transform: scale(1.2); opacity: 1; }
+        0%   { transform: scale(0.9); opacity: 0.8; }
+        50%  { transform: scale(1.2); opacity: 1; }
         100% { transform: scale(0.9); opacity: 0.8; }
       }
+      @keyframes qa-step-flash {
+        0%, 100% { color: #f8fafc; }
+        45%       { color: #34d399; }
+      }
+      .qa-step-count-flash { display: inline-block; animation: qa-step-flash 0.6s ease; }
+      .qa-panel-paused #qa-body-content { opacity: 0.75; transition: opacity 0.2s ease; }
+      /* Workstation skin — visually distinct from the Test Studio recorder */
+      .qa-ws-mode { border-color: rgba(20, 184, 166, 0.55) !important; box-shadow: 0 12px 40px rgba(13, 148, 136, 0.35) !important; }
+      .qa-ws-mode .qa-header { background: linear-gradient(135deg, rgba(13,148,136,0.22), rgba(15,118,110,0.12)) !important; }
+      .qa-ws-mode .qa-logo { color: #5eead4 !important; }
+      .qa-ws-mode #qa-status-badge { background: rgba(20,184,166,0.2) !important; color: #5eead4 !important; }
     \`;
     shadow.appendChild(style);
 
@@ -1240,54 +1286,105 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     toolbar.id = "qa-toolbar-container";
     toolbar.className = "qa-glass-panel";
     toolbar.innerHTML = \`
+      <!-- HEADER -->
       <div class="qa-header" id="qa-header-drag">
-        <div class="qa-title-area">
-          <div class="qa-title-row">
-            <span class="qa-dot" id="qa-dot-indicator"></span>
-            <span class="qa-logo">QA Recorder</span>
-            <span class="qa-badge-state qa-badge-recording" id="qa-status-badge">RECORDING</span>
+        <div class="qa-title-row">
+          <span class="qa-dot" id="qa-dot-indicator"></span>
+          <span class="qa-logo">QA Recorder</span>
+          <span class="qa-badge-state qa-badge-recording" id="qa-status-badge">REC</span>
+          <span id="qa-timer" style="font-size:10px;color:#475569;font-family:monospace;letter-spacing:0.5px;margin-left:2px;">00:00</span>
+        </div>
+        <button class="qa-link" id="qa-btn-collapse" style="font-size:15px; text-decoration:none; opacity:0.6;">—</button>
+      </div>
+
+      <!-- BODY -->
+      <div class="qa-body" id="qa-body-content">
+
+        <!-- Active case -->
+        <div class="qa-case-info" id="qa-case-title">Loading case…</div>
+
+        <!-- ── TIER 1: Session controls ── -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <button class="qa-btn-primary" id="qa-btn-pause">⏸ Pause recording</button>
+          <div class="qa-actions-grid qa-recorder-only">
+            <button class="qa-btn" id="qa-btn-new-case">➕ New case</button>
+            <button class="qa-btn" id="qa-btn-save-case">💾 Save case</button>
+          </div>
+          <button class="qa-btn qa-recorder-only" id="qa-btn-view-steps" style="width:100%;justify-content:space-between;">
+            <span>📋 Recorded steps</span>
+            <span style="background:rgba(255,255,255,0.08);border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;" id="qa-step-count">0</span>
+          </button>
+        </div>
+
+        <div class="qa-divider qa-recorder-only"></div>
+
+        <!-- ── TIER 2: Inspect tools ── -->
+        <div class="qa-recorder-only">
+          <div class="qa-section-label">Inspect</div>
+          <div class="qa-tools-grid">
+            <button class="qa-util-btn" id="qa-btn-pick" title="Click an element to record its locator">🔍 Pick</button>
+            <button class="qa-util-btn" id="qa-btn-verify" title="Click an element to add an assertion">✔ Verify</button>
+            <button class="qa-util-btn qa-btn-active" id="qa-btn-toggle-grouping" title="Toggle dropdown-grouping mode">🔗 Group</button>
+          </div>
+          <div class="qa-grouping-row" style="margin-top:5px;">
+            <span style="font-size:9px;color:rgba(148,163,184,0.5);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Status</span>
+            <span class="qa-grouping-status-text" id="qa-grouping-status">Ready</span>
           </div>
         </div>
-        <button class="qa-link" id="qa-btn-collapse" style="font-size:16px; text-decoration:none;">➖</button>
-      </div>      <div class="qa-body" id="qa-body-content">
-        <div class="qa-case-info" id="qa-case-title">Loading case...</div>
-        
-        <div class="qa-actions-grid">
-          <button class="qa-btn" id="qa-btn-pause">⏸️ Pause</button>
-          <button class="qa-btn" id="qa-btn-new-case">➕ New Case</button>
-          <button class="qa-btn" id="qa-btn-save-case">💾 Save Case</button>
-          <button class="qa-btn" id="qa-btn-view-steps">📋 Steps (<span id="qa-step-count">1</span>)</button>
+
+        <div class="qa-divider"></div>
+
+        <!-- ── TIER 3: Quick-add tools ── -->
+        <div>
+          <div class="qa-section-label" id="qa-quickadd-label">Quick add</div>
+          <div class="qa-tools-grid">
+            <button class="qa-util-btn qa-recorder-only" id="qa-btn-add-check" title="Insert a page assertion step">✅ Assert</button>
+            <button class="qa-util-btn qa-recorder-only" id="qa-btn-add-wait" title="Insert a timed wait step">⏱ Wait</button>
+            <button class="qa-util-btn qa-recorder-only" id="qa-btn-add-note" title="Add a tester note">📝 Note</button>
+            <button class="qa-util-btn" id="qa-btn-screenshot" title="Capture a screenshot (Alt+Shift+S)">📸 Shot</button>
+            <button class="qa-util-btn" id="qa-btn-video" data-recording="0" title="Start/stop session video recording">🎥 Record</button>
+            <button class="qa-util-btn" id="qa-btn-bug" title="Report a bug from this session">🐛 Bug</button>
+          </div>
         </div>
 
         <div class="qa-divider"></div>
 
-        <div class="qa-actions-grid" style="grid-template-columns: 1fr 1fr;">
-          <button class="qa-btn qa-btn-active" id="qa-btn-toggle-grouping">🔗 Grouping: ON</button>
-          <div style="font-size: 11px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-style: italic;" id="qa-grouping-status">Ready</div>
-        </div>
+        <!-- ── Finish ── -->
+        <button class="qa-btn-danger" id="qa-btn-finish">🏁 Finish session</button>
 
-        <div class="qa-divider"></div>
-
-        <div class="qa-actions-grid">
-          <button class="qa-btn" id="qa-btn-pick">🔍 Pick Element</button>
-          <button class="qa-btn" id="qa-btn-verify">✔️ Verify El</button>
-          <button class="qa-btn" id="qa-btn-screenshot">📸 Screenshot</button>
-          <button class="qa-btn" id="qa-btn-bug">🐛 Create Bug</button>
-        </div>
-
-        <div class="qa-divider"></div>
-
-        <div class="qa-actions-grid" style="grid-template-columns: 1fr;">
-          <button class="qa-btn qa-btn-finish" id="qa-btn-finish">🏁 Finish Session</button>
-        </div>
-
+        <!-- Error warning -->
         <div id="qa-errors-warning" class="qa-warning-panel" style="display:none;">
-          <span>⚠️ <span id="qa-errors-count">0</span> console/API errors</span>
-          <button class="qa-link" id="qa-btn-warning-bug">Create Bug</button>
+          <span>⚠️ <span id="qa-errors-count">0</span> errors</span>
+          <button class="qa-link" id="qa-btn-warning-bug">Report Bug</button>
         </div>
+
+        <!-- Mini recent steps -->
+        <div id="qa-mini-steps" style="display:flex;flex-direction:column;gap:3px;max-height:90px;overflow-y:auto;"></div>
       </div>
     \`;
     shadow.appendChild(toolbar);
+
+    // ── Workstation skin: distinct look + reduced toolset vs the Test Studio recorder ──
+    var IS_WORKSTATION = !!window.__QA_WORKSTATION_MODE;
+    if (IS_WORKSTATION) {
+      toolbar.classList.add("qa-ws-mode");
+      var logoEl = shadow.querySelector(".qa-logo");
+      if (logoEl) logoEl.textContent = "QA Workstation";
+      var badgeEl = shadow.getElementById("qa-status-badge");
+      if (badgeEl) { badgeEl.textContent = "LIVE"; }
+      var quickLabel = shadow.getElementById("qa-quickadd-label");
+      if (quickLabel) quickLabel.textContent = "Capture";
+      var pauseBtn = shadow.getElementById("qa-btn-pause");
+      if (pauseBtn) pauseBtn.textContent = "⏸ Pause session";
+      var finishBtn = shadow.getElementById("qa-btn-finish");
+      if (finishBtn) finishBtn.textContent = "🛑 End session";
+      var collapsedLabel = trigger.querySelector("span");
+      if (collapsedLabel) collapsedLabel.textContent = "WS";
+      // Hide all recorder-only (step authoring) controls
+      shadow.querySelectorAll(".qa-recorder-only").forEach(function (el) {
+        el.style.display = "none";
+      });
+    }
 
     // Drag support
     const headerDrag = shadow.getElementById("qa-header-drag");
@@ -1334,15 +1431,19 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         const res = await window.qaRecordAction({ actionType: "resume_recording" });
         if (res && res.success) {
           window.__qa_mode = "recording";
-          btnPause.textContent = "⏸️ Pause";
+          btnPause.textContent = "⏸ Pause recording";
+          btnPause.classList.remove("qa-paused-state");
           shadow.getElementById("qa-dot-indicator").className = "qa-dot";
+          toolbar.classList.remove("qa-panel-paused");
         }
       } else {
         const res = await window.qaRecordAction({ actionType: "pause_recording" });
         if (res && res.success) {
           window.__qa_mode = "paused";
-          btnPause.textContent = "▶️ Resume";
+          btnPause.textContent = "▶ Resume recording";
+          btnPause.classList.add("qa-paused-state");
           shadow.getElementById("qa-dot-indicator").className = "qa-dot-paused";
+          toolbar.classList.add("qa-panel-paused");
         }
       }
       syncSessionStatus();
@@ -1374,10 +1475,10 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     btnToggleGrouping.addEventListener("click", () => {
       window.__qa_dropdown_grouping = !window.__qa_dropdown_grouping;
       if (window.__qa_dropdown_grouping) {
-        btnToggleGrouping.textContent = "🔗 Grouping: ON";
+        btnToggleGrouping.textContent = "🔗 Group";
         btnToggleGrouping.classList.add("qa-btn-active");
       } else {
-        btnToggleGrouping.textContent = "🔗 Grouping: OFF";
+        btnToggleGrouping.textContent = "🔗 Group";
         btnToggleGrouping.classList.remove("qa-btn-active");
         commitActiveDropdown();
       }
@@ -1420,6 +1521,30 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       }
     });
 
+    // Record video toggle (Workstation): user explicitly chooses to record
+    var btnVideo = shadow.getElementById("qa-btn-video");
+    if (btnVideo) {
+      btnVideo.addEventListener("click", async () => {
+        var on = btnVideo.getAttribute("data-recording") === "1";
+        var res = await window.qaRecordAction({ actionType: on ? "video_stop" : "video_start" });
+        if (res && res.success) {
+          if (on) {
+            btnVideo.setAttribute("data-recording", "0");
+            btnVideo.textContent = "🎥 Record";
+            btnVideo.classList.remove("qa-btn-active");
+            var sb1 = shadow.getElementById("qa-status-badge");
+            if (sb1 && IS_WORKSTATION) sb1.textContent = "LIVE";
+          } else {
+            btnVideo.setAttribute("data-recording", "1");
+            btnVideo.textContent = "⏹ Stop video";
+            btnVideo.classList.add("qa-btn-active");
+            var sb2 = shadow.getElementById("qa-status-badge");
+            if (sb2 && IS_WORKSTATION) sb2.textContent = "● REC";
+          }
+        }
+      });
+    }
+
     // Bug modal trigger
     shadow.getElementById("qa-btn-bug").addEventListener("click", () => {
       openBugModal();
@@ -1432,6 +1557,62 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     shadow.getElementById("qa-btn-view-steps").addEventListener("click", () => {
       openStepsModal();
     });
+
+    // Utility buttons
+    shadow.getElementById("qa-btn-add-check").addEventListener("click", () => {
+      openQuickAssertModal();
+    });
+
+    shadow.getElementById("qa-btn-add-wait").addEventListener("click", () => {
+      openAddWaitModal();
+    });
+
+    shadow.getElementById("qa-btn-add-note").addEventListener("click", () => {
+      openAddNoteModal();
+    });
+
+    // Keyboard shortcuts (captured at document level, guards applied)
+    document.addEventListener("keydown", function(e) {
+      const path = e.composedPath ? e.composedPath() : [];
+      if (path.some(function(n) { return n && n.id === "__qa_recorder_host"; })) return;
+      const active = document.activeElement;
+      const tag = active ? active.tagName.toLowerCase() : "";
+      if (tag === "input" || tag === "textarea" || tag === "select") return;
+      if (window.__finishSessionModalOpen) return;
+
+      // Escape → exit picker / verify mode
+      if (e.key === "Escape") {
+        if (window.__qa_mode === "picker" || window.__qa_mode === "verify") {
+          window.__qa_mode = "recording";
+          const bPick = shadow.getElementById("qa-btn-pick");
+          const bVerify = shadow.getElementById("qa-btn-verify");
+          if (bPick) bPick.classList.remove("qa-btn-active");
+          if (bVerify) bVerify.classList.remove("qa-btn-active");
+          if (hoveredElement) {
+            hoveredElement.style.outline = hoveredElement.__qa_old_outline || "";
+            hoveredElement = null;
+            hideElementInspectorTooltip();
+          }
+          syncSessionStatus();
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // Alt+Shift+P → pause / resume  (e.code avoids Mac dead-key π; Shift avoids single-Alt conflicts)
+      if (e.altKey && e.shiftKey && e.code === "KeyP") {
+        shadow.getElementById("qa-btn-pause").click();
+        e.preventDefault();
+        return;
+      }
+
+      // Alt+Shift+S → quick viewport screenshot
+      if (e.altKey && e.shiftKey && e.code === "KeyS") {
+        window.qaRecordAction({ actionType: "take_screenshot", fullPage: false }).catch(function() {});
+        e.preventDefault();
+        return;
+      }
+    }, true);
 
     // Initial load
     syncSessionStatus();
@@ -1670,6 +1851,34 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     });
   }
 
+  // Collect browser/OS/resolution/URL/timestamp from the live page for bug auto-fill
+  function collectClientContext() {
+    var ua = navigator.userAgent || "";
+    var browserName = "Chromium";
+    if (/firefox/i.test(ua)) browserName = "Firefox";
+    else if (/edg/i.test(ua)) browserName = "Edge";
+    else if (/chrome|chromium|crios/i.test(ua)) browserName = "Chrome";
+    else if (/safari/i.test(ua)) browserName = "Safari";
+
+    var os = "Unknown";
+    if (/windows nt/i.test(ua)) os = "Windows";
+    else if (/mac os x/i.test(ua)) os = "macOS";
+    else if (/android/i.test(ua)) os = "Android";
+    else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
+    else if (/linux/i.test(ua)) os = "Linux";
+
+    var dpr = window.devicePixelRatio || 1;
+    return {
+      url: window.location.href,
+      browserName: browserName,
+      os: os,
+      userAgent: ua,
+      screenResolution: (window.screen.width || 0) + "x" + (window.screen.height || 0) + " @" + dpr + "x",
+      viewportSize: window.innerWidth + "x" + window.innerHeight,
+      timestamp: new Date().toISOString()
+    };
+  }
+
   function openBugModal() {
     const host = document.getElementById("__qa_recorder_host");
     const shadow = host.shadowRoot;
@@ -1704,6 +1913,14 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
           </select>
         </div>
         <div class="qa-form-group">
+          <label>Steps to Reproduce</label>
+          <textarea id="qa-input-bug-steps" class="qa-textarea" rows="3" placeholder="Leave blank to auto-fill from recorded steps, or edit here..."></textarea>
+        </div>
+        <div class="qa-form-group">
+          <label>Expected Result</label>
+          <textarea id="qa-input-bug-expected" class="qa-textarea" rows="2" placeholder="What should have happened?"></textarea>
+        </div>
+        <div class="qa-form-group">
           <label>Actual Result / Symptom *</label>
           <textarea id="qa-input-bug-actual" class="qa-textarea" rows="3" placeholder="Explain what actually occurred..."></textarea>
         </div>
@@ -1727,6 +1944,8 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       const title = shadow.getElementById("qa-input-bug-title").value;
       const severity = shadow.getElementById("qa-select-bug-severity").value;
       const priority = shadow.getElementById("qa-select-bug-priority").value;
+      const stepsToReproduce = shadow.getElementById("qa-input-bug-steps").value;
+      const expectedResult = shadow.getElementById("qa-input-bug-expected").value;
       const actualResult = shadow.getElementById("qa-input-bug-actual").value;
       const notes = shadow.getElementById("qa-input-bug-notes").value;
 
@@ -1735,13 +1954,19 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         return;
       }
 
+      // Auto-collect environment context from the live browser (spec §3, §6.1)
+      const clientContext = collectClientContext();
+
       const res = await window.qaRecordAction({
         actionType: "create_bug",
         title,
         severity,
         priority,
+        stepsToReproduce,
+        expectedResult,
         actualResult,
-        notes
+        notes,
+        clientContext
       });
       if (res && res.success) {
         alert("Bug successfully created! ID: " + res.bug.bugKey);
@@ -1929,6 +2154,158 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     });
   }
 
+  function openQuickAssertModal() {
+    const host = document.getElementById("__qa_recorder_host");
+    const shadow = host.shadowRoot;
+    if (shadow.getElementById("qa-quickassert-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "qa-quickassert-overlay";
+    overlay.className = "qa-modal-overlay";
+    overlay.innerHTML =
+      '<div class="qa-dialog">' +
+        '<div class="qa-dialog-title">✅ Add Assertion Step</div>' +
+        '<div class="qa-form-group">' +
+          '<label>Assertion Type</label>' +
+          '<select id="qa-qa-rule" class="qa-select">' +
+            '<option value="url_equals">Current URL equals</option>' +
+            '<option value="url_contains">Current URL contains</option>' +
+            '<option value="title_contains">Page title contains</option>' +
+          '</select>' +
+        '</div>' +
+        '<div class="qa-form-group">' +
+          '<label>Expected Value *</label>' +
+          '<input type="text" id="qa-qa-value" class="qa-input" placeholder="e.g. /dashboard or Welcome" />' +
+        '</div>' +
+        '<div class="qa-dialog-actions">' +
+          '<button class="qa-btn qa-btn-cancel" id="qa-btn-qa-close">Cancel</button>' +
+          '<button class="qa-btn qa-btn-finish" id="qa-btn-qa-save">Add Step</button>' +
+        '</div>' +
+      '</div>';
+    shadow.appendChild(overlay);
+
+    const ruleEl = shadow.getElementById("qa-qa-rule");
+    const valEl = shadow.getElementById("qa-qa-value");
+    valEl.value = window.location.href;
+
+    ruleEl.addEventListener("change", function() {
+      valEl.value = ruleEl.value === "title_contains" ? document.title : window.location.href;
+    });
+
+    shadow.getElementById("qa-btn-qa-close").addEventListener("click", function() {
+      overlay.remove();
+    });
+
+    shadow.getElementById("qa-btn-qa-save").addEventListener("click", async function() {
+      const rule = ruleEl.value;
+      const val = valEl.value.trim();
+      if (!val) { alert("Expected value is required."); return; }
+      const labels = { url_equals: "URL equals", url_contains: "URL contains", title_contains: "title contains" };
+      const res = await window.qaRecordAction({
+        actionType: rule,
+        actionDescription: "Assert " + (labels[rule] || rule) + ' "' + val + '"',
+        pageUrl: window.location.href,
+        assertionType: rule,
+        assertionValue: val,
+        inputValue: val
+      });
+      if (res && res.success) {
+        overlay.remove();
+        syncSessionStatus();
+      } else {
+        alert("Failed to add assertion step.");
+      }
+    });
+  }
+
+  function openAddWaitModal() {
+    const host = document.getElementById("__qa_recorder_host");
+    const shadow = host.shadowRoot;
+    if (shadow.getElementById("qa-wait-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "qa-wait-overlay";
+    overlay.className = "qa-modal-overlay";
+    overlay.innerHTML =
+      '<div class="qa-dialog">' +
+        '<div class="qa-dialog-title">⏱️ Add Wait Step</div>' +
+        '<div class="qa-form-group">' +
+          '<label>Wait Duration (milliseconds)</label>' +
+          '<input type="number" id="qa-wait-ms" class="qa-input" value="2000" min="100" max="30000" step="100" />' +
+        '</div>' +
+        '<div class="qa-dialog-actions">' +
+          '<button class="qa-btn qa-btn-cancel" id="qa-btn-wait-close">Cancel</button>' +
+          '<button class="qa-btn qa-btn-finish" id="qa-btn-wait-save">Add Wait</button>' +
+        '</div>' +
+      '</div>';
+    shadow.appendChild(overlay);
+
+    shadow.getElementById("qa-btn-wait-close").addEventListener("click", function() {
+      overlay.remove();
+    });
+
+    shadow.getElementById("qa-btn-wait-save").addEventListener("click", async function() {
+      const ms = parseInt(shadow.getElementById("qa-wait-ms").value || "2000", 10);
+      const res = await window.qaRecordAction({
+        actionType: "wait",
+        actionDescription: "Wait for " + ms + "ms",
+        pageUrl: window.location.href,
+        inputValue: String(ms)
+      });
+      if (res && res.success) {
+        overlay.remove();
+        syncSessionStatus();
+      } else {
+        alert("Failed to add wait step.");
+      }
+    });
+  }
+
+  function openAddNoteModal() {
+    const host = document.getElementById("__qa_recorder_host");
+    const shadow = host.shadowRoot;
+    if (shadow.getElementById("qa-note-overlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "qa-note-overlay";
+    overlay.className = "qa-modal-overlay";
+    overlay.innerHTML =
+      '<div class="qa-dialog">' +
+        '<div class="qa-dialog-title">📝 Add Session Note</div>' +
+        '<div class="qa-form-group">' +
+          '<label>Note *</label>' +
+          '<textarea id="qa-note-text" class="qa-textarea" rows="3" placeholder="Describe what you observed..."></textarea>' +
+        '</div>' +
+        '<div class="qa-dialog-actions">' +
+          '<button class="qa-btn qa-btn-cancel" id="qa-btn-note-close">Cancel</button>' +
+          '<button class="qa-btn qa-btn-finish" id="qa-btn-note-save">Save Note</button>' +
+        '</div>' +
+      '</div>';
+    shadow.appendChild(overlay);
+
+    shadow.getElementById("qa-btn-note-close").addEventListener("click", function() {
+      overlay.remove();
+    });
+
+    shadow.getElementById("qa-btn-note-save").addEventListener("click", async function() {
+      const note = shadow.getElementById("qa-note-text").value.trim();
+      if (!note) { alert("Note text is required."); return; }
+      // Saved as a real RecordedStep so it appears in the test case and generated code
+      const res = await window.qaRecordAction({
+        actionType: "note",
+        actionDescription: "Note: " + note,
+        pageUrl: window.location.href,
+        inputValue: note
+      });
+      if (res && res.success) {
+        overlay.remove();
+        syncSessionStatus();
+      } else {
+        alert("Failed to save note.");
+      }
+    });
+  }
+
   function openLocatorModal(element, locatorData) {
     const host = document.getElementById("__qa_recorder_host");
     const shadow = host.shadowRoot;
@@ -2043,10 +2420,12 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         <div class="qa-form-group">
           <label>Assertion Rule</label>
           <select id="qa-select-assert-rule" class="qa-select">
-            <option value="assert_visible">Element should be visible</option>
-            <option value="assert_hidden">Element should not be visible</option>
-            <option value="assert_text">Text contents should match</option>
-            <option value="wait_for_text">Toast message should appear</option>
+            <option value="visible">Element should be visible</option>
+            <option value="hidden">Element should not be visible</option>
+            <option value="text_contains">Text contains</option>
+            <option value="text_equals">Text exactly equals</option>
+            <option value="value_equals">Input value equals</option>
+            <option value="wait_for_text">Wait for text to appear</option>
           </select>
         </div>
         <div class="qa-form-group" id="qa-group-assert-val">
@@ -2063,7 +2442,7 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
 
     const ruleSelect = shadow.getElementById("qa-select-assert-rule");
     ruleSelect.addEventListener("change", () => {
-      const showVal = ruleSelect.value === "assert_text" || ruleSelect.value === "wait_for_text";
+      const showVal = ["text_contains", "text_equals", "value_equals", "wait_for_text"].indexOf(ruleSelect.value) !== -1;
       shadow.getElementById("qa-group-assert-val").style.display = showVal ? "flex" : "none";
     });
 
@@ -2078,13 +2457,17 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       const expectedText = shadow.getElementById("qa-input-assert-expected").value;
       const friendlyName = getElementFriendlyName(element);
 
-      let actionDescription = \`Assert that element "\${friendlyName}" is visible\`;
-      if (rule === "assert_hidden") {
-        actionDescription = \`Assert that element "\${friendlyName}" is not visible\`;
-      } else if (rule === "assert_text") {
-        actionDescription = \`Assert that element "\${friendlyName}" contains text "\${expectedText}"\`;
+      let actionDescription = 'Assert that element "' + friendlyName + '" is visible';
+      if (rule === "hidden") {
+        actionDescription = 'Assert that element "' + friendlyName + '" is not visible';
+      } else if (rule === "text_contains") {
+        actionDescription = 'Assert that element "' + friendlyName + '" contains text "' + expectedText + '"';
+      } else if (rule === "text_equals") {
+        actionDescription = 'Assert that element "' + friendlyName + '" text exactly equals "' + expectedText + '"';
+      } else if (rule === "value_equals") {
+        actionDescription = 'Assert that element "' + friendlyName + '" input value equals "' + expectedText + '"';
       } else if (rule === "wait_for_text") {
-        actionDescription = \`Wait for message "\${expectedText}" to appear on page\`;
+        actionDescription = 'Wait for text "' + expectedText + '" to appear on page';
       }
 
       const res = await window.qaRecordAction({

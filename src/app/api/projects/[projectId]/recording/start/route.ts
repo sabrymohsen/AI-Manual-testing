@@ -16,6 +16,7 @@ const startRecordingSchema = z.object({
   browserType: z.enum(["Chromium", "Firefox", "WebKit"]).optional(),
   viewport: z.enum(["Desktop", "Tablet", "Mobile", "Custom"]).optional(),
   recordingMode: z.enum(["Fast", "Detailed", "Assertion"]).optional(),
+  mode: z.enum(["Recorder", "Workstation"]).optional(),
 })
 
 export async function POST(
@@ -45,6 +46,7 @@ export async function POST(
       browserType: parsed.data.browserType || "Chromium",
       viewport: parsed.data.viewport || "Desktop",
       recordingMode: parsed.data.recordingMode || "Fast",
+      mode: parsed.data.mode || "Recorder",
     }
 
     const result = await recorderWorkerRequest<{ session: unknown; testCase: unknown }>(

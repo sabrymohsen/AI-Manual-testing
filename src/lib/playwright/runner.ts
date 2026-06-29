@@ -429,6 +429,11 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
           error: errorDetails,
           durationMs: stepDuration,
         })
+        // Mark all remaining Pending steps as Skipped so the UI doesn't show them as still running
+        await prisma.testStepResult.updateMany({
+          where: { testRunId, status: "Pending" },
+          data: { status: "Skipped", actualResult: "Skipped — prior step failed" },
+        })
         break
       } else {
         await publishTestRunEvent(testRunId, "test_run.step_completed", {
@@ -479,6 +484,11 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         completedAt: new Date(),
         durationMs: Date.now() - startTime,
       },
+    })
+    // Mark all steps that never ran as Skipped so they don't stay "Pending" in the UI
+    await prisma.testStepResult.updateMany({
+      where: { testRunId, status: { in: ["Pending", "Running"] } },
+      data: { status: "Skipped", actualResult: `Run aborted: ${message}` },
     })
     await publishTestRunEvent(testRunId, "test_run.completed", { status: "Failed", error: message })
     await notifyIntegrations(testRunId)

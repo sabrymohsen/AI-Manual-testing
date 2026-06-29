@@ -177,6 +177,7 @@ export async function GET(
   const testModule = searchParams.get("module")
   const priority = searchParams.get("priority")
   const source = searchParams.get("source")
+  const executionType = searchParams.get("executionType")
   const moduleId = searchParams.get("moduleId")
   const featureId = searchParams.get("featureId")
   const componentId = searchParams.get("componentId")
@@ -187,6 +188,7 @@ export async function GET(
       ...(testModule ? { module: testModule } : {}),
       ...(priority ? { priority: priority as any } : {}),
       ...(source ? { source: source as any } : {}),
+      ...(executionType ? { executionType: executionType as any } : {}),
       ...(moduleId ? { moduleId: moduleId === "null" ? null : moduleId } : {}),
       ...(featureId ? { featureId: featureId === "null" ? null : featureId } : {}),
       ...(componentId ? { componentId: componentId === "null" ? null : componentId } : {})

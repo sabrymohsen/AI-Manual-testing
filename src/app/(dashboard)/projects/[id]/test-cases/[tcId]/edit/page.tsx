@@ -71,7 +71,7 @@ export default function EditTestCasePage() {
     })
 
     if (res.ok) {
-      router.push(`/projects/${params.id}`)
+      router.push(`/projects/${params.id}/test-cases`)
     } else {
       const data = await res.json()
       setError(data.error || "Failed to update test case")

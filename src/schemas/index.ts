@@ -44,6 +44,8 @@ export const createTestCaseSchema = z.object({
   componentName: z.string().optional().nullable(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   preconditions: z.string().optional().nullable(),
+  source: z.enum(["Manual", "AIGenerated", "Imported", "Exploratory", "Recorder", "QAAgentBrain", "RequirementFile"]).optional(),
+  executionType: z.enum(["Manual", "Automated"]).optional(),
   testData: z.any().optional().nullable(),
   tags: z.array(z.string()).optional(),
   requirementIds: z.array(z.string()).optional(),
