@@ -93,6 +93,10 @@ export default function ManualSessionWorkspace() {
   const [activeCaseIndex, setActiveCaseIndex] = useState(0)
   const [activeStepIndex, setActiveStepIndex] = useState(0)
 
+  // Multi-select of cases in the queue (bulk mark pass/fail)
+  const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([])
+  const [bulkUpdating, setBulkUpdating] = useState(false)
+
   // Countdown timer for exploratory mode
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
@@ -148,6 +152,34 @@ export default function ManualSessionWorkspace() {
       setError(err.message || "An error occurred")
     } finally {
       setLoading(false)
+    }
+  }
+
+  const toggleCaseSelection = (caseId: string) => {
+    setSelectedCaseIds((prev) =>
+      prev.includes(caseId) ? prev.filter((id) => id !== caseId) : [...prev, caseId]
+    )
+  }
+
+  const handleBulkMarkCases = async (status: "Passed" | "Failed") => {
+    if (selectedCaseIds.length === 0) return
+    setBulkUpdating(true)
+    try {
+      const res = await fetch(`/api/manual-sessions/${sessionId}/cases/bulk-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionCaseIds: selectedCaseIds, status }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || "Failed to update cases")
+      }
+      setSelectedCaseIds([])
+      await fetchSessionDetails()
+    } catch (err: any) {
+      alert(err.message || "Failed to update selected cases")
+    } finally {
+      setBulkUpdating(false)
     }
   }
 
@@ -935,7 +967,49 @@ export default function ManualSessionWorkspace() {
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1.5">
               <FileText size={12} /> Test Case Queue
             </h2>
-            <span className="text-[10px] text-slate-500">Select case to view execution steps</span>
+            <span className="text-[10px] text-slate-500">Tick cases to bulk-mark, or click a case to run its steps</span>
+
+            {session.sessionCases.length > 0 && (
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <label className="flex items-center gap-1.5 text-[10px] text-slate-400 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={selectedCaseIds.length === session.sessionCases.length}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selectedCaseIds.length > 0 && selectedCaseIds.length < session.sessionCases.length
+                    }}
+                    onChange={(e) =>
+                      setSelectedCaseIds(e.target.checked ? session.sessionCases.map((c) => c.id) : [])
+                    }
+                    className="h-3.5 w-3.5 rounded border-slate-600 bg-slate-800 cursor-pointer"
+                  />
+                  Select all
+                </label>
+                {selectedCaseIds.length > 0 && (
+                  <span className="text-[10px] font-bold text-blue-400">{selectedCaseIds.length} selected</span>
+                )}
+              </div>
+            )}
+
+            {selectedCaseIds.length > 0 && (
+              <div className="mt-2 flex items-center gap-1.5">
+                <Button
+                  onClick={() => handleBulkMarkCases("Passed")}
+                  disabled={bulkUpdating}
+                  className="h-7 flex-1 bg-green-600 hover:bg-green-700 text-white text-[10px] font-bold flex items-center justify-center gap-1"
+                >
+                  <CheckCircle size={12} /> Mark Passed
+                </Button>
+                <Button
+                  onClick={() => handleBulkMarkCases("Failed")}
+                  disabled={bulkUpdating}
+                  variant="outline"
+                  className="h-7 border-red-900 text-red-400 hover:bg-red-950/40 text-[10px] font-bold flex items-center justify-center gap-1 px-2"
+                >
+                  <XCircle size={12} /> Fail
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-2 space-y-1 divide-y divide-slate-900">
@@ -957,8 +1031,15 @@ export default function ManualSessionWorkspace() {
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <span className={`text-xs font-bold truncate ${isActive ? "text-blue-400" : "text-slate-300"}`}>
-                      {index + 1}. {c.testCase.title}
+                    <span className={`text-xs font-bold truncate flex items-start gap-2 ${isActive ? "text-blue-400" : "text-slate-300"}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCaseIds.includes(c.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => toggleCaseSelection(c.id)}
+                        className="h-3.5 w-3.5 mt-0.5 rounded border-slate-600 bg-slate-800 cursor-pointer shrink-0"
+                      />
+                      <span className="truncate">{index + 1}. {c.testCase.title}</span>
                     </span>
                     <span className="shrink-0">
                       {isCaseFailed ? <XCircle size={14} className="text-red-500" /> :

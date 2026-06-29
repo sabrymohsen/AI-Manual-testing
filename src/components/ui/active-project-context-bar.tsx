@@ -1,0 +1,78 @@
+import React from "react"
+import { useProjectSummary } from "@/hooks/use-metrics"
+import { Globe, ClipboardList, Bug, ShieldAlert, ArrowRight } from "lucide-react"
+import { useRouter } from "next/navigation"
+
+interface ActiveProjectContextBarProps {
+  projectId: string
+}
+
+export function ActiveProjectContextBar({ projectId }: ActiveProjectContextBarProps) {
+  const router = useRouter()
+  const { summary, loading } = useProjectSummary(projectId)
+
+  if (loading || !summary) {
+    return (
+      <div className="h-12 border rounded-xl bg-slate-50 animate-pulse mb-6 flex items-center px-4 justify-between" />
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-4 p-4 border rounded-xl bg-slate-500/[0.02] mb-6 text-xs font-semibold select-none shadow-sm border-slate-100">
+      <div className="flex items-center gap-3">
+        <div className="space-y-0.5">
+          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Active Context Scope</span>
+          <div className="flex items-center gap-2">
+            <span className="font-extrabold text-slate-800 text-sm tracking-tight">{summary.name}</span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-bold border border-indigo-100">{summary.environment}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Summary Counts and Links */}
+      <div className="flex items-center gap-6 flex-wrap">
+        {summary.baseUrl && (
+          <div className="space-y-0.5 hidden sm:block">
+            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">Target URL</span>
+            <a href={summary.baseUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-indigo-600 hover:underline">
+              {summary.baseUrl.replace(/^https?:\/\//, "")}
+            </a>
+          </div>
+        )}
+
+        <div className="space-y-0.5">
+          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">OpenProject</span>
+          <span className={`flex items-center gap-1.5 font-bold ${summary.opConnected ? "text-emerald-600" : "text-amber-500"}`}>
+            <Globe className="h-3.5 w-3.5" />
+            {summary.opConnected ? "Connected" : "Setup Required"}
+          </span>
+        </div>
+
+        <div className="space-y-0.5 cursor-pointer" onClick={() => router.push(`/projects/${projectId}/test-cases`)}>
+          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">Test Cases</span>
+          <span className="font-bold text-slate-700 flex items-center gap-1">
+            <ClipboardList className="h-3.5 w-3.5 text-slate-400" /> {summary.testCasesCount} cases
+          </span>
+        </div>
+
+        <div className="space-y-0.5 cursor-pointer" onClick={() => router.push(`/projects/${projectId}/bug-reports`)}>
+          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">Open Bugs</span>
+          <span className="font-bold text-rose-600 flex items-center gap-1">
+            <Bug className="h-3.5 w-3.5 text-rose-400" /> {summary.openBugsCount} defects
+          </span>
+        </div>
+
+        <button 
+          onClick={() => {
+            localStorage.removeItem("activeProjectId")
+            window.dispatchEvent(new Event("projectChanged"))
+            router.push("/dashboard")
+          }}
+          className="h-8 px-3 rounded-lg border hover:bg-slate-100 flex items-center gap-1 bg-white text-slate-600 font-bold border-slate-200"
+        >
+          Switch Project <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    </div>
+  )
+}

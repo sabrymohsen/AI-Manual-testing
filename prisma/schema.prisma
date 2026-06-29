@@ -91,6 +91,11 @@ enum ExecutionMode {
   Debug
 }
 
+enum ExecutionType {
+  Manual
+  Automated
+}
+
 enum TestCaseSource {
   Manual
   AIGenerated
@@ -138,6 +143,16 @@ enum ActionType {
   assert_api_status
   screenshot
   custom_instruction
+  visible
+  hidden
+  text_contains
+  text_equals
+  value_equals
+  url_equals
+  url_contains
+  title_contains
+  wait
+  note
 }
 
 enum TargetType {
@@ -212,6 +227,7 @@ model Project {
   testRuns    TestRun[]
   auditLogs   AuditLog[]
   elementLocators ElementLocator[]
+  elementCollections ElementCollection[]
   recordingSessions RecordingSession[]
   modules     ProjectModule[]
   features    ProjectFeature[]
@@ -292,6 +308,7 @@ model TestCase {
   priority        Priority        @default(Medium)
   preconditions   String?
   source          TestCaseSource  @default(Manual)
+  executionType   ExecutionType   @default(Manual)
 
   moduleId        String?
   moduleRelation  ProjectModule?   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
@@ -324,6 +341,7 @@ model TestCase {
   @@index([componentId])
   @@index([priority])
   @@index([source])
+  @@index([executionType])
 }
 
 model TestStep {
@@ -587,6 +605,12 @@ model BugReport {
   consoleLogs      String?
   networkErrors    String?
 
+  // Auto-captured live-session context (Testing Workstation)
+  pageUrl          String?
+  osInfo           String?
+  screenResolution String?
+  videoUrl         String?
+
   comments         BugComment[]
   activities       BugActivity[]
   bugAttachments   BugAttachment[]
@@ -684,6 +708,9 @@ model ElementLocator {
   isValidated         Boolean           @default(false)
   matchCount          Int?
   lastValidatedAt     DateTime?
+  collectionId        String?
+  collection          ElementCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  actionType          String?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -692,6 +719,21 @@ model ElementLocator {
   @@index([featureId])
   @@index([componentId])
   @@index([locatorType])
+  @@index([collectionId])
+}
+
+model ElementCollection {
+  id          String           @id @default(uuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  pageUrls    String[]
+  elements    ElementLocator[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([projectId])
 }
 
 model RecordingSession {

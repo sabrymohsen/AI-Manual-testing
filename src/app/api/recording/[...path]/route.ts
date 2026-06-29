@@ -538,9 +538,49 @@ export async function POST(
     if (path.length === 2 && path[1] === "cancel") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
+
+      // Best-effort: ask the worker to close the browser. If the worker is offline
+      // the browser is already gone — skip gracefully and clean up the DB anyway.
+      let workerStopped = false
       try {
         await recorderWorkerRequest(`/sessions/${sessionId}/cancel`, { method: "POST", body: "{}" })
-        return NextResponse.json({ success: true })
+        workerStopped = true
+      } catch {
+        // Worker offline or session unknown — proceed to DB cleanup
+      }
+
+      // Always mark the session Cancelled so recoverActiveSession() won't resurface it
+      await prisma.recordingSession.updateMany({
+        where: { id: sessionId, status: { not: "Cancelled" } },
+        data: { status: "Cancelled", finishedAt: new Date() },
+      })
+
+      return NextResponse.json({ success: true, workerStopped })
+    }
+
+    // POST /api/recording/[sessionId]/screenshot
+    if (path.length === 2 && path[1] === "screenshot") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      try {
+        const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/screenshot`, { method: "POST", body: "{}" })
+        return NextResponse.json(result)
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
+    }
+
+    // POST /api/recording/[sessionId]/bug — create a bug report from the live session
+    if (path.length === 2 && path[1] === "bug") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const body = await request.json()
+      try {
+        const result = await recorderWorkerRequest<{ bug: unknown }>(`/sessions/${sessionId}/bug`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        })
+        return NextResponse.json(result)
       } catch (err) {
         return workerErrorResponse(err)
       }

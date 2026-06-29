@@ -26,6 +26,7 @@ export default function NewTestCasePage() {
   const [steps, setSteps] = useState<Step[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [executionType, setExecutionType] = useState<"Manual" | "Automated">("Manual")
 
   const [moduleId, setModuleId] = useState("")
   const [featureId, setFeatureId] = useState("")
@@ -47,6 +48,7 @@ export default function NewTestCasePage() {
       priority: form.get("priority"),
       preconditions: form.get("preconditions") || null,
       source: "Manual",
+      executionType,
       testData: null,
       tags: [],
       steps: steps.map((s) => ({
@@ -63,7 +65,7 @@ export default function NewTestCasePage() {
     })
 
     if (res.ok) {
-      router.push(`/projects/${params.id}`)
+      router.push(`/projects/${params.id}/test-cases`)
     } else {
       const data = await res.json()
       setError(data.error || "Failed to create test case")
@@ -92,6 +94,44 @@ export default function NewTestCasePage() {
           <div className="space-y-2 col-span-2">
             <Label htmlFor="preconditions">Preconditions</Label>
             <Input id="preconditions" name="preconditions" placeholder="e.g. User must be logged out" />
+          </div>
+        </div>
+
+        {/* Execution Type Picker */}
+        <div className="border rounded-2xl p-5 bg-accent/5 space-y-3 shadow-sm border-accent/20">
+          <h3 className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Execution Type</h3>
+          <p className="text-xs text-muted-foreground">How will this test case be executed?</p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setExecutionType("Manual")}
+              className={`rounded-xl border p-4 text-left transition-all ${
+                executionType === "Manual"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-md"
+                  : "border-input hover:border-muted-foreground/40 hover:bg-accent/30"
+              }`}
+            >
+              <div className="font-semibold text-sm flex items-center gap-2">
+                <span className={`text-base ${executionType === "Manual" ? "text-blue-600" : "text-muted-foreground"}`}>👤</span>
+                Manual
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">A human tester executes steps one by one in a manual session.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setExecutionType("Automated")}
+              className={`rounded-xl border p-4 text-left transition-all ${
+                executionType === "Automated"
+                  ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20 shadow-md"
+                  : "border-input hover:border-muted-foreground/40 hover:bg-accent/30"
+              }`}
+            >
+              <div className="font-semibold text-sm flex items-center gap-2">
+                <span className={`text-base ${executionType === "Automated" ? "text-violet-600" : "text-muted-foreground"}`}>⚡</span>
+                Automated
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">Steps are executed by Playwright. Requires selectors and actionable step types.</p>
+            </button>
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import http from "node:http"
 import { URL } from "node:url"
+import { saveFile } from "@/lib/storage"
 import {
   startSession,
   pauseSession,
@@ -15,6 +16,17 @@ import {
   getSessionConnectionStatus,
   activeSessions,
 } from "@/lib/recording/session-manager"
+import {
+  startPickerSession,
+  getPickerSessionState,
+  ackPickerCommand,
+  pausePickerSession,
+  clearPickerElements,
+  removePickerElement,
+  stopPickerSession,
+  createBugFromPickerElement,
+  activePickerSessions,
+} from "@/lib/recording/picker-session-manager"
 
 const PORT = Number(process.env.RECORDER_WORKER_PORT) || 3847
 
@@ -140,6 +152,17 @@ const server = http.createServer(async (req, res) => {
           sendJson(res, 200, { bug })
           return
         }
+        case "screenshot": {
+          const activeSess = activeSessions.get(sessionId)
+          if (!activeSess) {
+            sendJson(res, 400, { error: "Active session not found" })
+            return
+          }
+          const buffer = await activeSess.page.screenshot({ type: "png" })
+          const screenshotPath = await saveFile("screenshots", `screenshot-${sessionId}-${Date.now()}.png`, buffer)
+          sendJson(res, 200, { screenshotPath })
+          return
+        }
         default:
           sendJson(res, 404, { error: "Unknown session action" })
           return
@@ -152,6 +175,60 @@ const server = http.createServer(async (req, res) => {
       const result = await validateStepLocator(stepId)
       sendJson(res, 200, result)
       return
+    }
+
+    // ---- Multi-element picker ----
+    if (req.method === "POST" && path === "/picker/start") {
+      const body = await readBody(req)
+      const { projectId, url, credentialId } = body
+      if (!projectId || !url) {
+        sendJson(res, 400, { error: "projectId and url are required" })
+        return
+      }
+      const state = await startPickerSession({ projectId, url, credentialId: credentialId || null })
+      sendJson(res, 201, state)
+      return
+    }
+
+    const pickerElementsMatch = path.match(/^\/picker\/([^/]+)\/elements$/)
+    if (pickerElementsMatch && req.method === "GET") {
+      sendJson(res, 200, getPickerSessionState(pickerElementsMatch[1]))
+      return
+    }
+
+    const pickerActionMatch = path.match(/^\/picker\/([^/]+)\/(.+)$/)
+    if (pickerActionMatch && req.method === "POST") {
+      const sessionId = pickerActionMatch[1]
+      const action = pickerActionMatch[2]
+      const body = await readBody(req)
+      switch (action) {
+        case "pause":
+          sendJson(res, 200, await pausePickerSession(sessionId, true))
+          return
+        case "resume":
+          sendJson(res, 200, await pausePickerSession(sessionId, false))
+          return
+        case "clear":
+          sendJson(res, 200, await clearPickerElements(sessionId))
+          return
+        case "ack":
+          sendJson(res, 200, ackPickerCommand(sessionId))
+          return
+        case "remove-element":
+          sendJson(res, 200, removePickerElement(sessionId, body.elementId))
+          return
+        case "stop":
+          sendJson(res, 200, await stopPickerSession(sessionId))
+          return
+        case "bug": {
+          const bug = await createBugFromPickerElement(sessionId, body.elementId || null, body)
+          sendJson(res, 200, { bug })
+          return
+        }
+        default:
+          sendJson(res, 404, { error: "Unknown picker action" })
+          return
+      }
     }
 
     sendJson(res, 404, { error: "Not found" })
@@ -178,6 +255,14 @@ process.on("SIGINT", async () => {
       // ignore
     }
     activeSessions.delete(sessionId)
+  }
+  for (const [pickerId, pick] of activePickerSessions.entries()) {
+    try {
+      await pick.browser.close()
+    } catch {
+      // ignore
+    }
+    activePickerSessions.delete(pickerId)
   }
   server.close()
   process.exit(0)

@@ -415,6 +415,76 @@ async function runActionOnLocator(
       await page.waitForURL(step.targetValue || "", { timeout })
       break
 
+    // --- New recorder assertion types ---
+    case "visible":
+      await locator.waitFor({ state: "visible", timeout })
+      break
+
+    case "hidden":
+      await locator.waitFor({ state: "hidden", timeout })
+      break
+
+    case "text_contains": {
+      await locator.waitFor({ state: "visible", timeout })
+      const tc = (await locator.textContent()) || ""
+      const tcExpected = step.inputValue || ""
+      if (!tc.includes(tcExpected)) {
+        throw new Error(`Expected element to contain "${tcExpected}" but got "${tc.substring(0, 200)}"`)
+      }
+      break
+    }
+
+    case "text_equals": {
+      await locator.waitFor({ state: "visible", timeout })
+      const te = ((await locator.textContent()) || "").trim()
+      const teExpected = (step.inputValue || "").trim()
+      if (te !== teExpected) {
+        throw new Error(`Expected element text to equal "${teExpected}" but got "${te.substring(0, 200)}"`)
+      }
+      break
+    }
+
+    case "value_equals": {
+      await locator.waitFor({ state: "visible", timeout })
+      const ve = await locator.inputValue()
+      if (ve !== (step.inputValue || "")) {
+        throw new Error(`Expected element value to equal "${step.inputValue}" but got "${ve}"`)
+      }
+      break
+    }
+
+    case "url_equals": {
+      const ueActual = page.url()
+      if (ueActual !== (step.inputValue || "")) {
+        throw new Error(`Expected URL to equal "${step.inputValue}" but got "${ueActual}"`)
+      }
+      break
+    }
+
+    case "url_contains": {
+      const ucActual = page.url()
+      if (!ucActual.includes(step.inputValue || "")) {
+        throw new Error(`Expected URL to contain "${step.inputValue}" but got "${ucActual}"`)
+      }
+      break
+    }
+
+    case "title_contains": {
+      const tcTitle = await page.title()
+      if (!tcTitle.includes(step.inputValue || "")) {
+        throw new Error(`Expected page title to contain "${step.inputValue}" but got "${tcTitle}"`)
+      }
+      break
+    }
+
+    case "wait":
+      await page.waitForTimeout(parseInt(step.inputValue || "1000", 10))
+      break
+
+    case "note":
+      // Informational step — no execution needed
+      break
+
     case "screenshot":
     case "assert_api_status":
     case "custom_instruction":
@@ -822,6 +892,35 @@ async function attemptAutoHealing(
   return false
 }
 
+// Best-effort: let any navigation / SPA re-render triggered by the previous action
+// settle before the next step runs. Every wait is wrapped so a slow or never-idle
+// page can't fail an otherwise-passing step — it only ever delays, never throws.
+async function waitForDomStable(page: Page, timeout: number): Promise<void> {
+  try {
+    await page.waitForLoadState("domcontentloaded", { timeout })
+  } catch { /* already loaded or navigation timed out — proceed */ }
+
+  try {
+    // networkidle can hang forever on apps with websockets / long-polling, so cap it low.
+    await page.waitForLoadState("networkidle", { timeout: Math.min(timeout, 5000) })
+  } catch { /* persistent connections keep the network busy — proceed */ }
+
+  // Mirror the open_url SPA-loader handling: if a known loader is on screen, wait for it to hide.
+  try {
+    const loaderSelector = "app-splash-screen, .splash-screen, #loader, .loading-dots"
+    const loaderVisible = await page.locator(loaderSelector).first().isVisible().catch(() => false)
+    if (loaderVisible) {
+      console.log(`[step-executor] Post-action SPA loader detected. Waiting for it to hide...`)
+      await page.waitForFunction((sel) => {
+        return Array.from(document.querySelectorAll(sel)).every((el) => {
+          const rect = (el as HTMLElement).getBoundingClientRect()
+          return rect.width === 0 || rect.height === 0
+        })
+      }, loaderSelector, { timeout })
+    }
+  } catch { /* loader probe failed — proceed */ }
+}
+
 export async function executeStep(page: Page, step: Step): Promise<void> {
   const { actionType, targetType, targetValue, inputValue, timeoutMs } = step
   const timeout = Math.max(timeoutMs || 0, 10000)
@@ -829,6 +928,13 @@ export async function executeStep(page: Page, step: Step): Promise<void> {
   if (actionType === "open_url") {
     const defaultLoc = page.locator("html")
     await runActionOnLocator(defaultLoc, actionType, inputValue, step, page, timeout)
+    return
+  }
+
+  // These action types operate on the page directly — no locator or auto-healing needed
+  const pageOnlyActions = new Set(["url_equals", "url_contains", "title_contains", "wait", "note"])
+  if (pageOnlyActions.has(actionType)) {
+    await runActionOnLocator(page.locator("html"), actionType, inputValue, step, page, timeout)
     return
   }
 
@@ -841,4 +947,7 @@ export async function executeStep(page: Page, step: Step): Promise<void> {
       throw primaryError
     }
   }
+
+  // Auto-wait for the DOM to settle after the action so the next step starts on a stable page.
+  await waitForDomStable(page, timeout)
 }

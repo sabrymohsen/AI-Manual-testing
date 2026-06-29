@@ -21,6 +21,7 @@ interface TestCase {
   featureId: string | null
   componentId: string | null
   priority: string
+  executionType: string
   steps: any[]
 }
 
@@ -445,17 +446,32 @@ export default function NewManualSessionPage() {
                             {isSelected && <Check size={12} strokeWidth={3} />}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center justify-between mb-0.5">
+                            <div className="flex items-center justify-between mb-0.5 gap-2 flex-wrap">
                               <span className="font-semibold text-sm text-slate-800">{tc.title}</span>
-                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                                tc.priority === "Critical" ? "bg-red-100 text-red-700" :
-                                tc.priority === "High" ? "bg-orange-100 text-orange-700" :
-                                "bg-slate-100 text-slate-600"
-                              }`}>
-                                {tc.priority}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                {tc.executionType === "Automated" && (
+                                  <span
+                                    title="Automated test — designed for Playwright, not manual step-by-step execution"
+                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-0.5"
+                                  >
+                                    ⚠ Automated
+                                  </span>
+                                )}
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                                  tc.priority === "Critical" ? "bg-red-100 text-red-700" :
+                                  tc.priority === "High" ? "bg-orange-100 text-orange-700" :
+                                  "bg-slate-100 text-slate-600"
+                                }`}>
+                                  {tc.priority}
+                                </span>
+                              </div>
                             </div>
                             <span className="text-[11px] text-slate-400">{tc.module || "General"}</span>
+                            {tc.executionType === "Automated" && isSelected && (
+                              <p className="text-[10px] text-amber-600 mt-0.5">
+                                This case is marked Automated. Steps are designed for Playwright — running it manually may not be meaningful.
+                              </p>
+                            )}
                           </div>
                         </div>
                       )

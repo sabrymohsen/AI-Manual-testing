@@ -9,6 +9,7 @@ import {
   getSessionStats,
   saveRecordedCaseAsTestCase,
 } from "@/lib/recording/session-store"
+import { syncBugReportToOpenProject } from "@/lib/integrations/openproject/sync-bug-report"
 
 export { getSessionStats } from "@/lib/recording/session-store"
 
@@ -22,6 +23,13 @@ export interface ActiveSession {
   networkErrors: string[]
   toolbarInjected: boolean
   connectionStatus: "Connected" | "Disconnected" | "Reconnecting" | "BrowserClosed" | "ToolbarNotInjected" | "WorkerOffline"
+  // Session kind: "Recorder" (test studio) or "Workstation" (live exploratory QA)
+  mode: "Recorder" | "Workstation"
+  // Video is recorded at the context level but only retained on finish when the
+  // user opted in. In Workstation mode this is driven by the toolbar; Recorder
+  // mode keeps the legacy always-save behavior.
+  videoEnabled: boolean
+  videoEverEnabled: boolean
 }
 
 export type SessionConnectionStatus = {
@@ -190,8 +198,10 @@ export async function startSession(
     moduleId?: string | null
     featureId?: string | null
     componentId?: string | null
+    mode?: "Recorder" | "Workstation"
   }
 ) {
+  const sessionMode: "Recorder" | "Workstation" = options.mode === "Workstation" ? "Workstation" : "Recorder"
   let roleUsed = "None"
   if (options.requiredCredentialId) {
     const cred = await prisma.projectCredential.findUnique({
@@ -265,7 +275,17 @@ export async function startSession(
   const context = await browser.newContext({
     viewport: { width, height },
     bypassCSP: true,
+    recordVideo: {
+      dir: "public/videos/raw",
+      size: { width, height }
+    }
   })
+
+  // Set up automatic content script injection on context before creating any page.
+  if (sessionMode === "Workstation") {
+    await context.addInitScript("window.__QA_WORKSTATION_MODE = true;")
+  }
+  await context.addInitScript(INJECTED_RECORDER_SCRIPT)
 
   page = await context.newPage()
   attachBrowserLifecycleHandlers(sessionId, browser, page)
@@ -332,6 +352,9 @@ export async function startSession(
     networkErrors,
     toolbarInjected: false,
     connectionStatus: "Connected",
+    mode: sessionMode,
+    videoEnabled: false,
+    videoEverEnabled: false,
   })
 
   await prisma.recordingSession.update({
@@ -468,6 +491,16 @@ export async function startSession(
         const sessionDb = await prisma.recordingSession.findUnique({
           where: { id: sessionId }
         })
+        const stepCount = await prisma.recordedStep.count({
+          where: { recordedTestCaseId: activeSess.currentTestCaseId }
+        })
+        const lastSteps = await prisma.recordedStep.findMany({
+          where: { recordedTestCaseId: activeSess.currentTestCaseId, includeInFinalTestCase: true },
+          orderBy: { stepNumber: "desc" },
+          take: 5,
+          select: { stepNumber: true, actionType: true, actionDescription: true }
+        })
+        lastSteps.reverse()
         return {
           success: true,
           caseTitle: activeCase?.title || "",
@@ -475,7 +508,8 @@ export async function startSession(
           sessionStatus: sessionDb?.status || "Active",
           consoleErrorsCount: activeSess.consoleErrors.length,
           networkErrorsCount: activeSess.networkErrors.length,
-          currentStepCount: await prisma.recordedStep.count({ where: { recordedTestCaseId: activeSess.currentTestCaseId } })
+          currentStepCount: stepCount,
+          lastSteps
         }
       }
 
@@ -537,6 +571,18 @@ export async function startSession(
         return { success: true, bug }
       }
 
+      // Toolbar-driven video recording (Workstation). Playwright records at the
+      // context level, so these toggle whether the clip is retained on finish.
+      if (actionData.actionType === "video_start") {
+        activeSess.videoEnabled = true
+        activeSess.videoEverEnabled = true
+        return { success: true, videoEnabled: true }
+      }
+      if (actionData.actionType === "video_stop") {
+        activeSess.videoEnabled = false
+        return { success: true, videoEnabled: false }
+      }
+
       if (actionData.actionType === "add_note") {
         const note = await prisma.recordingSessionNote.create({
           data: {
@@ -561,6 +607,14 @@ export async function startSession(
       const stepCount = await prisma.recordedStep.count({
         where: { recordedTestCaseId: activeSess.currentTestCaseId },
       })
+
+      // Auto-wait for the DOM to settle (e.g. when the action triggered a navigation) before
+      // snapshotting the step, so the captured screenshot/url reflect the loaded page. Best-effort:
+      // every wait is capped and swallowed so a slow page never blocks recording.
+      try {
+        await page.waitForLoadState("domcontentloaded", { timeout: 5000 })
+        await page.waitForLoadState("networkidle", { timeout: 3000 })
+      } catch { /* already loaded or still busy — proceed with capture */ }
 
       // Take screenshot after the action is registered with a 1500ms safety timeout to prevent hanging during navigations
       let screenshotPath: string | null = null
@@ -632,7 +686,7 @@ export async function startSession(
           pageUrl: actionData.pageUrl || page.url(),
           actionType: actionData.actionType,
           actionDescription: actionData.actionDescription,
-          targetType: actionData.targetType,
+          targetType: actionData.targetType || "none",
           targetValue: actionData.targetValue || null,
           inputValue: safeInputValue,
           tagName: actionData.tagName || null,
@@ -671,9 +725,6 @@ export async function startSession(
       return { success: false, error: "Database save error" }
     }
   })
-
-  // 7. Set up automatic content script injection on reloads/navigations
-  await page.addInitScript(INJECTED_RECORDER_SCRIPT)
 
   // 8. Auto-login if credentials selected
   if (options.requiredCredentialId) {
@@ -815,6 +866,24 @@ export async function finishSession(sessionId: string) {
 
   const activeSess = activeSessions.get(sessionId)
   if (activeSess) {
+    // Recorder/Test Studio keeps the legacy always-save behavior. Workstation
+    // only retains the clip when the tester turned recording on via the toolbar.
+    const shouldSaveVideo =
+      activeSess.mode === "Workstation" ? activeSess.videoEverEnabled : true
+    try {
+      const video = activeSess.page.video()
+      if (video && shouldSaveVideo) {
+        const videoPath = await video.path()
+        const fs = await import("node:fs/promises")
+        await fs.mkdir("public/videos", { recursive: true }).catch(() => {})
+        await fs.copyFile(videoPath, `public/videos/${sessionId}.webm`).catch((err) => {
+          console.error("Error copying session video:", err)
+        })
+      }
+    } catch (err) {
+      console.error("Error capturing video:", err)
+    }
+
     try {
       await activeSess.browser.close()
     } catch (err) {
@@ -1038,14 +1107,22 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
   })
   if (!draftCase) throw new Error("Active test case not found")
 
+  // Load the session record for real browser / viewport / URL metadata
+  const sessionRecord = await prisma.recordingSession.findUnique({
+    where: { id: sessionId },
+  })
+
   // Generate bugKey
   const count = await prisma.bugReport.count({ where: { projectId: activeSess.projectId } })
   const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
 
-  // Format steps to reproduce
-  const stepsText = draftCase.steps
+  // Steps to reproduce — prefer tester-edited text, else auto-build from recorded steps
+  const autoStepsText = draftCase.steps
     .map(s => `${s.stepNumber}. ${s.actionDescription}`)
     .join("\n")
+  const stepsText = (bugData.stepsToReproduce && String(bugData.stepsToReproduce).trim())
+    ? String(bugData.stepsToReproduce).trim()
+    : autoStepsText
 
   // Save screenshot if screenshotPath is provided or take viewport screenshot
   let finalScreenshot: string | null = bugData.screenshotPath || null
@@ -1057,6 +1134,28 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
       console.error("Bug screenshot error:", err)
     }
   }
+
+  // Resolve current URL — live page wins, then client-reported, then session record
+  let currentUrl: string | null = null
+  try {
+    currentUrl = activeSess.page.url()
+  } catch {}
+  currentUrl = currentUrl || bugData.clientContext?.url || sessionRecord?.currentUrl || sessionRecord?.startUrl || null
+
+  // Best-effort link to the in-progress session video (finalized on finish)
+  let videoUrl: string | null = null
+  try {
+    const fs = await import("node:fs/promises")
+    await fs.access(`public/videos/${sessionId}.webm`)
+    videoUrl = `/videos/${sessionId}.webm`
+  } catch {}
+
+  // Auto-captured environment context (spec §3 "AUTO-FILLED DATA"), stored as
+  // first-class columns so they are filterable and displayable in the bug UI.
+  const ctx = bugData.clientContext || {}
+  const screenResolution: string | null = ctx.screenResolution
+    ? (ctx.viewportSize ? `${ctx.screenResolution} (viewport ${ctx.viewportSize})` : ctx.screenResolution)
+    : null
 
   // Create BugReport
   const bug = await prisma.bugReport.create({
@@ -1073,14 +1172,19 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
       status: "Open",
       environment: "Dev",
       roleUsed: "None",
-      browser: "Chromium",
-      viewport: "Desktop",
+      browser: sessionRecord?.browserType || "Chromium",
+      viewport: sessionRecord?.viewport || "Desktop",
       stepsToReproduce: stepsText || "No steps recorded yet.",
-      expectedResult: "Application operates correctly.",
+      expectedResult: (bugData.expectedResult && String(bugData.expectedResult).trim())
+        || "Application operates correctly.",
       actualResult: bugData.actualResult || "Error occurred during execution.",
       screenshotPath: finalScreenshot,
       consoleLogs: activeSess.consoleErrors.join("\n") || null,
       networkErrors: activeSess.networkErrors.join("\n") || null,
+      pageUrl: currentUrl,
+      osInfo: ctx.os || null,
+      screenResolution,
+      videoUrl,
     }
   })
 
@@ -1092,6 +1196,22 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
       details: `Manual bug report created inside recorder workspace. ID: ${bugKey}.`
     }
   })
+
+  // Best-effort: auto-sync to OpenProject when the project has it enabled.
+  // Fire-and-forget so the toolbar response is never blocked by an external call.
+  void syncBugReportToOpenProject(bug.id, { requireAutoFlag: true })
+    .then(async (r) => {
+      if (r.status === "skipped") return
+      console.log(`[op-sync] session bug ${bugKey} ${r.status} → WP ${r.externalId}`)
+      await prisma.bugActivity.create({
+        data: {
+          bugId: bug.id,
+          action: "SYNC_OPENPROJECT",
+          details: `Auto-synced to OpenProject work package #${r.externalId} (${r.status}).`,
+        },
+      }).catch(() => {})
+    })
+    .catch((err) => console.error("[op-sync] session bug auto-sync failed:", err))
 
   return bug
 }

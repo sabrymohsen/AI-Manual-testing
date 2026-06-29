@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   const componentId = searchParams.get("componentId") || undefined
   const priority = searchParams.get("priority") || undefined
   const source = searchParams.get("source") || undefined
+  const executionType = searchParams.get("executionType") || undefined
   const lastRunStatus = searchParams.get("lastRunStatus") || undefined
   const requirementLinked = searchParams.get("requirementLinked") || undefined
   const hasBug = searchParams.get("hasBug") || undefined
@@ -62,6 +63,10 @@ export async function GET(request: NextRequest) {
 
   if (source) {
     where.source = source as any
+  }
+
+  if (executionType) {
+    where.executionType = executionType as any
   }
 
   // Handle incomplete
