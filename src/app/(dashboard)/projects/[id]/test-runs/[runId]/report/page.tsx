@@ -21,12 +21,35 @@ export default function ReportPage() {
   const [syncing, setSyncing] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/projects/${params.id}/test-runs/${params.runId}`)
-      .then((res) => res.json())
-      .then((data) => {
+    const TERMINAL = ["Passed", "Failed", "Blocked", "Warning", "Cancelled"]
+    let interval: ReturnType<typeof setInterval> | null = null
+    let cancelled = false
+
+    async function load() {
+      try {
+        const res = await fetch(`/api/projects/${params.id}/test-runs/${params.runId}`)
+        const data = await res.json()
+        if (cancelled) return
         setTestRun(data.testRun)
         setLoading(false)
-      })
+        // Stop polling once the run reaches a terminal state.
+        if (interval && data.testRun && TERMINAL.includes(data.testRun.status)) {
+          clearInterval(interval)
+          interval = null
+        }
+      } catch {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    load()
+    // Poll for live step/status updates while the run is still executing.
+    interval = setInterval(load, 2000)
+
+    return () => {
+      cancelled = true
+      if (interval) clearInterval(interval)
+    }
   }, [params.id, params.runId])
 
   // Load OpenProject sync status for the test run's test case

@@ -14,28 +14,104 @@ export async function GET(
   const { searchParams } = new URL(request.url)
   const severity = searchParams.get("severity")
   const priority = searchParams.get("priority")
+  const status = searchParams.get("status")
+  const source = searchParams.get("source")
+  const search = searchParams.get("search") || ""
+
+  // Build prisma query constraints matching user project scope
+  const where: any = {
+    AND: [
+      {
+        OR: [
+          { projectId: params.projectId },
+          { testRun: { projectId: params.projectId } },
+          { manualTestSession: { projectId: params.projectId } }
+        ]
+      }
+    ]
+  }
+
+  if (severity && severity !== "all") {
+    where.AND.push({ severity: severity as any })
+  }
+  if (priority && priority !== "all") {
+    where.AND.push({ priority: priority as any })
+  }
+  if (status && status !== "all") {
+    where.AND.push({ status: status as any })
+  }
+  if (source && source !== "all") {
+    if (source === "Auto") {
+      where.AND.push({
+        OR: [
+          { testRunId: { not: null } },
+          { testStepResultId: { not: null } }
+        ]
+      })
+    } else {
+      // Find matches on manual sessions or manual creation
+      where.AND.push({
+        testRunId: null,
+        testStepResultId: null
+      })
+    }
+  }
+
+  if (search) {
+    where.AND.push({
+      OR: [
+        { title: { contains: search, mode: "insensitive" } },
+        { bugKey: { contains: search, mode: "insensitive" } },
+        { stepsToReproduce: { contains: search, mode: "insensitive" } },
+        { actualResult: { contains: search, mode: "insensitive" } },
+        { expectedResult: { contains: search, mode: "insensitive" } }
+      ]
+    })
+  }
 
   const bugReports = await prisma.bugReport.findMany({
-    where: {
-      OR: [
-        { testRun: { projectId: params.projectId } },
-        { manualTestSession: { projectId: params.projectId } }
-      ],
-      ...(severity ? { severity: severity as any } : {}),
-      ...(priority ? { priority: priority as any } : {}),
-    },
+    where,
     include: {
+      testCase: {
+        select: { id: true, title: true }
+      },
       testRun: {
-        select: { id: true, status: true, browserType: true },
+        select: { id: true, status: true, browserType: true, createdAt: true }
       },
       manualTestSession: {
         select: { id: true, name: true, browserType: true }
+      },
+      comments: {
+        orderBy: { createdAt: "desc" }
+      },
+      activities: {
+        orderBy: { createdAt: "desc" }
+      },
+      occurrences: {
+        orderBy: { occurredAt: "desc" }
       }
     },
-    orderBy: { createdAt: "desc" },
+    orderBy: { createdAt: "desc" }
   })
 
-  return NextResponse.json({ bugReports })
+  const syncMappings = await prisma.externalSyncMapping.findMany({
+    where: {
+      projectId: params.projectId,
+      localEntityType: "BugReport"
+    }
+  })
+
+  const bugReportsWithSync = bugReports.map(bug => {
+    const mapping = syncMappings.find(m => m.localEntityId === bug.id)
+    return {
+      ...bug,
+      openProjectSyncStatus: mapping ? (mapping.lastSyncStatus === "success" ? "Synced" : "Failed") : "Not Synced",
+      openProjectWorkPackageId: mapping?.externalId || null,
+      openProjectWorkPackageUrl: mapping?.externalUrl || null
+    }
+  })
+
+  return NextResponse.json({ bugReports: bugReportsWithSync })
 }
 
 export async function POST(
@@ -52,18 +128,19 @@ export async function POST(
     screenshotPath: z.string().optional().nullable(),
     consoleLogs: z.string().optional().nullable(),
     networkErrors: z.string().optional().nullable(),
+    videoUrl: z.string().optional().nullable(),
+    openProjectParentId: z.string().optional().nullable(),
+    pageUrl: z.string().optional().nullable(),
   })
   const parsed = bugReportBodySchema.safeParse(body)
   if (!parsed.success) {
     return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
 
-  // Get test run or manual session to populate environment/browser/viewport
   let env = "Staging"
   let roleUsed = "None"
   let browser = "Chromium"
   let viewport = "Desktop"
-
   let testCaseId: string | null = null
 
   if (parsed.data.testRunId) {
@@ -94,7 +171,6 @@ export async function POST(
     testCaseId = parsed.data.testCaseId
   }
 
-  // Inherit linked requirements from the test case
   let requirementIds: string[] = []
   if (testCaseId) {
     const tcRequirements = await prisma.testCaseRequirement.findMany({
@@ -103,31 +179,59 @@ export async function POST(
     requirementIds = tcRequirements.map((r) => r.requirementId)
   }
 
-  const bugReport = await prisma.bugReport.create({
-    data: {
-      title: parsed.data.title,
-      severity: parsed.data.severity || "Medium",
-      priority: parsed.data.priority || "Medium",
-      environment: env as any,
-      roleUsed,
-      stepsToReproduce: parsed.data.stepsToReproduce || "",
-      expectedResult: parsed.data.expectedResult || "",
-      actualResult: parsed.data.actualResult || "",
-      screenshotPath: parsed.data.screenshotPath || null,
-      consoleLogs: parsed.data.consoleLogs || null,
-      networkErrors: parsed.data.networkErrors || null,
-      browser: browser as any,
-      viewport: viewport as any,
-      testRunId: parsed.data.testRunId || null,
-      manualTestSessionId: parsed.data.manualTestSessionId || null,
-      requirements: requirementIds.length > 0
-        ? {
-            create: requirementIds.map((reqId) => ({
-              requirementId: reqId
-            }))
-          }
-        : undefined
-    },
+  // Generate sequential bug key e.g., BUG-0001
+  const count = await prisma.bugReport.count({ where: { projectId: params.projectId } })
+  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+
+  const bugReport = await prisma.$transaction(async (tx) => {
+    const bug = await tx.bugReport.create({
+      data: {
+        bugKey,
+        title: parsed.data.title,
+        projectId: params.projectId,
+        severity: parsed.data.severity || "Medium",
+        priority: parsed.data.priority || "Medium",
+        status: parsed.data.status || "Open",
+        resolution: parsed.data.resolution || null,
+        resolutionNote: parsed.data.resolutionNote || null,
+        tags: parsed.data.tags || [],
+        reporterId: auth.session!.user.id,
+        environment: env as any,
+        roleUsed,
+        stepsToReproduce: parsed.data.stepsToReproduce || "",
+        expectedResult: parsed.data.expectedResult || "",
+        actualResult: parsed.data.actualResult || "",
+        screenshotPath: parsed.data.screenshotPath || null,
+        consoleLogs: parsed.data.consoleLogs || null,
+        networkErrors: parsed.data.networkErrors || null,
+        videoUrl: parsed.data.videoUrl || null,
+        pageUrl: parsed.data.pageUrl || null,
+        assignedTo: parsed.data.assignedTo || null,
+        openProjectParentId: parsed.data.openProjectParentId || null,
+        browser: browser as any,
+        viewport: viewport as any,
+        testRunId: parsed.data.testRunId || null,
+        manualTestSessionId: parsed.data.manualTestSessionId || null,
+        testCaseId: testCaseId || null,
+        requirements: requirementIds.length > 0
+          ? {
+              create: requirementIds.map((reqId) => ({
+                requirementId: reqId
+              }))
+            }
+          : undefined
+      },
+    })
+
+    await tx.bugActivity.create({
+      data: {
+        bugId: bug.id,
+        action: "Bug Created",
+        details: `Bug report created manually. Key assigned: ${bugKey}.`
+      }
+    })
+
+    return bug
   })
 
   return NextResponse.json({ bugReport }, { status: 201 })

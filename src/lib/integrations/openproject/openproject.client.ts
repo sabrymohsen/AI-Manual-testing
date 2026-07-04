@@ -43,6 +43,17 @@ export interface OpUser {
   href: string
 }
 
+export interface OpCustomField {
+  key: string          // schema key, e.g. "customField6"
+  name: string         // human label, e.g. "Found in Build"
+  required: boolean
+  fieldType: string    // raw schema type, e.g. "String", "Formattable", "[]CustomOption"
+  isMulti: boolean     // true for "[]…" multi-value fields
+  isLink: boolean      // value(s) belong under _links (dropdown / references)
+  isFormattable: boolean
+  allowedValues: Array<{ href: string; title: string }>
+}
+
 export interface OpWorkPackage {
   id: number
   lockVersion: number
@@ -56,7 +67,9 @@ export interface OpWorkPackage {
 export interface OpCreateWPData {
   subject: string
   description?: { format: string; raw: string }
-  _links: Record<string, { href: string }>
+  _links: Record<string, any>
+  // Custom/scalar fields (e.g. customField6) are passed as top-level properties.
+  [key: string]: any
 }
 
 export interface OpTestConnectionResult {
@@ -270,6 +283,82 @@ export class OpenProjectClient {
     }))
   }
 
+  /**
+   * Returns the custom fields defined for a work-package type in this project,
+   * including required flags and the allowed values for list (dropdown) fields.
+   * Uses the work-package form endpoint, which resolves allowed values inline.
+   */
+  async getTypeCustomFields(
+    typeId: string | number,
+    opts: { onlyRequired?: boolean } = {}
+  ): Promise<OpCustomField[]> {
+    // The form endpoint needs the numeric project id.
+    let numericId: string = this.projectIdentifier
+    try {
+      const proj = await this.apiJson(`/api/v3/projects/${this.projectIdentifier}`)
+      if (proj?.id) numericId = String(proj.id)
+    } catch {
+      // fall back to identifier as-is
+    }
+
+    const res = await this.apiFetch(
+      `/api/v3/projects/${numericId}/work_packages/form`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ _links: { type: { href: this.typeHref(String(typeId)) } } }),
+      }
+    )
+    if (!res.ok) {
+      const text = await res.text().catch(() => "")
+      throw new Error(`Load type form failed: HTTP ${res.status} — ${text.slice(0, 200)}`)
+    }
+    const form = await res.json()
+    const schema = form?._embedded?.schema || {}
+
+    const fields: OpCustomField[] = []
+    for (const [key, raw] of Object.entries<any>(schema)) {
+      if (!key.startsWith("customField") || !raw || typeof raw !== "object") continue
+      if (opts.onlyRequired && raw.required !== true) continue
+
+      const fieldType: string = raw.type || "String"
+      const isMulti = fieldType.startsWith("[]")
+      const baseType = fieldType.replace(/^\[\]/, "")
+      // Link-valued fields (dropdowns / references) go under _links; scalar/text under the body.
+      const isLink = ["CustomOption", "User", "Version", "List"].includes(baseType) ||
+        !!(raw._links?.allowedValues || raw._embedded?.allowedValues)
+      const isFormattable = baseType === "Formattable"
+
+      let allowedValues: Array<{ href: string; title: string }> = []
+      const av = raw._links?.allowedValues
+      if (Array.isArray(av)) {
+        allowedValues = av.map((o: any) => ({ href: o.href, title: o.title || "" }))
+      } else if (av?.href) {
+        try {
+          const list = await this.apiJson(av.href)
+          allowedValues = (list?._embedded?.elements || []).map((o: any) => ({
+            href: o._links?.self?.href || "",
+            title: o.value || o.name || "",
+          }))
+        } catch {
+          allowedValues = []
+        }
+      }
+
+      fields.push({
+        key,
+        name: raw.name || key,
+        required: raw.required === true,
+        fieldType,
+        isMulti,
+        isLink,
+        isFormattable,
+        allowedValues,
+      })
+    }
+    return fields
+  }
+
   async getStatuses(): Promise<OpStatus[]> {
     const data = await this.apiJson(`/api/v3/statuses`)
     const elements: any[] = data?._embedded?.elements || []
@@ -294,29 +383,63 @@ export class OpenProjectClient {
   }
 
   async getBoards(): Promise<OpBoard[]> {
+    // A board's grid "scope" is stored as the URL of its index page, e.g.
+    // /projects/<id-or-slug>/boards — but OpenProject may persist either the
+    // numeric id OR the slug depending on how the board was created. Filtering by
+    // only one form silently returns zero boards (the "no boards appear" bug), so
+    // we resolve both forms and also keep an unfiltered fallback scan.
+    let numericId: string = this.projectIdentifier
+    let slug: string = this.projectIdentifier
     try {
-      // OpenProject grids API requires the numeric project ID in the scope path,
-      // not the slug identifier. Fetch the project first to get its numeric ID.
-      let numericId: string = this.projectIdentifier
-      try {
-        const proj = await this.apiJson(`/api/v3/projects/${this.projectIdentifier}`)
-        if (proj?.id) numericId = String(proj.id)
-      } catch {
-        // Fall back to identifier as-is
-      }
+      const proj = await this.apiJson(`/api/v3/projects/${this.projectIdentifier}`)
+      if (proj?.id) numericId = String(proj.id)
+      if (proj?.identifier) slug = proj.identifier
+    } catch {
+      // Fall back to identifier as-is
+    }
 
-      const scopeFilter = encodeURIComponent(
-        JSON.stringify([{ scope: { operator: "=", values: [`/projects/${numericId}/boards`] } }])
-      )
-      const data = await this.apiJson(`/api/v3/grids?filters=${scopeFilter}&pageSize=50`)
+    const mapEl = (b: any): OpBoard => {
+      const scopeHref: string = b._links?.scope?.href || ""
+      // OpenProject board grids expose the board's name as a top-level `name`
+      // property; scope.title / options.name are only fallbacks. Without `name`
+      // the dropdown would show "Board <id>" instead of the real board name.
+      const name: string =
+        b.name || b._links?.scope?.title || b.options?.name || `Board ${b.id}`
+      const attribute: string = b.options?.attribute || ""
+      const type = attribute || (b.options?.type === "basic" ? "basic" : "status")
+      return { id: b.id, name, type, href: scopeHref }
+    }
+
+    // 1. Try each scope form explicitly.
+    const scopeCandidates = Array.from(new Set([
+      `/projects/${numericId}/boards`,
+      `/projects/${slug}/boards`,
+    ]))
+    for (const scope of scopeCandidates) {
+      try {
+        const scopeFilter = encodeURIComponent(
+          JSON.stringify([{ scope: { operator: "=", values: [scope] } }])
+        )
+        const data = await this.apiJson(`/api/v3/grids?filters=${scopeFilter}&pageSize=50`)
+        const elements: any[] = data?._embedded?.elements || []
+        if (elements.length > 0) return elements.map(mapEl)
+      } catch {
+        // Try the next scope form / fallback
+      }
+    }
+
+    // 2. Fallback: list all grids and keep board scopes for this project.
+    try {
+      const data = await this.apiJson(`/api/v3/grids?pageSize=100`)
       const elements: any[] = data?._embedded?.elements || []
-      return elements.map((b) => {
-        const scopeHref: string = b._links?.scope?.href || ""
-        const name: string = b._links?.scope?.title || b.options?.name || `Board ${b.id}`
-        const attribute: string = b.options?.attribute || ""
-        const type = attribute || (b.options?.type === "basic" ? "basic" : "status")
-        return { id: b.id, name, type, href: scopeHref }
+      const filtered = elements.filter((b) => {
+        const href: string = b._links?.scope?.href || ""
+        return (
+          href.includes("/boards") &&
+          (href.includes(`/projects/${numericId}/`) || href.includes(`/projects/${slug}/`))
+        )
       })
+      return filtered.map(mapEl)
     } catch {
       return []
     }
@@ -414,6 +537,58 @@ export class OpenProjectClient {
     } catch {
       return null
     }
+  }
+
+  /**
+   * Permanently deletes a work package. Returns true on success (204) or when the
+   * work package no longer exists (404 — already gone, treated as success).
+   */
+  async deleteWorkPackage(wpId: string | number): Promise<boolean> {
+    const res = await this.apiFetch(`/api/v3/work_packages/${wpId}`, { method: "DELETE" }, false)
+    if (res.status === 204 || res.status === 200 || res.status === 404) return true
+    const text = await res.text().catch(() => "")
+    throw new Error(`Delete WP #${wpId} failed: HTTP ${res.status} — ${text.slice(0, 200)}`)
+  }
+
+  /**
+   * Returns the file names of the attachments already on a work package, so a
+   * re-sync doesn't upload the same screenshot twice.
+   */
+  async getWorkPackageAttachmentNames(wpId: string | number): Promise<string[]> {
+    try {
+      const data = await this.apiJson(`/api/v3/work_packages/${wpId}/attachments`)
+      const elements: any[] = data?._embedded?.elements || []
+      return elements.map((a: any) => a.fileName).filter(Boolean)
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Uploads a file as an attachment on a work package (multipart form-data).
+   * The OpenProject API expects a `metadata` JSON part and a `file` part. The
+   * Content-Type header is intentionally left unset so fetch adds the multipart
+   * boundary itself.
+   */
+  async uploadWorkPackageAttachment(
+    wpId: string | number,
+    fileName: string,
+    data: Buffer | Uint8Array,
+    contentType: string
+  ): Promise<boolean> {
+    const form = new FormData()
+    form.append("metadata", JSON.stringify({ fileName }))
+    const bytes = new Uint8Array(data)
+    form.append("file", new Blob([bytes], { type: contentType }), fileName)
+
+    const res = await this.apiFetch(
+      `/api/v3/work_packages/${wpId}/attachments`,
+      { method: "POST", body: form },
+      false
+    )
+    if (res.ok) return true
+    const text = await res.text().catch(() => "")
+    throw new Error(`Attach "${fileName}" to WP #${wpId} failed: HTTP ${res.status} — ${text.slice(0, 200)}`)
   }
 
   async createWorkPackage(data: OpCreateWPData): Promise<OpWorkPackage> {
@@ -528,6 +703,38 @@ export class OpenProjectClient {
     return patchRes.status === 200
   }
 
+  /**
+   * Adds a single work package to a free/basic board column WITHOUT dropping the
+   * work packages already placed there. Reads the widget's current id filter and
+   * merges in the new id (setBoardWidgetIdFilter, by contrast, replaces the whole
+   * filter — fine for a full group sync, wrong for placing one bug at a time).
+   */
+  async addWorkPackageToBoardWidget(boardId: number, widgetId: number, wpId: string | number): Promise<boolean> {
+    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
+    if (!gridRes.ok) return false
+    const grid = await gridRes.json()
+
+    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+    const target = widgets.find((w: any) => w.id === widgetId)
+    if (!target) return false
+
+    const existing: string[] = target.options?.filters?.[0]?.id?.values || []
+    const merged = Array.from(new Set([...existing.map(String), String(wpId)]))
+
+    const updatedWidgets = widgets.map((w: any) =>
+      w.id === widgetId
+        ? { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: merged } }] } }
+        : w
+    )
+
+    const patchRes = await this.apiFetch(`/api/v3/grids/${boardId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ widgets: updatedWidgets }),
+    })
+    return patchRes.status === 200
+  }
+
   async addWorkPackageComment(wpId: string | number, markdown: string): Promise<boolean> {
     const res = await this.apiFetch(
       `/api/v3/work_packages/${wpId}/activities`,
@@ -597,6 +804,63 @@ export class OpenProjectClient {
 
   versionHref(versionId: string): string {
     return `/api/v3/versions/${versionId}`
+  }
+
+  priorityHref(priorityId: string | number): string {
+    return `/api/v3/priorities/${priorityId}`
+  }
+
+  /**
+   * Returns the priorities defined in the connected OpenProject instance so a
+   * bug's priority can be mapped onto the work package's native priority field.
+   */
+  async getPriorities(): Promise<Array<{ id: string; name: string }>> {
+    try {
+      const data = await this.apiJson(`/api/v3/priorities`)
+      const elements: any[] = data?._embedded?.elements || []
+      return elements.map((e: any) => ({ id: String(e.id), name: e.name || `Priority ${e.id}` }))
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * Returns the assignable users (project members) of the connected project by
+   * reading OpenProject memberships. Groups/placeholder principals are skipped —
+   * only real users can be set as a work-package assignee.
+   */
+  async getMembers(): Promise<Array<{ id: string; name: string }>> {
+    try {
+      let numericId: string = this.projectIdentifier
+      try {
+        const proj = await this.apiJson(`/api/v3/projects/${this.projectIdentifier}`)
+        if (proj?.id) numericId = String(proj.id)
+      } catch {
+        // Fall back to identifier as-is
+      }
+
+      const filter = encodeURIComponent(
+        JSON.stringify([{ project: { operator: "=", values: [numericId] } }])
+      )
+      const data = await this.apiJson(`/api/v3/memberships?filters=${filter}&pageSize=100`)
+      const elements: any[] = data?._embedded?.elements || []
+
+      const seen = new Set<string>()
+      const members: Array<{ id: string; name: string }> = []
+      for (const m of elements) {
+        const principal = m?._links?.principal
+        const href: string = principal?.href || ""
+        // Only /users/ principals are assignable (exclude groups/placeholders).
+        if (!href.includes("/users/")) continue
+        const id = href.split("/").pop() || ""
+        if (!id || seen.has(id)) continue
+        seen.add(id)
+        members.push({ id, name: principal.title || `User ${id}` })
+      }
+      return members
+    } catch {
+      return []
+    }
   }
 
   assigneeHref(userId: string): string {

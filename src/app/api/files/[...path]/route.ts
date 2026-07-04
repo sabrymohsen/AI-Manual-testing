@@ -50,6 +50,8 @@ export async function GET(
       ".jpeg": "image/jpeg",
       ".gif": "image/gif",
       ".webp": "image/webp",
+      ".webm": "video/webm",
+      ".mp4": "video/mp4",
       ".pdf": "application/pdf",
       ".zip": "application/zip",
       ".md": "text/markdown",
@@ -58,7 +60,10 @@ export async function GET(
     return new NextResponse(buffer, {
       headers: {
         "Content-Type": mimeTypes[ext] || "application/octet-stream",
-        "Cache-Control": "public, max-age=31536000, immutable",
+        // Revalidate every load. These files were historically served "immutable"
+        // for a year while filenames collided across runs, so browsers kept showing
+        // stale/wrong screenshots even after the file changed on disk.
+        "Cache-Control": "no-cache, must-revalidate",
       },
     })
   } catch {

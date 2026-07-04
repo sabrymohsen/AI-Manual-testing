@@ -7,6 +7,39 @@ const confirmImportSchema = z.object({
   previewRows: z.array(z.any()).min(1, "previewRows is required"),
 })
 
+/**
+ * Spreadsheets carry free-form status/priority values ("Active", "P1", Arabic
+ * labels, …). Normalize them onto the Prisma enums instead of failing the
+ * whole import on the first unexpected value.
+ */
+function normalizeStatus(raw: unknown): "Draft" | "ReadyForTesting" | "InTesting" | "Covered" | "PartiallyCovered" | "Failed" | "Blocked" | "Deprecated" {
+  const v = String(raw ?? "").trim().toLowerCase()
+  if (!v) return "Draft"
+  const exact: Record<string, any> = {
+    draft: "Draft", readyfortesting: "ReadyForTesting", intesting: "InTesting",
+    covered: "Covered", partiallycovered: "PartiallyCovered", failed: "Failed",
+    blocked: "Blocked", deprecated: "Deprecated",
+  }
+  if (exact[v.replace(/[\s_-]/g, "")]) return exact[v.replace(/[\s_-]/g, "")]
+  if (/active|approved|ready|open|new|todo|نشط|معتمد|جاهز/.test(v)) return "ReadyForTesting"
+  if (/testing|progress|قيد/.test(v)) return "InTesting"
+  if (/done|passed|complete|مكتمل|منجز/.test(v)) return "Covered"
+  if (/fail|فشل/.test(v)) return "Failed"
+  if (/block|hold|معلق|محظور/.test(v)) return "Blocked"
+  if (/deprecat|obsolete|cancel|ملغي/.test(v)) return "Deprecated"
+  return "Draft"
+}
+
+function normalizePriority(raw: unknown): "Low" | "Medium" | "High" | "Critical" {
+  const v = String(raw ?? "").trim().toLowerCase()
+  if (!v) return "Medium"
+  if (/critical|urgent|highest|p0|p1|حرج|عاجل/.test(v)) return "Critical"
+  if (/high|p2|عالي|مرتفع/.test(v)) return "High"
+  if (/low|minor|p4|p5|منخفض|ضعيف/.test(v)) return "Low"
+  if (/medium|normal|moderate|p3|متوسط|عادي/.test(v)) return "Medium"
+  return "Medium"
+}
+
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
@@ -29,6 +62,25 @@ export async function POST(
     let moduleCreated = 0
     let featureCreated = 0
     let componentCreated = 0
+    let epicCreated = 0
+
+    // Epics resolve by key OR title (case-insensitive); unmatched ones are
+    // auto-created by name with a generated EP-<n> key (decision: implicit
+    // epic creation, surfaced in the preview step).
+    const epicsMap = new Map<string, string>() // key/title lowercase -> id
+    const dbEpics = await prisma.epic.findMany({ where: { projectId: params.projectId } })
+    dbEpics.forEach(e => {
+      epicsMap.set(e.epicKey.toLowerCase(), e.id)
+      epicsMap.set(e.title.toLowerCase(), e.id)
+    })
+    const takenEpicKeys = new Set(dbEpics.map(e => e.epicKey))
+    const nextEpicKey = () => {
+      let n = takenEpicKeys.size + 1
+      while (takenEpicKeys.has(`EP-${n}`)) n++
+      const key = `EP-${n}`
+      takenEpicKeys.add(key)
+      return key
+    }
 
     // Load existing folders for reference
     const modulesMap = new Map<string, string>() // name.toLowerCase() -> id
@@ -52,6 +104,7 @@ export async function POST(
           title,
           description,
           acceptanceCriteria,
+          epic: epicRef,
           module: modName,
           feature: featName,
           component: compName,
@@ -65,6 +118,27 @@ export async function POST(
         let moduleId: string | null = null
         let featureId: string | null = null
         let componentId: string | null = null
+        let epicId: string | null = null
+
+        // 0. Resolve / auto-create parent Epic
+        if (epicRef && String(epicRef).trim()) {
+          const refLower = String(epicRef).trim().toLowerCase()
+          if (epicsMap.has(refLower)) {
+            epicId = epicsMap.get(refLower)!
+          } else {
+            const newEpic = await tx.epic.create({
+              data: {
+                projectId: params.projectId,
+                epicKey: nextEpicKey(),
+                title: String(epicRef).trim()
+              }
+            })
+            epicsMap.set(refLower, newEpic.id)
+            epicsMap.set(newEpic.epicKey.toLowerCase(), newEpic.id)
+            epicId = newEpic.id
+            epicCreated++
+          }
+        }
 
         // 1. Resolve Module
         if (modName && modName.trim()) {
@@ -140,9 +214,10 @@ export async function POST(
           title: title.trim(),
           description: description || null,
           acceptanceCriteria: acceptanceCriteria || null,
-          priority: (priority || "Medium") as any,
-          status: (status || "Draft") as any,
+          priority: normalizePriority(priority),
+          status: normalizeStatus(status),
           source: "ExcelImport" as any,
+          epicId,
           moduleId,
           featureId,
           componentId,
@@ -177,7 +252,8 @@ export async function POST(
         updatedRequirements: updatedCount,
         createdModules: moduleCreated,
         createdFeatures: featureCreated,
-        createdComponents: componentCreated
+        createdComponents: componentCreated,
+        createdEpics: epicCreated
       }
     })
   } catch (error: any) {

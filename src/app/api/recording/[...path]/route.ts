@@ -3,7 +3,8 @@ import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { getSessionStats, saveRecordedCaseAsTestCase } from "@/lib/recording/session-store"
-import { recorderWorkerRequest, RecorderWorkerError } from "@/lib/recording/worker-client"
+import { recorderWorkerRequest, RecorderWorkerError, RECORDER_WORKER_URL } from "@/lib/recording/worker-client"
+import { saveFile } from "@/lib/storage"
 
 async function verifyRecordingSession(sessionId: string, userId: string) {
   const rec = await prisma.recordingSession.findUnique({
@@ -207,6 +208,49 @@ export async function GET(
           sessionStatus: sessionDb?.status || "Failed",
           lastError: sessionDb?.lastError,
         })
+      }
+      return workerErrorResponse(err)
+    }
+  }
+
+  // GET /api/recording/[sessionId]/recordings — session video artifacts
+  if (path.length === 2 && path[1] === "recordings") {
+    const sessionId = path[0]
+    const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+    if (guard) return guard
+    const recordings = await prisma.sessionRecording.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: "asc" },
+    })
+    return NextResponse.json({ recordings })
+  }
+
+  // GET /api/recording/[sessionId]/screenshots — persisted session captures
+  if (path.length === 2 && path[1] === "screenshots") {
+    const sessionId = path[0]
+    const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+    if (guard) return guard
+    const screenshots = await prisma.sessionScreenshot.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: "asc" },
+    })
+    return NextResponse.json({ screenshots })
+  }
+
+  // GET /api/recording/[sessionId]/frame — live preview snapshot (base64 JPEG)
+  if (path.length === 2 && path[1] === "frame") {
+    const sessionId = path[0]
+    const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+    if (guard) return guard
+    try {
+      const result = await recorderWorkerRequest<{ frame: string | null; url: string | null }>(
+        `/sessions/${sessionId}/frame`,
+        { method: "GET" }
+      )
+      return NextResponse.json(result)
+    } catch (err) {
+      if (err instanceof RecorderWorkerError) {
+        return NextResponse.json({ frame: null, url: null })
       }
       return workerErrorResponse(err)
     }
@@ -558,25 +602,125 @@ export async function POST(
       return NextResponse.json({ success: true, workerStopped })
     }
 
-    // POST /api/recording/[sessionId]/screenshot
+    // POST /api/recording/[sessionId]/screenshot — body: { fullPage?: boolean }
     if (path.length === 2 && path[1] === "screenshot") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
+      const body = await request.json().catch(() => ({}))
       try {
-        const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/screenshot`, { method: "POST", body: "{}" })
+        const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/screenshot`, {
+          method: "POST",
+          body: JSON.stringify({ fullPage: !!body.fullPage }),
+        })
         return NextResponse.json(result)
       } catch (err) {
         return workerErrorResponse(err)
       }
     }
 
-    // POST /api/recording/[sessionId]/bug — create a bug report from the live session
-    if (path.length === 2 && path[1] === "bug") {
+    // POST /api/recording/[sessionId]/screenshot/annotated — persist an
+    // annotated screenshot (data URL from the in-app annotator). No worker
+    // involvement: the image is saved straight to storage.
+    if (path.length === 3 && path[1] === "screenshot" && path[2] === "annotated") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      const body = await request.json()
+      const body = await request.json().catch(() => ({}))
+      const imageData: string = body.imageData || ""
+      const match = imageData.match(/^data:image\/(png|jpeg);base64,(.+)$/)
+      if (!match) return badRequestResponse("imageData must be a base64 PNG or JPEG data URL")
+      const buffer = Buffer.from(match[2], "base64")
+      if (buffer.length > 15 * 1024 * 1024) return badRequestResponse("Image exceeds 15MB limit")
+      const screenshotPath = await saveFile(
+        "screenshots",
+        `annotated-${sessionId}-${Date.now()}.${match[1] === "jpeg" ? "jpg" : "png"}`,
+        buffer
+      )
+
+      // This is the single persistence point for session screenshots —
+      // captures are held in memory until the tester explicitly saves.
+      // Lineage links to the raw capture when re-annotating a saved shot;
+      // fresh captures carry their own pageUrl/fullPage metadata.
+      let annotatedFromId: string | null = null
+      let pageUrl: string | null = typeof body.pageUrl === "string" ? body.pageUrl : null
+      if (typeof body.annotatedFromId === "string" && body.annotatedFromId) {
+        const original = await prisma.sessionScreenshot.findFirst({
+          where: { id: body.annotatedFromId, sessionId },
+          select: { id: true, pageUrl: true },
+        })
+        if (original) {
+          annotatedFromId = original.id
+          pageUrl = original.pageUrl
+        }
+      }
+      const screenshot = await prisma.sessionScreenshot.create({
+        data: {
+          sessionId,
+          filePath: screenshotPath,
+          annotatedFromId,
+          pageUrl,
+          fullPage: !!body.fullPage,
+        },
+      })
+      return NextResponse.json({ screenshotPath, screenshot })
+    }
+
+    // POST /api/recording/[sessionId]/recordings — upload a MediaRecorder clip
+    // (multipart: file + durationMs). Produces a SessionRecording row that is
+    // playable/downloadable immediately, before the session ends.
+    if (path.length === 2 && path[1] === "recordings") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const formData = await request.formData().catch(() => null)
+      const file = formData?.get("file") as File | null
+      if (!file) return badRequestResponse("No recording file uploaded")
+      if (file.size > 200 * 1024 * 1024) return badRequestResponse("Recording exceeds 200MB limit")
+      const durationMs = Number(formData?.get("durationMs")) || null
+
+      const buffer = Buffer.from(await file.arrayBuffer())
+      const filePath = await saveFile("videos", `liveqa-${sessionId}-${Date.now()}.webm`, buffer)
+      const now = new Date()
+      const recording = await prisma.sessionRecording.create({
+        data: {
+          sessionId,
+          filePath,
+          status: "Ready",
+          startedAt: durationMs ? new Date(now.getTime() - durationMs) : now,
+          endedAt: now,
+          durationMs,
+        },
+      })
+      return NextResponse.json({ recording }, { status: 201 })
+    }
+
+    // POST /api/recording/[sessionId]/stream-token — mint a one-time token for
+    // the live-view WebSocket. Ownership is verified here; the browser then
+    // connects to the worker directly (ws://…/sessions/:id/stream?token=…).
+    if (path.length === 2 && path[1] === "stream-token") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
       try {
-        const result = await recorderWorkerRequest<{ bug: unknown }>(`/sessions/${sessionId}/bug`, {
+        const result = await recorderWorkerRequest<{ token: string }>(
+          `/sessions/${sessionId}/stream-token`,
+          { method: "POST", body: "{}" }
+        )
+        const wsBase = RECORDER_WORKER_URL.replace(/^http/, "ws")
+        return NextResponse.json({
+          token: result.token,
+          wsUrl: `${wsBase}/sessions/${sessionId}/stream?token=${result.token}`,
+        })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
+    }
+
+    // POST /api/recording/[sessionId]/input — forward mouse/keyboard/navigation
+    // events from the embedded live browser view to the controlled page.
+    if (path.length === 2 && path[1] === "input") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const body = await request.json().catch(() => ({}))
+      try {
+        const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/input`, {
           method: "POST",
           body: JSON.stringify(body),
         })

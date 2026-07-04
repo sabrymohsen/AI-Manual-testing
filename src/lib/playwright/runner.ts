@@ -216,7 +216,9 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       try {
         const screenshotBefore = page ? await page.screenshot({ type: "png", timeout: 5000 }) : null
         if (screenshotBefore) {
-          screenshotBeforePath = await saveFile("screenshots", `step-${step.stepNumber}-before.png`, screenshotBefore)
+          // Key by stepResultId so screenshots are unique per run — otherwise every
+          // run (and every test case) overwrites the same step-N-before.png file.
+          screenshotBeforePath = await saveFile("screenshots", `${stepResultId}-step-${step.stepNumber}-before.png`, screenshotBefore)
         }
       } catch (e) {
         console.warn(`[runner.ts] Failed to capture screenshot before step ${step.stepNumber}:`, e instanceof Error ? e.message : e)
@@ -345,7 +347,7 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       try {
         const screenshotAfter = page ? await page.screenshot({ type: "png", timeout: 5000 }) : null
         if (screenshotAfter) {
-          screenshotAfterPath = await saveFile("screenshots", `step-${step.stepNumber}-after.png`, screenshotAfter)
+          screenshotAfterPath = await saveFile("screenshots", `${stepResultId}-step-${step.stepNumber}-after.png`, screenshotAfter)
         }
       } catch (e) {
         console.warn(`[runner.ts] Failed to capture screenshot after step ${step.stepNumber}:`, e instanceof Error ? e.message : e)
@@ -356,7 +358,7 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       if (status === "Failed" && page) {
         try {
           const domHtml = await page.content()
-          domSnapshotPath = await saveFile("dom_snapshots", `step-${step.stepNumber}-dom.html`, Buffer.from(domHtml))
+          domSnapshotPath = await saveFile("dom_snapshots", `${stepResultId}-step-${step.stepNumber}-dom.html`, Buffer.from(domHtml))
           console.log(`[runner.ts] Saved DOM snapshot on failure to: ${domSnapshotPath}`)
           
           if (!stepToExecute.actionMetadata) {

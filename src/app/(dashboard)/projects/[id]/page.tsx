@@ -209,7 +209,7 @@ export default function ProjectDetailPage() {
                   { title: "Open Test Cases", desc: "Manage functional test case steps suites.", href: `/projects/${projectId}/test-cases`, icon: FileText },
                   { title: "Open Bug Reports", desc: "Triage defect tickets and synchronizations.", href: `/projects/${projectId}/bug-reports`, icon: Bug },
                   { title: "Open Recorder Studio", desc: "Launch step pickers to record user actions.", href: `/projects/${projectId}/recorder-studio`, icon: Video },
-                  { title: "Open Testing Workstation", desc: "Run manual testing checklists and capture screenshots.", href: `/projects/${projectId}/testing-workstation`, icon: FlaskConical },
+                  { title: "Open Live QA Session", desc: "Run live QA checks and capture screenshots.", href: `/projects/${projectId}/live-qa-session`, icon: FlaskConical },
                   { title: "Open OpenProject Sync", desc: "Configure server hooks and track parent maps.", href: `/projects/${projectId}/openproject-sync`, icon: Globe }
                 ].map((ws, idx) => (
                   <div 

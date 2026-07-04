@@ -13,7 +13,7 @@ interface Project {
 interface ProjectSelectionGatewayProps {
   title: string
   description: string
-  targetWorkflow: string // e.g. 'test-cases', 'bug-reports', 'recorder-studio', 'testing-workstation', 'openproject-sync', 'settings'
+  targetWorkflow: string // e.g. 'test-cases', 'bug-reports', 'recorder-studio', 'live-qa-session', 'openproject-sync', 'settings'
 }
 
 export function ProjectSelectionGateway({

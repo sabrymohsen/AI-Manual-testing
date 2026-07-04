@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 import { z } from "zod"
+import { computeRequirementCoverage } from "@/lib/coverage"
+import { createAuditLog } from "@/lib/auth/audit"
 
 const putBodySchema = z.object({
   requirementKey: z.string().optional(),
@@ -10,6 +12,7 @@ const putBodySchema = z.object({
   acceptanceCriteria: z.string().optional(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   status: z.enum(["Draft", "ReadyForTesting", "InTesting", "Covered", "PartiallyCovered", "Failed", "Blocked", "Deprecated"]).optional(),
+  epicId: z.string().optional().nullable(),
   moduleId: z.string().optional().nullable(),
   featureId: z.string().optional().nullable(),
   componentId: z.string().optional().nullable(),
@@ -77,85 +80,13 @@ export async function GET(
     // Compute dynamic coverage status for this single requirement
     const links = requirement.testCases || []
     const bugs = requirement.bugReports || []
-    
-    let coverageStatus = "Uncovered"
-    let hasFailed = false
-    let hasBlocked = false
-    let hasWarning = false
-    let hasNotExecuted = false
-    let hasPassed = false
-
-    const hasCriticalBugs = bugs.some(
-      (b: any) => b.bugReport.severity === "Critical" || b.bugReport.severity === "High"
-    )
-    if (hasCriticalBugs) {
-      hasBlocked = true
-    }
-
-    if (links.length > 0) {
-      links.forEach((link: any) => {
-        const tc = link.testCase
-        if (!tc) return
-
-        const latestRun = tc.testRuns?.[0] || null
-        const latestManualCase = tc.manualSessionCases?.[0] || null
-
-        let latestStatus = "NotExecuted"
-        let latestTime = 0
-
-        if (latestRun && latestRun.completedAt) {
-          latestTime = new Date(latestRun.completedAt).getTime()
-          latestStatus = latestRun.status
-        }
-
-        if (latestManualCase && latestManualCase.completedAt) {
-          const mTime = new Date(latestManualCase.completedAt).getTime()
-          if (mTime > latestTime) {
-            latestTime = mTime
-            latestStatus = latestManualCase.status
-          }
-        }
-
-        if (
-          latestStatus === "NotExecuted" ||
-          latestStatus === "Pending" ||
-          latestStatus === "Queued" ||
-          latestStatus === "Running"
-        ) {
-          hasNotExecuted = true
-        } else if (latestStatus === "Failed") {
-          hasFailed = true
-        } else if (latestStatus === "Blocked") {
-          hasBlocked = true
-        } else if (latestStatus === "Warning") {
-          hasWarning = true
-        } else if (latestStatus === "Passed") {
-          hasPassed = true
-        }
-      })
-
-      if (hasBlocked) {
-        coverageStatus = "Blocked"
-      } else if (hasFailed) {
-        coverageStatus = "Failed"
-      } else if (hasNotExecuted) {
-        if (hasPassed || hasFailed || hasWarning) {
-          coverageStatus = "PartiallyCovered"
-        } else {
-          coverageStatus = "NotExecuted"
-        }
-      } else if (hasPassed) {
-        coverageStatus = "Covered"
-      } else {
-        coverageStatus = "NotExecuted"
-      }
-    }
+    const coverage = computeRequirementCoverage(links, bugs)
 
     return NextResponse.json({
       requirement: {
         ...requirement,
         breadcrumbPath,
-        computedCoverage: coverageStatus,
+        computedCoverage: coverage.status,
         openBugsCount: bugs.length
       }
     })
@@ -201,6 +132,7 @@ export async function PUT(
       acceptanceCriteria,
       priority,
       status,
+      epicId,
       moduleId,
       featureId,
       componentId,
@@ -208,6 +140,15 @@ export async function PUT(
       externalUrl,
       externalSystem
     } = body
+
+    if (epicId) {
+      const epic = await prisma.epic.findFirst({
+        where: { id: epicId, projectId: requirement.projectId }
+      })
+      if (!epic) {
+        return NextResponse.json({ error: "Epic not found in this project" }, { status: 400 })
+      }
+    }
 
     if (requirementKey && requirementKey.trim() !== requirement.requirementKey) {
       // Validate key uniqueness
@@ -235,6 +176,7 @@ export async function PUT(
         acceptanceCriteria: acceptanceCriteria !== undefined ? acceptanceCriteria : undefined,
         priority: priority || undefined,
         status: status || undefined,
+        epicId: epicId !== undefined ? epicId : undefined,
         moduleId: moduleId !== undefined ? moduleId : undefined,
         featureId: featureId !== undefined ? featureId : undefined,
         componentId: componentId !== undefined ? componentId : undefined,
@@ -274,8 +216,21 @@ export async function DELETE(
       return unauthorizedResponse("Access denied")
     }
 
-    await prisma.requirement.delete({
-      where: { id: params.requirementId }
+    // Remove sync mappings first — no FK ties them to the requirement, so a
+    // plain delete would leave orphaned rows behind.
+    await prisma.$transaction(async (tx) => {
+      await tx.externalSyncMapping.deleteMany({
+        where: { localEntityType: "Requirement", localEntityId: params.requirementId }
+      })
+      await tx.requirement.delete({
+        where: { id: params.requirementId }
+      })
+      await createAuditLog({
+        action: "Delete Requirement",
+        details: `Deleted requirement: ${requirement.requirementKey} - ${requirement.title}`,
+        userId: auth.session!.user.id,
+        projectId: requirement.projectId
+      })
     })
 
     return NextResponse.json({ message: "Requirement deleted successfully" })

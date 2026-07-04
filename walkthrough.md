@@ -1,52 +1,40 @@
-# Walkthrough: Information Architecture & Page Flow Redesign
+# Walkthrough: Redesigned Bug Reports Workspace
 
-Redesigned the global application layout, route organization, and page flow to separate configuration settings from operational workflows.
-
----
-
-## 1. Unified Navigation Sidebar
-
-Updated the left sidebar navigation in `src/app/(dashboard)/layout.tsx` to group links into clean workflow levels, using consistent terminology:
-
-- **Dashboard** (`/dashboard`): Monitoring hub.
-- **QA Workflows**:
-  - **Test Cases**: `/projects/[id]/test-cases`
-  - **Testing Workstation**: `/projects/[id]/testing-workstation`
-  - **Recorder Studio**: `/projects/[id]/recorder-studio`
-  - **Bug Reports**: `/projects/[id]/bug-reports`
-  - **OpenProject Sync**: `/projects/[id]/openproject-sync`
-- **Management**:
-  - **Projects**: `/projects`
-  - **Requirements**: `/projects/[id]/requirements`
-- **Configuration**:
-  - **Settings**: `/projects/[id]/settings`
+Redesigned the Bug Reports workspace from a simple list into a professional, feature-rich defect management workspace with dual list/board views, detailed slide-over inspection drawer, status transition workflow triggers, and manual wizard creators.
 
 ---
 
-## 2. Reusable Layout Components
+## 1. Unified Defect Workspace (`/projects/[id]/bug-reports`)
 
-1. **`AppPageHeader`** (`src/components/ui/app-page-header.tsx`): Renders breadcrumbs, title, subtitles, action button arrays, and status badges.
-2. **`ActiveProjectContextBar`** (`src/components/ui/active-project-context-bar.tsx`): Displays project name, target app URL, OpenProject connection status, test cases count, open bugs count, and a switch project button.
-3. **`ProjectSelectionGateway`** (`src/components/ui/project-selection-gateway.tsx`): Renders a selector gating pages when no project is in the active context.
-
----
-
-## 3. Scope Gateways & Route Ownership
-
-- **Gateway Redirects**: Global paths `/test-cases`, `/bug-reports`, `/recorder-studio`, `/testing-workstation`, `/openproject-sync`, `/settings` redirect to project subpages if a project is selected, else load `ProjectSelectionGateway`.
-- **Legacy Redirects**: Overwrote legacy paths `/projects/[id]/record` and `/workflow/` subfolders to client-redirect safely to their official route counterparts.
+- **Page Header**: Displays active project context name, target environment, base target URL, and OpenProject sync connection status.
+- **Top summary cards row**: Interactive counts of Total bugs, Open bugs, Critical sev, Auto-Created bugs, OpenProject Synced, and Duplicates. Clicking a card instantly filters the workspace view below.
+- **Advanced filters bar**: Matches query filters for Title/Logs text search, Severity, Priority, Status phase, and Source.
+- **View switcher**: Provides a button toggle to switch between:
+  - **List View**: Detailed table with browser type, environment, execution link references, and action tool buttons (`View`, `Sync`, `Retest`, `Delete`).
+  - **Board View**: Interactive Kanban Board columns matching status phases: Open, Triaged, In Progress, Ready for Retest, Resolved, and Closed.
 
 ---
 
-## 4. Simplified Dashboards & Details
+## 2. Dynamic Right Detail Drawer
 
-- **Dashboard** (`src/app/(dashboard)/dashboard/page.tsx`): monitoring-only screen presenting test cases, bug reports, and test run pass rate statistics with quick links.
-- **Project Detail** (`src/app/(dashboard)/projects/[id]/page.tsx`): Tabs include Overview (quick stats cards), Scope (read-only hierarchy overview tree), Credentials Vault, Integrations Config, and general settings edit/deletion.
+- **Overview Tab**: Inline editable input fields for Bug Title, Description, Severity dropdown, Priority dropdown, Status phase, and assigned developer.
+- **Evidence Tab**: Displays auto-captured screenshot paths (with click-to-zoom modal), screen recording playbacks, and pre-formatted console/network request logs.
+- **Steps Tab**: Displays expectation summaries and reproduction details.
+- **Linked Run Tab**: Connects TestCase name and TestRun status. Provides a trigger button to execute an automated retest immediately.
+- **Activity Tab**: Audits historical logs (Status changes, Assignments, Comments log). Provides a tool to link the bug as a duplicate of an existing defect.
+- **OpenProject Tab**: Lists mapping ID, direct OpenProject links, sync date, and a trigger sync retry button.
 
 ---
 
-## 5. Verification
+## 3. Redirect Legacy Detail Route (`/projects/[id]/bug-reports/[bugId]`)
 
-- `npx tsc --noEmit`: **Success** (0 type errors).
-- `npm run build`: **Success** (Clean compilation).
-- Checked links: **All verified** (No broken references).
+- Added a client-side redirect in `/projects/[id]/bug-reports/[bugId]/page.tsx` pointing to `/projects/[id]/bug-reports?bugId=[bugId]`, opening the slide-over detail drawer inside the unified workspace.
+
+---
+
+## 4. Backend APIs & Integrations
+
+- Modified GET `/api/projects/[projectId]/bug-reports` to resolve scoped queries, search queries, and dynamically append OpenProject sync statuses.
+- Modified PUT `/api/bug-reports/[bugId]` to support `testCaseId` and `testRunId` updates.
+- Created `/api/bug-reports/[bugId]/mark-duplicate` to map duplicate occurrences.
+- Created `/api/bug-reports/[bugId]/retest` to auto-queue retests.

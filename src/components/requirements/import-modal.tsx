@@ -16,6 +16,7 @@ interface ColumnMapping {
   title: string
   description: string
   acceptanceCriteria: string
+  epic: string
   module: string
   feature: string
   component: string
@@ -31,6 +32,7 @@ const SCHEMA_FIELDS = [
   { key: "title", label: "Title *", required: true, desc: "Brief summary of the requirement." },
   { key: "description", label: "Description", required: false, desc: "Detailed information about the requirement." },
   { key: "acceptanceCriteria", label: "Acceptance Criteria", required: false, desc: "Conditions to meet for compliance." },
+  { key: "epic", label: "Parent Epic", required: false, desc: "Epic key or name — unmatched epics are auto-created." },
   { key: "module", label: "Module Name", required: false, desc: "Top-level module hierarchy path." },
   { key: "feature", label: "Feature Name", required: false, desc: "Mid-level feature hierarchy path." },
   { key: "component", label: "Component Name", required: false, desc: "Leaf-level component hierarchy path." },
@@ -51,6 +53,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
     title: "",
     description: "",
     acceptanceCriteria: "",
+    epic: "",
     module: "",
     feature: "",
     component: "",
@@ -100,7 +103,10 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
           const colIndex = String(index)
           const lowerHeader = header.toLowerCase()
 
-          if (lowerHeader.includes("key") || lowerHeader === "id" || lowerHeader.includes("رمز") || lowerHeader.includes("معرف")) {
+          // Check "epic" before "key" so an "Epic Key" column maps to epic
+          if (lowerHeader.includes("epic") || lowerHeader.includes("ملحمة")) {
+            autoMapping.epic = colIndex
+          } else if (lowerHeader.includes("key") || lowerHeader === "id" || lowerHeader.includes("رمز") || lowerHeader.includes("معرف")) {
             autoMapping.requirementKey = colIndex
           } else if (lowerHeader.includes("title") || lowerHeader === "name" || lowerHeader.includes("عنوان") || lowerHeader.includes("اسم")) {
             autoMapping.title = colIndex
@@ -336,16 +342,19 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                 <div className="border border-slate-100 p-4 bg-amber-50/30 rounded-xl text-center border-amber-100/30">
                   <span className="text-[10px] font-bold text-amber-600 block uppercase">Structure folders to create</span>
                   <span className="text-2xl font-bold text-amber-700 mt-1 block">
-                    {previewData.summary.createdModules + previewData.summary.createdFeatures + previewData.summary.createdComponents}
+                    {previewData.summary.createdModules + previewData.summary.createdFeatures + previewData.summary.createdComponents + (previewData.summary.createdEpics || 0)}
                   </span>
                 </div>
               </div>
 
               {/* Proposed Hierarchy Changes */}
-              {(previewData.newStructures.modules.length > 0 || previewData.newStructures.features.length > 0 || previewData.newStructures.components.length > 0) && (
+              {((previewData.newStructures.epics?.length || 0) > 0 || previewData.newStructures.modules.length > 0 || previewData.newStructures.features.length > 0 || previewData.newStructures.components.length > 0) && (
                 <div className="border border-amber-100 bg-amber-50/15 p-4 rounded-xl space-y-2.5">
                   <span className="text-xs font-bold text-amber-800 block">Proposed project structure changes:</span>
                   <div className="text-[11px] text-amber-700 space-y-1">
+                    {(previewData.newStructures.epics || []).map((e: string, i: number) => (
+                      <div key={`ep-${i}`}>• Create Epic: <span className="font-semibold">{e}</span></div>
+                    ))}
                     {previewData.newStructures.modules.map((m: string, i: number) => (
                       <div key={i}>• Create Module: <span className="font-semibold">{m}</span></div>
                     ))}
@@ -371,6 +380,11 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                           <span className="text-slate-400 text-[10px]">({r.priority})</span>
                         </div>
                         <p className="font-medium text-slate-700 mt-0.5">{r.title}</p>
+                        {r.epic && (
+                          <span className="text-[10px] text-violet-500 block mt-1 font-semibold">
+                            Epic: {r.epic}{r.epicAction === "Create" && " (new)"}
+                          </span>
+                        )}
                         {r.module && (
                           <span className="text-[10px] text-slate-400 block mt-1">
                             Folder: {r.module} {r.feature && ` / ${r.feature}`} {r.component && ` / ${r.component}`}

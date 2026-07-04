@@ -26,6 +26,7 @@ interface MatrixRow {
   requirementKey: string
   title: string
   priority: string
+  epic: { id: string; epicKey: string; title: string } | null
   module: string | null
   feature: string | null
   component: string | null
@@ -53,6 +54,7 @@ export default function CoverageMatrixPage() {
   const [search, setSearch] = useState("")
   const [riskFilter, setRiskFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
+  const [groupByEpic, setGroupByEpic] = useState(true)
 
   useEffect(() => {
     fetchMatrixData()
@@ -90,6 +92,7 @@ export default function CoverageMatrixPage() {
     const dataToExport = filteredMatrix.map((r) => ({
       "Requirement Key": r.requirementKey,
       "Requirement Title": r.title,
+      "Epic": r.epic ? `${r.epic.epicKey} — ${r.epic.title}` : "No Epic",
       "Module": r.module || "Unassigned",
       "Feature": r.feature || "N/A",
       "Component": r.component || "N/A",
@@ -234,6 +237,17 @@ export default function CoverageMatrixPage() {
           <option value="Blocked">Blocked</option>
           <option value="NotExecuted">Not Executed</option>
         </select>
+
+        <button
+          type="button"
+          onClick={() => setGroupByEpic(v => !v)}
+          className={`px-3 py-2 rounded-xl border text-xs font-semibold transition-colors ${
+            groupByEpic ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+          }`}
+          title="Group requirements under their parent epics"
+        >
+          Group by Epic
+        </button>
       </div>
 
       {/* Matrix Tree List */}
@@ -260,7 +274,49 @@ export default function CoverageMatrixPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {filteredMatrix.map((row) => (
+                {(groupByEpic
+                  ? (() => {
+                      // Group rows under epic headers, No-Epic bucket last
+                      const groups = new Map<string, { label: string; rows: MatrixRow[] }>()
+                      filteredMatrix.forEach((row) => {
+                        const key = row.epic?.id || "__none__"
+                        const label = row.epic ? `${row.epic.epicKey} — ${row.epic.title}` : "No Epic"
+                        const g = groups.get(key) || { label, rows: [] }
+                        g.rows.push(row)
+                        groups.set(key, g)
+                      })
+                      const ordered = Array.from(groups.entries()).sort(([a], [b]) =>
+                        a === "__none__" ? 1 : b === "__none__" ? -1 : 0
+                      )
+                      return ordered.flatMap(([key, group]) => {
+                        const covered = group.rows.filter((r) => r.coverageStatus === "Covered").length
+                        return [
+                          <tr key={`epic-${key}`} className={key === "__none__" ? "bg-slate-50 border-y border-slate-100" : "bg-violet-50/60 border-y border-violet-100/80"}>
+                            <td colSpan={7} className="px-4 py-2.5">
+                              <span className={`text-xs font-bold ${key === "__none__" ? "text-slate-500" : "text-violet-900"}`}>
+                                {group.label}
+                              </span>
+                              <span className={`ml-3 text-[10px] font-semibold ${key === "__none__" ? "text-slate-400" : "text-violet-500"}`}>
+                                {group.rows.length} stor{group.rows.length === 1 ? "y" : "ies"} · {covered}/{group.rows.length} covered
+                              </span>
+                            </td>
+                          </tr>,
+                          ...group.rows.map(renderMatrixRow)
+                        ]
+                      })
+                    })()
+                  : filteredMatrix.map(renderMatrixRow))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+    </div>
+  )
+
+  function renderMatrixRow(row: MatrixRow) {
+    return (
                   <tr key={row.id} className="hover:bg-slate-50/50 transition-colors align-top">
                     <td className="p-4 font-bold text-slate-900">{row.requirementKey}</td>
                     <td className="p-4 font-semibold text-slate-800">
@@ -316,13 +372,6 @@ export default function CoverageMatrixPage() {
                       )}
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-    </div>
-  )
+    )
+  }
 }

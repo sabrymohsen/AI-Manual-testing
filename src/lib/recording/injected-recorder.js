@@ -981,6 +981,19 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
   // Shadow DOM Injections & Drag/Draggable setup
   function injectToolbar() {
     if (window.self !== window.top) return;
+    // Workstation mode: the web-app workstation page is the single control
+    // surface (pause, screenshot, video, bug, end). Skip the in-browser
+    // toolbar entirely — recording hooks stay active — and keep only the
+    // Alt+Shift+S quick-screenshot shortcut.
+    if (window.__QA_WORKSTATION_MODE) {
+      document.addEventListener("keydown", function (e) {
+        if (e.altKey && e.shiftKey && e.code === "KeyS") {
+          window.qaRecordAction({ actionType: "take_screenshot", fullPage: false }).catch(function () {});
+          e.preventDefault();
+        }
+      }, true);
+      return;
+    }
     if (document.getElementById("__qa_recorder_host")) return;
 
     const host = document.createElement("div");

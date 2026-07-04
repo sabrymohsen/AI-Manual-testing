@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { computeRequirementCoverage } from "@/lib/coverage"
 
 export async function GET(
   request: Request,
@@ -13,6 +14,7 @@ export async function GET(
     const requirements = await prisma.requirement.findMany({
       where: { projectId: params.projectId },
       include: {
+        epic: { select: { id: true, epicKey: true, title: true, status: true, priority: true } },
         module: { select: { id: true, name: true } },
         feature: { select: { id: true, name: true } },
         component: { select: { id: true, name: true } },
@@ -47,78 +49,8 @@ export async function GET(
       const links = req.testCases || []
       const bugs = req.bugReports || []
 
-      let coverageStatus = "Uncovered"
-      let hasFailed = false
-      let hasBlocked = false
-      let hasWarning = false
-      let hasNotExecuted = false
-      let hasPassed = false
-
-      const hasCriticalBugs = bugs.some(
-        (b) => b.bugReport.severity === "Critical" || b.bugReport.severity === "High"
-      )
-      if (hasCriticalBugs) {
-        hasBlocked = true
-      }
-
-      if (links.length > 0) {
-        links.forEach((link) => {
-          const tc = link.testCase
-          if (!tc) return
-
-          const latestRun = tc.testRuns?.[0] || null
-          const latestManualCase = tc.manualSessionCases?.[0] || null
-
-          let latestStatus = "NotExecuted"
-          let latestTime = 0
-
-          if (latestRun && latestRun.completedAt) {
-            latestTime = new Date(latestRun.completedAt).getTime()
-            latestStatus = latestRun.status
-          }
-
-          if (latestManualCase && latestManualCase.completedAt) {
-            const mTime = new Date(latestManualCase.completedAt).getTime()
-            if (mTime > latestTime) {
-              latestTime = mTime
-              latestStatus = latestManualCase.status
-            }
-          }
-
-          if (
-            latestStatus === "NotExecuted" ||
-            latestStatus === "Pending" ||
-            latestStatus === "Queued" ||
-            latestStatus === "Running"
-          ) {
-            hasNotExecuted = true
-          } else if (latestStatus === "Failed") {
-            hasFailed = true
-          } else if (latestStatus === "Blocked") {
-            hasBlocked = true
-          } else if (latestStatus === "Warning") {
-            hasWarning = true
-          } else if (latestStatus === "Passed") {
-            hasPassed = true
-          }
-        })
-
-        if (hasBlocked) {
-          coverageStatus = "Blocked"
-        } else if (hasFailed) {
-          coverageStatus = "Failed"
-        } else if (hasNotExecuted) {
-          if (hasPassed || hasFailed || hasWarning) {
-            coverageStatus = "PartiallyCovered"
-          } else {
-            coverageStatus = "NotExecuted"
-          }
-        } else if (hasPassed) {
-          coverageStatus = "Covered"
-        } else {
-          coverageStatus = "NotExecuted"
-        }
-      }
+      const { status: coverageStatus, hasFailed, hasCriticalBugs } =
+        computeRequirementCoverage(links, bugs)
 
       // Calculate Risk Score
       // Rules:
@@ -148,6 +80,9 @@ export async function GET(
         requirementKey: req.requirementKey,
         title: req.title,
         priority: req.priority,
+        epic: req.epic
+          ? { id: req.epic.id, epicKey: req.epic.epicKey, title: req.epic.title }
+          : null,
         module: req.module?.name || null,
         feature: req.feature?.name || null,
         component: req.component?.name || null,
