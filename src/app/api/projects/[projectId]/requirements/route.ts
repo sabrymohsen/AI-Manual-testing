@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { createRequirementSchema } from "@/schemas"
+import { computeRequirementCoverage } from "@/lib/coverage"
 
 export async function GET(
   request: Request,
@@ -14,6 +15,7 @@ export async function GET(
     const requirements = await prisma.requirement.findMany({
       where: { projectId: params.projectId },
       include: {
+        epic: { select: { id: true, epicKey: true, title: true, status: true, priority: true } },
         module: { select: { id: true, name: true } },
         feature: { select: { id: true, name: true } },
         component: { select: { id: true, name: true } },
@@ -21,6 +23,12 @@ export async function GET(
           include: {
             testCase: {
               include: {
+                // Bugs raised against this test case — powers the
+                // story → test case → bug traceability view.
+                bugReports: {
+                  select: { id: true, bugKey: true, title: true, severity: true, status: true },
+                  orderBy: { createdAt: "desc" }
+                },
                 testRuns: {
                   where: { status: { notIn: ["Queued", "Running"] } },
                   orderBy: { completedAt: "desc" },
@@ -44,89 +52,31 @@ export async function GET(
       orderBy: { requirementKey: "asc" }
     })
 
+    // OpenProject sync state for the story rows (badge + WP link in the UI).
+    const syncMappings = await prisma.externalSyncMapping.findMany({
+      where: {
+        projectId: params.projectId,
+        provider: "OpenProject",
+        localEntityType: "Requirement",
+      },
+    })
+    const syncByReqId = new Map(syncMappings.map((m) => [m.localEntityId, m]))
+
     // Compute dynamic coverage status for every requirement
     const resolvedRequirements = requirements.map((req) => {
       const links = req.testCases || []
       const bugs = req.bugReports || []
-      
-      let coverageStatus = "Uncovered"
-      let hasFailed = false
-      let hasBlocked = false
-      let hasWarning = false
-      let hasNotExecuted = false
-      let hasPassed = false
+      const coverage = computeRequirementCoverage(links, bugs)
 
-      // Check linked critical/high bugs
-      const hasCriticalBugs = bugs.some(
-        (b) => b.bugReport.severity === "Critical" || b.bugReport.severity === "High"
-      )
-      if (hasCriticalBugs) {
-        hasBlocked = true
-      }
-
-      if (links.length > 0) {
-        links.forEach((link) => {
-          const tc = link.testCase
-          if (!tc) return
-
-          const latestRun = tc.testRuns?.[0] || null
-          const latestManualCase = tc.manualSessionCases?.[0] || null
-
-          let latestStatus = "NotExecuted"
-          let latestTime = 0
-
-          if (latestRun && latestRun.completedAt) {
-            latestTime = new Date(latestRun.completedAt).getTime()
-            latestStatus = latestRun.status
-          }
-
-          if (latestManualCase && latestManualCase.completedAt) {
-            const mTime = new Date(latestManualCase.completedAt).getTime()
-            if (mTime > latestTime) {
-              latestTime = mTime
-              latestStatus = latestManualCase.status
-            }
-          }
-
-          if (
-            latestStatus === "NotExecuted" ||
-            latestStatus === "Pending" ||
-            latestStatus === "Queued" ||
-            latestStatus === "Running"
-          ) {
-            hasNotExecuted = true
-          } else if (latestStatus === "Failed") {
-            hasFailed = true
-          } else if (latestStatus === "Blocked") {
-            hasBlocked = true
-          } else if (latestStatus === "Warning") {
-            hasWarning = true
-          } else if (latestStatus === "Passed") {
-            hasPassed = true
-          }
-        })
-
-        if (hasBlocked) {
-          coverageStatus = "Blocked"
-        } else if (hasFailed) {
-          coverageStatus = "Failed"
-        } else if (hasNotExecuted) {
-          if (hasPassed || hasFailed || hasWarning) {
-            coverageStatus = "PartiallyCovered"
-          } else {
-            coverageStatus = "NotExecuted"
-          }
-        } else if (hasPassed) {
-          coverageStatus = "Covered"
-        } else {
-          coverageStatus = "NotExecuted"
-        }
-      }
-
+      const mapping = syncByReqId.get(req.id)
       return {
         ...req,
-        computedCoverage: coverageStatus,
-        openBugsCount: bugs.length
+        computedCoverage: coverage.status,
+        openBugsCount: bugs.length,
+        openProjectSyncStatus: mapping
+          ? (mapping.lastSyncStatus === "success" ? "Synced" : "Failed")
+          : "NotSynced",
+        openProjectWorkPackageUrl: mapping?.externalUrl || null
       }
     })
 
@@ -160,6 +110,7 @@ export async function POST(
       priority,
       status,
       source,
+      epicId,
       moduleId,
       featureId,
       componentId,
@@ -167,6 +118,15 @@ export async function POST(
       externalUrl,
       externalSystem
     } = parsed.data
+
+    if (epicId) {
+      const epic = await prisma.epic.findFirst({
+        where: { id: epicId, projectId: params.projectId }
+      })
+      if (!epic) {
+        return badRequestResponse("Epic not found in this project")
+      }
+    }
 
     // Enforce uniqueness of key per project
     const existing = await prisma.requirement.findFirst({
@@ -193,6 +153,7 @@ export async function POST(
         priority: priority || "Medium",
         status: status || "Draft",
         source: source || "Manual",
+        epicId: epicId || null,
         moduleId: moduleId || null,
         featureId: featureId || null,
         componentId: componentId || null,

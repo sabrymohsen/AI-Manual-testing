@@ -62,6 +62,7 @@ enum RequirementSource {
   GitHub
   Figma
   AIGenerated
+  OpenProject
 }
 
 enum TestRunStatus {
@@ -190,16 +191,23 @@ enum JobStatus {
   Cancelled
 }
 
+enum UserPlan {
+  Free
+  Pro
+}
+
 model User {
   id           String     @id @default(uuid())
   email        String     @unique
   passwordHash String
   name         String?
+  plan         UserPlan   @default(Free)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   projects     Project[]
   auditLogs    AuditLog[]
+  reportedBugs BugReport[] @relation("BugReporter")
 }
 
 model Project {
@@ -237,6 +245,7 @@ model Project {
   reusableStepFlows   ReusableStepFlow[]
   testDataVariables   TestDataVariable[]
   requirements        Requirement[]
+  epics               Epic[]
   requirementImports  RequirementImport[]
   bugReports          BugReport[]
   figmaFrames             FigmaFrame[]
@@ -590,12 +599,33 @@ model BugReport {
   priority         Priority
   status           BugStatus    @default(Open)
 
+  // How the bug was resolved (set when moving to Resolved/Closed/Rejected).
+  resolution       BugResolution?
+  resolutionNote   String?
+
+  // Free-form triage labels e.g. ["regression", "ui", "security"].
+  tags             String[]     @default([])
+
   environment      Environment?
   roleUsed         String?
   browser          BrowserType?
   viewport         ViewportType?
 
   assignedTo       String?
+
+  // Who filed the bug (auto-set to the creating user).
+  reporterId       String?
+  reporter         User?        @relation("BugReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+
+  // OpenProject parent work package to nest this bug under when synced.
+  openProjectParentId String?
+  // OpenProject board (grid id) the synced bug should be placed on.
+  openProjectBoardId  String?
+  // OpenProject board column (widget id) the synced bug should be placed under.
+  openProjectBoardColumnId String?
+  // Values for OpenProject required/custom fields on the bug type, keyed by
+  // schema field key (e.g. { "customField6": { type, value } }).
+  openProjectCustomFields Json?
 
   stepsToReproduce String
   expectedResult   String
@@ -752,6 +782,8 @@ model RecordingSession {
   connectionStatus String?       @default("Connected")
   lastError    String?
   keepBrowserOpen Boolean         @default(true)
+  // "Studio" (Recorder Studio) or "LiveQA" (Live QA Session)
+  kind         String             @default("Studio")
   startedAt    DateTime           @default(now())
   finishedAt   DateTime?
   createdAt    DateTime           @default(now())
@@ -759,8 +791,44 @@ model RecordingSession {
 
   recordedTestCases RecordedTestCase[]
   notes             RecordingSessionNote[]
+  screenshots       SessionScreenshot[]
+  recordings        SessionRecording[]
 
   @@index([projectId, status])
+}
+
+model SessionScreenshot {
+  id              String           @id @default(uuid())
+  sessionId       String
+  session         RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  filePath        String
+  fullPage        Boolean          @default(false)
+  pageUrl         String?
+  // Lineage: id of the raw capture this row is an annotated version of
+  annotatedFromId String?
+  createdAt       DateTime         @default(now())
+
+  @@index([sessionId])
+}
+
+enum SessionRecordingStatus {
+  Recording
+  Ready
+  Failed
+}
+
+model SessionRecording {
+  id         String                 @id @default(uuid())
+  sessionId  String
+  session    RecordingSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  filePath   String?
+  status     SessionRecordingStatus @default(Recording)
+  startedAt  DateTime               @default(now())
+  endedAt    DateTime?
+  durationMs Int?
+  createdAt  DateTime               @default(now())
+
+  @@index([sessionId])
 }
 
 model RecordedTestCase {
@@ -1061,10 +1129,41 @@ model ManualSessionNote {
   createdAt   DateTime @default(now())
 }
 
+// ─── Epic — hierarchy layer above Requirement (user story) ──────────────────
+// Orthogonal to the Module/Feature/Component tree by design.
+enum EpicStatus {
+  Draft
+  Active
+  Completed
+  Archived
+}
+
+model Epic {
+  id           String        @id @default(uuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  epicKey      String
+  title        String
+  description  String?
+  priority     Priority      @default(Medium)
+  status       EpicStatus    @default(Active)
+  orderIndex   Int           @default(0)
+  requirements Requirement[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([projectId, epicKey])
+  @@index([projectId])
+}
+
 model Requirement {
   id              String   @id @default(uuid())
   projectId        String
   project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Deleting an Epic never deletes stories at the DB level — SetNull orphans
+  // them; cascade delete of children is an explicit app-side choice.
+  epicId           String?
+  epic             Epic?    @relation(fields: [epicId], references: [id], onDelete: SetNull)
   requirementKey   String
   title            String
   description      String?
@@ -1072,6 +1171,8 @@ model Requirement {
   priority         Priority @default(Medium)
   status           RequirementStatus @default(Draft)
   source           RequirementSource @default(Manual)
+  // Ordering position in the product backlog view (lower = higher priority).
+  backlogRank      Int?
   moduleId         String?
   module           ProjectModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
   featureId        String?
@@ -1091,6 +1192,7 @@ model Requirement {
 
   @@unique([projectId, requirementKey])
   @@index([projectId])
+  @@index([epicId])
   @@index([status])
   @@index([moduleId])
   @@index([featureId])
@@ -1195,6 +1297,14 @@ enum BugStatus {
   Closed
   Rejected
   Duplicate
+}
+
+enum BugResolution {
+  Fixed
+  WontFix
+  CannotReproduce
+  Duplicate
+  ByDesign
 }
 
 model BugComment {
@@ -1728,6 +1838,7 @@ model OpenProjectIntegration {
   // Type mapping (IDs loaded dynamically from OpenProject)
   testCaseTypeId                String?
   bugTypeId                     String?
+  userStoryTypeId               String?
 
   // Status mapping (local status → OpenProject status ID)
   defaultStatusId               String?

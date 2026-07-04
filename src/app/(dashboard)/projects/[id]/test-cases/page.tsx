@@ -185,6 +185,8 @@ export default function TestCasesPage() {
   // Delete Case Confirm Modal
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTestCaseId, setDeleteTestCaseId] = useState("")
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   // Import Dialog
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
@@ -923,6 +925,38 @@ export default function TestCasesPage() {
   }
 
   // Delete Case Hook
+  // Bulk delete: reuses the single-case DELETE endpoint (with its full cascade
+  // cleanup) per selected id, then reports a success/failure summary.
+  async function handleBulkDelete() {
+    if (selectedIds.length === 0) return
+    setBulkDeleting(true)
+    try {
+      const results = await Promise.allSettled(
+        selectedIds.map((id) =>
+          fetch(`/api/projects/${projectId}/test-cases/${id}`, { method: "DELETE" })
+        )
+      )
+      const succeeded = results.filter(
+        (r) => r.status === "fulfilled" && r.value.ok
+      ).length
+      const failed = selectedIds.length - succeeded
+
+      if (failed === 0) {
+        setToast({ message: `${succeeded} test case(s) deleted.`, type: "success" })
+      } else {
+        setToast({ message: `${succeeded} deleted, ${failed} failed.`, type: "error" })
+      }
+      if (selectedTestCaseId && selectedIds.includes(selectedTestCaseId)) setSelectedTestCaseId("")
+      setSelectedIds([])
+      fetchTestCases()
+      fetchHistory()
+    } catch {
+      setToast({ message: "Network error during bulk delete", type: "error" })
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
   async function triggerDeleteTestCase(tcId: string) {
     try {
       const res = await fetch(`/api/projects/${projectId}/test-cases/${tcId}`, {
@@ -972,16 +1006,16 @@ export default function TestCasesPage() {
         </div>
       )}
 
-      {/* 🧩 A. LEFT PANEL: STRUCTURE TREE (CRITICAL HIERARCHY) */}
-      <aside className="w-64 border-r bg-card flex flex-col overflow-y-auto shrink-0 select-none text-xs font-semibold">
-        <div className="p-4 border-b flex items-center justify-between bg-accent/5">
-          <span className="font-extrabold uppercase text-[10px] tracking-wider text-muted-foreground/60 flex items-center gap-1.5">
-            <Layers className="h-4 w-4 text-indigo-500" /> Structure Cockpit
+      {/* Left panel: test suite tree */}
+      <aside className="w-64 border-r bg-card flex flex-col overflow-y-auto shrink-0 select-none">
+        <div className="px-4 h-12 border-b flex items-center justify-between shrink-0">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Layers className="h-3.5 w-3.5" /> Test Suites
           </span>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 rounded-md hover:bg-indigo-500/10 text-indigo-600"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
             onClick={() => handleOpenCreateNode("module")}
             title="Create Module"
           >
@@ -989,19 +1023,19 @@ export default function TestCasesPage() {
           </Button>
         </div>
 
-        {/* Dynamic Nodes Container */}
-        <div className="p-3 space-y-1">
-          {/* Project Node */}
-          <div 
+        {/* Tree */}
+        <div className="p-2 space-y-0.5">
+          {/* Project node */}
+          <div
             onClick={() => selectNode("project", "")}
-            className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-              selectedNodeType === "project" ? "bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/15" : "hover:bg-accent/40"
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md cursor-pointer text-sm transition-colors ${
+              selectedNodeType === "project" ? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-500/10 dark:text-indigo-400" : "hover:bg-accent/60"
             }`}
           >
-            <span className="flex items-center gap-2 font-bold">
-              <Zap className="h-4 w-4 text-indigo-500" /> All Workspace Cases
+            <span className="flex items-center gap-2 min-w-0">
+              <Layers className="h-4 w-4 text-indigo-500 shrink-0" /> All Test Cases
             </span>
-            <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full text-[9px] font-bold">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {testCases.length}
             </span>
           </div>
@@ -1011,8 +1045,8 @@ export default function TestCasesPage() {
           {/* Modules Tree */}
           <div className="space-y-1">
             {hierarchy.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground/60 text-[10px] leading-relaxed">
-                No modules found. Click plus to create.
+              <div className="p-4 text-center text-muted-foreground text-xs leading-relaxed">
+                No modules yet. Use + above to create one.
               </div>
             ) : (
               hierarchy.map((mod) => {
@@ -1023,31 +1057,31 @@ export default function TestCasesPage() {
                 return (
                   <div key={mod.id} className="space-y-0.5">
                     {/* Module row */}
-                    <div className={`group flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer ${
-                      selectedNodeType === "module" && selectedNodeId === mod.id ? "bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/15" : "hover:bg-accent/40"
+                    <div className={`group flex items-center justify-between pl-1.5 pr-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors ${
+                      selectedNodeType === "module" && selectedNodeId === mod.id ? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-500/10 dark:text-indigo-400" : "hover:bg-accent/60"
                     }`}>
-                      <span 
+                      <span
                         onClick={() => { selectNode("module", mod.id); toggleNodeExpand(mod.id) }}
                         className="flex items-center gap-1.5 min-w-0 flex-1 py-0.5"
                       >
-                        {isModExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/60" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />}
-                        <Folder className="h-4 w-4 text-indigo-400 shrink-0 fill-indigo-400/10" />
-                        <span className="truncate font-bold text-slate-700" title={mod.name}>{mod.name}</span>
+                        {isModExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                        <Folder className="h-4 w-4 text-indigo-400 shrink-0" />
+                        <span className="truncate" title={mod.name}>{mod.name}</span>
                       </span>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {modPassRate !== null && (
-                          <span className={`text-[9px] font-bold px-1 rounded ${
-                            modPassRate >= 90 ? "bg-emerald-100 text-emerald-700" :
-                            modPassRate >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"
+                          <span className={`text-[10px] font-medium tabular-nums ${
+                            modPassRate >= 90 ? "text-emerald-600 dark:text-emerald-400" :
+                            modPassRate >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
                           }`}>
                             {modPassRate}%
                           </span>
                         )}
-                        <span className="bg-slate-100 text-slate-500 px-1 py-0.5 rounded text-[9px]">
+                        <span className="text-xs text-muted-foreground tabular-nums group-hover:hidden">
                           {modCases}
                         </span>
-                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-5 w-5 rounded hover:bg-slate-200" onClick={() => handleOpenCreateNode("feature", mod.id)} title="Add Feature"><Plus className="h-3.5 w-3.5" /></Button>
+                        <div className="hidden group-hover:flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 rounded text-muted-foreground hover:text-foreground" onClick={() => handleOpenCreateNode("feature", mod.id)} title="Add Feature"><Plus className="h-3.5 w-3.5" /></Button>
                         </div>
                       </div>
                     </div>
@@ -1063,24 +1097,24 @@ export default function TestCasesPage() {
                           return (
                             <div key={feat.id} className="space-y-0.5">
                               {/* Feature row */}
-                              <div className={`group flex items-center justify-between px-2 py-1.5 rounded-lg cursor-pointer ${
-                                selectedNodeType === "feature" && selectedNodeId === feat.id ? "bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/15" : "hover:bg-accent/40"
+                              <div className={`group flex items-center justify-between pl-1.5 pr-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors ${
+                                selectedNodeType === "feature" && selectedNodeId === feat.id ? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-500/10 dark:text-indigo-400" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                               }`}>
-                                <span 
+                                <span
                                   onClick={() => { selectNode("feature", feat.id); toggleNodeExpand(feat.id) }}
                                   className="flex items-center gap-1.5 min-w-0 flex-1 py-0.5"
                                 >
-                                  {isFeatExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/60" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />}
+                                  {isFeatExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
                                   <FolderOpen className="h-4 w-4 text-violet-400 shrink-0" />
-                                  <span className="truncate font-semibold text-slate-600" title={feat.name}>{feat.name}</span>
+                                  <span className="truncate" title={feat.name}>{feat.name}</span>
                                 </span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1.5 shrink-0">
                                   {featPassRate !== null && (
-                                    <span className="text-[8px] text-emerald-600 font-bold">{featPassRate}%</span>
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium tabular-nums">{featPassRate}%</span>
                                   )}
-                                  <span className="text-slate-400 text-[9px] font-normal">({featCases})</span>
-                                  <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded hover:bg-slate-200" onClick={() => handleOpenCreateNode("component", undefined, feat.id)} title="Add Component"><Plus className="h-3.5 w-3.5" /></Button>
+                                  <span className="text-xs text-muted-foreground tabular-nums group-hover:hidden">{featCases}</span>
+                                  <div className="hidden group-hover:flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded text-muted-foreground hover:text-foreground" onClick={() => handleOpenCreateNode("component", undefined, feat.id)} title="Add Component"><Plus className="h-3.5 w-3.5" /></Button>
                                   </div>
                                 </div>
                               </div>
@@ -1092,18 +1126,18 @@ export default function TestCasesPage() {
                                     const compCases = countCasesInNode("component", comp.id)
                                     const isCompSelected = selectedNodeType === "component" && selectedNodeId === comp.id
                                     return (
-                                      <div 
+                                      <div
                                         key={comp.id}
                                         onClick={() => selectNode("component", comp.id)}
-                                        className={`group flex items-center justify-between px-2 py-1 rounded-lg cursor-pointer ${
-                                          isCompSelected ? "bg-indigo-50/70 text-indigo-700 dark:bg-indigo-950/15" : "hover:bg-accent/40"
+                                        className={`group flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer text-sm transition-colors ${
+                                          isCompSelected ? "bg-indigo-50 text-indigo-700 font-medium dark:bg-indigo-500/10 dark:text-indigo-400" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
                                         }`}
                                       >
                                         <span className="flex items-center gap-1.5 min-w-0 flex-1 py-0.5">
                                           <Box className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-                                          <span className="truncate font-medium text-slate-500" title={comp.name}>{comp.name}</span>
+                                          <span className="truncate" title={comp.name}>{comp.name}</span>
                                         </span>
-                                        <span className="text-slate-400 text-[9px] font-normal">({compCases})</span>
+                                        <span className="text-xs text-muted-foreground tabular-nums shrink-0">{compCases}</span>
                                       </div>
                                     )
                                   })}
@@ -1122,338 +1156,342 @@ export default function TestCasesPage() {
         </div>
       </aside>
 
-      {/* 🧠 B. CENTER PANEL: TEST CASE LIST (CONTEXTUAL + TIMELINE FLOW) */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-background">
-        
-        {/* Dynamic Context Header */}
-        <div className="p-4 border-b flex items-center justify-between bg-card">
-          <div className="space-y-0.5">
-            <div className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60 flex items-center gap-1.5">
-              Workspace &bull; {selectedNodeType}
-            </div>
-            <h2 className="text-sm font-extrabold text-foreground tracking-tight">
-              {selectedNodeType === "project" && "All Workspace Cases"}
-              {selectedNodeType === "module" && `Module: ${hierarchy.find(m => m.id === selectedNodeId)?.name || "General"}`}
-              {selectedNodeType === "feature" && `Feature Scope`}
-              {selectedNodeType === "component" && `Component Scope`}
+      {/* Center panel: test case list */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
+
+        {/* Header */}
+        <div className="px-5 py-3 border-b flex items-center justify-between gap-4 bg-card">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-foreground tracking-tight truncate">
+              {selectedNodeType === "project" && "All Test Cases"}
+              {selectedNodeType === "module" && (hierarchy.find(m => m.id === selectedNodeId)?.name || "Module")}
+              {selectedNodeType === "feature" && (hierarchy.flatMap(m => m.features).find(f => f.id === selectedNodeId)?.name || "Feature")}
+              {selectedNodeType === "component" && (hierarchy.flatMap(m => m.features).flatMap(f => f.components).find(c => c.id === selectedNodeId)?.name || "Component")}
             </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filteredList.length === testCases.length
+                ? `${testCases.length} test case${testCases.length === 1 ? "" : "s"}`
+                : `${filteredList.length} of ${testCases.length} test cases`}
+            </p>
           </div>
 
-          {/* Quick inline search/filters when listing */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsImportModalOpen(true)}
+              className="h-8 text-xs flex items-center gap-1.5 px-3"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Import
+            </Button>
             <Button
               size="sm"
               onClick={handleOpenCreateCaseDrawer}
-              className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm px-3 shrink-0"
+              className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs flex items-center gap-1.5 shadow-sm px-3"
             >
-              <Plus className="h-4 w-4" /> Create Case
+              <Plus className="h-4 w-4" /> New Test Case
             </Button>
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground/60" />
-              <Input 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search cases..."
-                className="pl-8 h-8 w-40 text-xs bg-background"
-              />
-            </div>
-            <select
-              value={filterExecutionType}
-              onChange={(e) => setFilterExecutionType(e.target.value)}
-              className="h-8 rounded-md border text-xs bg-background px-2"
-            >
-              <option value="">All Types</option>
-              <option value="Automated">Automated</option>
-              <option value="Manual">Manual</option>
-            </select>
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="h-8 rounded-md border text-xs bg-background px-2"
-            >
-              <option value="">Priority</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-            <select 
-              value={filterStatus} 
-              onChange={(e) => setFilterStatus(e.target.value)} 
-              className="h-8 rounded-md border text-xs bg-background px-2"
-            >
-              <option value="">Status</option>
-              <option value="Passed">Passed</option>
-              <option value="Failed">Failed</option>
-              <option value="NotExecuted">Not Run</option>
-            </select>
           </div>
         </div>
 
-        {/* Traceability validation filters */}
-        <div className="px-4 py-2 border-b bg-card flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wide">
-          <span>Validation Filters:</span>
-          <button 
-            onClick={() => setTraceFilter("all")}
-            className={`px-2.5 py-1 rounded-full ${traceFilter === "all" ? "bg-indigo-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+        {/* Toolbar: search + filters */}
+        <div className="px-5 py-2 border-b bg-card flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search test cases..."
+              className="pl-8 h-8 w-56 text-xs bg-background"
+            />
+          </div>
+          <select
+            value={filterExecutionType}
+            onChange={(e) => setFilterExecutionType(e.target.value)}
+            className="h-8 rounded-md border text-xs bg-background text-foreground px-2"
           >
-            All Cases
-          </button>
-          <button 
-            onClick={() => setTraceFilter("orphans")}
-            className={`px-2.5 py-1 rounded-full flex items-center gap-1 ${traceFilter === "orphans" ? "bg-amber-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+            <option value="">All types</option>
+            <option value="Automated">Automated</option>
+            <option value="Manual">Manual</option>
+          </select>
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            className="h-8 rounded-md border text-xs bg-background text-foreground px-2"
           >
-            <ShieldAlert className="h-3 w-3" /> Orphans ({testCases.filter(tc => !tc.moduleId).length})
-          </button>
-          <button
-            onClick={() => setTraceFilter("broken")}
-            className={`px-2.5 py-1 rounded-full flex items-center gap-1 ${traceFilter === "broken" ? "bg-red-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+            <option value="">All priorities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Critical">Critical</option>
+          </select>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="h-8 rounded-md border text-xs bg-background text-foreground px-2"
           >
-            <AlertCircle className="h-3 w-3" /> Broken Links ({testCases.filter(tc => getTraceabilityDetails(tc).isBroken).length})
-          </button>
+            <option value="">All statuses</option>
+            <option value="Passed">Passed</option>
+            <option value="Failed">Failed</option>
+            <option value="NotExecuted">Not run</option>
+          </select>
 
-          <span className="mx-1 h-3.5 w-px bg-slate-200" />
-          <span>Type:</span>
+          <span className="h-4 w-px bg-border mx-1" />
+
           <button
-            onClick={() => setFilterExecutionType(filterExecutionType === "Automated" ? "" : "Automated")}
-            className={`px-2.5 py-1 rounded-full flex items-center gap-1 ${filterExecutionType === "Automated" ? "bg-violet-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+            onClick={() => setTraceFilter(traceFilter === "orphans" ? "all" : "orphans")}
+            className={`h-8 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors ${
+              traceFilter === "orphans"
+                ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-400"
+                : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
           >
-            <Zap className="h-3 w-3" /> Automated ({testCases.filter(tc => tc.executionType === "Automated").length})
+            <ShieldAlert className="h-3.5 w-3.5" /> Orphans
+            <span className="tabular-nums">{testCases.filter(tc => !tc.moduleId).length}</span>
           </button>
           <button
-            onClick={() => setFilterExecutionType(filterExecutionType === "Manual" ? "" : "Manual")}
-            className={`px-2.5 py-1 rounded-full flex items-center gap-1 ${filterExecutionType === "Manual" ? "bg-blue-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-600"}`}
+            onClick={() => setTraceFilter(traceFilter === "broken" ? "all" : "broken")}
+            className={`h-8 px-2.5 rounded-md border text-xs font-medium flex items-center gap-1.5 transition-colors ${
+              traceFilter === "broken"
+                ? "border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-400"
+                : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
           >
-            <FileText className="h-3 w-3" /> Manual ({testCases.filter(tc => tc.executionType === "Manual").length})
+            <AlertCircle className="h-3.5 w-3.5" /> Broken links
+            <span className="tabular-nums">{testCases.filter(tc => getTraceabilityDetails(tc).isBroken).length}</span>
           </button>
         </div>
 
-        {/* Content View Scroll Panel */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Content scroll panel */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-3">
 
-          {/* Bulk Action Bar */}
+          {/* Bulk action bar */}
           {selectedIds.length > 0 && (
-            <div className="flex items-center justify-between p-3 bg-indigo-500/[0.04] border border-indigo-200 dark:border-indigo-900/40 rounded-xl animate-in slide-in-from-top duration-200 gap-3 flex-wrap text-xs">
-              <span className="font-bold text-indigo-700 flex items-center gap-2">
-                {selectedIds.length} testcase(s) selected
+            <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 rounded-lg animate-in slide-in-from-top duration-200 gap-3 flex-wrap">
+              <span className="text-xs font-medium text-indigo-700 dark:text-indigo-400">
+                {selectedIds.length} selected
               </span>
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={handleBulkRun} className="flex items-center gap-1 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] h-8">
-                  <Play className="h-3.5 w-3.5 fill-current" /> Run Selected
+              <div className="flex items-center gap-1.5">
+                <Button size="sm" onClick={handleBulkRun} className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8">
+                  <Play className="h-3.5 w-3.5 fill-current" /> Run
                 </Button>
                 {hasOpIntegration && (
-                  <Button size="sm" onClick={handleBulkSync} className="flex items-center gap-1 font-semibold text-blue-600 border border-blue-200 hover:bg-blue-50 text-[11px] h-8">
-                    <CloudUpload className="h-3.5 w-3.5" /> Sync OpenProject
+                  <Button size="sm" variant="outline" onClick={handleBulkSync} className="flex items-center gap-1.5 text-xs h-8">
+                    <CloudUpload className="h-3.5 w-3.5" /> Sync
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={handleExportSelection} className="flex items-center gap-1 font-semibold text-[11px] h-8">
-                  <FileDown className="h-3.5 w-3.5" /> Export JSON
+                <Button size="sm" variant="outline" onClick={handleExportSelection} className="flex items-center gap-1.5 text-xs h-8">
+                  <FileDown className="h-3.5 w-3.5" /> Export
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])} className="text-[11px] h-8">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setBulkDeleteConfirmOpen(true)}
+                  disabled={bulkDeleting}
+                  className="flex items-center gap-1.5 text-xs h-8 text-red-600 border-red-200 hover:bg-red-50 dark:border-red-500/30 dark:hover:bg-red-500/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> {bulkDeleting ? "Deleting..." : "Delete"}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedIds([])} className="text-xs h-8 text-muted-foreground">
                   Clear
                 </Button>
               </div>
             </div>
           )}
 
-          {/* List of Test Cases */}
+          {/* Test case list */}
           {filteredList.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 max-w-sm mx-auto select-none">
-              <div className="p-4 rounded-full bg-slate-100 text-slate-400">
-                <FileText className="h-10 w-10" />
+            <div className="flex flex-col items-center justify-center py-24 text-center space-y-4 max-w-sm mx-auto select-none">
+              <div className="p-4 rounded-full bg-muted text-muted-foreground">
+                <FileText className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="font-extrabold text-sm text-slate-800">No test cases found</h3>
-                <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">
-                  Generate cases using our Playwright recorder studio, upload an Excel sheets pack, or trigger AI generator.
+                <h3 className="font-semibold text-sm text-foreground">No test cases found</h3>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  Create one manually, record a session with the Playwright recorder, or import from Excel.
                 </p>
               </div>
+              <Button size="sm" onClick={handleOpenCreateCaseDrawer} className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs flex items-center gap-1.5">
+                <Plus className="h-4 w-4" /> New Test Case
+              </Button>
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between px-3 py-1 text-[10px] font-bold text-muted-foreground/60 uppercase">
-                <span className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    checked={filteredList.length > 0 && filteredList.every(tc => selectedIds.includes(tc.id))}
-                    onChange={toggleSelectAllVisible}
-                    className="rounded text-indigo-600 border-slate-300 focus:ring-indigo-500" 
-                  />
-                  Select Visible
-                </span>
-                <span>Lifecycle Flow Tracing Timeline</span>
-              </div>
+            <div>
+              <label className="flex items-center gap-2 px-4 pb-2 text-xs text-muted-foreground cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={filteredList.length > 0 && filteredList.every(tc => selectedIds.includes(tc.id))}
+                  onChange={toggleSelectAllVisible}
+                  className="rounded border-input text-indigo-600 focus:ring-indigo-500"
+                />
+                Select all visible
+              </label>
 
-              {filteredList.map((tc) => {
-                const { isOrphan, isBroken, hasRuns, lastStatus, isSynced, linkedBugs } = getTraceabilityDetails(tc)
-                const isSelected = selectedTestCaseId === tc.id
-                const runInfo = activeRuns.get(tc.id)
+              <div className="border rounded-xl bg-card divide-y overflow-hidden">
+                {filteredList.map((tc) => {
+                  const { isOrphan, isBroken, hasRuns, lastStatus, isSynced, linkedBugs } = getTraceabilityDetails(tc)
+                  const isSelected = selectedTestCaseId === tc.id
+                  const runInfo = activeRuns.get(tc.id)
 
-                return (
-                  <div 
-                    key={tc.id}
-                    onClick={() => setSelectedTestCaseId(tc.id)}
-                    className={`group border rounded-xl p-4 bg-card flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer transition-all hover:shadow-md ${
-                      isSelected ? "border-indigo-600 ring-1 ring-indigo-600 bg-indigo-500/[0.01]" : "hover:border-slate-300"
-                    }`}
-                  >
-                    {/* Left details info */}
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <input 
-                        type="checkbox" 
+                  return (
+                    <div
+                      key={tc.id}
+                      onClick={() => setSelectedTestCaseId(tc.id)}
+                      className={`group flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors ${
+                        isSelected ? "bg-indigo-50/70 dark:bg-indigo-500/[0.08]" : "hover:bg-accent/40"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
                         checked={selectedIds.includes(tc.id)}
                         onChange={(e) => { e.stopPropagation(); toggleSelectCase(tc.id) }}
-                        className="mt-1 rounded text-indigo-600 border-slate-300 focus:ring-indigo-500" 
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border-input text-indigo-600 focus:ring-indigo-500 shrink-0"
                       />
-                      <div className="space-y-1.5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-extrabold text-xs text-slate-800 truncate" title={tc.title}>
+
+                      {/* Execution type icon */}
+                      <span
+                        className="shrink-0"
+                        title={tc.executionType === "Automated" ? "Automated (Playwright)" : "Manual test case"}
+                      >
+                        {tc.executionType === "Automated"
+                          ? <Zap className="h-4 w-4 text-violet-500" />
+                          : <ClipboardList className="h-4 w-4 text-muted-foreground" />}
+                      </span>
+
+                      {/* Title + meta */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-medium text-foreground truncate" title={tc.title}>
                             {tc.title}
                           </span>
-                          <span className={`px-1.5 py-0.5 rounded-[4px] text-[8px] font-bold uppercase tracking-wider ${
-                            tc.priority === "Critical" ? "bg-red-100 text-red-700" :
-                            tc.priority === "High" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
+                            tc.priority === "Critical" ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" :
+                            tc.priority === "High" ? "bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-400" :
+                            tc.priority === "Medium" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400" :
+                            "bg-muted text-muted-foreground"
                           }`}>
                             {tc.priority}
                           </span>
                           {isOrphan && (
-                            <span className="bg-amber-100 text-amber-700 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                              <ShieldAlert className="h-2.5 w-2.5" /> Orphan
+                            <span className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400" title="Not assigned to any module">
+                              <ShieldAlert className="h-3 w-3" /> Orphan
                             </span>
                           )}
                           {isBroken && (
-                            <span className="bg-red-100 text-red-700 text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
-                              <AlertCircle className="h-2.5 w-2.5" /> Broken
+                            <span className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" title="Missing runs, bugs, or sync links">
+                              <AlertCircle className="h-3 w-3" /> Broken
                             </span>
                           )}
                         </div>
 
-                        <div className="flex items-center gap-3 text-[10px] text-muted-foreground/80 font-bold flex-wrap">
-                          <span className="flex items-center gap-1 text-slate-500 font-semibold uppercase text-[9px]">
-                            {tc.executionType === "Manual" ? <ClipboardList className="h-3 w-3 text-slate-400" /> : <Play className="h-3 w-3 text-emerald-500 fill-emerald-500/10" />}
-                            {tc.executionType}
-                          </span>
-                          <span>&bull;</span>
-                          <span>Source: {tc.source}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground min-w-0">
+                          <span>{tc.source}</span>
                           {tc.moduleId && (
                             <>
-                              <span>&bull;</span>
-                              <span className="text-indigo-600 truncate">{tc.module}</span>
+                              <span>&middot;</span>
+                              <span className="truncate">{tc.module}</span>
+                            </>
+                          )}
+                          {linkedBugs.length > 0 && (
+                            <>
+                              <span>&middot;</span>
+                              <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 shrink-0">
+                                <AlertTriangle className="h-3 w-3" /> {linkedBugs.length} bug{linkedBugs.length > 1 ? "s" : ""}
+                              </span>
                             </>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Timeline Flow Steps */}
-                    <div className="flex items-center gap-1.5 self-end md:self-auto shrink-0 select-none">
-                      
-                      {/* Step 1: Created */}
-                      <div className="flex flex-col items-center" title={`Created via ${tc.source}`}>
-                        <div className="h-5 w-5 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center">
-                          {tc.source === "Recorder" ? <Video className="h-3 w-3 text-indigo-500" /> :
-                           tc.source === "AI" ? <Sparkles className="h-3 w-3 text-purple-500" /> :
-                           <FileText className="h-3 w-3 text-slate-500" />}
-                        </div>
-                        <span className="text-[7px] font-bold text-muted-foreground mt-0.5">Created</span>
-                      </div>
-
-                      <div className="h-px w-3 bg-slate-200" />
-
-                      {/* Step 2: Executed */}
-                      <div className="flex flex-col items-center" title="Execution actions">
-                        {runInfo ? (
-                          <div className="h-5 w-5 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center animate-pulse">
-                            <Loader2 className="h-3 w-3 text-amber-500 animate-spin" />
-                          </div>
-                        ) : (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleRunTestCase(tc) }}
-                            className="h-5 w-5 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center hover:bg-emerald-100"
-                          >
-                            <Play className="h-3 w-3 text-emerald-600 fill-current" />
-                          </button>
+                      {/* Status + quick actions */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isSynced && (
+                          <CloudUpload className="h-3.5 w-3.5 text-blue-500" aria-label="Synced to OpenProject" />
                         )}
-                        <span className="text-[7px] font-bold text-muted-foreground mt-0.5">Run</span>
-                      </div>
 
-                      <div className="h-px w-3 bg-slate-200" />
+                        {runInfo ? (
+                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            {runInfo.currentStep ? `Step ${runInfo.currentStep}/${runInfo.totalSteps}` : "Running"}
+                          </span>
+                        ) : (
+                          <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
+                            lastStatus === "Passed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" :
+                            lastStatus === "Failed" ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" :
+                            "bg-muted text-muted-foreground"
+                          }`}>
+                            {lastStatus === "Passed" ? "Passed" : lastStatus === "Failed" ? "Failed" : "Not run"}
+                          </span>
+                        )}
 
-                      {/* Step 3: Verified Status */}
-                      <div className="flex flex-col items-center" title={`Last status: ${lastStatus}`}>
-                        <div className={`h-5 w-5 rounded-full flex items-center justify-center border ${
-                          lastStatus === "Passed" ? "bg-emerald-50 border-emerald-200 text-emerald-600" :
-                          lastStatus === "Failed" ? "bg-red-50 border-red-200 text-red-600" :
-                          "bg-slate-50 border-slate-200 text-slate-400"
-                        }`}>
-                          {lastStatus === "Passed" ? <CheckCircle2 className="h-3.5 w-3.5 fill-current" /> :
-                           lastStatus === "Failed" ? <XCircle className="h-3.5 w-3.5 fill-current" /> :
-                           <Clock className="h-3 w-3" />}
-                        </div>
-                        <span className="text-[7px] font-bold text-muted-foreground mt-0.5">Status</span>
-                      </div>
-
-                      <div className="h-px w-3 bg-slate-200" />
-
-                      {/* Step 4: Bug Linked */}
-                      <div className="flex flex-col items-center" title={linkedBugs.length > 0 ? `${linkedBugs.length} linked bugs` : "No bugs filed"}>
-                        <div className={`h-5 w-5 rounded-full flex items-center justify-center border ${
-                          linkedBugs.length > 0 ? "bg-rose-50 border-rose-200 text-rose-600 font-extrabold text-[8px]" :
-                          (lastStatus === "Failed" ? "bg-red-100 border-red-400 text-red-700 animate-bounce" : "bg-slate-50 border-slate-200 text-slate-300")
-                        }`}>
-                          {linkedBugs.length > 0 ? linkedBugs.length : <AlertTriangle className="h-3 w-3" />}
-                        </div>
-                        <span className="text-[7px] font-bold text-muted-foreground mt-0.5">Bug</span>
-                      </div>
-
-                      <div className="h-px w-3 bg-slate-200" />
-
-                      {/* Step 5: Synced */}
-                      <div className="flex flex-col items-center" title={isSynced ? "Synced to OpenProject" : "Sync case"}>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleSyncSingleOP(tc.id) }}
-                          className={`h-5 w-5 rounded-full flex items-center justify-center border ${
-                            isSynced ? "bg-blue-50 border-blue-200 text-blue-600" : "bg-slate-50 border-slate-200 hover:bg-slate-100 text-slate-400"
-                          }`}
+                        <div
+                          className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <CloudUpload className="h-3 w-3" />
-                        </button>
-                        <span className="text-[7px] font-bold text-muted-foreground mt-0.5">Synced</span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-500/10"
+                            onClick={() => handleRunTestCase(tc)}
+                            disabled={!!runInfo}
+                            title="Run test case"
+                          >
+                            <Play className="h-3.5 w-3.5 fill-current" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-500/10"
+                            onClick={() => handleSyncSingleOP(tc.id)}
+                            title="Sync to OpenProject"
+                          >
+                            <CloudUpload className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                            onClick={() => { setDeleteTestCaseId(tc.id); setDeleteConfirmOpen(true) }}
+                            title="Delete test case"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           )}
 
         </div>
       </div>
 
-      {/* 🔍 C. RIGHT PANEL: DETAILS + TRACEABILITY INTERFACE */}
-      <aside className="w-[380px] border-l bg-card flex flex-col overflow-hidden shrink-0 select-none text-xs font-semibold">
+      {/* Right panel: details + traceability */}
+      <aside className="w-[380px] border-l bg-card flex flex-col overflow-hidden shrink-0 select-none">
         {activeTestCase ? (
           <div className="h-full flex flex-col overflow-hidden">
-            
-            {/* Right Panel Header */}
-            <div className="p-4 border-b space-y-2 bg-accent/5">
+
+            {/* Header */}
+            <div className="px-4 py-3 border-b space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] uppercase font-bold text-muted-foreground/60">Testcase Triage</span>
-                <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-7 w-7 text-indigo-600 rounded hover:bg-slate-200"
+                <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Test Case</span>
+                <div className="flex items-center gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md"
                     onClick={() => router.push(`/projects/${projectId}/test-cases/${activeTestCase.id}/edit`)}
                     title="Edit Case"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
                   </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-7 w-7 text-red-600 rounded hover:bg-red-50"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-red-600 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10"
                     onClick={() => { setDeleteTestCaseId(activeTestCase.id); setDeleteConfirmOpen(true) }}
                     title="Delete Case"
                   >
@@ -1461,41 +1499,41 @@ export default function TestCasesPage() {
                   </Button>
                 </div>
               </div>
-              <h3 className="font-extrabold text-xs text-slate-800 leading-tight">
+              <h3 className="font-semibold text-sm text-foreground leading-snug">
                 {activeTestCase.title}
               </h3>
             </div>
 
-            {/* Tabs Selector Bar */}
-            <div className="flex border-b bg-slate-50 text-[10px] uppercase font-extrabold tracking-wider text-slate-500">
-              <button 
+            {/* Tabs */}
+            <div className="flex border-b text-xs font-medium text-muted-foreground">
+              <button
                 onClick={() => setActiveRightTab("details")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition-all ${
-                  activeRightTab === "details" ? "border-indigo-600 text-indigo-700 bg-white" : "border-transparent hover:bg-slate-100"
+                className={`flex-1 py-2.5 text-center border-b-2 -mb-px transition-colors ${
+                  activeRightTab === "details" ? "border-indigo-600 text-indigo-600 dark:text-indigo-400" : "border-transparent hover:text-foreground"
                 }`}
               >
                 Details
               </button>
-              <button 
+              <button
                 onClick={() => setActiveRightTab("execution")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition-all ${
-                  activeRightTab === "execution" ? "border-indigo-600 text-indigo-700 bg-white" : "border-transparent hover:bg-slate-100"
+                className={`flex-1 py-2.5 text-center border-b-2 -mb-px transition-colors ${
+                  activeRightTab === "execution" ? "border-indigo-600 text-indigo-600 dark:text-indigo-400" : "border-transparent hover:text-foreground"
                 }`}
               >
-                Executions
+                Runs
               </button>
-              <button 
+              <button
                 onClick={() => setActiveRightTab("bugs")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition-all ${
-                  activeRightTab === "bugs" ? "border-indigo-600 text-indigo-700 bg-white" : "border-transparent hover:bg-slate-100"
+                className={`flex-1 py-2.5 text-center border-b-2 -mb-px transition-colors ${
+                  activeRightTab === "bugs" ? "border-indigo-600 text-indigo-600 dark:text-indigo-400" : "border-transparent hover:text-foreground"
                 }`}
               >
                 Bugs
               </button>
-              <button 
+              <button
                 onClick={() => setActiveRightTab("integrations")}
-                className={`flex-1 py-2.5 text-center border-b-2 transition-all ${
-                  activeRightTab === "integrations" ? "border-indigo-600 text-indigo-700 bg-white" : "border-transparent hover:bg-slate-100"
+                className={`flex-1 py-2.5 text-center border-b-2 -mb-px transition-colors ${
+                  activeRightTab === "integrations" ? "border-indigo-600 text-indigo-600 dark:text-indigo-400" : "border-transparent hover:text-foreground"
                 }`}
               >
                 Sync
@@ -1507,41 +1545,43 @@ export default function TestCasesPage() {
               
               {/* TAB 1: Details */}
               {activeRightTab === "details" && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {activeTestCase.preconditions && (
-                    <div className="space-y-1">
-                      <span className="text-[10px] text-muted-foreground uppercase">Preconditions</span>
-                      <p className="p-2 border rounded-lg bg-slate-50/50 text-[11px] text-slate-600 whitespace-pre-wrap leading-relaxed">
+                    <div className="space-y-1.5">
+                      <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Preconditions</span>
+                      <p className="p-2.5 border rounded-lg bg-muted/40 text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                         {activeTestCase.preconditions}
                       </p>
                     </div>
                   )}
 
                   {/* Requirements links */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-muted-foreground uppercase">Linked Requirements</span>
+                  <div className="space-y-1.5">
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Linked Requirements</span>
                     {activeTestCase.requirements && activeTestCase.requirements.length > 0 ? (
-                      <div className="space-y-1">
+                      <div className="space-y-1.5">
                         {activeTestCase.requirements.map(req => (
-                          <div key={req.id} className="p-2 border rounded-lg flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-indigo-700">{req.requirementKey} &bull; {req.title}</span>
+                          <div key={req.id} className="p-2.5 border rounded-lg flex items-center gap-2 text-xs">
+                            <Link2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                            <span className="font-medium text-indigo-600 dark:text-indigo-400 shrink-0">{req.requirementKey}</span>
+                            <span className="text-foreground truncate" title={req.title}>{req.title}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-[11px] text-muted-foreground italic p-2 border border-dashed rounded-lg">
-                        No requirements linked to this testcase.
+                      <p className="text-xs text-muted-foreground p-3 border border-dashed rounded-lg text-center">
+                        No requirements linked yet.
                       </p>
                     )}
                   </div>
 
                   {/* Steps list */}
-                  <div className="space-y-2">
-                    <span className="text-[10px] text-muted-foreground uppercase flex items-center justify-between">
-                      <span>Action Steps ({activeTestCase.steps.length})</span>
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Steps ({activeTestCase.steps.length})</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => {
                           setMoveTestCaseId(activeTestCase.id)
                           setMoveTestCaseTitle(activeTestCase.title)
@@ -1550,22 +1590,28 @@ export default function TestCasesPage() {
                           setMoveCurrentComponentId(activeTestCase.componentId || null)
                           setMoveModalOpen(true)
                         }}
-                        className="h-5 text-[9px] uppercase font-bold text-indigo-600"
+                        className="h-6 px-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-400"
                       >
-                        Move Hierarchy
+                        Move
                       </Button>
-                    </span>
-                    <div className="space-y-1 text-[11px]">
+                    </div>
+                    <div className="space-y-1.5">
                       {activeTestCase.steps.map(step => (
-                        <div key={step.stepNumber} className="p-2 border rounded-lg bg-card hover:bg-slate-50/40 space-y-1">
-                          <div className="flex items-center justify-between font-bold text-slate-700">
-                            <span>Step {step.stepNumber}</span>
-                            <span className="text-[9px] uppercase font-mono px-1 rounded bg-slate-100 text-slate-500">{step.actionType}</span>
+                        <div key={step.stepNumber} className="flex gap-2.5 p-2.5 border rounded-lg bg-card">
+                          <span className="h-5 w-5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 text-[10px] font-semibold flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
+                            {step.stepNumber}
+                          </span>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="text-xs text-foreground leading-snug">{step.actionDescription}</p>
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">{step.actionType}</span>
+                            </div>
+                            {step.expectedResult && (
+                              <p className="text-[11px] text-emerald-600 dark:text-emerald-400 leading-snug">
+                                Expected: {step.expectedResult}
+                              </p>
+                            )}
                           </div>
-                          <p className="text-slate-600 font-medium leading-tight">{step.actionDescription}</p>
-                          {step.expectedResult && (
-                            <p className="text-[10px] text-emerald-600 font-bold bg-emerald-500/[0.02] p-1 rounded">Expected: {step.expectedResult}</p>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -1580,41 +1626,41 @@ export default function TestCasesPage() {
                     const testHistory = allTestRuns.filter(run => run.testCaseId === activeTestCase.id)
                     
                     return (
-                      <div className="space-y-2">
-                        <div className="p-3 border rounded-xl bg-slate-50 flex items-center justify-between">
+                      <div className="space-y-3">
+                        <div className="p-3 border rounded-lg bg-muted/40 flex items-center justify-between">
                           <div className="space-y-0.5">
-                            <span className="text-[9px] text-slate-400 uppercase font-bold">Latest Result</span>
-                            <div className="font-extrabold text-xs text-slate-700">
-                              {history[activeTestCase.id]?.lastStatus || "Not Executed"}
+                            <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Latest Result</span>
+                            <div className="font-semibold text-sm text-foreground">
+                              {history[activeTestCase.id]?.lastStatus || "Not run"}
                             </div>
                           </div>
-                          <Button size="sm" onClick={() => handleRunTestCase(activeTestCase)} className="h-7 bg-indigo-600 text-white font-bold text-[10px] px-2.5">
-                            Run case
+                          <Button size="sm" onClick={() => handleRunTestCase(activeTestCase)} className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 flex items-center gap-1.5">
+                            <Play className="h-3.5 w-3.5 fill-current" /> Run
                           </Button>
                         </div>
 
-                        <span className="text-[10px] text-muted-foreground uppercase block mt-3">Execution History Logs ({testHistory.length})</span>
+                        <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground block">Run History ({testHistory.length})</span>
                         {testHistory.length === 0 ? (
-                          <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground italic">
-                            No execution history logs found.
+                          <div className="p-8 border border-dashed rounded-lg text-center text-xs text-muted-foreground">
+                            This test case has not been run yet.
                           </div>
                         ) : (
-                          <div className="space-y-1.5 text-[11px]">
+                          <div className="space-y-1.5">
                             {testHistory.map(run => (
-                              <Link 
+                              <Link
                                 key={run.id}
                                 href={`/projects/${projectId}/test-runs/${run.id}/report`}
-                                className="p-2 border.5 rounded-lg flex items-center justify-between hover:bg-slate-50 border block bg-card"
+                                className="p-2.5 border rounded-lg flex items-center justify-between hover:bg-accent/40 transition-colors block bg-card"
                               >
                                 <div className="space-y-0.5">
-                                  <span className="font-bold text-slate-700 flex items-center gap-1">
-                                    <Clock className="h-3 w-3 text-slate-400" /> {new Date(run.createdAt).toLocaleDateString()}
+                                  <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                                    <Clock className="h-3 w-3 text-muted-foreground" /> {new Date(run.createdAt).toLocaleDateString()}
                                   </span>
-                                  <span className="text-[9px] text-slate-400 font-semibold">{run.executionMode || "Automated"}</span>
+                                  <span className="text-[11px] text-muted-foreground">{run.executionMode || "Automated"}</span>
                                 </div>
-                                <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] ${
-                                  run.status === "Passed" ? "bg-emerald-100 text-emerald-700" :
-                                  run.status === "Failed" ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-500"
+                                <span className={`px-2 py-0.5 rounded-full font-medium text-[11px] ${
+                                  run.status === "Passed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" :
+                                  run.status === "Failed" ? "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" : "bg-muted text-muted-foreground"
                                 }`}>
                                   {run.status}
                                 </span>
@@ -1635,42 +1681,42 @@ export default function TestCasesPage() {
                     const linkedBugs = bugs.filter(b => b.testCaseId === activeTestCase.id)
                     
                     return (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground uppercase">Linked Bugs ({linkedBugs.length})</span>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Linked Bugs ({linkedBugs.length})</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => router.push(`/projects/${projectId}/bug-reports`)}
-                            className="h-5 text-[9px] font-bold text-indigo-600 border-indigo-200"
+                            className="h-7 px-2.5 text-[11px] font-medium"
                           >
                             File Defect
                           </Button>
                         </div>
 
                         {linkedBugs.length === 0 ? (
-                          <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground italic">
-                            No bugs or defects linked to this testcase.
+                          <div className="p-8 border border-dashed rounded-lg text-center text-xs text-muted-foreground">
+                            No bugs linked to this test case.
                           </div>
                         ) : (
-                          <div className="space-y-1.5 text-[11px]">
+                          <div className="space-y-1.5">
                             {linkedBugs.map(bug => (
-                              <Link 
-                                key={bug.id} 
+                              <Link
+                                key={bug.id}
                                 href={`/projects/${projectId}/bug-reports/${bug.id}`}
-                                className="p-2.5 border rounded-lg hover:bg-slate-50 block space-y-1 bg-card"
+                                className="p-2.5 border rounded-lg hover:bg-accent/40 transition-colors block space-y-1 bg-card"
                               >
-                                <div className="flex items-center justify-between font-bold">
-                                  <span className="text-indigo-600">{bug.bugKey || "DEFECT"}</span>
-                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
-                                    bug.status === "Closed" ? "bg-slate-100 text-slate-500" :
-                                    bug.status === "Fixed" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">{bug.bugKey || "DEFECT"}</span>
+                                  <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-medium ${
+                                    bug.status === "Closed" ? "bg-muted text-muted-foreground" :
+                                    bug.status === "Fixed" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" : "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400"
                                   }`}>
                                     {bug.status}
                                   </span>
                                 </div>
-                                <p className="text-slate-700 font-bold leading-snug">{bug.title}</p>
-                                <p className="text-[10px] text-slate-500 truncate">Actual: {bug.actualResult}</p>
+                                <p className="text-xs text-foreground font-medium leading-snug">{bug.title}</p>
+                                <p className="text-[11px] text-muted-foreground truncate">Actual: {bug.actualResult}</p>
                               </Link>
                             ))}
                           </div>
@@ -1683,26 +1729,29 @@ export default function TestCasesPage() {
 
               {/* TAB 4: Integrations */}
               {activeRightTab === "integrations" && (
-                <div className="space-y-4 text-[11px]">
+                <div className="space-y-4">
                   {(() => {
                     const sync = syncMap[activeTestCase.id]
-                    
+
                     return (
                       <div className="space-y-3">
-                        <div className="p-3 border rounded-xl bg-slate-50 space-y-2">
-                          <span className="text-[10px] text-slate-400 uppercase font-bold">OpenProject Integration</span>
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-slate-700">Sync Status:</span>
-                            <span className={`h-2.5 w-2.5 rounded-full ${sync ? "bg-emerald-500" : "bg-slate-300"}`} />
+                        <div className="p-3 border rounded-lg bg-muted/40 space-y-2.5">
+                          <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">OpenProject</span>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Sync status</span>
+                            <span className={`flex items-center gap-1.5 font-medium ${sync ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                              <span className={`h-2 w-2 rounded-full ${sync ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+                              {sync ? "Synced" : "Not synced"}
+                            </span>
                           </div>
                           {sync && (
                             <div className="space-y-1.5 pt-1">
-                              <div className="flex justify-between">
-                                <span className="text-slate-500">Work Package ID:</span>
-                                <span className="font-bold text-slate-700">{sync.externalId}</span>
+                              <div className="flex justify-between text-xs">
+                                <span className="text-muted-foreground">Work Package</span>
+                                <span className="font-medium text-foreground tabular-nums">#{sync.externalId}</span>
                               </div>
                               {sync.externalUrl && (
-                                <a href={sync.externalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-indigo-600 font-bold hover:underline w-fit mt-1">
+                                <a href={sync.externalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 font-medium hover:underline w-fit mt-1">
                                   View Work Package <ExternalLink className="h-3 w-3" />
                                 </a>
                               )}
@@ -1710,12 +1759,12 @@ export default function TestCasesPage() {
                           )}
                         </div>
 
-                        <Button 
+                        <Button
                           onClick={() => handleSyncSingleOP(activeTestCase.id)}
                           disabled={isSyncing}
-                          className="w-full flex items-center justify-center gap-1.5 shadow-sm font-semibold h-9"
+                          className="w-full flex items-center justify-center gap-1.5 h-9 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
                         >
-                          {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudUpload className="h-4 w-4" />} Sync OpenProject
+                          {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <CloudUpload className="h-4 w-4" />} Sync to OpenProject
                         </Button>
                       </div>
                     )
@@ -1728,13 +1777,13 @@ export default function TestCasesPage() {
           </div>
         ) : (
           <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-3 select-none">
-            <div className="p-4 rounded-full bg-slate-50 text-slate-300">
-              <ClipboardList className="h-8 w-8" />
+            <div className="p-4 rounded-full bg-muted text-muted-foreground">
+              <ClipboardList className="h-7 w-7" />
             </div>
             <div>
-              <h4 className="font-extrabold text-xs text-slate-700">No test case selected</h4>
-              <p className="text-[10px] text-muted-foreground mt-1 max-w-[200px] leading-relaxed mx-auto font-medium">
-                Click any case card in the cockpit grid list to view step details, execution history runs, and OpenProject mappings.
+              <h4 className="font-semibold text-sm text-foreground">No test case selected</h4>
+              <p className="text-xs text-muted-foreground mt-1.5 max-w-[220px] leading-relaxed mx-auto">
+                Select a test case from the list to view its steps, run history, bugs, and sync status.
               </p>
             </div>
           </div>
@@ -1768,7 +1817,7 @@ export default function TestCasesPage() {
               {!activeSession ? (
                 <form onSubmit={handleStartRecording} className="space-y-4 text-xs font-semibold">
                   <div className="space-y-1.5">
-                    <Label className="font-bold text-slate-700">Test Case Title</Label>
+                    <Label className="font-medium text-foreground">Test Case Title</Label>
                     <Input 
                       value={recTitle} 
                       onChange={(e) => setRecTitle(e.target.value)} 
@@ -1778,7 +1827,7 @@ export default function TestCasesPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="font-bold text-slate-700">Target Web URL</Label>
+                    <Label className="font-medium text-foreground">Target Web URL</Label>
                     <Input 
                       value={recStartUrl} 
                       onChange={(e) => setRecStartUrl(e.target.value)} 
@@ -1789,7 +1838,7 @@ export default function TestCasesPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="font-bold text-slate-700">Target Browser</Label>
+                      <Label className="font-medium text-foreground">Target Browser</Label>
                       <select 
                         value={recBrowser} 
                         onChange={(e) => setRecBrowser(e.target.value as any)}
@@ -1802,7 +1851,7 @@ export default function TestCasesPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="font-bold text-slate-700">Viewport Mode</Label>
+                      <Label className="font-medium text-foreground">Viewport Mode</Label>
                       <select 
                         value={recViewport} 
                         onChange={(e) => setRecViewport(e.target.value as any)}
@@ -1817,7 +1866,7 @@ export default function TestCasesPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="font-bold text-slate-700">Test Priority</Label>
+                      <Label className="font-medium text-foreground">Test Priority</Label>
                       <select 
                         value={recPriority} 
                         onChange={(e) => setRecPriority(e.target.value as any)}
@@ -1831,7 +1880,7 @@ export default function TestCasesPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label className="font-bold text-slate-700">Preconditions Credential</Label>
+                      <Label className="font-medium text-foreground">Preconditions Credential</Label>
                       <select 
                         value={recCredentialId} 
                         onChange={(e) => setRecCredentialId(e.target.value)}
@@ -1846,7 +1895,7 @@ export default function TestCasesPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label className="font-bold text-slate-700">Preconditions</Label>
+                    <Label className="font-medium text-foreground">Preconditions</Label>
                     <textarea 
                       value={recPreconditions} 
                       onChange={(e) => setRecPreconditions(e.target.value)} 
@@ -1869,13 +1918,13 @@ export default function TestCasesPage() {
                   <div className="p-4 border border-indigo-100 rounded-xl bg-indigo-500/[0.02] flex items-center justify-between">
                     <div className="space-y-0.5">
                       <span className="text-[10px] text-indigo-600 uppercase font-bold">Session connection active</span>
-                      <p className="text-slate-700 font-extrabold">{recTitle}</p>
+                      <p className="text-foreground font-semibold text-sm">{recTitle}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button size="sm" onClick={handleFinishRecording} className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-8">
                         Save Case
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={handleCancelRecording} className="text-slate-500 h-8">
+                      <Button size="sm" variant="ghost" onClick={handleCancelRecording} className="text-muted-foreground h-8">
                         Cancel
                       </Button>
                     </div>
@@ -1883,9 +1932,9 @@ export default function TestCasesPage() {
 
                   {/* Captured Steps Timeline */}
                   <div className="space-y-3">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Recorded Steps Timeline ({recSteps.length})</span>
+                    <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground block">Recorded Steps ({recSteps.length})</span>
                     {recSteps.length === 0 ? (
-                      <div className="p-8 border border-dashed rounded-xl text-center text-slate-400 font-medium italic">
+                      <div className="p-8 border border-dashed rounded-lg text-center text-xs text-muted-foreground">
                         Interact inside the controlled browser window to record steps dynamically...
                       </div>
                     ) : (
@@ -1893,12 +1942,12 @@ export default function TestCasesPage() {
                         {recSteps.map((step) => (
                           <div key={step.id} className="p-3 border rounded-xl bg-card space-y-2 shadow-sm">
                             <div className="flex items-center justify-between">
-                              <span className="font-extrabold text-slate-800 text-[11px]">Step {step.stepNumber}</span>
+                              <span className="font-semibold text-foreground text-xs">Step {step.stepNumber}</span>
                               <div className="flex items-center gap-0.5">
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-5 w-5 rounded hover:bg-slate-200 text-red-500"
+                                  className="h-5 w-5 rounded text-muted-foreground hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
                                   onClick={() => handleDeleteRecStep(step.id)}
                                 >
                                   <Trash2 className="h-3 w-3" />
@@ -1953,13 +2002,13 @@ export default function TestCasesPage() {
             
             <form onSubmit={handleSaveNewTestCase} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs font-semibold">
               <div className="space-y-1.5">
-                <Label className="font-bold text-slate-700">Test Case Title</Label>
+                <Label className="font-medium text-foreground">Test Case Title</Label>
                 <Input value={createTitle} onChange={(e) => setCreateTitle(e.target.value)} placeholder="e.g. Verify cart checkout path" className="h-9 bg-background" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="font-bold text-slate-700">Priority</Label>
+                  <Label className="font-medium text-foreground">Priority</Label>
                   <select value={createPriority} onChange={(e) => setCreatePriority(e.target.value)} className="h-9 w-full rounded-md border bg-background px-3">
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -1970,7 +2019,7 @@ export default function TestCasesPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="font-bold text-slate-700">Preconditions</Label>
+                <Label className="font-medium text-foreground">Preconditions</Label>
                 <textarea value={createPreconditions} onChange={(e) => setCreatePreconditions(e.target.value)} rows={3} placeholder="Preconditions details..." className="w-full border rounded-md p-2 bg-background font-medium" />
               </div>
 
@@ -2027,12 +2076,22 @@ export default function TestCasesPage() {
       />
 
       {deleteConfirmOpen && (
-        <ConfirmDialog 
+        <ConfirmDialog
           open={deleteConfirmOpen}
           title="Delete Test Case"
           description="Are you absolutely sure you want to permanently delete this test case from the project? This action cannot be undone."
           onConfirm={() => { setDeleteConfirmOpen(false); triggerDeleteTestCase(deleteTestCaseId) }}
           onCancel={() => setDeleteConfirmOpen(false)}
+        />
+      )}
+
+      {bulkDeleteConfirmOpen && (
+        <ConfirmDialog
+          open={bulkDeleteConfirmOpen}
+          title={`Delete ${selectedIds.length} Test Case(s)`}
+          description={`You are about to permanently delete ${selectedIds.length} selected test case(s), including their runs, results, and history. This action cannot be undone.`}
+          onConfirm={() => { setBulkDeleteConfirmOpen(false); handleBulkDelete() }}
+          onCancel={() => setBulkDeleteConfirmOpen(false)}
         />
       )}
 

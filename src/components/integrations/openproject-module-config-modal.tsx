@@ -135,6 +135,36 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
 
   useEffect(() => { load() }, [load])
 
+  // Auto-load OpenProject metadata (boards, types, statuses, versions) when the
+  // modal opens so the dropdowns are populated without the user first having to
+  // click "Test Connection". Uses the module's test-connection endpoint (empty
+  // body → server resolves saved module override → project-level creds and
+  // normalizes the identifier), which is the same path the button uses. Silent:
+  // it never surfaces a success/error banner. No-ops if creds aren't configured.
+  const loadMetadata = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/projects/${projectId}/integrations/openproject/modules/${moduleId}/test-connection`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
+      )
+      if (!res.ok) return
+      const data = await res.json()
+      if (Array.isArray(data.types) && data.types.length) setTypes(data.types)
+      if (Array.isArray(data.statuses) && data.statuses.length) setStatuses(data.statuses)
+      if (Array.isArray(data.versions) && data.versions.length) setVersions(data.versions)
+      if (Array.isArray(data.boards) && data.boards.length) {
+        setBoards(data.boards)
+        setShowBoardSection(true)
+      }
+    } catch { /* non-critical — Test Connection remains as a manual fallback */ }
+  }, [projectId, moduleId])
+
+  useEffect(() => { loadMetadata() }, [loadMetadata])
+
   const loadBoardColumns = useCallback(async (boardId: string) => {
     if (!boardId) { setBoardColumns([]); return }
     setLoadingColumns(true)

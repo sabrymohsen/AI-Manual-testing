@@ -192,6 +192,42 @@ function extractOriginalFeatures(step: Step) {
   return features
 }
 
+// Narrow a locator that may match several elements down to a single, preferably
+// visible one. Playwright throws a strict-mode error ("resolved to N elements")
+// if you act on a multi-match locator — the most common cause of menu, link, and
+// dropdown clicks failing, since many UIs repeat the same role+name or text.
+async function resolveActionable(locator: Locator, timeout: number): Promise<Locator> {
+  await locator.first().waitFor({ state: "attached", timeout })
+  const visible = locator.filter({ visible: true })
+  if ((await visible.count()) > 0) return visible.first()
+  return locator.first()
+}
+
+// Click that survives hidden or custom-styled controls (radios, switches, menu
+// items styled with overlays). Falls back to a forced click, then to clicking the
+// element's associated <label>.
+async function smartClick(locator: Locator, page: Page, timeout: number): Promise<void> {
+  const target = await resolveActionable(locator, timeout)
+  try {
+    await target.click({ timeout })
+    return
+  } catch (err) {
+    try {
+      await target.click({ force: true, timeout: 3000 })
+      return
+    } catch { /* fall through to label click */ }
+    const id = await target.getAttribute("id").catch(() => null)
+    if (id) {
+      const label = page.locator(`label[for="${id}"]`).first()
+      if ((await label.count()) > 0) {
+        await label.click({ timeout: 3000 })
+        return
+      }
+    }
+    throw err
+  }
+}
+
 async function runActionOnLocator(
   locator: Locator,
   actionType: string,
@@ -234,28 +270,34 @@ async function runActionOnLocator(
     case "pagination_previous":
     case "accordion_expand":
     case "accordion_collapse":
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.click()
+      await smartClick(locator, page, timeout)
       break
 
-    case "fill":
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.fill(inputValue || "")
+    case "fill": {
+      const target = await resolveActionable(locator, timeout)
+      await target.fill(inputValue || "")
       break
+    }
 
-    case "select":
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.selectOption(inputValue || "")
+    case "select": {
+      const target = await resolveActionable(locator, timeout)
+      const optionVal = inputValue || ""
+      try {
+        await target.selectOption(optionVal)
+      } catch {
+        // Native <select> may need matching by the visible label rather than value.
+        await target.selectOption({ label: optionVal })
+      }
       break
+    }
 
     case "select_custom": {
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.click()
+      await smartClick(locator, page, timeout)
 
       let optionLoc = null
       const meta = step.actionMetadata as any
       if (meta && typeof meta === "object" && meta.optionSelector) {
-        optionLoc = page.locator(meta.optionSelector)
+        optionLoc = page.locator(meta.optionSelector).first()
       } else if (step.selectedOptionText) {
         optionLoc = page.getByRole("option", { name: step.selectedOptionText, exact: false })
           .or(page.getByText(step.selectedOptionText, { exact: false }))
@@ -276,14 +318,14 @@ async function runActionOnLocator(
 
     case "select_searchable":
     case "autocomplete_select": {
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.click()
+      const trigger = await resolveActionable(locator, timeout)
+      await smartClick(trigger, page, timeout)
 
       const phrase = (step.actionMetadata as any)?.searchPhrase || inputValue || ""
       if (phrase) {
-        let inputLoc = locator
-        if (await locator.evaluate((el) => el.tagName.toLowerCase() !== "input")) {
-          inputLoc = locator.locator("input").first()
+        let inputLoc = trigger
+        if (await trigger.evaluate((el) => el.tagName.toLowerCase() !== "input")) {
+          inputLoc = trigger.locator("input").first()
           if (await inputLoc.count() === 0) {
             inputLoc = page.locator("input[type='text'], input:not([type])").first()
           }
@@ -313,8 +355,7 @@ async function runActionOnLocator(
     }
 
     case "multi_select": {
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.click()
+      await smartClick(locator, page, timeout)
 
       const options = (step.actionMetadata as any)?.options || []
       for (const opt of options) {
@@ -329,64 +370,92 @@ async function runActionOnLocator(
     }
 
     case "remove_multi_select_value": {
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.click()
+      await smartClick(locator, page, timeout)
       break
     }
 
     case "date_select":
     case "time_select": {
-      await locator.waitFor({ state: "visible", timeout })
-      if (await locator.evaluate((el) => el.tagName.toLowerCase() === "input")) {
-        await locator.fill(inputValue || "")
+      const target = await resolveActionable(locator, timeout)
+      if (await target.evaluate((el) => el.tagName.toLowerCase() === "input")) {
+        await target.fill(inputValue || "")
       } else {
-        await locator.click()
+        await smartClick(target, page, timeout)
       }
       break
     }
 
     case "check":
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.check()
+    case "uncheck": {
+      const desired = actionType === "check"
+      // Radios/checkboxes are often the hidden real <input> behind a styled label,
+      // so don't require visibility — just that it's attached — and fall back to a
+      // forced check, then to clicking the control/label, if the native call fails.
+      const target = locator.first()
+      await target.waitFor({ state: "attached", timeout })
+      try {
+        if (desired) await target.check()
+        else await target.uncheck()
+      } catch {
+        try {
+          if (desired) await target.check({ force: true })
+          else await target.uncheck({ force: true })
+        } catch {
+          await smartClick(locator, page, timeout)
+        }
+      }
       break
-
-    case "uncheck":
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.uncheck()
-      break
+    }
 
     case "toggle_on": {
-      await locator.waitFor({ state: "visible", timeout })
-      const isChecked = await locator.getAttribute("aria-checked") === "true" || await locator.isChecked()
+      const target = await resolveActionable(locator, timeout)
+      const isChecked = (await target.getAttribute("aria-checked")) === "true" || (await target.isChecked().catch(() => false))
       if (!isChecked) {
-        await locator.click()
+        await smartClick(target, page, timeout)
       }
       break
     }
 
     case "toggle_off": {
-      await locator.waitFor({ state: "visible", timeout })
-      const isChecked = await locator.getAttribute("aria-checked") === "true" || await locator.isChecked()
+      const target = await resolveActionable(locator, timeout)
+      const isChecked = (await target.getAttribute("aria-checked")) === "true" || (await target.isChecked().catch(() => false))
       if (isChecked) {
-        await locator.click()
+        await smartClick(target, page, timeout)
       }
       break
     }
 
     case "slider_set": {
-      await locator.waitFor({ state: "visible", timeout })
+      const target = await resolveActionable(locator, timeout)
       if (inputValue) {
-        await locator.fill(inputValue)
+        await target.fill(inputValue)
       } else {
-        await locator.click()
+        await smartClick(target, page, timeout)
       }
       break
     }
 
-    case "upload_file":
-      await locator.waitFor({ state: "visible", timeout })
-      await locator.setInputFiles(inputValue || "")
+    case "upload_file": {
+      // File inputs are almost always hidden (display:none) behind a styled button,
+      // so we must NOT wait for visibility. setInputFiles works on hidden inputs.
+      let fileInput = locator.first()
+      const isFileInput = await fileInput
+        .evaluate((el) => el instanceof HTMLInputElement && el.type === "file")
+        .catch(() => false)
+      if (!isFileInput) {
+        // The target was the styled button/wrapper — find the real file input.
+        const nested = locator.locator("input[type='file']").first()
+        if ((await nested.count()) > 0) {
+          fileInput = nested
+        } else {
+          const pageInput = page.locator("input[type='file']").first()
+          if ((await pageInput.count()) > 0) fileInput = pageInput
+        }
+      }
+      await fileInput.waitFor({ state: "attached", timeout })
+      await fileInput.setInputFiles(inputValue || "")
       break
+    }
 
     case "wait_for_text":
       await page.getByText(step.targetValue || "", { exact: false }).waitFor({

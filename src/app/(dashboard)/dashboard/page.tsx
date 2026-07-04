@@ -204,7 +204,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               { title: "Test Cases Cockpit", desc: "Create, import, and organize test steps suites.", href: `/projects/${activeProjectId}/test-cases`, icon: FileText },
-              { title: "Testing Workstation", desc: "Execute live QA sessions and report bugs.", href: `/projects/${activeProjectId}/testing-workstation`, icon: FlaskConical },
+              { title: "Live QA Session", desc: "Execute live QA sessions and report bugs.", href: `/projects/${activeProjectId}/live-qa-session`, icon: FlaskConical },
               { title: "Recorder Studio", desc: "Record selector elements to build cases.", href: `/projects/${activeProjectId}/recorder-studio`, icon: Video },
               { title: "OpenProject Sync", desc: "Map and synchronize defects to tasks list.", href: `/projects/${activeProjectId}/openproject-sync`, icon: Globe }
             ].map((ws, idx) => (

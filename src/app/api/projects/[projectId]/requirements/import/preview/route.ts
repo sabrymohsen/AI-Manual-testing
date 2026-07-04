@@ -30,9 +30,19 @@ export async function POST(
     const existingFeatures = await prisma.projectFeature.findMany({ where: { projectId: params.projectId } })
     const existingComponents = await prisma.projectComponent.findMany({ where: { projectId: params.projectId } })
     const existingRequirements = await prisma.requirement.findMany({ where: { projectId: params.projectId } })
+    const existingEpics = await prisma.epic.findMany({ where: { projectId: params.projectId } })
+
+    // Epic cell values match an existing epic by key or title (case-insensitive)
+    const findEpic = (ref: string) => {
+      const refLower = ref.toLowerCase()
+      return existingEpics.find(
+        (e) => e.epicKey.toLowerCase() === refLower || e.title.toLowerCase() === refLower
+      )
+    }
 
     let createdReqsCount = 0
     let updatedReqsCount = 0
+    const epicsToCreate = new Set<string>()
     const modulesToCreate = new Set<string>()
     const featuresToCreate = new Set<string>() // formatted as "Module Name -> Feature Name"
     const componentsToCreate = new Set<string>() // formatted as "Module Name -> Feature Name -> Component Name"
@@ -49,6 +59,7 @@ export async function POST(
       const description = mapping.description ? String(row[Number(mapping.description)] || "").trim() : ""
       const criteria = mapping.acceptanceCriteria ? String(row[Number(mapping.acceptanceCriteria)] || "").trim() : ""
       
+      const epicRef = mapping.epic ? String(row[Number(mapping.epic)] || "").trim() : ""
       const modName = mapping.module ? String(row[Number(mapping.module)] || "").trim() : ""
       const featName = mapping.feature ? String(row[Number(mapping.feature)] || "").trim() : ""
       const compName = mapping.component ? String(row[Number(mapping.component)] || "").trim() : ""
@@ -70,6 +81,21 @@ export async function POST(
         updatedReqsCount++
       } else {
         createdReqsCount++
+      }
+
+      // Track epics to auto-create (referenced by key/name but not found)
+      let epicAction: "Link" | "Create" | null = null
+      let resolvedEpic = ""
+      if (epicRef) {
+        const epicMatch = findEpic(epicRef)
+        if (epicMatch) {
+          epicAction = "Link"
+          resolvedEpic = `${epicMatch.epicKey} — ${epicMatch.title}`
+        } else {
+          epicAction = "Create"
+          resolvedEpic = epicRef
+          epicsToCreate.add(epicRef)
+        }
       }
 
       // Track folders to create
@@ -109,6 +135,9 @@ export async function POST(
         title,
         description,
         acceptanceCriteria: criteria,
+        epic: epicRef || null,
+        epicAction,
+        resolvedEpic: resolvedEpic || null,
         module: modName || null,
         feature: featName || null,
         component: compName || null,
@@ -131,9 +160,11 @@ export async function POST(
         createdModules: modulesToCreate.size,
         createdFeatures: featuresToCreate.size,
         createdComponents: componentsToCreate.size,
+        createdEpics: epicsToCreate.size,
         skippedRowsCount: skippedRows.length
       },
       newStructures: {
+        epics: Array.from(epicsToCreate),
         modules: Array.from(modulesToCreate),
         features: Array.from(featuresToCreate),
         components: Array.from(componentsToCreate)

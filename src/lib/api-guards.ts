@@ -34,6 +34,27 @@ export async function requireAuth(): Promise<
   return { error: null, status: 200, session }
 }
 
+// Gate for Pro-only features. Currently UNUSED — Live QA Session was made
+// free for all users. Kept (with User.plan) so gating can be reintroduced
+// without rebuilding the plumbing.
+export async function requirePro(): Promise<
+  | { error: string; status: number; session: null }
+  | { error: null; status: 200; session: NonNullable<Awaited<ReturnType<typeof getSession>>> }
+> {
+  const session = await getSession()
+  if (!session) {
+    return { error: "Not authenticated", status: 401, session: null }
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { plan: true },
+  })
+  if (user?.plan !== "Pro") {
+    return { error: "Pro plan required", status: 403, session: null }
+  }
+  return { error: null, status: 200, session }
+}
+
 export function unauthorizedResponse(error: string = "Not authenticated") {
   return NextResponse.json({ error }, { status: 401 })
 }

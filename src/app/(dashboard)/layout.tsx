@@ -23,7 +23,8 @@ import {
   Info,
   X,
   Plus,
-  FlaskConical
+  FlaskConical,
+  ListOrdered
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 
@@ -133,7 +134,7 @@ export default function DashboardLayout({
 
   const workflowItems = [
     { href: "/test-cases", label: "Test Cases", icon: FileText },
-    { href: "/testing-workstation", label: "Testing Workstation", icon: FlaskConical },
+    { href: "/live-qa-session", label: "Live QA Session", icon: FlaskConical },
     { href: "/recorder-studio", label: "Recorder Studio", icon: Video },
     { href: "/bug-reports", label: "Bug Reports", icon: Bug },
     { href: "/openproject-sync", label: "OpenProject Sync", icon: Globe },
@@ -142,6 +143,7 @@ export default function DashboardLayout({
   const managementItems = [
     { href: "/projects", label: "Projects", icon: FolderKanban },
     { href: "/requirements", label: "Requirements", icon: Layers },
+    { href: "/backlog", label: "Backlog", icon: ListOrdered },
   ]
 
   const configItems = [
@@ -151,10 +153,12 @@ export default function DashboardLayout({
   const getHref = (basePath: string) => {
     if (!activeProjectId) return basePath
     if (basePath === "/test-cases") return `/projects/${activeProjectId}/test-cases`
-    if (basePath === "/testing-workstation") return `/projects/${activeProjectId}/testing-workstation`
+    if (basePath === "/live-qa-session") return `/projects/${activeProjectId}/live-qa-session`
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
     if (basePath === "/openproject-sync") return `/projects/${activeProjectId}/openproject-sync`
+    if (basePath === "/backlog") return `/projects/${activeProjectId}/backlog`
+    if (basePath === "/requirements") return `/projects/${activeProjectId}/requirements`
     if (basePath === "/settings") return `/projects/${activeProjectId}/settings`
     return basePath
   }
@@ -320,10 +324,10 @@ export default function DashboardLayout({
               <span className="font-bold text-[10px] uppercase text-muted-foreground tracking-wider">Quick Actions</span>
               <div className="space-y-1.5">
                 <div 
-                  onClick={() => { setShowSearch(false); router.push(getHref("/testing-workstation")) }}
+                  onClick={() => { setShowSearch(false); router.push(getHref("/live-qa-session")) }}
                   className="p-2.5 rounded-lg hover:bg-indigo-50/50 cursor-pointer flex items-center justify-between text-slate-700"
                 >
-                  <span className="flex items-center gap-2 font-bold"><Play className="h-4 w-4 text-indigo-500" /> Go to Testing Workstation</span>
+                  <span className="flex items-center gap-2 font-bold"><Play className="h-4 w-4 text-indigo-500" /> Go to Live QA Session</span>
                   <ChevronRight className="h-4 w-4 opacity-55" />
                 </div>
                 <div 

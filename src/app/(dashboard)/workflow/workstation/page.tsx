@@ -23,23 +23,23 @@ export default function WorkstationWorkflowPage() {
 
   useEffect(() => {
     if (projectId) {
-      router.replace(`/projects/${projectId}/testing-workstation`)
+      router.replace(`/projects/${projectId}/live-qa-session`)
     }
   }, [projectId, router])
 
   if (!resolved || projectId) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground animate-pulse font-semibold">
-        Opening Testing Workstation...
+        Opening Live QA Session...
       </div>
     )
   }
 
   return (
     <ProjectSelectionGateway 
-      title="Testing Workstation Execution"
+      title="Live QA Session"
       description="Select a project workspace scope to run live manual test sessions and capture screenshots."
-      targetWorkflow="testing-workstation"
+      targetWorkflow="live-qa-session"
     />
   )
 }

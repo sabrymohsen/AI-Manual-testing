@@ -197,7 +197,10 @@ export async function GET(
       steps: { orderBy: { stepNumber: "asc" } },
       moduleRelation: true,
       feature: true,
-      component: true
+      component: true,
+      // Story links — powers the bulk-link picker's "already linked" badges
+      // and the "no linked story" orphan filter.
+      requirements: { select: { requirementId: true } }
     },
     orderBy: { createdAt: "desc" },
   })

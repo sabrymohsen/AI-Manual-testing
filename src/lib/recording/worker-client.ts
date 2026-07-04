@@ -1,4 +1,4 @@
-const RECORDER_WORKER_URL =
+export const RECORDER_WORKER_URL =
   process.env.RECORDER_WORKER_URL || "http://127.0.0.1:3847"
 
 export class RecorderWorkerError extends Error {
@@ -47,6 +47,12 @@ export async function checkRecorderWorkerHealth(): Promise<RecorderWorkerHealth>
   }
 }
 
+// Must match WORKER_VERSION in src/workers/recorder.worker.ts. A mismatch
+// means the running worker process predates the current code — sessions
+// started against it would misbehave (e.g. headed browsers, missing
+// endpoints), so we refuse loudly instead.
+export const REQUIRED_WORKER_VERSION = "2.1.0"
+
 export async function recorderWorkerRequest<T>(
   path: string,
   options: RequestInit = {}
@@ -56,6 +62,12 @@ export async function recorderWorkerRequest<T>(
     throw new RecorderWorkerError(
       "Recorder service is offline. Start it with: npm run recorder-worker",
       "WORKER_OFFLINE"
+    )
+  }
+  if (health.version !== REQUIRED_WORKER_VERSION) {
+    throw new RecorderWorkerError(
+      `Recorder service is running outdated code (v${health.version}, expected v${REQUIRED_WORKER_VERSION}). Restart it with: npm run recorder-worker`,
+      "WORKER_OUTDATED"
     )
   }
 

@@ -25,6 +25,8 @@ export interface ActiveSession {
   connectionStatus: "Connected" | "Disconnected" | "Reconnecting" | "BrowserClosed" | "ToolbarNotInjected" | "WorkerOffline"
   // Session kind: "Recorder" (test studio) or "Workstation" (live exploratory QA)
   mode: "Recorder" | "Workstation"
+  // Engine the session runs on — CDP screencast streaming is Chromium-only
+  browserType: "Chromium" | "Firefox" | "WebKit"
   // Video is recorded at the context level but only retained on finish when the
   // user opted in. In Workstation mode this is driven by the toolbar; Recorder
   // mode keeps the legacy always-save behavior.
@@ -245,6 +247,7 @@ export async function startSession(
       currentUrl: options.startUrl,
       recordingMode: options.recordingMode || "Fast",
       connectionStatus: "Reconnecting",
+      kind: sessionMode === "Workstation" ? "LiveQA" : "Studio",
     },
   })
 
@@ -254,7 +257,11 @@ export async function startSession(
 
   try {
     const launcher = getPlaywrightBrowser(options.browserType)
-    browser = await launcher.launch({ headless: false })
+    // Workstation sessions run headless: the browser is embedded in the web
+    // app through the live view (frame streaming + input forwarding), so no
+    // external window opens. Recorder Studio keeps a visible window with the
+    // injected toolbar.
+    browser = await launcher.launch({ headless: sessionMode === "Workstation" })
   } catch (err: any) {
     console.error("[RECORDER] Playwright browser launch failed. Actual error:", err.message, err.stack)
     const actualError = err.message || "Unknown browser launch error"
@@ -272,13 +279,20 @@ export async function startSession(
     )
   }
 
+  // Studio keeps Playwright's whole-session recordVideo (finalized on close).
+  // Live QA records on demand client-side (MediaRecorder on the live view),
+  // so its contexts skip recordVideo entirely.
   const context = await browser.newContext({
     viewport: { width, height },
     bypassCSP: true,
-    recordVideo: {
-      dir: "public/videos/raw",
-      size: { width, height }
-    }
+    ...(sessionMode === "Workstation"
+      ? {}
+      : {
+          recordVideo: {
+            dir: "public/videos/raw",
+            size: { width, height },
+          },
+        }),
   })
 
   // Set up automatic content script injection on context before creating any page.
@@ -353,6 +367,7 @@ export async function startSession(
     toolbarInjected: false,
     connectionStatus: "Connected",
     mode: sessionMode,
+    browserType: (options.browserType as "Chromium" | "Firefox" | "WebKit") || "Chromium",
     videoEnabled: false,
     videoEverEnabled: false,
   })

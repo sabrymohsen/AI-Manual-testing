@@ -75,6 +75,9 @@ export const createBugReportSchema = z.object({
   severity: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   status: z.enum(["Open", "InProgress", "ReadyForRetest", "Reopened", "Resolved", "Closed", "Rejected", "Duplicate"]).optional(),
+  resolution: z.enum(["Fixed", "WontFix", "CannotReproduce", "Duplicate", "ByDesign"]).optional().nullable(),
+  resolutionNote: z.string().max(2000).optional().nullable(),
+  tags: z.array(z.string().min(1).max(40)).max(20).optional(),
   environment: z.enum(["Dev", "Staging", "UAT", "Production"]).optional().nullable(),
   assignedTo: z.string().optional().nullable(),
   stepsToReproduce: z.string().optional().nullable(),
@@ -101,7 +104,8 @@ export const createRequirementSchema = z.object({
   acceptanceCriteria: z.string().optional().nullable(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   status: z.enum(["Draft", "ReadyForTesting", "InTesting", "Covered", "PartiallyCovered", "Failed", "Blocked", "Deprecated"]).optional(),
-  source: z.enum(["Manual", "ExcelImport", "Jira", "AzureDevOps", "GitHub", "Figma", "AIGenerated"]).optional(),
+  source: z.enum(["Manual", "ExcelImport", "Jira", "AzureDevOps", "GitHub", "Figma", "AIGenerated", "OpenProject"]).optional(),
+  epicId: z.string().optional().nullable(),
   moduleId: z.string().optional().nullable(),
   featureId: z.string().optional().nullable(),
   componentId: z.string().optional().nullable(),
@@ -111,6 +115,17 @@ export const createRequirementSchema = z.object({
 })
 
 export const updateRequirementSchema = createRequirementSchema.partial()
+
+export const createEpicSchema = z.object({
+  epicKey: z.string().max(100).optional(),
+  title: z.string().min(1, "Title is required").max(500),
+  description: z.string().optional().nullable(),
+  priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
+  status: z.enum(["Draft", "Active", "Completed", "Archived"]).optional(),
+  orderIndex: z.number().int().optional(),
+})
+
+export const updateEpicSchema = createEpicSchema.partial()
 
 export const createLocatorSchema = z.object({
   friendlyName: z.string().min(1, "Friendly name is required").max(200),
