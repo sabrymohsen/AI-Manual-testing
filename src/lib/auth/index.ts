@@ -12,6 +12,7 @@ export interface AuthUser {
   id: string
   email: string
   name: string | null
+  role?: "User" | "Admin"
 }
 
 export interface AuthSession {
@@ -201,11 +202,18 @@ export async function getSession(): Promise<AuthSession | null> {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, role: true, isActive: true },
   })
-  if (!dbUser) return null
+  if (!dbUser || dbUser.isActive === false) return null
 
-  return { user: dbUser, token }
+  const authUser: AuthUser = {
+    id: dbUser.id,
+    email: dbUser.email,
+    name: dbUser.name,
+    role: dbUser.role as "User" | "Admin"
+  }
+
+  return { user: authUser, token }
 }
 
 export function setSessionCookie(token: string): void {

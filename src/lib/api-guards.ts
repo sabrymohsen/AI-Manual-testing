@@ -74,3 +74,24 @@ export function badRequestResponse(error: string = "Bad request") {
 export function serverErrorResponse(error: string = "Internal server error") {
   return NextResponse.json({ error }, { status: 500 })
 }
+
+export async function requireAdmin(): Promise<
+  | { error: string; status: number; session: null }
+  | { error: null; status: 200; session: NonNullable<Awaited<ReturnType<typeof getSession>>> }
+> {
+  const session = await getSession()
+  if (!session) {
+    return { error: "Not authenticated", status: 401, session: null }
+  }
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, isActive: true },
+  })
+  if (!user || user.isActive === false) {
+    return { error: "Not authenticated", status: 401, session: null }
+  }
+  if (user.role !== "Admin") {
+    return { error: "Admin access required", status: 403, session: null }
+  }
+  return { error: null, status: 200, session }
+}

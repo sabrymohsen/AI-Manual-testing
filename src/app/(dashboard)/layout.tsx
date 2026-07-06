@@ -24,7 +24,8 @@ import {
   X,
   Plus,
   FlaskConical,
-  ListOrdered
+  ListOrdered,
+  ShieldCheck
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 
@@ -57,6 +58,7 @@ export default function DashboardLayout({
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>("")
   const [activeProjectStats, setActiveProjectStats] = useState<ProjectStats | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string } | null>(null)
   
 
   // Command bar search overlay state
@@ -86,7 +88,19 @@ export default function DashboardLayout({
         console.error("Error loading project list:", err)
       }
     }
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/me")
+        if (res.ok) {
+          const data = await res.json()
+          setUser(data.user)
+        }
+      } catch (err) {
+        console.error("Error loading user context:", err)
+      }
+    }
     loadProjects()
+    loadUser()
 
     // Listen to Ctrl + K / Cmd + K keyboard shortcut
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -274,6 +288,22 @@ export default function DashboardLayout({
               </Link>
             )
           })}
+
+          {user?.role === "Admin" && (
+            <>
+              <div className="border-t my-2" />
+              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Administration</span>
+              <Link
+                href="/admin"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                  pathname === "/admin" || pathname.startsWith("/admin/") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                }`}
+              >
+                <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-600" />
+                Admin Dashboard
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* User signout */}
