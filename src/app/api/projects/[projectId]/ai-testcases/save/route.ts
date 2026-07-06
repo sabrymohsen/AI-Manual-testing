@@ -34,9 +34,6 @@ export async function POST(
           preconditions: tc.preconditions || "",
           source: "AIGenerated",
           projectId: params.projectId,
-          moduleId: moduleId || null,
-          featureId: featureId || null,
-          componentId: componentId || null,
           tags: tc.tags || ["ai-generated"],
           steps: {
             create: (tc.steps || []).map((step: any) => ({
@@ -85,9 +82,6 @@ export async function POST(
             priority: tc.priority as any,
             status: "ReadyForTesting",
             source: "AIGenerated",
-            moduleId: moduleId || null,
-            featureId: featureId || null,
-            componentId: componentId || null,
             sourceImportId: importId,
             testCases: {
               create: {

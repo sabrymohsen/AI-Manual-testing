@@ -1,7 +1,7 @@
 /**
- * GET/POST /api/projects/[projectId]/integrations/openproject/modules/[moduleId]/config
+ * GET/POST /api/projects/[projectId]/integrations/openproject/features/[featureId]/config
  *
- * Per-module OpenProject configuration. null fields inherit from the project-level
+ * Per-feature OpenProject configuration. null fields inherit from the project-level
  * OpenProjectIntegration record. Token is AES-256-GCM encrypted; never returned in GET.
  */
 import { NextResponse } from "next/server"
@@ -28,14 +28,14 @@ const schema = z.object({
   targetVersionId: z.string().nullable().optional(),
 })
 
-type Params = { params: { projectId: string; moduleId: string } }
+type Params = { params: { projectId: string; featureId: string } }
 
 export async function GET(_req: Request, { params }: Params) {
   const auth = await requireProjectOwner(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
-  const cfg = await prisma.openProjectModuleConfig.findUnique({
-    where: { projectId_moduleId: { projectId: params.projectId, moduleId: params.moduleId } },
+  const cfg = await prisma.openProjectFeatureConfig.findUnique({
+    where: { projectId_featureId: { projectId: params.projectId, featureId: params.featureId } },
   })
 
   // Also fetch project integration to compute effective values and isComplete
@@ -173,9 +173,9 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   try {
-    await prisma.openProjectModuleConfig.upsert({
-      where: { projectId_moduleId: { projectId: params.projectId, moduleId: params.moduleId } },
-      create: { projectId: params.projectId, moduleId: params.moduleId, ...upsertData },
+    await prisma.openProjectFeatureConfig.upsert({
+      where: { projectId_featureId: { projectId: params.projectId, featureId: params.featureId } },
+      create: { projectId: params.projectId, featureId: params.featureId, ...upsertData },
       update: upsertData,
     })
   } catch (err: any) {

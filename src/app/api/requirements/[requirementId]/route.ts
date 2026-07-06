@@ -13,9 +13,7 @@ const putBodySchema = z.object({
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   status: z.enum(["Draft", "ReadyForTesting", "InTesting", "Covered", "PartiallyCovered", "Failed", "Blocked", "Deprecated"]).optional(),
   epicId: z.string().optional().nullable(),
-  moduleId: z.string().optional().nullable(),
   featureId: z.string().optional().nullable(),
-  componentId: z.string().optional().nullable(),
   figmaUrl: z.string().optional().nullable(),
   externalUrl: z.string().optional().nullable(),
   externalSystem: z.string().optional().nullable(),
@@ -33,9 +31,8 @@ export async function GET(
       where: { id: params.requirementId },
       include: {
         project: { select: { userId: true } },
-        module: true,
-        feature: true,
-        component: true,
+        epic: { select: { id: true, epicKey: true, title: true } },
+        feature: { select: { id: true, featureKey: true, name: true } },
         testCases: {
           include: {
             testCase: {
@@ -70,11 +67,10 @@ export async function GET(
       return unauthorizedResponse("Access denied")
     }
 
-    // Build breadcrumbs path: Module / Feature / Component
+    // Build breadcrumbs path: Epic / Feature
     const pathParts = []
-    if (requirement.module) pathParts.push(requirement.module.name)
+    if (requirement.epic) pathParts.push(`${requirement.epic.epicKey} ${requirement.epic.title}`)
     if (requirement.feature) pathParts.push(requirement.feature.name)
-    if (requirement.component) pathParts.push(requirement.component.name)
     const breadcrumbPath = pathParts.join(" / ")
 
     // Compute dynamic coverage status for this single requirement
@@ -132,14 +128,11 @@ export async function PUT(
       acceptanceCriteria,
       priority,
       status,
-      epicId,
-      moduleId,
-      featureId,
-      componentId,
       figmaUrl,
       externalUrl,
       externalSystem
     } = body
+    let { epicId, featureId } = body as { epicId?: string | null; featureId?: string | null }
 
     if (epicId) {
       const epic = await prisma.epic.findFirst({
@@ -147,6 +140,19 @@ export async function PUT(
       })
       if (!epic) {
         return NextResponse.json({ error: "Epic not found in this project" }, { status: 400 })
+      }
+    }
+
+    if (featureId) {
+      const feature = await prisma.feature.findFirst({
+        where: { id: featureId, projectId: requirement.projectId }
+      })
+      if (!feature) {
+        return NextResponse.json({ error: "Feature not found in this project" }, { status: 400 })
+      }
+      // Assigning a feature auto-aligns the story's epic to the feature's epic
+      if (feature.epicId && epicId === undefined) {
+        epicId = feature.epicId
       }
     }
 
@@ -177,9 +183,7 @@ export async function PUT(
         priority: priority || undefined,
         status: status || undefined,
         epicId: epicId !== undefined ? epicId : undefined,
-        moduleId: moduleId !== undefined ? moduleId : undefined,
         featureId: featureId !== undefined ? featureId : undefined,
-        componentId: componentId !== undefined ? componentId : undefined,
         figmaUrl: figmaUrl !== undefined ? figmaUrl : undefined,
         externalUrl: externalUrl !== undefined ? externalUrl : undefined,
         externalSystem: externalSystem !== undefined ? externalSystem : undefined

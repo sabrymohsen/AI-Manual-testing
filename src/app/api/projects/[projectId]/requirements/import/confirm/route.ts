@@ -59,14 +59,12 @@ export async function POST(
 
     let createdCount = 0
     let updatedCount = 0
-    let moduleCreated = 0
-    let featureCreated = 0
-    let componentCreated = 0
     let epicCreated = 0
+    let featureCreated = 0
 
-    // Epics resolve by key OR title (case-insensitive); unmatched ones are
-    // auto-created by name with a generated EP-<n> key (decision: implicit
-    // epic creation, surfaced in the preview step).
+    // Epics resolve by key OR title, features by key OR name (case-insensitive);
+    // unmatched refs are auto-created with generated keys (implicit creation,
+    // surfaced in the preview step).
     const epicsMap = new Map<string, string>() // key/title lowercase -> id
     const dbEpics = await prisma.epic.findMany({ where: { projectId: params.projectId } })
     dbEpics.forEach(e => {
@@ -82,21 +80,21 @@ export async function POST(
       return key
     }
 
-    // Load existing folders for reference
-    const modulesMap = new Map<string, string>() // name.toLowerCase() -> id
-    const featuresMap = new Map<string, string>() // "moduleId:name.toLowerCase()" -> id
-    const componentsMap = new Map<string, string>() // "featureId:name.toLowerCase()" -> id
+    const featuresMap = new Map<string, { id: string; epicId: string | null }>() // key/name lowercase -> feature
+    const dbFeatures = await prisma.feature.findMany({ where: { projectId: params.projectId } })
+    dbFeatures.forEach(f => {
+      featuresMap.set(f.featureKey.toLowerCase(), { id: f.id, epicId: f.epicId })
+      featuresMap.set(f.name.toLowerCase(), { id: f.id, epicId: f.epicId })
+    })
+    const takenFeatureKeys = new Set(dbFeatures.map(f => f.featureKey))
+    const nextFeatureKey = () => {
+      let n = takenFeatureKeys.size + 1
+      while (takenFeatureKeys.has(`FT-${n}`)) n++
+      const key = `FT-${n}`
+      takenFeatureKeys.add(key)
+      return key
+    }
 
-    const dbModules = await prisma.projectModule.findMany({ where: { projectId: params.projectId } })
-    dbModules.forEach(m => modulesMap.set(m.name.toLowerCase(), m.id))
-
-    const dbFeatures = await prisma.projectFeature.findMany({ where: { projectId: params.projectId } })
-    dbFeatures.forEach(f => featuresMap.set(`${f.moduleId}:${f.name.toLowerCase()}`, f.id))
-
-    const dbComponents = await prisma.projectComponent.findMany({ where: { projectId: params.projectId } })
-    dbComponents.forEach(c => componentsMap.set(`${c.featureId}:${c.name.toLowerCase()}`, c.id))
-
-    // Let's run imports in transaction
     await prisma.$transaction(async (tx) => {
       for (const row of previewRows) {
         const {
@@ -105,9 +103,7 @@ export async function POST(
           description,
           acceptanceCriteria,
           epic: epicRef,
-          module: modName,
-          feature: featName,
-          component: compName,
+          feature: featureRef,
           priority,
           status,
           figmaUrl,
@@ -115,12 +111,8 @@ export async function POST(
           externalSystem
         } = row
 
-        let moduleId: string | null = null
-        let featureId: string | null = null
-        let componentId: string | null = null
+        // 1. Resolve / auto-create parent Epic
         let epicId: string | null = null
-
-        // 0. Resolve / auto-create parent Epic
         if (epicRef && String(epicRef).trim()) {
           const refLower = String(epicRef).trim().toLowerCase()
           if (epicsMap.has(refLower)) {
@@ -140,69 +132,32 @@ export async function POST(
           }
         }
 
-        // 1. Resolve Module
-        if (modName && modName.trim()) {
-          const mNameLower = modName.trim().toLowerCase()
-          if (modulesMap.has(mNameLower)) {
-            moduleId = modulesMap.get(mNameLower)!
+        // 2. Resolve / auto-create Feature (created under the row's epic)
+        let featureId: string | null = null
+        if (featureRef && String(featureRef).trim()) {
+          const refLower = String(featureRef).trim().toLowerCase()
+          if (featuresMap.has(refLower)) {
+            const feature = featuresMap.get(refLower)!
+            featureId = feature.id
+            // Assigning a feature auto-aligns the story's epic
+            if (!epicId && feature.epicId) epicId = feature.epicId
           } else {
-            const newMod = await tx.projectModule.create({
+            const newFeature = await tx.feature.create({
               data: {
                 projectId: params.projectId,
-                name: modName.trim(),
-                orderIndex: dbModules.length + moduleCreated
+                featureKey: nextFeatureKey(),
+                name: String(featureRef).trim(),
+                epicId: epicId || null
               }
             })
-            modulesMap.set(mNameLower, newMod.id)
-            moduleId = newMod.id
-            moduleCreated++
-          }
-
-          // 2. Resolve Feature
-          if (moduleId && featName && featName.trim()) {
-            const fNameLower = featName.trim().toLowerCase()
-            const fKey = `${moduleId}:${fNameLower}`
-            if (featuresMap.has(fKey)) {
-              featureId = featuresMap.get(fKey)!
-            } else {
-              const newFeat = await tx.projectFeature.create({
-                data: {
-                  projectId: params.projectId,
-                  moduleId: moduleId,
-                  name: featName.trim(),
-                  orderIndex: dbFeatures.length + featureCreated
-                }
-              })
-              featuresMap.set(fKey, newFeat.id)
-              featureId = newFeat.id
-              featureCreated++
-            }
-
-            // 3. Resolve Component
-            if (featureId && compName && compName.trim()) {
-              const cNameLower = compName.trim().toLowerCase()
-              const cKey = `${featureId}:${cNameLower}`
-              if (componentsMap.has(cKey)) {
-                componentId = componentsMap.get(cKey)!
-              } else {
-                const newComp = await tx.projectComponent.create({
-                  data: {
-                    projectId: params.projectId,
-                    moduleId: moduleId,
-                    featureId: featureId,
-                    name: compName.trim(),
-                    orderIndex: dbComponents.length + componentCreated
-                  }
-                })
-                componentsMap.set(cKey, newComp.id)
-                componentId = newComp.id
-                componentCreated++
-              }
-            }
+            featuresMap.set(refLower, { id: newFeature.id, epicId: newFeature.epicId })
+            featuresMap.set(newFeature.featureKey.toLowerCase(), { id: newFeature.id, epicId: newFeature.epicId })
+            featureId = newFeature.id
+            featureCreated++
           }
         }
 
-        // 4. Create or Update Requirement
+        // 3. Create or Update Requirement
         const existing = await tx.requirement.findFirst({
           where: {
             projectId: params.projectId,
@@ -218,9 +173,7 @@ export async function POST(
           status: normalizeStatus(status),
           source: "ExcelImport" as any,
           epicId,
-          moduleId,
           featureId,
-          componentId,
           figmaUrl: figmaUrl || null,
           externalUrl: externalUrl || null,
           externalSystem: externalSystem || null
@@ -250,10 +203,8 @@ export async function POST(
       summary: {
         createdRequirements: createdCount,
         updatedRequirements: updatedCount,
-        createdModules: moduleCreated,
-        createdFeatures: featureCreated,
-        createdComponents: componentCreated,
-        createdEpics: epicCreated
+        createdEpics: epicCreated,
+        createdFeatures: featureCreated
       }
     })
   } catch (error: any) {

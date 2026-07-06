@@ -106,7 +106,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/modules/${moduleId}/config`)
+      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/features/${moduleId}/config`)
       const data = await res.json()
       setConfig(data.config)
       setEffective(data.effective)
@@ -144,7 +144,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
   const loadMetadata = useCallback(async () => {
     try {
       const res = await fetch(
-        `/api/projects/${projectId}/integrations/openproject/modules/${moduleId}/test-connection`,
+        `/api/projects/${projectId}/integrations/openproject/features/${moduleId}/test-connection`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -188,7 +188,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
     setTestResult(null)
     try {
       const res = await fetch(
-        `/api/projects/${projectId}/integrations/openproject/modules/${moduleId}/test-connection`,
+        `/api/projects/${projectId}/integrations/openproject/features/${moduleId}/test-connection`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -241,7 +241,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
       payload.targetVersionId = targetVersionId || null
 
       const res = await fetch(
-        `/api/projects/${projectId}/integrations/openproject/modules/${moduleId}/config`,
+        `/api/projects/${projectId}/integrations/openproject/features/${moduleId}/config`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -678,7 +678,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                 className="h-8 px-4 text-xs font-semibold"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-                {saving ? "Saving..." : "Save Module Config"}
+                {saving ? "Saving..." : "Save Feature Config"}
               </Button>
             </div>
           </div>

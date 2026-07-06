@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Zap
 } from "lucide-react"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { MultiElementPicker } from "@/components/locators/multi-element-picker"
 
@@ -48,12 +47,6 @@ interface SavedLocator {
   matchCount: number | null
   lastValidatedAt: string | null
   createdAt: string
-  moduleId?: string | null
-  moduleRelation?: { name: string } | null
-  featureId?: string | null
-  feature?: { name: string } | null
-  componentId?: string | null
-  component?: { name: string } | null
 }
 
 interface Project {
@@ -86,9 +79,6 @@ export default function ElementLocatorPickerPage() {
   const [capturedLocator, setCapturedLocator] = useState<any | null>(null)
   const [friendlyName, setFriendlyName] = useState("")
   const [description, setDescription] = useState("")
-  const [moduleId, setModuleId] = useState("")
-  const [featureId, setFeatureId] = useState("")
-  const [componentId, setComponentId] = useState("")
   const [selectedLocatorType, setSelectedLocatorType] = useState<string>("test_id")
   const [selectedLocatorValue, setSelectedLocatorValue] = useState<string>("")
   const [isSaving, setIsSaving] = useState(false)
@@ -174,9 +164,6 @@ export default function ElementLocatorPickerPage() {
           action: "save",
           friendlyName,
           description,
-          moduleId: moduleId || null,
-          featureId: featureId || null,
-          componentId: componentId || null,
           pageUrl: capturedLocator.pageUrl,
           tagName: capturedLocator.tagName,
           visibleText: capturedLocator.visibleText,
@@ -199,9 +186,6 @@ export default function ElementLocatorPickerPage() {
  
       if (res.ok) {
         setCapturedLocator(null)
-        setModuleId("")
-        setFeatureId("")
-        setComponentId("")
         fetchProjectAndLocators()
       } else {
         alert("Failed to save locator.")
@@ -431,19 +415,6 @@ export default function ElementLocatorPickerPage() {
                     </div>
                   </div>
 
-                  <div className="border p-4 rounded-xl bg-accent/5 space-y-3">
-                    <h4 className="font-semibold text-xs text-purple-600 dark:text-purple-400 uppercase tracking-wider">Suite Hierarchy Assignment</h4>
-                    <HierarchySelector
-                      projectId={params.id as string}
-                      moduleId={moduleId}
-                      onChangeModuleId={setModuleId}
-                      featureId={featureId}
-                      onChangeFeatureId={setFeatureId}
-                      componentId={componentId}
-                      onChangeComponentId={setComponentId}
-                    />
-                  </div>
-
                   {/* Selector Choice */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-muted-foreground">Choose Locator to Save</label>
@@ -661,15 +632,6 @@ export default function ElementLocatorPickerPage() {
                     <td className="p-3 font-semibold">
                       <div className="flex flex-col gap-0.5">
                         <span>{loc.friendlyName}</span>
-                        {(loc.moduleRelation || loc.feature || loc.component) && (
-                          <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
-                            {[
-                              loc.moduleRelation?.name,
-                              loc.feature?.name,
-                              loc.component?.name
-                            ].filter(Boolean).join(" → ")}
-                          </span>
-                        )}
                       </div>
                       {loc.description && (
                         <div className="text-xs text-muted-foreground font-normal mt-0.5">{loc.description}</div>

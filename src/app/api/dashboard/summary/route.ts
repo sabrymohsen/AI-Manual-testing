@@ -180,10 +180,11 @@ export async function GET(request: Request) {
     select: { id: true, title: true }
   })
 
+  // "Unassigned" now means: no linked user story
   const unassignedCases = await prisma.testCase.findMany({
     where: {
       projectId: { in: projectIds },
-      moduleId: null
+      requirements: { none: {} }
     },
     select: { id: true, title: true }
   })
@@ -222,10 +223,7 @@ export async function GET(request: Request) {
       testCase: {
         select: {
           id: true,
-          title: true,
-          module: true,
-          featureId: true,
-          componentId: true
+          title: true
         }
       },
       project: { select: { name: true } },
@@ -239,9 +237,6 @@ export async function GET(request: Request) {
     testCaseId: run.testCase?.id || null,
     testCaseTitle: run.testCase?.title || "Unknown Case",
     project: run.project.name,
-    module: run.testCase?.module || "General",
-    featureId: run.testCase?.featureId || null,
-    componentId: run.testCase?.componentId || null,
     failedAt: run.completedAt || run.createdAt,
     failureReason: run.logs[0]?.message || "Assertion failed or step timeout.",
     bugId: run.bugReports[0]?.id || null,
@@ -339,76 +334,76 @@ export async function GET(request: Request) {
     })
   }
 
-  // 9. Module Coverage horizontal bar chart data
-  const modules = await prisma.projectModule.findMany({
+  // 9. Epic Coverage horizontal bar chart data (test cases reached via story links)
+  const epics = await prisma.epic.findMany({
     where: { projectId: { in: projectIds } },
     include: {
-      testCases: {
-        include: {
-          testRuns: {
-            orderBy: { createdAt: "desc" },
-            take: 1
-          }
-        }
-      },
       requirements: {
-        select: { id: true }
+        select: {
+          id: true,
+          testCases: {
+            select: {
+              testCase: {
+                select: {
+                  id: true,
+                  testRuns: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true } }
+                }
+              }
+            }
+          },
+          bugReports: { select: { bugReport: { select: { status: true } } } }
+        }
       }
     }
   })
 
-  const coverageByModule = modules.map(mod => {
-    const totalCases = mod.testCases.length
-    const passedCases = mod.testCases.filter(c => c.testRuns[0]?.status === "Passed").length
-    const reqsCount = mod.requirements.length
-    const passRate = totalCases > 0 ? Math.round((passedCases / totalCases) * 100) : 0
-
-    return {
-      name: mod.name,
-      testCases: totalCases,
-      passRate,
-      requirements: reqsCount
-    }
-  }).slice(0, 8)
-
-  // 10. Risk Areas
-  const riskAreas = modules.map(mod => {
-    const failedRunsCount = mod.testCases.reduce((acc, c) => acc + c.testRuns.filter(r => r.status === "Failed").length, 0)
-    return {
-      id: mod.id,
-      name: mod.name,
-      failedRuns: failedRunsCount,
-      openBugs: 0,
-      coverage: 0,
-      risk: "Low"
-    }
-  })
-
-  for (const area of riskAreas) {
-    area.openBugs = await prisma.bugReport.count({
-      where: {
-        moduleId: area.id,
-        status: { in: ["Open", "InProgress", "ReadyForRetest", "Reopened"] }
-      }
+  const epicRollups = epics.map(epic => {
+    const caseMap = new Map<string, { latestStatus: string | null }>()
+    let openBugs = 0
+    epic.requirements.forEach(req => {
+      req.testCases.forEach(link => {
+        if (link.testCase) {
+          caseMap.set(link.testCase.id, { latestStatus: link.testCase.testRuns[0]?.status ?? null })
+        }
+      })
+      openBugs += req.bugReports.filter(b =>
+        ["Open", "InProgress", "ReadyForRetest", "Reopened"].includes(b.bugReport.status)
+      ).length
     })
-    const totalCases = await prisma.testCase.count({ where: { moduleId: area.id } })
-    const neverRunCount = await prisma.testCase.count({ where: { moduleId: area.id, testRuns: { none: {} } } })
-    area.coverage = totalCases > 0 ? Math.round(((totalCases - neverRunCount) / totalCases) * 100) : 0
+    const cases = Array.from(caseMap.values())
+    const totalCases = cases.length
+    const passedCases = cases.filter(c => c.latestStatus === "Passed").length
+    const failedRunsCount = cases.filter(c => c.latestStatus === "Failed").length
+    const executedCases = cases.filter(c => c.latestStatus !== null).length
+    return { epic, totalCases, passedCases, failedRunsCount, executedCases, openBugs }
+  })
 
-    if (area.openBugs >= 3 || area.failedRuns >= 8) {
-      area.risk = "Critical"
-    } else if (area.openBugs >= 1 || area.failedRuns >= 3) {
-      area.risk = "High"
-    } else if (area.failedRuns > 0) {
-      area.risk = "Medium"
-    } else {
-      area.risk = "Low"
+  const coverageByModule = epicRollups.map(({ epic, totalCases, passedCases }) => ({
+    name: `${epic.epicKey} — ${epic.title}`,
+    testCases: totalCases,
+    passRate: totalCases > 0 ? Math.round((passedCases / totalCases) * 100) : 0,
+    requirements: epic.requirements.length
+  })).slice(0, 8)
+
+  // 10. Risk Areas (per epic)
+  const riskAreas = epicRollups.map(({ epic, totalCases, failedRunsCount, executedCases, openBugs }) => {
+    let risk = "Low"
+    if (openBugs >= 3 || failedRunsCount >= 8) risk = "Critical"
+    else if (openBugs >= 1 || failedRunsCount >= 3) risk = "High"
+    else if (failedRunsCount > 0) risk = "Medium"
+    return {
+      id: epic.id,
+      name: `${epic.epicKey} — ${epic.title}`,
+      failedRuns: failedRunsCount,
+      openBugs,
+      coverage: totalCases > 0 ? Math.round((executedCases / totalCases) * 100) : 0,
+      risk
     }
-  }
+  })
 
   const sortedRiskAreas = riskAreas
     .filter(a => a.failedRuns > 0 || a.openBugs > 0)
-    .sort((a, b) => b.failedRuns + a.openBugs * 2 - (a.failedRuns + a.openBugs * 2))
+    .sort((a, b) => b.failedRuns + b.openBugs * 2 - (a.failedRuns + a.openBugs * 2))
     .slice(0, 5)
 
   // 11. Activity Feed

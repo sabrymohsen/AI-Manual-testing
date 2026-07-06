@@ -32,9 +32,6 @@ export async function POST(request: Request) {
         requirements: {
           include: { requirement: true }
         },
-        moduleRelation: true,
-        feature: true,
-        component: true,
         project: true
       }
     })
@@ -42,10 +39,6 @@ export async function POST(request: Request) {
     const exported = testCases.map(tc => ({
       id: tc.id,
       title: tc.title,
-      module: tc.module || "General",
-      moduleName: tc.moduleRelation?.name || "",
-      featureName: tc.feature?.name || "",
-      componentName: tc.component?.name || "",
       priority: tc.priority,
       preconditions: tc.preconditions || "",
       source: tc.source,

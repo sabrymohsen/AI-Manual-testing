@@ -17,9 +17,7 @@ interface ColumnMapping {
   description: string
   acceptanceCriteria: string
   epic: string
-  module: string
   feature: string
-  component: string
   priority: string
   status: string
   figmaUrl: string
@@ -33,9 +31,7 @@ const SCHEMA_FIELDS = [
   { key: "description", label: "Description", required: false, desc: "Detailed information about the requirement." },
   { key: "acceptanceCriteria", label: "Acceptance Criteria", required: false, desc: "Conditions to meet for compliance." },
   { key: "epic", label: "Parent Epic", required: false, desc: "Epic key or name — unmatched epics are auto-created." },
-  { key: "module", label: "Module Name", required: false, desc: "Top-level module hierarchy path." },
-  { key: "feature", label: "Feature Name", required: false, desc: "Mid-level feature hierarchy path." },
-  { key: "component", label: "Component Name", required: false, desc: "Leaf-level component hierarchy path." },
+  { key: "feature", label: "Parent Feature", required: false, desc: "Feature key or name — unmatched features are auto-created under the row's epic." },
   { key: "priority", label: "Priority", required: false, desc: "Low, Medium, High, Critical." },
   { key: "status", label: "Status", required: false, desc: "Draft, ReadyForTesting, InTesting, Deprecated." },
   { key: "figmaUrl", label: "Figma Link", required: false, desc: "URL link to Figma frames." },
@@ -54,9 +50,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
     description: "",
     acceptanceCriteria: "",
     epic: "",
-    module: "",
     feature: "",
-    component: "",
     priority: "",
     status: "",
     figmaUrl: "",
@@ -114,12 +108,8 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
             autoMapping.description = colIndex
           } else if (lowerHeader.includes("criteria") || lowerHeader.includes("acceptance") || lowerHeader.includes("معايير") || lowerHeader.includes("شروط")) {
             autoMapping.acceptanceCriteria = colIndex
-          } else if (lowerHeader.includes("module") || lowerHeader.includes("قسم") || lowerHeader.includes("موديل")) {
-            autoMapping.module = colIndex
           } else if (lowerHeader.includes("feature") || lowerHeader.includes("خاصية") || lowerHeader.includes("ميزة")) {
             autoMapping.feature = colIndex
-          } else if (lowerHeader.includes("component") || lowerHeader.includes("مكون")) {
-            autoMapping.component = colIndex
           } else if (lowerHeader.includes("priority") || lowerHeader.includes("أولوية") || lowerHeader.includes("اولوية")) {
             autoMapping.priority = colIndex
           } else if (lowerHeader.includes("status") || lowerHeader.includes("حالة") || lowerHeader.includes("حاله")) {
@@ -340,29 +330,23 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                   <span className="text-2xl font-bold text-blue-700 mt-1 block">{previewData.summary.updatedRequirements}</span>
                 </div>
                 <div className="border border-slate-100 p-4 bg-amber-50/30 rounded-xl text-center border-amber-100/30">
-                  <span className="text-[10px] font-bold text-amber-600 block uppercase">Structure folders to create</span>
+                  <span className="text-[10px] font-bold text-amber-600 block uppercase">Epics / Features to create</span>
                   <span className="text-2xl font-bold text-amber-700 mt-1 block">
-                    {previewData.summary.createdModules + previewData.summary.createdFeatures + previewData.summary.createdComponents + (previewData.summary.createdEpics || 0)}
+                    {(previewData.summary.createdEpics || 0) + (previewData.summary.createdFeatures || 0)}
                   </span>
                 </div>
               </div>
 
               {/* Proposed Hierarchy Changes */}
-              {((previewData.newStructures.epics?.length || 0) > 0 || previewData.newStructures.modules.length > 0 || previewData.newStructures.features.length > 0 || previewData.newStructures.components.length > 0) && (
+              {((previewData.newStructures.epics?.length || 0) > 0 || (previewData.newStructures.features?.length || 0) > 0) && (
                 <div className="border border-amber-100 bg-amber-50/15 p-4 rounded-xl space-y-2.5">
                   <span className="text-xs font-bold text-amber-800 block">Proposed project structure changes:</span>
                   <div className="text-[11px] text-amber-700 space-y-1">
                     {(previewData.newStructures.epics || []).map((e: string, i: number) => (
                       <div key={`ep-${i}`}>• Create Epic: <span className="font-semibold">{e}</span></div>
                     ))}
-                    {previewData.newStructures.modules.map((m: string, i: number) => (
-                      <div key={i}>• Create Module: <span className="font-semibold">{m}</span></div>
-                    ))}
-                    {previewData.newStructures.features.map((f: string, i: number) => (
-                      <div key={i}>• Create Feature: <span className="font-semibold">{f}</span></div>
-                    ))}
-                    {previewData.newStructures.components.map((c: string, i: number) => (
-                      <div key={i}>• Create Component: <span className="font-semibold">{c}</span></div>
+                    {(previewData.newStructures.features || []).map((f: string, i: number) => (
+                      <div key={`ft-${i}`}>• Create Feature: <span className="font-semibold">{f}</span></div>
                     ))}
                   </div>
                 </div>
@@ -385,9 +369,9 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                             Epic: {r.epic}{r.epicAction === "Create" && " (new)"}
                           </span>
                         )}
-                        {r.module && (
-                          <span className="text-[10px] text-slate-400 block mt-1">
-                            Folder: {r.module} {r.feature && ` / ${r.feature}`} {r.component && ` / ${r.component}`}
+                        {r.feature && (
+                          <span className="text-[10px] text-indigo-500 block mt-1 font-semibold">
+                            Feature: {r.feature}{r.featureAction === "Create" && " (new)"}
                           </span>
                         )}
                       </div>

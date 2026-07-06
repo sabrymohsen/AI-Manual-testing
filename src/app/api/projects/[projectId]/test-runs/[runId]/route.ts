@@ -13,13 +13,7 @@ export async function GET(
   const testRun = await prisma.testRun.findFirst({
     where: { id: params.runId, projectId: params.projectId },
     include: {
-      testCase: {
-        include: {
-          moduleRelation: true,
-          feature: true,
-          component: true
-        }
-      },
+      testCase: true,
       stepResults: {
         orderBy: { stepNumber: "asc" },
         include: {

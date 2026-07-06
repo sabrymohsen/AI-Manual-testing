@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { AnnotationEditor } from "@/components/live-qa/annotation-editor"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import {
@@ -103,9 +102,6 @@ export default function LiveQASessionPage() {
   // Setup Form Configuration States
   const [title, setTitle] = useState("")
   const [startUrl, setStartUrl] = useState("")
-  const [moduleId, setModuleId] = useState("")
-  const [featureId, setFeatureId] = useState("")
-  const [componentId, setComponentId] = useState("")
   const [priority, setPriority] = useState("Medium")
   const [preconditions, setPreconditions] = useState("")
   const [browserType, setBrowserType] = useState<"Chromium" | "Firefox" | "WebKit">("Chromium")
@@ -296,17 +292,43 @@ export default function LiveQASessionPage() {
     setHasFrame(true)
   }
 
-  async function drawFrameBlob(blob: Blob) {
-    try {
-      const bitmap = await createImageBitmap(blob)
-      drawToCanvas(bitmap.width, bitmap.height, (ctx) => ctx.drawImage(bitmap, 0, 0))
-      bitmap.close()
-    } catch {}
+  // Latest-frame-wins decoding: JPEG decode is async, so under load frames can
+  // arrive faster than they decode. Instead of queueing every frame (stale,
+  // laggy playback), keep only the newest blob and decode frames one at a time.
+  const pendingFrameRef = useRef<Blob | null>(null)
+  const decodingFrameRef = useRef(false)
+  // Remote devicePixelRatio: WS frames arrive at CSS px × dsf (retina crisp);
+  // REST polling frames are captured at plain CSS px. frameDsfRef tracks the
+  // scale of whatever frame is currently on the canvas so mouse coordinates
+  // always map back to remote CSS pixels.
+  const streamDsfRef = useRef(1)
+  const frameDsfRef = useRef(1)
+
+  function drawFrameBlob(blob: Blob) {
+    pendingFrameRef.current = blob
+    if (decodingFrameRef.current) return
+    decodingFrameRef.current = true
+    ;(async () => {
+      while (pendingFrameRef.current) {
+        const next = pendingFrameRef.current
+        pendingFrameRef.current = null
+        try {
+          const bitmap = await createImageBitmap(next)
+          drawToCanvas(bitmap.width, bitmap.height, (ctx) => ctx.drawImage(bitmap, 0, 0))
+          frameDsfRef.current = streamDsfRef.current
+          bitmap.close()
+        } catch {}
+      }
+      decodingFrameRef.current = false
+    })()
   }
 
   function drawFrameDataUrl(dataUrl: string) {
     const img = new Image()
-    img.onload = () => drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
+    img.onload = () => {
+      drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
+      frameDsfRef.current = 1 // polling frames are plain CSS pixels
+    }
     img.src = dataUrl
   }
 
@@ -378,6 +400,8 @@ export default function LiveQASessionPage() {
                   cancelled = true
                   setStreamMode("polling")
                 }
+              } else if (msg.type === "dsf" && msg.dsf) {
+                streamDsfRef.current = Number(msg.dsf) || 1
               } else if (msg.type === "url" && msg.url) {
                 setLiveUrl(msg.url)
                 }
@@ -474,15 +498,17 @@ export default function LiveQASessionPage() {
       .catch(() => {})
   }
 
-  // Map a mouse event on the scaled frame canvas to real page coordinates
+  // Map a mouse event on the scaled frame canvas to remote CSS-px coordinates
+  // (the frame bitmap may be dsf× larger than the remote CSS viewport)
   function liveViewCoords(e: { clientX: number; clientY: number }) {
     const canvas = liveCanvasRef.current
     if (!canvas || !canvas.width) return null
     const rect = canvas.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return null
+    const dsf = frameDsfRef.current || 1
     return {
-      x: Math.round(((e.clientX - rect.left) / rect.width) * canvas.width),
-      y: Math.round(((e.clientY - rect.top) / rect.height) * canvas.height)
+      x: Math.round(((e.clientX - rect.left) / rect.width) * (canvas.width / dsf)),
+      y: Math.round(((e.clientY - rect.top) / rect.height) * (canvas.height / dsf))
     }
   }
 
@@ -525,6 +551,36 @@ export default function LiveQASessionPage() {
     return () => el.removeEventListener("wheel", onWheel)
   }, [sessionId, sessionStatus, showLivePreview])
 
+  // Fit-to-container: keep the remote viewport matched to the live view's
+  // visible area so the stream fills it edge-to-edge (no letterboxing).
+  // Debounced — window drags/panel toggles fire many resize events.
+  useEffect(() => {
+    const el = liveViewRef.current
+    if (!el || !sessionId || sessionStatus !== "Active" || !showLivePreview) return
+
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const sendResize = () => {
+      const rect = el.getBoundingClientRect()
+      const width = Math.round(rect.width)
+      const height = Math.round(rect.height)
+      if (width < 320 || height < 320) return
+      sendBrowserInput({ type: "resize", width, height })
+    }
+
+    // Match immediately on session start / view open, then follow changes
+    sendResize()
+    const observer = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(sendResize, 350)
+    })
+    observer.observe(el)
+    return () => {
+      if (timer) clearTimeout(timer)
+      observer.disconnect()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, sessionStatus, showLivePreview, fullView])
+
   // ── Session Controls ───────────────────────────────────────────────────────
 
   async function handleStartSession(e: React.FormEvent) {
@@ -543,9 +599,6 @@ export default function LiveQASessionPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          moduleId: moduleId || null,
-          featureId: featureId || null,
-          componentId: componentId || null,
           priority,
           preconditions: preconditions || undefined,
           requiredCredentialId: credentialId || null,
@@ -881,20 +934,6 @@ export default function LiveQASessionPage() {
             <div className="space-y-1.5">
               <Label htmlFor="work-url">Target Startup URL *</Label>
               <Input id="work-url" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} required />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Suite Directory Path</Label>
-              <HierarchySelector 
-                projectId={projectId}
-                moduleId={moduleId}
-                onChangeModuleId={setModuleId}
-                featureId={featureId}
-                onChangeFeatureId={setFeatureId}
-                componentId={componentId}
-                onChangeComponentId={setComponentId}
-                showLabels={false}
-              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">

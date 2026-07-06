@@ -1,7 +1,7 @@
 /**
  * GET /api/projects/[projectId]/integrations/openproject/groups
  *
- * Returns all module groups with OpenProject sync status + per-module config state.
+ * Returns all feature groups with OpenProject sync status + per-feature config state.
  */
 import { NextResponse } from "next/server"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
@@ -37,15 +37,15 @@ export async function GET(
       integration.defaultStatusId
     )
 
-    // Per-module configs
-    const moduleCfgs = await prisma.openProjectModuleConfig.findMany({
+    // Per-feature configs
+    const featureCfgs = await prisma.openProjectFeatureConfig.findMany({
       where: { projectId: params.projectId },
     })
-    const modCfgMap = new Map(moduleCfgs.map((c) => [c.moduleId, c]))
+    const modCfgMap = new Map(featureCfgs.map((c) => [c.featureId, c]))
 
     const groups = await getAllGroupsWithStatus(params.projectId)
 
-    // Attach per-module config status to each group
+    // Attach per-feature config status to each group
     const groupsWithConfig = groups.map((g) => {
       const mod = modCfgMap.get(g.groupId)
 
@@ -65,7 +65,7 @@ export async function GET(
 
       return {
         ...g,
-        moduleConfig: {
+        featureConfig: {
           hasOwnConfig: !!mod,
           configured: projConfigured || !!(mod?.apiTokenEncrypted),
           complete: isComplete,

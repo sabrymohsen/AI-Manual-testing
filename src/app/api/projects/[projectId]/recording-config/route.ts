@@ -19,21 +19,6 @@ export async function GET(
     select: { id: true, roleName: true, username: true }
   })
 
-  const modules = await prisma.projectModule.findMany({
-    where: { projectId: params.projectId },
-    select: { id: true, name: true }
-  })
-
-  const features = await prisma.projectFeature.findMany({
-    where: { module: { projectId: params.projectId } },
-    select: { id: true, name: true, moduleId: true }
-  })
-
-  const components = await prisma.projectComponent.findMany({
-    where: { feature: { module: { projectId: params.projectId } } },
-    select: { id: true, name: true, featureId: true }
-  })
-
   return NextResponse.json({
     project: {
       id: project.id,
@@ -41,9 +26,6 @@ export async function GET(
       baseUrl: project.webAppUrl
     },
     environments: ["Dev", "Staging", "UAT", "Production"],
-    credentials,
-    modules,
-    features,
-    components
+    credentials
   })
 }

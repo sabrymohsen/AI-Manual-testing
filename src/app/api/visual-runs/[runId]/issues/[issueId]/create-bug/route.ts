@@ -88,10 +88,7 @@ export async function POST(
         stepsToReproduce,
         expectedResult,
         actualResult,
-        screenshotPath: issue.diffCropPath || run.actualImagePath || null,
-        moduleId: mapping.moduleId || null,
-        featureId: mapping.featureId || null,
-        componentId: mapping.componentId || null
+        screenshotPath: issue.diffCropPath || run.actualImagePath || null
       }
     })
 

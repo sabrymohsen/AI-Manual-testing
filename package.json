@@ -11,8 +11,7 @@
     "recorder-worker": "tsx src/workers/recorder.worker.ts",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:migrate-hierarchy": "tsx scripts/migrate-hierarchy.ts"
+    "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@faker-js/faker": "^10.5.0",

@@ -17,7 +17,6 @@ async function runVerification() {
     data: {
       projectId: project.id,
       title: "Herokuapp Login E2E Demo Test",
-      module: "Auth",
       priority: "Critical",
       source: "Manual",
       steps: {

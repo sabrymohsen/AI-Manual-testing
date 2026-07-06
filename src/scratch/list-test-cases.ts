@@ -17,7 +17,6 @@ async function main() {
   for (const tc of testCases) {
     console.log(`ID: ${tc.id}`)
     console.log(`Title: ${tc.title}`)
-    console.log(`Module: ${tc.module}`)
     console.log(`Steps count: ${tc.steps.length}`)
     for (const step of tc.steps) {
       console.log(`  Step ${step.stepNumber}: ${step.actionType} | ${step.targetType} | Target: ${step.targetValue} | Input: ${step.inputValue}`)

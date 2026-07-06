@@ -1,5 +1,5 @@
 /**
- * POST /api/projects/[projectId]/integrations/openproject/modules/[moduleId]/test-connection
+ * POST /api/projects/[projectId]/integrations/openproject/features/[featureId]/test-connection
  *
  * Validates the effective connection config for a specific module.
  * Uses module override if present, falls back to project-level config.
@@ -12,7 +12,7 @@ import { decryptSecret } from "@/lib/crypto"
 import { encryptSecret } from "@/lib/crypto"
 import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
 
-type Params = { params: { projectId: string; moduleId: string } }
+type Params = { params: { projectId: string; featureId: string } }
 
 export async function POST(req: Request, { params }: Params) {
   const auth = await requireProjectOwner(params.projectId)
@@ -25,8 +25,8 @@ export async function POST(req: Request, { params }: Params) {
   const inProgressIdentifier: string | null = body.openProjectProjectIdentifier || null
 
   // Load module override
-  const modCfg = await prisma.openProjectModuleConfig.findUnique({
-    where: { projectId_moduleId: { projectId: params.projectId, moduleId: params.moduleId } },
+  const modCfg = await prisma.openProjectFeatureConfig.findUnique({
+    where: { projectId_featureId: { projectId: params.projectId, featureId: params.featureId } },
   })
 
   // Load project-level config as fallback
@@ -81,8 +81,8 @@ export async function POST(req: Request, { params }: Params) {
 
   // Persist connection status to module config
   if (modCfg) {
-    await prisma.openProjectModuleConfig.update({
-      where: { projectId_moduleId: { projectId: params.projectId, moduleId: params.moduleId } },
+    await prisma.openProjectFeatureConfig.update({
+      where: { projectId_featureId: { projectId: params.projectId, featureId: params.featureId } },
       data: {},
     })
   }

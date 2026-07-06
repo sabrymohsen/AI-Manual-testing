@@ -9,7 +9,6 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get("projectId") || undefined
-  const moduleId = searchParams.get("moduleId") || undefined
   const featureId = searchParams.get("featureId") || undefined
   const componentId = searchParams.get("componentId") || undefined
   const severity = searchParams.get("severity") || undefined
@@ -73,9 +72,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Specific filters
-    if (moduleId) {
-      where.moduleId = moduleId === "null" ? null : moduleId
-    }
     if (featureId) {
       where.featureId = featureId === "null" ? null : featureId
     }
@@ -185,9 +181,6 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         project: { select: { id: true, name: true } },
-        moduleRelation: { select: { id: true, name: true } },
-        feature: { select: { id: true, name: true } },
-        component: { select: { id: true, name: true } },
         testCase: { select: { id: true, title: true } },
         requirements: { include: { requirement: true } },
         testRun: { select: { id: true, browserType: true } },
@@ -234,9 +227,6 @@ export async function POST(request: Request) {
       stepsToReproduce,
       expectedResult,
       actualResult,
-      moduleId,
-      featureId,
-      componentId,
       testCaseId,
       requirementIds
     } = parsed.data
@@ -255,9 +245,6 @@ export async function POST(request: Request) {
           bugKey,
           title,
           projectId,
-          moduleId: moduleId || null,
-          featureId: featureId || null,
-          componentId: componentId || null,
           testCaseId: testCaseId || null,
           severity: severity || "Medium",
           priority: priority || "Medium",

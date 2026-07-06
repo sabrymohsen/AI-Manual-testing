@@ -1,10 +1,16 @@
 /**
  * OpenProject Group Sync Service
  *
- * Provides group-scoped (module-level) sync operations for OpenProject integration.
+ * Provides group-scoped (feature-level) sync operations for OpenProject integration.
  * Reuses OpenProjectClient and the existing sync patterns from bulk sync routes.
  *
- * groupId = ProjectModule.id  |  "unassigned" for test cases with no module
+ * groupId = Feature.id | "unassigned".
+ *
+ * Test cases no longer carry direct classification — a test case's group is
+ * derived through its story links: the feature of the linked story whose
+ * TestCaseRequirement link row has the earliest createdAt (oldest link wins);
+ * if that story has no feature, fall through to the next-oldest linked story
+ * that has one; if none, the test case is "unassigned".
  */
 
 import { prisma } from "@/lib/db"
@@ -17,7 +23,7 @@ const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://local
 
 export interface GroupInfo {
   groupId: string
-  groupType: "Module" | "Unassigned"
+  groupType: "Feature" | "Unassigned"
   groupName: string
   totalCases: number
   passed: number
@@ -79,19 +85,19 @@ export interface GroupSyncedItem {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function getClientAndIntegration(projectId: string, moduleId?: string) {
+async function getClientAndIntegration(projectId: string, featureId?: string) {
   const integration = await prisma.openProjectIntegration.findUnique({
     where: { projectId },
   })
 
-  // Load module-level config override when moduleId is provided
-  const modCfg = moduleId
-    ? await prisma.openProjectModuleConfig.findUnique({
-        where: { projectId_moduleId: { projectId, moduleId } },
+  // Load feature-level config override when featureId is provided
+  const modCfg = featureId
+    ? await prisma.openProjectFeatureConfig.findUnique({
+        where: { projectId_featureId: { projectId, featureId } },
       })
     : null
 
-  // Resolve effective connection params: module override → project fallback
+  // Resolve effective connection params: feature override → project fallback
   const baseUrl = modCfg?.baseUrl || integration?.baseUrl
   const identifier = modCfg?.openProjectProjectIdentifier || integration?.openProjectProjectIdentifier
 
@@ -113,7 +119,7 @@ async function getClientAndIntegration(projectId: string, moduleId?: string) {
   }
 
   if (!baseUrl || !identifier || !token) {
-    throw new Error("OpenProject integration is not configured. Add connection details in Project Settings or module config.")
+    throw new Error("OpenProject integration is not configured. Add connection details in Project Settings or feature config.")
   }
 
   const client = new OpenProjectClient(baseUrl, identifier, token)
@@ -134,49 +140,48 @@ async function getClientAndIntegration(projectId: string, moduleId?: string) {
   return { client, integration: effective, modCfg }
 }
 
-async function getGroupTestCases(projectId: string, groupId: string) {
-  if (groupId === "unassigned") {
-    return prisma.testCase.findMany({
-      where: { projectId, moduleId: null },
-      include: {
-        steps: { orderBy: { stepNumber: "asc" } },
-        moduleRelation: { select: { name: true } },
-        feature: { select: { name: true } },
-        component: { select: { name: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    })
+/**
+ * Derive a test case's group (feature id or "unassigned") from its story
+ * links, using the earliest-created link whose story has a feature.
+ */
+function deriveGroupId(links: Array<{ createdAt: Date; requirement: { featureId: string | null } }>): string {
+  const ordered = [...links].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+  for (const link of ordered) {
+    if (link.requirement.featureId) return link.requirement.featureId
   }
+  return "unassigned"
+}
 
-  return prisma.testCase.findMany({
-    where: { projectId, moduleId: groupId },
+async function getAllTestCasesWithGroup(projectId: string) {
+  const testCases = await prisma.testCase.findMany({
+    where: { projectId },
     include: {
       steps: { orderBy: { stepNumber: "asc" } },
-      moduleRelation: { select: { name: true } },
-      feature: { select: { name: true } },
-      component: { select: { name: true } },
+      requirements: {
+        select: { createdAt: true, requirement: { select: { featureId: true } } },
+      },
     },
     orderBy: { createdAt: "asc" },
   })
+  return testCases.map(tc => ({ ...tc, groupId: deriveGroupId(tc.requirements) }))
+}
+
+async function getGroupTestCases(projectId: string, groupId: string) {
+  const all = await getAllTestCasesWithGroup(projectId)
+  return all.filter(tc => tc.groupId === groupId)
 }
 
 async function getGroupName(projectId: string, groupId: string): Promise<string> {
   if (groupId === "unassigned") return "Unassigned"
-  const mod = await prisma.projectModule.findFirst({ where: { id: groupId, projectId }, select: { name: true } })
-  return mod?.name || "Unknown Module"
+  const feature = await prisma.feature.findFirst({ where: { id: groupId, projectId }, select: { name: true } })
+  return feature?.name || "Unknown Feature"
 }
 
-function buildTestCaseDescription(tc: any, projectName: string): string {
-  const mod = tc.moduleRelation?.name || tc.module || "General"
-  const feature = tc.feature?.name
-  const component = tc.component?.name
-
+function buildTestCaseDescription(tc: any, projectName: string, featureName?: string): string {
   let md = `## Test Case\n\n`
   md += `**Local Test Case ID:** \`${tc.id}\`\n`
   md += `**Project:** ${projectName}\n`
-  md += `**Module:** ${mod}\n`
-  if (feature) md += `**Feature:** ${feature}\n`
-  if (component) md += `**Component:** ${component}\n`
+  if (featureName && featureName !== "Unassigned") md += `**Feature:** ${featureName}\n`
   md += `**Priority:** ${tc.priority}\n`
   md += `**Source:** ${tc.source}\n\n`
 
@@ -207,18 +212,15 @@ function buildTestCaseDescription(tc: any, projectName: string): string {
 // ─── Core Functions ───────────────────────────────────────────────────────────
 
 export async function getAllGroupsWithStatus(projectId: string): Promise<GroupInfo[]> {
-  // Load all modules for this project
-  const modules = await prisma.projectModule.findMany({
+  // Load all features for this project
+  const features = await prisma.feature.findMany({
     where: { projectId },
     orderBy: { orderIndex: "asc" },
     select: { id: true, name: true },
   })
 
-  // Load all test cases grouped by moduleId
-  const allTestCases = await prisma.testCase.findMany({
-    where: { projectId },
-    select: { id: true, moduleId: true },
-  })
+  // Load all test cases with their derived group (via story links)
+  const allTestCases = await getAllTestCasesWithGroup(projectId)
 
   // Load all sync mappings for test cases
   const syncMappings = await prisma.externalSyncMapping.findMany({
@@ -242,30 +244,30 @@ export async function getAllGroupsWithStatus(projectId: string): Promise<GroupIn
 
   // Load parent mappings
   const parentMappings = await prisma.openProjectParentMapping.findMany({
-    where: { projectId, mappingType: "Module" },
+    where: { projectId, mappingType: "Feature" },
   })
   const parentMap = new Map(parentMappings.map(m => [m.localEntityId, m]))
 
   const results: GroupInfo[] = []
 
-  // Build a group for each module
-  for (const mod of modules) {
-    const tcIds = allTestCases.filter(tc => tc.moduleId === mod.id).map(tc => tc.id)
-    const opInfo = buildGroupOpStatus(tcIds, syncMap, mod.id, parentMap)
+  // Build a group for each feature
+  for (const feature of features) {
+    const tcIds = allTestCases.filter(tc => tc.groupId === feature.id).map(tc => tc.id)
+    const opInfo = buildGroupOpStatus(tcIds, syncMap, feature.id, parentMap)
     const runStats = buildRunStats(tcIds, latestRunMap)
 
     results.push({
-      groupId: mod.id,
-      groupType: "Module",
-      groupName: mod.name,
+      groupId: feature.id,
+      groupType: "Feature",
+      groupName: feature.name,
       totalCases: tcIds.length,
       ...runStats,
       openProject: opInfo,
     })
   }
 
-  // Add unassigned group for test cases with no moduleId
-  const unassignedIds = allTestCases.filter(tc => !tc.moduleId).map(tc => tc.id)
+  // Add unassigned group for test cases with no story-derived feature
+  const unassignedIds = allTestCases.filter(tc => tc.groupId === "unassigned").map(tc => tc.id)
   if (unassignedIds.length > 0) {
     const opInfo = buildGroupOpStatus(unassignedIds, syncMap, "unassigned", parentMap)
     const runStats = buildRunStats(unassignedIds, latestRunMap)
@@ -358,10 +360,10 @@ export async function mapGroupParent(
   const parentUrl = client.workPackageUrl(parentWorkPackageId)
 
   const mapping = await prisma.openProjectParentMapping.upsert({
-    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Module", localEntityId: groupId } },
+    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Feature", localEntityId: groupId } },
     create: {
       projectId,
-      mappingType: "Module",
+      mappingType: "Feature",
       localEntityId: groupId,
       localEntityName: groupName,
       openProjectParentId: parentWorkPackageId,
@@ -398,7 +400,7 @@ export async function syncGroupTestCasesToOpenProject(
 
   // Get parent mapping for this group
   const parentMapping = await prisma.openProjectParentMapping.findUnique({
-    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Module", localEntityId: groupId } },
+    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Feature", localEntityId: groupId } },
   })
 
   const project = await prisma.project.findUnique({ where: { id: projectId }, select: { name: true } })
@@ -438,7 +440,7 @@ export async function syncGroupTestCasesToOpenProject(
   let created = 0, updated = 0, skipped = 0, failed = 0, parentLinked = 0
 
   for (const tc of testCases) {
-    const description = buildTestCaseDescription(tc, projectName)
+    const description = buildTestCaseDescription(tc, projectName, groupName)
     const subject = `[TC] ${tc.title}`
     const existingMapping = mappingMap.get(tc.id)
 
@@ -536,12 +538,12 @@ export async function syncGroupTestCasesToOpenProject(
   // Persist sync outcome to project-level integration
   await prisma.openProjectIntegration.update({ where: { projectId }, data: { lastSyncAt: new Date() } }).catch(() => {})
 
-  // Persist sync outcome to per-module config (upsert — creates record if it doesn't exist yet)
-  await prisma.openProjectModuleConfig.upsert({
-    where: { projectId_moduleId: { projectId, moduleId: groupId } },
+  // Persist sync outcome to per-feature config (upsert — creates record if it doesn't exist yet)
+  await prisma.openProjectFeatureConfig.upsert({
+    where: { projectId_featureId: { projectId, featureId: groupId } },
     create: {
       projectId,
-      moduleId: groupId,
+      featureId: groupId,
       lastSyncAt: new Date(),
       lastSyncStatus: failed === 0 ? "success" : "failed",
       lastSyncError: syncError,
@@ -560,7 +562,7 @@ export async function applyParentToGroup(projectId: string, groupId: string): Pr
   const { client } = await getClientAndIntegration(projectId, groupId)
 
   const parentMapping = await prisma.openProjectParentMapping.findUnique({
-    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Module", localEntityId: groupId } },
+    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Feature", localEntityId: groupId } },
   })
   if (!parentMapping?.openProjectParentId) throw new Error("No parent mapping configured for this group. Map a parent first.")
 
@@ -594,7 +596,7 @@ export async function syncGroupToBoard(projectId: string, groupId: string): Prom
   const { client, integration, modCfg } = await getClientAndIntegration(projectId, groupId)
 
   const parentMapping = await prisma.openProjectParentMapping.findUnique({
-    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Module", localEntityId: groupId } },
+    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Feature", localEntityId: groupId } },
   })
 
   const testCases = await getGroupTestCases(projectId, groupId)
@@ -710,7 +712,7 @@ export async function checkGroupBoardVisibility(projectId: string, groupId: stri
   const mappingMap = new Map(syncMappings.map(m => [m.localEntityId, m]))
 
   const parentMapping = await prisma.openProjectParentMapping.findUnique({
-    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Module", localEntityId: groupId } },
+    where: { projectId_mappingType_localEntityId: { projectId, mappingType: "Feature", localEntityId: groupId } },
   })
 
   const items: GroupBoardCheckResult["items"] = []

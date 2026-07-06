@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StepBuilder } from "@/components/test-cases/step-builder"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 
 export default function EditTestCasePage() {
@@ -17,9 +16,6 @@ export default function EditTestCasePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const [moduleId, setModuleId] = useState("")
-  const [featureId, setFeatureId] = useState("")
-  const [componentId, setComponentId] = useState("")
 
   const [requirementIds, setRequirementIds] = useState<string[]>([])
 
@@ -28,9 +24,6 @@ export default function EditTestCasePage() {
       .then((res) => res.json())
       .then((data) => {
         setTestCase(data.testCase)
-        setModuleId(data.testCase.moduleId || "")
-        setFeatureId(data.testCase.featureId || "")
-        setComponentId(data.testCase.componentId || "")
         setRequirementIds((data.testCase.requirements || []).map((r: any) => r.requirementId))
         setSteps(
           data.testCase.steps.map((s: any) => ({
@@ -55,9 +48,6 @@ export default function EditTestCasePage() {
     const form = new FormData(e.currentTarget)
     const body = {
       title: form.get("title"),
-      moduleId: moduleId || null,
-      featureId: featureId || null,
-      componentId: componentId || null,
       priority: form.get("priority"),
       preconditions: form.get("preconditions") || null,
       steps,
@@ -103,19 +93,6 @@ export default function EditTestCasePage() {
             <Label htmlFor="preconditions">Preconditions</Label>
             <Input id="preconditions" name="preconditions" defaultValue={testCase.preconditions || ""} />
           </div>
-        </div>
-
-        <div className="border p-5 rounded-2xl bg-accent/5 space-y-3 shadow-sm border-accent/20">
-          <h3 className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Test Suite Hierarchy</h3>
-          <HierarchySelector
-            projectId={params.id as string}
-            moduleId={moduleId}
-            onChangeModuleId={setModuleId}
-            featureId={featureId}
-            onChangeFeatureId={setFeatureId}
-            componentId={componentId}
-            onChangeComponentId={setComponentId}
-          />
         </div>
 
         <LinkedRequirementsSelector

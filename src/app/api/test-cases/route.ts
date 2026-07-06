@@ -18,9 +18,6 @@ export async function GET(request: NextRequest) {
       return notFoundResponse("Project not found or access denied")
     }
   }
-  const moduleId = searchParams.get("moduleId") || undefined
-  const featureId = searchParams.get("featureId") || undefined
-  const componentId = searchParams.get("componentId") || undefined
   const priority = searchParams.get("priority") || undefined
   const source = searchParams.get("source") || undefined
   const executionType = searchParams.get("executionType") || undefined
@@ -45,18 +42,6 @@ export async function GET(request: NextRequest) {
     where.projectId = projectId
   }
 
-  if (moduleId) {
-    where.moduleId = moduleId === "null" ? null : moduleId
-  }
-
-  if (featureId) {
-    where.featureId = featureId === "null" ? null : featureId
-  }
-
-  if (componentId) {
-    where.componentId = componentId === "null" ? null : componentId
-  }
-
   if (priority) {
     where.priority = priority as any
   }
@@ -73,7 +58,6 @@ export async function GET(request: NextRequest) {
   if (incomplete === "true") {
     where.OR = [
       { steps: { none: {} } },
-      { componentId: null },
       { requirements: { none: {} } },
       { steps: { some: { expectedResult: "" } } }
     ]
@@ -103,10 +87,6 @@ export async function GET(request: NextRequest) {
     where.OR = [
       ...(where.OR || []),
       { title: { contains: search, mode: "insensitive" } },
-      { module: { contains: search, mode: "insensitive" } },
-      { moduleRelation: { name: { contains: search, mode: "insensitive" } } },
-      { feature: { name: { contains: search, mode: "insensitive" } } },
-      { component: { name: { contains: search, mode: "insensitive" } } },
       { steps: { some: { actionDescription: { contains: search, mode: "insensitive" } } } },
       { steps: { some: { expectedResult: { contains: search, mode: "insensitive" } } } },
       { requirements: { some: { requirement: { requirementKey: { contains: search, mode: "insensitive" } } } } }
@@ -120,11 +100,11 @@ export async function GET(request: NextRequest) {
       include: {
         steps: { orderBy: { stepNumber: "asc" } },
         requirements: {
-          include: { requirement: true }
+          include: { requirement: { include: {
+            epic: { select: { id: true, epicKey: true, title: true } },
+            feature: { select: { id: true, featureKey: true, name: true } }
+          } } }
         },
-        moduleRelation: true,
-        feature: true,
-        component: true,
         project: true,
         testRuns: {
           orderBy: { createdAt: "desc" },
@@ -166,13 +146,11 @@ export async function GET(request: NextRequest) {
       if (!tc.steps || tc.steps.length === 0) warnings.push("No Steps")
       if (tc.steps && tc.steps.some(s => !s.expectedResult)) warnings.push("No Expected Result")
       if (!tc.requirements || tc.requirements.length === 0) warnings.push("No Requirement")
-      if (!tc.componentId) warnings.push("No Component")
       if (status === "NotExecuted") warnings.push("Never Run")
 
       return {
         id: tc.id,
         title: tc.title,
-        module: tc.module,
         priority: tc.priority,
         preconditions: tc.preconditions,
         source: tc.source,
@@ -184,9 +162,6 @@ export async function GET(request: NextRequest) {
           viewport: tc.project.viewport,
           environment: tc.project.environment
         },
-        moduleRelation: tc.moduleRelation,
-        feature: tc.feature,
-        component: tc.component,
         requirements: tc.requirements.map(r => r.requirement),
         warnings,
         lastRunStatus: status,
@@ -226,7 +201,7 @@ export async function GET(request: NextRequest) {
     const failedCount = summaryBase.filter(c => c.lastRunStatus === "Failed").length
     const notExecutedCount = summaryBase.filter(c => c.lastRunStatus === "NotExecuted").length
     const highPriorityCount = summaryBase.filter(c => c.priority === "High" || c.priority === "Critical").length
-    const unassignedCount = summaryBase.filter(c => !c.component).length
+    const unassignedCount = summaryBase.filter(c => !c.requirements || c.requirements.length === 0).length
 
     // Paginate
     const pageNum = parseInt(page, 10)

@@ -7,7 +7,6 @@ export async function generateMarkdownReport(testRunId: string): Promise<string>
       testCase: {
         select: {
           title: true,
-          module: true,
           requirements: {
             include: {
               requirement: {
@@ -33,7 +32,6 @@ export async function generateMarkdownReport(testRunId: string): Promise<string>
   lines.push(`# Test Run Report: ${testRun.project?.name || "Unknown Project"}`)
   lines.push("")
   lines.push(`**Test Case**: ${testRun.testCase?.title || "N/A"}`)
-  lines.push(`**Module**: ${testRun.testCase?.module || "N/A"}`)
   lines.push(`**Status**: ${testRun.status}`)
   lines.push(`**Environment**: ${testRun.project?.environment || "N/A"}`)
   lines.push(`**Browser**: ${testRun.browserType}`)

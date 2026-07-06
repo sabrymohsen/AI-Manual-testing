@@ -237,9 +237,7 @@ model Project {
   elementLocators ElementLocator[]
   elementCollections ElementCollection[]
   recordingSessions RecordingSession[]
-  modules     ProjectModule[]
-  features    ProjectFeature[]
-  components  ProjectComponent[]
+  features    Feature[]
 
   manualTestSessions ManualTestSession[]
   reusableStepFlows   ReusableStepFlow[]
@@ -313,18 +311,10 @@ model FigmaConfig {
 model TestCase {
   id              String          @id @default(uuid())
   title           String
-  module          String?
   priority        Priority        @default(Medium)
   preconditions   String?
   source          TestCaseSource  @default(Manual)
   executionType   ExecutionType   @default(Manual)
-
-  moduleId        String?
-  moduleRelation  ProjectModule?   @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  featureId       String?
-  feature         ProjectFeature?  @relation(fields: [featureId], references: [id], onDelete: SetNull)
-  componentId     String?
-  component       ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
 
   requiredCredentialId String?
   requiredCredential   ProjectCredential? @relation(fields: [requiredCredentialId], references: [id], onDelete: SetNull)
@@ -345,9 +335,6 @@ model TestCase {
   updatedAt       DateTime        @updatedAt
 
   @@index([projectId])
-  @@index([moduleId])
-  @@index([featureId])
-  @@index([componentId])
   @@index([priority])
   @@index([source])
   @@index([executionType])
@@ -572,15 +559,6 @@ model BugReport {
   projectId        String?
   project          Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  moduleId         String?
-  moduleRelation   ProjectModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-
-  featureId        String?
-  feature          ProjectFeature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
-
-  componentId      String?
-  component        ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
-
   testCaseId       String?
   testCase         TestCase?    @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
 
@@ -710,12 +688,6 @@ model ElementLocator {
   id                  String            @id @default(uuid())
   projectId           String
   project             Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  moduleId            String?
-  moduleRelation      ProjectModule?    @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  featureId           String?
-  feature             ProjectFeature?   @relation(fields: [featureId], references: [id], onDelete: SetNull)
-  componentId         String?
-  component           ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
   friendlyName        String
   description         String?
   pageUrl             String
@@ -745,9 +717,6 @@ model ElementLocator {
   updatedAt           DateTime          @updatedAt
 
   @@index([projectId])
-  @@index([moduleId])
-  @@index([featureId])
-  @@index([componentId])
   @@index([locatorType])
   @@index([collectionId])
 }
@@ -925,64 +894,24 @@ model IntegrationConfig {
   updatedAt         DateTime @updatedAt
 }
 
-model ProjectModule {
-  id              String           @id @default(uuid())
-  projectId       String
-  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name            String
-  description     String?
-  orderIndex      Int              @default(0)
+// ─── Feature — hierarchy layer between Epic and User Story ──────────────────
+model Feature {
+  id           String        @id @default(uuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  epicId       String?
+  epic         Epic?         @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  featureKey   String
+  name         String
+  description  String?
+  orderIndex   Int           @default(0)
+  requirements Requirement[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  features        ProjectFeature[]
-  components      ProjectComponent[]
-  testCases       TestCase[]
-  elementLocators ElementLocator[]
-  requirements    Requirement[]
-  bugReports      BugReport[]
-
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-}
-
-model ProjectFeature {
-  id              String           @id @default(uuid())
-  moduleId        String
-  module          ProjectModule    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  projectId       String
-  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name            String
-  description     String?
-  orderIndex      Int              @default(0)
-
-  components      ProjectComponent[]
-  testCases       TestCase[]
-  elementLocators ElementLocator[]
-  requirements    Requirement[]
-  bugReports      BugReport[]
-
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-}
-
-model ProjectComponent {
-  id              String         @id @default(uuid())
-  featureId       String
-  feature         ProjectFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
-  moduleId        String
-  module          ProjectModule  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  projectId       String
-  project         Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  name            String
-  description     String?
-  orderIndex      Int            @default(0)
-
-  testCases       TestCase[]
-  elementLocators ElementLocator[]
-  requirements    Requirement[]
-  bugReports      BugReport[]
-
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  @@unique([projectId, featureKey])
+  @@index([projectId])
+  @@index([epicId])
 }
 
 model ReusableStepFlow {
@@ -1149,6 +1078,7 @@ model Epic {
   status       EpicStatus    @default(Active)
   orderIndex   Int           @default(0)
   requirements Requirement[]
+  features     Feature[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -1173,12 +1103,9 @@ model Requirement {
   source           RequirementSource @default(Manual)
   // Ordering position in the product backlog view (lower = higher priority).
   backlogRank      Int?
-  moduleId         String?
-  module           ProjectModule? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  // Optional middle layer: assigning a feature auto-aligns epicId app-side
   featureId        String?
-  feature          ProjectFeature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
-  componentId      String?
-  component        ProjectComponent? @relation(fields: [componentId], references: [id], onDelete: SetNull)
+  feature          Feature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
   figmaUrl         String?
   externalUrl      String?
   externalSystem   String? // Jira, Azure DevOps, GitHub, Manual, Other
@@ -1194,9 +1121,7 @@ model Requirement {
   @@index([projectId])
   @@index([epicId])
   @@index([status])
-  @@index([moduleId])
   @@index([featureId])
-  @@index([componentId])
 }
 
 enum RequirementImportStatus {
@@ -1921,15 +1846,15 @@ model OpenProjectSyncRun {
   @@index([status])
 }
 
-// ─── Per-module OpenProject config ───────────────────────────────────────────
-// Each module can override (or inherit) the project-level OpenProjectIntegration.
+// ─── Per-feature OpenProject config ──────────────────────────────────────────
+// Each feature can override (or inherit) the project-level OpenProjectIntegration.
 // null fields mean "inherit from project config".
-// moduleId is a ProjectModule.id UUID or the literal string "unassigned".
+// featureId is a Feature.id UUID or the literal string "unassigned".
 
-model OpenProjectModuleConfig {
+model OpenProjectFeatureConfig {
   id        String @id @default(uuid())
   projectId String
-  moduleId  String // ProjectModule.id | "unassigned"
+  featureId String // Feature.id | "unassigned"
 
   // Connection overrides (null = inherit from OpenProjectIntegration)
   baseUrl                      String?
@@ -1956,7 +1881,7 @@ model OpenProjectModuleConfig {
   targetColumnStatusId  String? // status ID of the board column to place WPs in
   targetVersionId       String?
 
-  // Last sync outcome for this module
+  // Last sync outcome for this feature
   lastSyncAt     DateTime?
   lastSyncStatus String?   // "success" | "failed"
   lastSyncError  String?
@@ -1964,6 +1889,6 @@ model OpenProjectModuleConfig {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([projectId, moduleId])
+  @@unique([projectId, featureId])
   @@index([projectId])
 }

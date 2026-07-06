@@ -24,9 +24,8 @@ export async function POST(
       where: { id: params.requirementId },
       include: {
         project: { select: { userId: true } },
-        module: true,
-        feature: true,
-        component: true
+        epic: { select: { epicKey: true, title: true } },
+        feature: { select: { featureKey: true, name: true } }
       }
     })
 
@@ -66,9 +65,8 @@ Title: ${requirement.title}
 Description: ${requirement.description || "N/A"}
 Acceptance Criteria: ${requirement.acceptanceCriteria || "N/A"}
 Priority: ${requirement.priority}
-Module: ${requirement.module?.name || "N/A"}
-Feature: ${requirement.feature?.name || "N/A"}
-Component: ${requirement.component?.name || "N/A"}`
+Epic: ${requirement.epic ? `${requirement.epic.epicKey} ${requirement.epic.title}` : "N/A"}
+Feature: ${requirement.feature ? `${requirement.feature.featureKey} ${requirement.feature.name}` : "N/A"}`
 
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: "POST",

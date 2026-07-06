@@ -39,49 +39,32 @@ async function main() {
   })
   console.log(`✅ Created project: ${project.name}`)
 
-  // Create module
-  const module = await prisma.projectModule.create({
+  // Create epic + feature hierarchy
+  const epic = await prisma.epic.create({
     data: {
       projectId: project.id,
-      name: "Authentication",
+      epicKey: "EP-1",
+      title: "Authentication",
       description: "Login, registration, and password reset flows",
-      orderIndex: 0,
     },
   })
-  console.log(`✅ Created module: ${module.name}`)
+  console.log(`✅ Created epic: ${epic.title}`)
 
-  // Create feature
-  const feature = await prisma.projectFeature.create({
+  const feature = await prisma.feature.create({
     data: {
       projectId: project.id,
-      moduleId: module.id,
+      epicId: epic.id,
+      featureKey: "FT-1",
       name: "Login Flow",
       description: "User login functionality",
-      orderIndex: 0,
     },
   })
   console.log(`✅ Created feature: ${feature.name}`)
-
-  // Create component
-  const component = await prisma.projectComponent.create({
-    data: {
-      projectId: project.id,
-      moduleId: module.id,
-      featureId: feature.id,
-      name: "Login Form",
-      description: "The login form component",
-      orderIndex: 0,
-    },
-  })
-  console.log(`✅ Created component: ${component.name}`)
 
   // Create test case
   const testCase = await prisma.testCase.create({
     data: {
       title: "Successful user login with valid credentials",
-      moduleId: module.id,
-      featureId: feature.id,
-      componentId: component.id,
       priority: "High",
       preconditions: "User account exists and is active",
       source: "Manual",
@@ -159,9 +142,8 @@ async function main() {
       priority: "High",
       status: "ReadyForTesting",
       source: "Manual",
-      moduleId: module.id,
+      epicId: epic.id,
       featureId: feature.id,
-      componentId: component.id,
     },
   })
   console.log(`✅ Created requirement: ${requirement.requirementKey}`)

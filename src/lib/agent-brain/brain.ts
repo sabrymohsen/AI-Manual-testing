@@ -14,7 +14,8 @@ export async function analyzeApplicationContext(
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     include: {
-      modules: true,
+      epics: true,
+      features: true,
       requirements: true,
       elementLocators: { take: 10 },
       credentials: true
@@ -47,7 +48,8 @@ Return ONLY valid JSON matching this exact structure:
   const userMessage = `Project Name: ${project.name}
 WebApp URL: ${project.webAppUrl}
 Description: ${project.description || "N/A"}
-Modules: ${project.modules.map(m => m.name).join(", ") || "None"}
+Epics: ${project.epics.map(e => e.title).join(", ") || "None"}
+Features: ${project.features.map(f => f.name).join(", ") || "None"}
 Requirements: ${project.requirements.map(r => r.title).join(", ") || "None"}
 Credentials: ${project.credentials.map(c => `${c.roleName} (${c.username})`).join(", ") || "None"}
 Sample Locators: ${project.elementLocators.map(l => `${l.friendlyName} (${l.pageUrl})`).join(", ") || "None"}

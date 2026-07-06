@@ -44,7 +44,6 @@ import {
   PenLine,
   Clock,
 } from "lucide-react"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { RecorderExportModal } from "@/components/recorder/recorder-export-modal"
 
 interface Credential {
@@ -137,9 +136,6 @@ export default function RecorderWorkspacePage() {
   // Setup form states
   const [title, setTitle] = useState("")
   const [module, setModule] = useState("General")
-  const [moduleId, setModuleId] = useState("")
-  const [featureId, setFeatureId] = useState("")
-  const [componentId, setComponentId] = useState("")
   const [priority, setPriority] = useState("Medium")
   const [preconditions, setPreconditions] = useState("")
   const [requiredCredentialId, setRequiredCredentialId] = useState("")
@@ -167,9 +163,6 @@ export default function RecorderWorkspacePage() {
   const [isNewCaseModalOpen, setIsNewCaseModalOpen] = useState(false)
   const [newCaseTitle, setNewCaseTitle] = useState("")
   const [newCaseModule, setNewCaseModule] = useState("General")
-  const [newCaseModuleId, setNewCaseModuleId] = useState("")
-  const [newCaseFeatureId, setNewCaseFeatureId] = useState("")
-  const [newCaseComponentId, setNewCaseComponentId] = useState("")
   const [newCasePriority, setNewCasePriority] = useState("Medium")
   const [newCasePreconditions, setNewCasePreconditions] = useState("")
 
@@ -434,9 +427,6 @@ export default function RecorderWorkspacePage() {
         body: JSON.stringify({
           title,
           module,
-          moduleId: moduleId || null,
-          featureId: featureId || null,
-          componentId: componentId || null,
           priority,
           preconditions,
           requiredCredentialId: requiredCredentialId || null,
@@ -552,9 +542,6 @@ export default function RecorderWorkspacePage() {
         body: JSON.stringify({
           title: newCaseTitle,
           module: newCaseModule,
-          moduleId: newCaseModuleId || null,
-          featureId: newCaseFeatureId || null,
-          componentId: newCaseComponentId || null,
           priority: newCasePriority,
           preconditions: newCasePreconditions
         }),
@@ -570,9 +557,6 @@ export default function RecorderWorkspacePage() {
         // Reset modal fields
         setNewCaseTitle("")
         setNewCaseModule("General")
-        setNewCaseModuleId("")
-        setNewCaseFeatureId("")
-        setNewCaseComponentId("")
         setNewCasePriority("Medium")
         setNewCasePreconditions("")
 
@@ -1217,19 +1201,6 @@ export default function RecorderWorkspacePage() {
                 />
               </div>
 
-              <div className="border rounded-xl bg-accent/5 p-4 space-y-3">
-                <h4 className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Suite / Module (optional)</h4>
-                <HierarchySelector
-                  projectId={params.id as string}
-                  moduleId={moduleId}
-                  onChangeModuleId={setModuleId}
-                  featureId={featureId}
-                  onChangeFeatureId={setFeatureId}
-                  componentId={componentId}
-                  onChangeComponentId={setComponentId}
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-muted-foreground">Priority</Label>
@@ -1859,19 +1830,6 @@ export default function RecorderWorkspacePage() {
                   value={newCaseTitle}
                   onChange={(e) => setNewCaseTitle(e.target.value)}
                   placeholder="e.g. Verify Profile Update Flow"
-                />
-              </div>
-
-              <div className="border p-4 rounded-xl bg-accent/5 space-y-3">
-                <h4 className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Suite Hierarchy Selection</h4>
-                <HierarchySelector
-                  projectId={params.id as string}
-                  moduleId={newCaseModuleId}
-                  onChangeModuleId={setNewCaseModuleId}
-                  featureId={newCaseFeatureId}
-                  onChangeFeatureId={setNewCaseFeatureId}
-                  componentId={newCaseComponentId}
-                  onChangeComponentId={setNewCaseComponentId}
                 />
               </div>
 

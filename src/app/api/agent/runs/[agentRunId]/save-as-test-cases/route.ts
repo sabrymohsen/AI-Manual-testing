@@ -63,9 +63,6 @@ export async function POST(
           priority: "Medium",
           preconditions,
           requiredCredentialId: run.credentialId || null,
-          moduleId: test.moduleId || null,
-          featureId: test.featureId || null,
-          componentId: test.componentId || null,
           steps: {
             create: test.steps.map((s: any, idx: number) => ({
               stepNumber: idx + 1,
