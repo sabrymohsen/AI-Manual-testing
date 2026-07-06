@@ -50,9 +50,6 @@ interface VisualMapping {
   figmaFrameId: string
   appUrl: string
   routeName: string | null
-  moduleId: string | null
-  featureId: string | null
-  componentId: string | null
   viewportName: string
   viewportWidth: number
   viewportHeight: number
@@ -124,7 +121,6 @@ export default function VisualComparisonPage() {
   const [project, setProject] = useState<any>(null)
   const [mappingToDelete, setMappingToDelete] = useState<string | null>(null)
   const [credentials, setCredentials] = useState<any[]>([])
-  const [hierarchy, setHierarchy] = useState<any[]>([])
   const [mappings, setMappings] = useState<VisualMapping[]>([])
   const [runs, setRuns] = useState<VisualRun[]>([])
   const [figmaFrames, setFigmaFrames] = useState<FigmaFrame[]>([])
@@ -145,9 +141,6 @@ export default function VisualComparisonPage() {
     figmaFrameId: "",
     appUrl: "",
     routeName: "",
-    moduleId: "",
-    featureId: "",
-    componentId: "",
     viewportName: "Desktop 1440x900",
     browserType: "Chromium",
     credentialId: "",
@@ -210,10 +203,6 @@ export default function VisualComparisonPage() {
       // Fetch credentials
       const credsRes = await fetch(`/api/projects/${projectId}/credentials`).then(res => res.json())
       setCredentials(credsRes.credentials || [])
-
-      // Fetch hierarchy
-      const hierarchyRes = await fetch(`/api/projects/${projectId}/hierarchy`).then(res => res.json())
-      setHierarchy(hierarchyRes.modules || [])
 
       // Fetch mappings
       const mappingsRes = await fetch(`/api/projects/${projectId}/visual-mappings`).then(res => res.json())
@@ -332,9 +321,6 @@ export default function VisualComparisonPage() {
           figmaFrameId: mappingForm.figmaFrameId,
           appUrl: mappingForm.appUrl,
           routeName: mappingForm.routeName,
-          moduleId: mappingForm.moduleId || null,
-          featureId: mappingForm.featureId || null,
-          componentId: mappingForm.componentId || null,
           viewportName: mappingForm.viewportName.split(" ")[0],
           viewportWidth: width,
           viewportHeight: height,

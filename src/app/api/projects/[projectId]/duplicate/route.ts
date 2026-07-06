@@ -86,7 +86,6 @@ export async function POST(
           data: {
             projectId: newProject.id,
             title: tc.title,
-            module: tc.module,
             priority: tc.priority,
             preconditions: tc.preconditions,
             source: tc.source,

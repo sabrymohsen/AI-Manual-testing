@@ -363,31 +363,6 @@ export async function POST(
           return badRequestResponse("Credential does not belong to this project")
         }
       }
-      if (data.moduleId) {
-        const m = await prisma.projectModule.findFirst({
-          where: { id: data.moduleId, projectId }
-        })
-        if (!m) {
-          return badRequestResponse("Module does not belong to this project")
-        }
-      }
-      if (data.featureId) {
-        const f = await prisma.projectFeature.findFirst({
-          where: { id: data.featureId, module: { projectId } }
-        })
-        if (!f) {
-          return badRequestResponse("Feature does not belong to this project")
-        }
-      }
-      if (data.componentId) {
-        const c = await prisma.projectComponent.findFirst({
-          where: { id: data.componentId, feature: { module: { projectId } } }
-        })
-        if (!c) {
-          return badRequestResponse("Component does not belong to this project")
-        }
-      }
-
       const options = {
         title: data.title,
         module: data.module || "General",

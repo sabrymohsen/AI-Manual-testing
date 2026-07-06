@@ -31,7 +31,6 @@ export async function GET(
             testCase: {
               select: {
                 title: true,
-                module: true,
                 priority: true,
                 preconditions: true
               }

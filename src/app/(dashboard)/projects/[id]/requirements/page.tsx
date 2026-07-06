@@ -38,8 +38,10 @@ import {
   X
 } from "lucide-react"
 import { ImportRequirementsModal } from "@/components/requirements/import-modal"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
+import { EpicFeatureSelector } from "@/components/hierarchy/epic-feature-selector"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { getPriorityBadge, getStatusBadge, getCoverageBadge } from "@/components/ui/qa-badges"
+import { importStoriesFromOpenProject } from "@/lib/openproject-import-client"
 
 interface Epic {
   id: string
@@ -63,12 +65,8 @@ interface Requirement {
   source: string
   epicId: string | null
   epic: { id: string; epicKey: string; title: string } | null
-  moduleId: string | null
   featureId: string | null
-  componentId: string | null
-  module: { id: string; name: string } | null
-  feature: { id: string; name: string } | null
-  component: { id: string; name: string } | null
+  feature: { id: string; featureKey: string; name: string; epicId: string | null } | null
   figmaUrl: string | null
   externalUrl: string | null
   externalSystem: string | null
@@ -143,9 +141,7 @@ export default function RequirementsDashboard() {
   const [newFigmaUrl, setNewFigmaUrl] = useState("")
   const [newExternalUrl, setNewExternalUrl] = useState("")
   const [newExternalSystem, setNewExternalSystem] = useState("Jira")
-  const [newModuleId, setNewModuleId] = useState("")
   const [newFeatureId, setNewFeatureId] = useState("")
-  const [newComponentId, setNewComponentId] = useState("")
   const [newEpicId, setNewEpicId] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
@@ -172,20 +168,10 @@ export default function RequirementsDashboard() {
 
   const handleImportStories = async () => {
     setImportingStories(true)
-    try {
-      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/import-stories`, { method: "POST" })
-      const data = await res.json()
-      if (res.ok) {
-        alert(`OpenProject import: ${data.imported} new, ${data.updated} updated${data.skipped ? `, ${data.skipped} skipped` : ""} (of ${data.total} found)`)
-        fetchRequirementsData()
-      } else {
-        alert(data.error || "Import from OpenProject failed")
-      }
-    } catch {
-      alert("Network error during import")
-    } finally {
-      setImportingStories(false)
-    }
+    const result = await importStoriesFromOpenProject(projectId)
+    alert(result.message)
+    if (result.ok) fetchRequirementsData()
+    setImportingStories(false)
   }
 
   // Traceability: which requirement rows are expanded to show cases → bugs
@@ -203,14 +189,13 @@ export default function RequirementsDashboard() {
   const [linking, setLinking] = useState(false)
   // Picker search/filters
   const [linkSearch, setLinkSearch] = useState("")
-  const [linkModuleFilter, setLinkModuleFilter] = useState("ALL")
   const [linkPriorityFilter, setLinkPriorityFilter] = useState("ALL")
   const [linkExecFilter, setLinkExecFilter] = useState("ALL")
   const [linkUnlinkedOnly, setLinkUnlinkedOnly] = useState(false)
 
   // Filters
   const [search, setSearch] = useState("")
-  const [modFilter, setModFilter] = useState("ALL")
+  const [featFilter, setFeatFilter] = useState("ALL")
   const [priorityFilter, setPriorityFilter] = useState("ALL")
   const [statusFilter, setStatusFilter] = useState("ALL")
   const [coverageFilter, setCoverageFilter] = useState("ALL")
@@ -219,12 +204,12 @@ export default function RequirementsDashboard() {
   const [bugsFilter, setBugsFilter] = useState("ALL") // ALL, WITH_BUGS, NO_BUGS
 
   // Hierarchy for filters
-  const [projectModules, setProjectModules] = useState<any[]>([])
+  const [projectFeatures, setProjectFeatures] = useState<any[]>([])
 
   useEffect(() => {
     fetchRequirementsData()
     fetchStatsData()
-    fetchModules()
+    fetchFeatures()
     fetchEpics()
   }, [projectId])
 
@@ -260,12 +245,12 @@ export default function RequirementsDashboard() {
     } catch {}
   }
 
-  const fetchModules = async () => {
+  const fetchFeatures = async () => {
     try {
-      const res = await fetch(`/api/projects/${projectId}/modules`)
+      const res = await fetch(`/api/projects/${projectId}/features`)
       if (res.ok) {
         const data = await res.json()
-        setProjectModules(data.modules || [])
+        setProjectFeatures(data.features || [])
       }
     } catch {}
   }
@@ -287,11 +272,10 @@ export default function RequirementsDashboard() {
           priority: newPriority,
           status: newStatus,
           epicId: newEpicId || null,
-          moduleId: newModuleId || null,
           featureId: newFeatureId || null,
-          componentId: newComponentId || null,
-          figmaUrl: newFigmaUrl,
-          externalUrl: newExternalUrl,
+          // Empty strings fail the API's url() validation — omit instead
+          figmaUrl: newFigmaUrl.trim() || undefined,
+          externalUrl: newExternalUrl.trim() || undefined,
           externalSystem: newExternalSystem
         })
       })
@@ -304,9 +288,7 @@ export default function RequirementsDashboard() {
         setNewCriteria("")
         setNewFigmaUrl("")
         setNewExternalUrl("")
-        setNewModuleId("")
         setNewFeatureId("")
-        setNewComponentId("")
         setNewEpicId("")
         fetchRequirementsData()
         fetchStatsData()
@@ -511,7 +493,6 @@ export default function RequirementsDashboard() {
     setSelectedReq(req)
     setSelectedCaseIdsToLink(req.testCases.map(tc => tc.testCaseId))
     setLinkSearch("")
-    setLinkModuleFilter("ALL")
     setLinkPriorityFilter("ALL")
     setLinkExecFilter("ALL")
     setLinkUnlinkedOnly(false)
@@ -573,7 +554,7 @@ export default function RequirementsDashboard() {
     if (!matchSearch) return false
     if (epicFilter === "NONE" && req.epicId !== null) return false
     if (epicFilter !== "ALL" && epicFilter !== "NONE" && req.epicId !== epicFilter) return false
-    if (modFilter !== "ALL" && req.moduleId !== modFilter) return false
+    if (featFilter !== "ALL" && req.featureId !== featFilter) return false
     if (priorityFilter !== "ALL" && req.priority !== priorityFilter) return false
     if (statusFilter !== "ALL" && req.status !== statusFilter) return false
     if (coverageFilter !== "ALL" && req.computedCoverage !== coverageFilter) return false
@@ -617,7 +598,6 @@ export default function RequirementsDashboard() {
   const filteredPickerCases = availableTestCases.filter((tc) => {
     const q = linkSearch.toLowerCase()
     if (q && !tc.title?.toLowerCase().includes(q)) return false
-    if (linkModuleFilter !== "ALL" && tc.moduleId !== linkModuleFilter) return false
     if (linkPriorityFilter !== "ALL" && tc.priority !== linkPriorityFilter) return false
     if (linkExecFilter !== "ALL" && tc.executionType !== linkExecFilter) return false
     if (linkUnlinkedOnly) {
@@ -685,15 +665,13 @@ export default function RequirementsDashboard() {
               )}
             </td>
           )}
-          <td className="p-4 text-slate-400 text-[11px]">
-            {req.module ? (
-              <span>
-                {req.module.name}
-                {req.feature && ` / ${req.feature.name}`}
-                {req.component && ` / ${req.component.name}`}
+          <td className="p-4 text-[11px]">
+            {req.feature ? (
+              <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-indigo-100 whitespace-nowrap">
+                {req.feature.featureKey} {req.feature.name}
               </span>
             ) : (
-              "Unassigned"
+              <span className="text-slate-300">-</span>
             )}
           </td>
           <td className="p-4">{getPriorityBadge(req.priority)}</td>
@@ -855,6 +833,43 @@ export default function RequirementsDashboard() {
   }
 
   // Epic group header row for the tree view — tinted band with coverage bar
+  // Stories within a group render as feature sub-bands (features first, in
+  // insertion order), then feature-less stories directly.
+  const renderGroupedStories = (stories: Requirement[]) => {
+    const byFeature = new Map<string, { feature: NonNullable<Requirement["feature"]>; items: Requirement[] }>()
+    const noFeature: Requirement[] = []
+    stories.forEach((st) => {
+      if (st.feature) {
+        const g = byFeature.get(st.feature.id) || { feature: st.feature, items: [] }
+        g.items.push(st)
+        byFeature.set(st.feature.id, g)
+      } else {
+        noFeature.push(st)
+      }
+    })
+    return (
+      <>
+        {Array.from(byFeature.values()).map(({ feature, items }) => (
+          <Fragment key={`feat-${feature.id}`}>
+            <tr className="bg-indigo-50/40 border-y border-indigo-100/60">
+              <td className="p-2 w-8"></td>
+              <td colSpan={colCount - 1} className="p-2 pl-10">
+                <span className="inline-flex items-center gap-2 text-[11px] font-bold text-indigo-700">
+                  {feature.featureKey} — {feature.name}
+                  <span className="text-[10px] font-semibold text-indigo-400">
+                    {items.length} stor{items.length === 1 ? "y" : "ies"}
+                  </span>
+                </span>
+              </td>
+            </tr>
+            {items.map(renderStoryRow)}
+          </Fragment>
+        ))}
+        {noFeature.map(renderStoryRow)}
+      </>
+    )
+  }
+
   const renderEpicHeader = (epic: Epic, stories: Requirement[]) => {
     const collapsed = collapsedEpicIds.has(epic.id)
     const { covered, cases } = epicRollup(stories)
@@ -925,58 +940,6 @@ export default function RequirementsDashboard() {
         </td>
       </tr>
     )
-  }
-
-  // Consistent pill color coding, reused across rows, headers, and the picker
-  const PRIORITY_STYLES: Record<string, string> = {
-    Critical: "bg-red-50 text-red-700 border-red-100",
-    High: "bg-orange-50 text-orange-700 border-orange-100",
-    Medium: "bg-amber-50 text-amber-700 border-amber-100",
-    Low: "bg-slate-50 text-slate-500 border-slate-100"
-  }
-  const getPriorityBadge = (p: string) => (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${PRIORITY_STYLES[p] || PRIORITY_STYLES.Low}`}>
-      {p}
-    </span>
-  )
-
-  const STATUS_STYLES: Record<string, { label: string; cls: string }> = {
-    Draft: { label: "Draft", cls: "bg-slate-50 text-slate-500 border-slate-200" },
-    ReadyForTesting: { label: "Ready", cls: "bg-blue-50 text-blue-700 border-blue-100" },
-    InTesting: { label: "In Testing", cls: "bg-amber-50 text-amber-700 border-amber-100" },
-    Covered: { label: "Covered", cls: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-    PartiallyCovered: { label: "Partial", cls: "bg-yellow-50 text-yellow-700 border-yellow-100" },
-    Failed: { label: "Failed", cls: "bg-red-50 text-red-700 border-red-100" },
-    Blocked: { label: "Blocked", cls: "bg-orange-50 text-orange-700 border-orange-100" },
-    Deprecated: { label: "Deprecated", cls: "bg-slate-100 text-slate-400 border-slate-200" }
-  }
-  const getStatusBadge = (s: string) => {
-    const style = STATUS_STYLES[s] || { label: s, cls: "bg-slate-50 text-slate-500 border-slate-200" }
-    return (
-      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap ${style.cls}`}>
-        {style.label}
-      </span>
-    )
-  }
-
-  // Format Status badge colors
-  const getCoverageBadge = (cov: string) => {
-    switch (cov) {
-      case "Covered":
-        return <span className="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-400 px-2.5 py-0.5 rounded-full uppercase">Covered</span>
-      case "PartiallyCovered":
-        return <span className="text-[10px] font-bold bg-yellow-100 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400 px-2.5 py-0.5 rounded-full uppercase">Partial</span>
-      case "Uncovered":
-        return <span className="text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-900 dark:text-slate-400 px-2.5 py-0.5 rounded-full uppercase">Uncovered</span>
-      case "Failed":
-        return <span className="text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400 px-2.5 py-0.5 rounded-full uppercase">Failed</span>
-      case "Blocked":
-        return <span className="text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-400 px-2.5 py-0.5 rounded-full uppercase">Blocked</span>
-      case "NotExecuted":
-        return <span className="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-400 px-2.5 py-0.5 rounded-full uppercase">Not Executed</span>
-      default:
-        return <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full uppercase">{cov}</span>
-    }
   }
 
   return (
@@ -1077,12 +1040,12 @@ export default function RequirementsDashboard() {
           </select>
 
           <select
-            value={modFilter}
-            onChange={(e) => setModFilter(e.target.value)}
+            value={featFilter}
+            onChange={(e) => setFeatFilter(e.target.value)}
             className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700"
           >
-            <option value="ALL">All Modules</option>
-            {projectModules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+            <option value="ALL">All Features</option>
+            {projectFeatures.map(f => <option key={f.id} value={f.id}>{f.featureKey} — {f.name}</option>)}
           </select>
 
           <select
@@ -1176,7 +1139,9 @@ export default function RequirementsDashboard() {
             <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
             <p className="text-slate-500 text-sm">Fetching project requirements matrix...</p>
           </div>
-        ) : filteredRequirements.length === 0 ? (
+        ) : filteredRequirements.length === 0 && (viewMode === "flat" || epics.length === 0) ? (
+          // Tree mode still renders when epics exist so a freshly created
+          // (empty) epic is visible; flat mode has nothing to show.
           <div className="p-16 text-center text-slate-500 space-y-4">
             <Layers className="mx-auto text-slate-300 h-12 w-12" />
             <p className="text-sm font-semibold">No requirements found matching filters.</p>
@@ -1199,7 +1164,7 @@ export default function RequirementsDashboard() {
                   <th className="p-4">Key</th>
                   <th className="p-4">Title</th>
                   {viewMode === "flat" && <th className="p-4">Epic</th>}
-                  <th className="p-4">Module path</th>
+                  <th className="p-4">Feature</th>
                   <th className="p-4">Priority</th>
                   <th className="p-4">Status</th>
                   <th className="p-4">Linked Cases</th>
@@ -1221,7 +1186,7 @@ export default function RequirementsDashboard() {
                         return (
                           <Fragment key={epic.id}>
                             {renderEpicHeader(epic, stories)}
-                            {!collapsedEpicIds.has(epic.id) && stories.map(renderStoryRow)}
+                            {!collapsedEpicIds.has(epic.id) && renderGroupedStories(stories)}
                             {!collapsedEpicIds.has(epic.id) && stories.length === 0 && (
                               <tr>
                                 <td colSpan={colCount} className="px-10 py-3 text-[11px] text-slate-400 italic">
@@ -1266,7 +1231,7 @@ export default function RequirementsDashboard() {
                             </div>
                           </td>
                         </tr>
-                        {!collapsedEpicIds.has("__none__") && noEpicStories.map(renderStoryRow)}
+                        {!collapsedEpicIds.has("__none__") && renderGroupedStories(noEpicStories)}
                       </Fragment>
                     )}
                   </>
@@ -1332,31 +1297,15 @@ export default function RequirementsDashboard() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Parent Epic (Optional)</label>
-                <select
-                  value={newEpicId}
-                  onChange={(e) => setNewEpicId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
-                >
-                  <option value="">No Epic</option>
-                  {epics.map(ep => (
-                    <option key={ep.id} value={ep.id}>{ep.epicKey} — {ep.title}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Hierarchy coordinates linking */}
+              {/* Epic → Feature placement (both optional) */}
               <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50 space-y-3">
-                <span className="text-xs font-bold text-slate-600 block">Link Hierarchy path (Optional)</span>
-                <HierarchySelector
+                <span className="text-xs font-bold text-slate-600 block">Parent Epic / Feature (Optional)</span>
+                <EpicFeatureSelector
                   projectId={projectId}
-                  moduleId={newModuleId}
-                  onChangeModuleId={setNewModuleId}
+                  epicId={newEpicId}
+                  onChangeEpicId={setNewEpicId}
                   featureId={newFeatureId}
                   onChangeFeatureId={setNewFeatureId}
-                  componentId={newComponentId}
-                  onChangeComponentId={setNewComponentId}
                 />
               </div>
 
@@ -1465,14 +1414,6 @@ export default function RequirementsDashboard() {
                 />
               </div>
               <select
-                value={linkModuleFilter}
-                onChange={(e) => setLinkModuleFilter(e.target.value)}
-                className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-[11px] focus:outline-none text-slate-700"
-              >
-                <option value="ALL">All Modules</option>
-                {projectModules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-              <select
                 value={linkPriorityFilter}
                 onChange={(e) => setLinkPriorityFilter(e.target.value)}
                 className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-[11px] focus:outline-none text-slate-700"
@@ -1528,7 +1469,11 @@ export default function RequirementsDashboard() {
                   const links = tc.requirements || []
                   const linkedToThis = selectedReq.testCases.some(l => l.testCaseId === tc.id)
                   const otherLinks = links.filter((l: any) => l.requirementId !== selectedReq.id).length
-                  const pathParts = [tc.moduleRelation?.name, tc.feature?.name, tc.component?.name].filter(Boolean)
+                  const firstLinked = links.find((l: any) => l.requirement)?.requirement
+                  const pathParts = [
+                    firstLinked?.epic ? `${firstLinked.epic.epicKey} ${firstLinked.epic.title}` : null,
+                    firstLinked?.feature ? firstLinked.feature.name : null
+                  ].filter(Boolean)
                   return (
                     <div
                       key={tc.id}
@@ -1549,7 +1494,7 @@ export default function RequirementsDashboard() {
                       <div className="flex-grow min-w-0">
                         <span className="text-xs font-semibold text-slate-800 block truncate" title={tc.title}>{tc.title}</span>
                         <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
-                          {pathParts.length > 0 ? pathParts.join(" / ") : (tc.module || "Unassigned")}
+                          {pathParts.length > 0 ? pathParts.join(" / ") : "Unlinked"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">

@@ -14,9 +14,8 @@ export async function GET(
     const requirements = await prisma.requirement.findMany({
       where: { projectId: params.projectId },
       include: {
-        module: { select: { id: true, name: true } },
-        feature: { select: { id: true, name: true } },
-        component: { select: { id: true, name: true } },
+        epic: { select: { id: true, epicKey: true, title: true } },
+        feature: { select: { id: true, featureKey: true, name: true } },
         testCases: {
           include: {
             testCase: {
@@ -52,9 +51,8 @@ export async function GET(
     let notExecuted = 0
     let withBugs = 0
 
-    const moduleStats: Record<string, { total: number; covered: number }> = {}
+    const epicStats: Record<string, { total: number; covered: number }> = {}
     const featureStats: Record<string, { total: number; covered: number }> = {}
-    const componentStats: Record<string, { total: number; covered: number }> = {}
 
     const highPriorityNotCovered: any[] = []
     const failedCritical: any[] = []
@@ -93,26 +91,20 @@ export async function GET(
         notExecuted++
       }
 
-      // Aggregate module/feature/component percentages
+      // Aggregate epic/feature percentages
       const isReqCovered = coverageStatus === "Covered"
-      
-      if (req.module) {
-        const key = req.module.name
-        if (!moduleStats[key]) moduleStats[key] = { total: 0, covered: 0 }
-        moduleStats[key].total++
-        if (isReqCovered) moduleStats[key].covered++
+
+      if (req.epic) {
+        const key = `${req.epic.epicKey} — ${req.epic.title}`
+        if (!epicStats[key]) epicStats[key] = { total: 0, covered: 0 }
+        epicStats[key].total++
+        if (isReqCovered) epicStats[key].covered++
       }
       if (req.feature) {
-        const key = req.feature.name
+        const key = `${req.feature.featureKey} — ${req.feature.name}`
         if (!featureStats[key]) featureStats[key] = { total: 0, covered: 0 }
         featureStats[key].total++
         if (isReqCovered) featureStats[key].covered++
-      }
-      if (req.component) {
-        const key = req.component.name
-        if (!componentStats[key]) componentStats[key] = { total: 0, covered: 0 }
-        componentStats[key].total++
-        if (isReqCovered) componentStats[key].covered++
       }
     })
 
@@ -130,19 +122,13 @@ export async function GET(
         coveragePercentage,
         requirementsWithBugs: withBugs
       },
-      moduleCoverage: Object.entries(moduleStats).map(([name, stat]) => ({
+      epicCoverage: Object.entries(epicStats).map(([name, stat]) => ({
         name,
         total: stat.total,
         covered: stat.covered,
         percent: stat.total > 0 ? Math.round((stat.covered / stat.total) * 100) : 0
       })),
       featureCoverage: Object.entries(featureStats).map(([name, stat]) => ({
-        name,
-        total: stat.total,
-        covered: stat.covered,
-        percent: stat.total > 0 ? Math.round((stat.covered / stat.total) * 100) : 0
-      })),
-      componentCoverage: Object.entries(componentStats).map(([name, stat]) => ({
         name,
         total: stat.total,
         covered: stat.covered,

@@ -120,9 +120,6 @@ export async function POST(
       },
       include: {
         steps: { orderBy: { stepNumber: "asc" } },
-        moduleRelation: { select: { name: true } },
-        feature: { select: { name: true } },
-        component: { select: { name: true } },
       },
       orderBy: { createdAt: "asc" },
     })

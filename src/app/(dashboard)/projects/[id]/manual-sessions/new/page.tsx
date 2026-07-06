@@ -16,10 +16,6 @@ interface ProjectCredential {
 interface TestCase {
   id: string
   title: string
-  module: string | null
-  moduleId: string | null
-  featureId: string | null
-  componentId: string | null
   priority: string
   executionType: string
   steps: any[]
@@ -41,9 +37,6 @@ export default function NewManualSessionPage() {
   // Project details states
   const [credentials, setCredentials] = useState<ProjectCredential[]>([])
   const [testCases, setTestCases] = useState<TestCase[]>([])
-  const [modules, setModules] = useState<HierarchyNode[]>([])
-  const [features, setFeatures] = useState<HierarchyNode[]>([])
-  const [components, setComponents] = useState<HierarchyNode[]>([])
 
   // Form states
   const [sessionName, setSessionName] = useState("")
@@ -60,9 +53,7 @@ export default function NewManualSessionPage() {
   const [areasCovered, setAreasCovered] = useState("")
 
   // Filters for test cases
-  const [moduleFilter, setModuleFilter] = useState("ALL")
-  const [featureFilter, setFeatureFilter] = useState("ALL")
-  const [componentFilter, setComponentFilter] = useState("ALL")
+  const [caseSearch, setCaseSearch] = useState("")
 
   // Selected test case IDs
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([])
@@ -91,11 +82,6 @@ export default function NewManualSessionPage() {
       const casesData = await casesRes.json()
       setTestCases(casesData.testCases || [])
 
-      const modRes = await fetch(`/api/projects/${projectId}/modules`)
-      if (modRes.ok) {
-        const mods = await modRes.json()
-        setModules(mods.modules || [])
-      }
     } catch (err: any) {
       setError(err.message || "Failed to load project details")
     } finally {
@@ -103,41 +89,9 @@ export default function NewManualSessionPage() {
     }
   }
 
-  // Load features when module selection changes
-  useEffect(() => {
-    if (moduleFilter === "ALL") {
-      setFeatures([])
-      setFeatureFilter("ALL")
-      return
-    }
-    fetch(`/api/modules/${moduleFilter}/features`)
-      .then(res => res.json())
-      .then(data => setFeatures(data.features || []))
-      .catch(() => {})
-    setFeatureFilter("ALL")
-  }, [moduleFilter])
-
-  // Load components when feature selection changes
-  useEffect(() => {
-    if (featureFilter === "ALL") {
-      setComponents([])
-      setComponentFilter("ALL")
-      return
-    }
-    fetch(`/api/features/${featureFilter}/components`)
-      .then(res => res.json())
-      .then(data => setComponents(data.components || []))
-      .catch(() => {})
-    setComponentFilter("ALL")
-  }, [featureFilter])
-
   const getFilteredTestCases = () => {
-    return testCases.filter((tc) => {
-      if (moduleFilter !== "ALL" && tc.moduleId !== moduleFilter) return false
-      if (featureFilter !== "ALL" && tc.featureId !== featureFilter) return false
-      if (componentFilter !== "ALL" && tc.componentId !== componentFilter) return false
-      return true
-    })
+    const q = caseSearch.toLowerCase()
+    return testCases.filter((tc) => !q || tc.title.toLowerCase().includes(q))
   }
 
   const filteredCases = getFilteredTestCases()
@@ -376,51 +330,17 @@ export default function NewManualSessionPage() {
                   </div>
                 </div>
 
-                {/* Filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 flex items-center gap-1">
-                      <Filter size={12} /> Module
-                    </label>
-                    <select
-                      value={moduleFilter}
-                      onChange={(e) => setModuleFilter(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none text-slate-800"
-                    >
-                      <option value="ALL">All Modules</option>
-                      {modules.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 flex items-center gap-1">
-                      <Filter size={12} /> Feature
-                    </label>
-                    <select
-                      value={featureFilter}
-                      disabled={moduleFilter === "ALL"}
-                      onChange={(e) => setFeatureFilter(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none text-slate-800 disabled:opacity-50"
-                    >
-                      <option value="ALL">All Features</option>
-                      {features.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 flex items-center gap-1">
-                      <Filter size={12} /> Component
-                    </label>
-                    <select
-                      value={componentFilter}
-                      disabled={featureFilter === "ALL"}
-                      onChange={(e) => setComponentFilter(e.target.value)}
-                      className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none text-slate-800 disabled:opacity-50"
-                    >
-                      <option value="ALL">All Components</option>
-                      {components.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
+                {/* Filter */}
+                <div className="mb-6">
+                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 flex items-center gap-1">
+                    <Filter size={12} /> Search test cases
+                  </label>
+                  <input
+                    value={caseSearch}
+                    onChange={(e) => setCaseSearch(e.target.value)}
+                    placeholder="Filter by title..."
+                    className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none text-slate-800"
+                  />
                 </div>
 
                 {/* Checklist */}
@@ -466,7 +386,6 @@ export default function NewManualSessionPage() {
                                 </span>
                               </div>
                             </div>
-                            <span className="text-[11px] text-slate-400">{tc.module || "General"}</span>
                             {tc.executionType === "Automated" && isSelected && (
                               <p className="text-[10px] text-amber-600 mt-0.5">
                                 This case is marked Automated. Steps are designed for Playwright — running it manually may not be meaningful.

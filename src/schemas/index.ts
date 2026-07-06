@@ -36,12 +36,6 @@ export const createCredentialSchema = z.object({
 
 export const createTestCaseSchema = z.object({
   title: z.string().min(1, "Title is required").max(500),
-  module: z.string().optional().nullable(),
-  moduleId: z.string().optional().nullable(),
-  featureId: z.string().optional().nullable(),
-  componentId: z.string().optional().nullable(),
-  featureName: z.string().optional().nullable(),
-  componentName: z.string().optional().nullable(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).optional(),
   preconditions: z.string().optional().nullable(),
   source: z.enum(["Manual", "AIGenerated", "Imported", "Exploratory", "Recorder", "QAAgentBrain", "RequirementFile"]).optional(),
@@ -83,9 +77,6 @@ export const createBugReportSchema = z.object({
   stepsToReproduce: z.string().optional().nullable(),
   expectedResult: z.string().optional().nullable(),
   actualResult: z.string().optional().nullable(),
-  moduleId: z.string().optional().nullable(),
-  featureId: z.string().optional().nullable(),
-  componentId: z.string().optional().nullable(),
   testCaseId: z.string().optional().nullable(),
   requirementIds: z.array(z.string()).optional(),
 })
@@ -106,9 +97,7 @@ export const createRequirementSchema = z.object({
   status: z.enum(["Draft", "ReadyForTesting", "InTesting", "Covered", "PartiallyCovered", "Failed", "Blocked", "Deprecated"]).optional(),
   source: z.enum(["Manual", "ExcelImport", "Jira", "AzureDevOps", "GitHub", "Figma", "AIGenerated", "OpenProject"]).optional(),
   epicId: z.string().optional().nullable(),
-  moduleId: z.string().optional().nullable(),
   featureId: z.string().optional().nullable(),
-  componentId: z.string().optional().nullable(),
   figmaUrl: z.string().url().optional().nullable(),
   externalUrl: z.string().url().optional().nullable(),
   externalSystem: z.string().optional().nullable(),
@@ -144,9 +133,6 @@ export const createLocatorSchema = z.object({
   textSelector: z.string().optional().nullable(),
   labelSelector: z.string().optional().nullable(),
   placeholderSelector: z.string().optional().nullable(),
-  moduleId: z.string().optional().nullable(),
-  featureId: z.string().optional().nullable(),
-  componentId: z.string().optional().nullable(),
 })
 
 export const updateLocatorSchema = createLocatorSchema.partial()
@@ -155,24 +141,6 @@ export const updateBugReportSchema = createBugReportSchema.partial().omit({ proj
 
 export const updateBugStatusSchema = z.object({
   status: z.enum(["Open", "InProgress", "ReadyForRetest", "Reopened", "Resolved", "Closed", "Rejected", "Duplicate"]),
-})
-
-export const createModuleSchema = z.object({
-  name: z.string().min(1, "Module name is required").max(200),
-  description: z.string().optional().nullable(),
-})
-
-export const createFeatureSchema = z.object({
-  name: z.string().min(1, "Feature name is required").max(200),
-  description: z.string().optional().nullable(),
-  moduleId: z.string().min(1, "Module ID is required"),
-})
-
-export const createComponentSchema = z.object({
-  name: z.string().min(1, "Component name is required").max(200),
-  description: z.string().optional().nullable(),
-  moduleId: z.string().min(1, "Module ID is required"),
-  featureId: z.string().min(1, "Feature ID is required"),
 })
 
 export const createManualSessionSchema = z.object({

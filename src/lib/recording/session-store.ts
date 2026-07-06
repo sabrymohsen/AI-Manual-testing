@@ -42,10 +42,6 @@ export async function saveRecordedCaseAsTestCase(recordedTestCaseId: string) {
     data: {
       projectId: draft.session.projectId,
       title: draft.title,
-      module: draft.module || "General",
-      moduleId: draft.moduleId,
-      featureId: draft.featureId,
-      componentId: draft.componentId,
       priority: draft.priority,
       preconditions: draft.preconditions,
       requiredCredentialId: draft.requiredCredentialId,

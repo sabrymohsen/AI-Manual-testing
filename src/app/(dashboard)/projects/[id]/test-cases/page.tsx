@@ -47,10 +47,7 @@ import {
 } from "lucide-react"
 import { ImportModal } from "@/components/test-cases/import-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { HierarchyFormModal } from "@/components/hierarchy/hierarchy-form-modal"
-import { MoveCaseModal } from "@/components/hierarchy/move-case-modal"
 import { StepBuilder } from "@/components/test-cases/step-builder"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 
 // Interfaces matching database structure
@@ -80,16 +77,24 @@ interface StepBuilderStep {
 interface TestCase {
   id: string
   title: string
-  module: string
   priority: string
   source: string
   executionType: string
   preconditions?: string | null
   steps: TestStep[]
-  moduleId?: string | null
-  featureId?: string | null
-  componentId?: string | null
-  requirements?: Array<{ id: string; requirementKey: string; title: string }>
+  // Story links — classification (epic/feature) derives from these
+  requirements?: Array<{
+    requirementId: string
+    requirement?: {
+      id: string
+      requirementKey: string
+      title: string
+      epicId: string | null
+      featureId: string | null
+      epic?: { id: string; epicKey: string; title: string } | null
+      feature?: { id: string; featureKey: string; name: string } | null
+    } | null
+  }>
 }
 
 interface HistoryEntry {
@@ -166,22 +171,6 @@ export default function TestCasesPage() {
   const [filterStatus, setFilterStatus] = useState("")
   const [filterExecutionType, setFilterExecutionType] = useState("")
 
-  // Form Node Modal States
-  const [formModalOpen, setFormModalOpen] = useState(false)
-  const [formLevel, setFormLevel] = useState<"module" | "feature" | "component">("module")
-  const [formMode, setFormMode] = useState<"create" | "edit">("create")
-  const [formEditData, setFormEditData] = useState<any>(undefined)
-  const [parentModuleId, setParentModuleId] = useState<string | undefined>(undefined)
-  const [parentFeatureId, setParentFeatureId] = useState<string | undefined>(undefined)
-
-  // Move Case Modal State
-  const [moveModalOpen, setMoveModalOpen] = useState(false)
-  const [moveTestCaseId, setMoveTestCaseId] = useState("")
-  const [moveTestCaseTitle, setMoveTestCaseTitle] = useState("")
-  const [moveCurrentModuleId, setMoveCurrentModuleId] = useState<string | null>(null)
-  const [moveCurrentFeatureId, setMoveCurrentFeatureId] = useState<string | null>(null)
-  const [moveCurrentComponentId, setMoveCurrentComponentId] = useState<string | null>(null)
-
   // Delete Case Confirm Modal
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deleteTestCaseId, setDeleteTestCaseId] = useState("")
@@ -194,9 +183,6 @@ export default function TestCasesPage() {
   // Slide-Over Drawers Configurations
   const [showCreateDrawer, setShowCreateDrawer] = useState(false)
   const [createTitle, setCreateTitle] = useState("")
-  const [createModuleId, setCreateModuleId] = useState("")
-  const [createFeatureId, setCreateFeatureId] = useState("")
-  const [createComponentId, setCreateComponentId] = useState("")
   const [createPriority, setCreatePriority] = useState("Medium")
   const [createPreconditions, setCreatePreconditions] = useState("")
   const [createSteps, setCreateSteps] = useState<StepBuilderStep[]>([])
@@ -213,9 +199,6 @@ export default function TestCasesPage() {
   const [recViewport, setRecViewport] = useState<"Desktop" | "Tablet" | "Mobile">("Desktop")
   const [recPriority, setRecPriority] = useState<"Low" | "Medium" | "High" | "Critical">("Medium")
   const [recPreconditions, setRecPreconditions] = useState("")
-  const [recModuleId, setRecModuleId] = useState("")
-  const [recFeatureId, setRecFeatureId] = useState("")
-  const [recComponentId, setRecComponentId] = useState("")
   const [activeSession, setActiveSession] = useState<any>(null)
   const [recStarting, setRecStarting] = useState(false)
   const [recError, setRecError] = useState("")
@@ -242,6 +225,36 @@ export default function TestCasesPage() {
 
   async function fetchHierarchy() {
     try {
+      // Tree = Epics → Features (derived from the story hierarchy); test cases
+      // fall into nodes via their linked user stories.
+      const [epicRes, featRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}/epics`),
+        fetch(`/api/projects/${projectId}/features`),
+      ])
+      if (epicRes.ok && featRes.ok) {
+        const epics = (await epicRes.json()).epics || []
+        const features = (await featRes.json()).features || []
+        const tree: HierarchyModule[] = epics.map((e: any) => ({
+          id: e.id,
+          name: `${e.epicKey} — ${e.title}`,
+          orderIndex: e.orderIndex ?? 0,
+          features: features
+            .filter((f: any) => f.epic?.id === e.id)
+            .map((f: any) => ({ id: f.id, name: `${f.featureKey} — ${f.name}`, orderIndex: f.orderIndex ?? 0, components: [] })),
+        }))
+        const orphanFeatures = features.filter((f: any) => !f.epic)
+        if (orphanFeatures.length > 0) {
+          tree.push({
+            id: "__noepic__",
+            name: "No Epic",
+            orderIndex: 9999,
+            features: orphanFeatures.map((f: any) => ({ id: f.id, name: `${f.featureKey} — ${f.name}`, orderIndex: f.orderIndex ?? 0, components: [] })),
+          })
+        }
+        setHierarchy(tree)
+      }
+      return
+      // Legacy path (endpoint removed):
       const res = await fetch(`/api/projects/${projectId}/hierarchy`)
       if (res.ok) {
         const data = await res.json()
@@ -407,9 +420,6 @@ export default function TestCasesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: recTitle,
-          moduleId: recModuleId || null,
-          featureId: recFeatureId || null,
-          componentId: recComponentId || null,
           priority: recPriority,
           preconditions: recPreconditions || undefined,
           requiredCredentialId: recCredentialId || null,
@@ -717,51 +727,7 @@ export default function TestCasesPage() {
     } catch {}
   }
 
-  // Hierarchy Node Actions
-  const handleOpenCreateNode = (level: "module" | "feature" | "component", pModId?: string, pFeatId?: string) => {
-    setFormLevel(level)
-    setFormMode("create")
-    setFormEditData(undefined)
-    setParentModuleId(pModId)
-    setParentFeatureId(pFeatId)
-    setFormModalOpen(true)
-  }
-
-  const handleOpenEditNode = (level: "module" | "feature" | "component", node: any) => {
-    setFormLevel(level)
-    setFormMode("edit")
-    setFormEditData(node)
-    setFormModalOpen(true)
-  }
-
   const handleOpenCreateCaseDrawer = () => {
-    setCreateModuleId("")
-    setCreateFeatureId("")
-    setCreateComponentId("")
-
-    if (selectedNodeType === "module") {
-      setCreateModuleId(selectedNodeId)
-    } else if (selectedNodeType === "feature") {
-      setCreateFeatureId(selectedNodeId)
-      for (const mod of hierarchy) {
-        if (mod.features?.some(f => f.id === selectedNodeId)) {
-          setCreateModuleId(mod.id)
-          break
-        }
-      }
-    } else if (selectedNodeType === "component") {
-      setCreateComponentId(selectedNodeId)
-      for (const mod of hierarchy) {
-        for (const feat of mod.features || []) {
-          if (feat.components?.some(c => c.id === selectedNodeId)) {
-            setCreateFeatureId(feat.id)
-            setCreateModuleId(mod.id)
-            break
-          }
-        }
-      }
-    }
-
     setCreateTitle("")
     setCreatePreconditions("")
     setCreateSteps([])
@@ -787,9 +753,6 @@ export default function TestCasesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: createTitle,
-          moduleId: createModuleId || null,
-          featureId: createFeatureId || null,
-          componentId: createComponentId || null,
           priority: createPriority,
           preconditions: createPreconditions || null,
           source: "Manual",
@@ -824,7 +787,7 @@ export default function TestCasesPage() {
 
   // Traceability Validation Engine Calculations
   const getTraceabilityDetails = (tc: TestCase) => {
-    const isOrphan = !tc.moduleId
+    const isOrphan = !tc.requirements || tc.requirements.length === 0
     const tcHistory = history[tc.id]
     const hasRuns = !!tcHistory
     const lastStatus = tcHistory?.lastStatus || "NotExecuted"
@@ -843,12 +806,8 @@ export default function TestCasesPage() {
     let list = testCases
 
     // Hierarchy filter
-    if (selectedNodeType === "module") {
-      list = list.filter((tc) => tc.moduleId === selectedNodeId)
-    } else if (selectedNodeType === "feature") {
-      list = list.filter((tc) => tc.featureId === selectedNodeId)
-    } else if (selectedNodeType === "component") {
-      list = list.filter((tc) => tc.componentId === selectedNodeId)
+    if (selectedNodeType === "module" || selectedNodeType === "feature" || selectedNodeType === "component") {
+      list = list.filter((tc) => tcInNode(tc, selectedNodeType, selectedNodeId))
     }
 
     // Dynamic Filter
@@ -887,19 +846,23 @@ export default function TestCasesPage() {
 
   const filteredList = getFilteredTestCases()
 
-  const countCasesInNode = (type: "module" | "feature" | "component", id: string) => {
-    if (type === "module") return testCases.filter((t) => t.moduleId === id).length
-    if (type === "feature") return testCases.filter((t) => t.featureId === id).length
-    if (type === "component") return testCases.filter((t) => t.componentId === id).length
-    return 0
+  // A test case belongs to an epic/feature node through its linked stories
+  const tcInNode = (tc: TestCase, type: "module" | "feature" | "component", id: string) => {
+    const links = tc.requirements || []
+    if (type === "module") {
+      if (id === "__noepic__") return links.some(l => l.requirement && !l.requirement.epicId && l.requirement.featureId)
+      return links.some(l => l.requirement?.epicId === id)
+    }
+    if (type === "feature") return links.some(l => l.requirement?.featureId === id)
+    return false
   }
+
+  const countCasesInNode = (type: "module" | "feature" | "component", id: string) =>
+    testCases.filter((t) => tcInNode(t, type, id)).length
 
   // Calculate nodes execution status aggregates (e.g. 85% pass rate)
   const getNodePassRate = (type: "module" | "feature" | "component", id: string) => {
-    let nodeCases = testCases
-    if (type === "module") nodeCases = testCases.filter((t) => t.moduleId === id)
-    else if (type === "feature") nodeCases = testCases.filter((t) => t.featureId === id)
-    else if (type === "component") nodeCases = testCases.filter((t) => t.componentId === id)
+    const nodeCases = testCases.filter((t) => tcInNode(t, type, id))
 
     if (nodeCases.length === 0) return null
 
@@ -1010,17 +973,8 @@ export default function TestCasesPage() {
       <aside className="w-64 border-r bg-card flex flex-col overflow-y-auto shrink-0 select-none">
         <div className="px-4 h-12 border-b flex items-center justify-between shrink-0">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-            <Layers className="h-3.5 w-3.5" /> Test Suites
+            <Layers className="h-3.5 w-3.5" /> Epics & Features
           </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-            onClick={() => handleOpenCreateNode("module")}
-            title="Create Module"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
         </div>
 
         {/* Tree */}
@@ -1046,7 +1000,7 @@ export default function TestCasesPage() {
           <div className="space-y-1">
             {hierarchy.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground text-xs leading-relaxed">
-                No modules yet. Use + above to create one.
+                No epics yet — create Epics and Features on the Requirements page.
               </div>
             ) : (
               hierarchy.map((mod) => {
@@ -1080,9 +1034,6 @@ export default function TestCasesPage() {
                         <span className="text-xs text-muted-foreground tabular-nums group-hover:hidden">
                           {modCases}
                         </span>
-                        <div className="hidden group-hover:flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-5 w-5 rounded text-muted-foreground hover:text-foreground" onClick={() => handleOpenCreateNode("feature", mod.id)} title="Add Feature"><Plus className="h-3.5 w-3.5" /></Button>
-                        </div>
                       </div>
                     </div>
 
@@ -1113,9 +1064,6 @@ export default function TestCasesPage() {
                                     <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium tabular-nums">{featPassRate}%</span>
                                   )}
                                   <span className="text-xs text-muted-foreground tabular-nums group-hover:hidden">{featCases}</span>
-                                  <div className="hidden group-hover:flex items-center shrink-0" onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 rounded text-muted-foreground hover:text-foreground" onClick={() => handleOpenCreateNode("component", undefined, feat.id)} title="Add Component"><Plus className="h-3.5 w-3.5" /></Button>
-                                  </div>
                                 </div>
                               </div>
 
@@ -1164,7 +1112,7 @@ export default function TestCasesPage() {
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-foreground tracking-tight truncate">
               {selectedNodeType === "project" && "All Test Cases"}
-              {selectedNodeType === "module" && (hierarchy.find(m => m.id === selectedNodeId)?.name || "Module")}
+              {selectedNodeType === "module" && (hierarchy.find(m => m.id === selectedNodeId)?.name || "Epic")}
               {selectedNodeType === "feature" && (hierarchy.flatMap(m => m.features).find(f => f.id === selectedNodeId)?.name || "Feature")}
               {selectedNodeType === "component" && (hierarchy.flatMap(m => m.features).flatMap(f => f.components).find(c => c.id === selectedNodeId)?.name || "Component")}
             </h2>
@@ -1247,7 +1195,7 @@ export default function TestCasesPage() {
             }`}
           >
             <ShieldAlert className="h-3.5 w-3.5" /> Orphans
-            <span className="tabular-nums">{testCases.filter(tc => !tc.moduleId).length}</span>
+            <span className="tabular-nums">{testCases.filter(tc => !tc.requirements || tc.requirements.length === 0).length}</span>
           </button>
           <button
             onClick={() => setTraceFilter(traceFilter === "broken" ? "all" : "broken")}
@@ -1387,10 +1335,12 @@ export default function TestCasesPage() {
 
                         <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground min-w-0">
                           <span>{tc.source}</span>
-                          {tc.moduleId && (
+                          {(tc.requirements?.[0]?.requirement?.feature || tc.requirements?.[0]?.requirement?.epic) && (
                             <>
                               <span>&middot;</span>
-                              <span className="truncate">{tc.module}</span>
+                              <span className="truncate">
+                                {tc.requirements![0].requirement!.feature?.name || tc.requirements![0].requirement!.epic?.title}
+                              </span>
                             </>
                           )}
                           {linkedBugs.length > 0 && (
@@ -1560,11 +1510,11 @@ export default function TestCasesPage() {
                     <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Linked Requirements</span>
                     {activeTestCase.requirements && activeTestCase.requirements.length > 0 ? (
                       <div className="space-y-1.5">
-                        {activeTestCase.requirements.map(req => (
-                          <div key={req.id} className="p-2.5 border rounded-lg flex items-center gap-2 text-xs">
+                        {activeTestCase.requirements.map(link => (
+                          <div key={link.requirementId} className="p-2.5 border rounded-lg flex items-center gap-2 text-xs">
                             <Link2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                            <span className="font-medium text-indigo-600 dark:text-indigo-400 shrink-0">{req.requirementKey}</span>
-                            <span className="text-foreground truncate" title={req.title}>{req.title}</span>
+                            <span className="font-medium text-indigo-600 dark:text-indigo-400 shrink-0">{link.requirement?.requirementKey}</span>
+                            <span className="text-foreground truncate" title={link.requirement?.title}>{link.requirement?.title}</span>
                           </div>
                         ))}
                       </div>
@@ -1579,21 +1529,6 @@ export default function TestCasesPage() {
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">Steps ({activeTestCase.steps.length})</span>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setMoveTestCaseId(activeTestCase.id)
-                          setMoveTestCaseTitle(activeTestCase.title)
-                          setMoveCurrentModuleId(activeTestCase.moduleId || null)
-                          setMoveCurrentFeatureId(activeTestCase.featureId || null)
-                          setMoveCurrentComponentId(activeTestCase.componentId || null)
-                          setMoveModalOpen(true)
-                        }}
-                        className="h-6 px-2 text-[11px] font-medium text-indigo-600 dark:text-indigo-400"
-                      >
-                        Move
-                      </Button>
                     </div>
                     <div className="space-y-1.5">
                       {activeTestCase.steps.map(step => (
@@ -2040,34 +1975,6 @@ export default function TestCasesPage() {
       )}
 
       {/* Global Modals */}
-      {formModalOpen && (
-        <HierarchyFormModal 
-          isOpen={formModalOpen}
-          onClose={() => setFormModalOpen(false)}
-          onSuccess={() => { fetchHierarchy(); fetchTestCases() }}
-          projectId={projectId}
-          level={formLevel}
-          mode={formMode}
-          editData={formEditData}
-          parentModuleId={parentModuleId}
-          parentFeatureId={parentFeatureId}
-        />
-      )}
-
-      {moveModalOpen && (
-        <MoveCaseModal 
-          isOpen={moveModalOpen}
-          onClose={() => setMoveModalOpen(false)}
-          onSuccess={fetchTestCases}
-          projectId={projectId}
-          testCaseId={moveTestCaseId}
-          testCaseTitle={moveTestCaseTitle}
-          currentModuleId={moveCurrentModuleId}
-          currentFeatureId={moveCurrentFeatureId}
-          currentComponentId={moveCurrentComponentId}
-        />
-      )}
-
       <ImportModal 
         projectId={projectId}
         isOpen={isImportModalOpen}

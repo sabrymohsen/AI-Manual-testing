@@ -17,11 +17,6 @@ export async function GET(
 
   const locators = await prisma.elementLocator.findMany({
     where: { projectId: params.projectId },
-    include: {
-      moduleRelation: true,
-      feature: true,
-      component: true
-    },
     orderBy: { createdAt: "desc" },
   })
 
@@ -47,9 +42,6 @@ export async function POST(
     const saved = await prisma.elementLocator.create({
       data: {
         projectId: params.projectId,
-        moduleId: parsed.data.moduleId || null,
-        featureId: parsed.data.featureId || null,
-        componentId: parsed.data.componentId || null,
         friendlyName: parsed.data.friendlyName,
         description: parsed.data.description || null,
         pageUrl: parsed.data.pageUrl,

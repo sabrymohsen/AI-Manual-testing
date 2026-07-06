@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
+import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { 
   Bug, 
   Search, 
@@ -157,6 +158,8 @@ export default function ProjectBugReportsPage() {
   // Detail Drawer States
   const [selectedBugId, setSelectedBugId] = useState<string | null>(null)
   const [selectedBug, setSelectedBug] = useState<BugReport | null>(null)
+  // Linked user stories (BugReportRequirement links) for the open bug
+  const [linkedStoryIds, setLinkedStoryIds] = useState<string[]>([])
   const [activeDetailTab, setActiveDetailTab] = useState<TabType>("overview")
   const [detailLoading, setDetailLoading] = useState(false)
 
@@ -325,6 +328,7 @@ export default function ProjectBugReportsPage() {
       if (res.ok) {
         const data = await res.json()
         setSelectedBug(data.bug)
+        setLinkedStoryIds(((data.bug?.requirements || []) as any[]).map((l: any) => l.requirementId || l.requirement?.id).filter(Boolean))
         setEditTitleValue(data.bug.title)
         setEditDescValue(data.bug.stepsToReproduce) // Description maps to steps/details
         setEditParentValue(data.bug.openProjectParentId || "")
@@ -1663,6 +1667,21 @@ export default function ProjectBugReportsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Linked User Stories — optional, editable any time */}
+                  <div className="p-4 border border-slate-100 rounded-2xl space-y-3 shadow-sm">
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60 block">
+                      Linked User Stories ({linkedStoryIds.length})
+                    </span>
+                    <LinkedRequirementsSelector
+                      projectId={projectId}
+                      selectedIds={linkedStoryIds}
+                      onChange={(ids) => {
+                        setLinkedStoryIds(ids)
+                        handleInlineUpdate({ requirementIds: ids } as any)
+                      }}
+                    />
+                  </div>
                 </div>
               )}
 

@@ -15,9 +15,7 @@ export async function GET(
       where: { projectId: params.projectId },
       include: {
         epic: { select: { id: true, epicKey: true, title: true, status: true, priority: true } },
-        module: { select: { id: true, name: true } },
-        feature: { select: { id: true, name: true } },
-        component: { select: { id: true, name: true } },
+        feature: { select: { id: true, featureKey: true, name: true } },
         testCases: {
           include: {
             testCase: {
@@ -83,9 +81,7 @@ export async function GET(
         epic: req.epic
           ? { id: req.epic.id, epicKey: req.epic.epicKey, title: req.epic.title }
           : null,
-        module: req.module?.name || null,
-        feature: req.feature?.name || null,
-        component: req.component?.name || null,
+        feature: req.feature ? `${req.feature.featureKey} — ${req.feature.name}` : null,
         coverageStatus,
         risk,
         linkedTestCases: links.map((l) => ({

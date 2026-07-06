@@ -42,9 +42,6 @@ export async function POST(request: Request) {
       where: { id: { in: bugIds } },
       include: {
         project: { select: { name: true } },
-        moduleRelation: { select: { name: true } },
-        feature: { select: { name: true } },
-        component: { select: { name: true } },
         testCase: { select: { title: true } },
         requirements: { include: { requirement: true } },
         testRun: { select: { id: true } }
@@ -56,9 +53,6 @@ export async function POST(request: Request) {
       bugKey: b.bugKey || "",
       title: b.title,
       project: b.project?.name || "",
-      module: b.moduleRelation?.name || "",
-      feature: b.feature?.name || "",
-      component: b.component?.name || "",
       severity: b.severity,
       priority: b.priority,
       status: b.status,

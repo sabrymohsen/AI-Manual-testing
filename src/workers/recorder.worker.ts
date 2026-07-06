@@ -96,6 +96,20 @@ async function applyInput(
       case "type":
         await page.keyboard.insertText(body.text || "")
         break
+      case "resize": {
+        // Live view fit-to-container: the client sends its visible area so the
+        // remote viewport matches it exactly (no letterboxing). Clamped to
+        // sane bounds; the CDP screencast follows the new size per-frame.
+        const w = Math.max(320, Math.min(1920, Math.round(body.width || 0)))
+        const h = Math.max(320, Math.min(1920, Math.round(body.height || 0)))
+        if (w > 0 && h > 0) {
+          const current = page.viewportSize()
+          if (!current || current.width !== w || current.height !== h) {
+            await page.setViewportSize({ width: w, height: h })
+          }
+        }
+        break
+      }
       case "back":
         await page.goBack({ timeout: 15000 }).catch(() => null)
         break
@@ -150,6 +164,9 @@ interface SessionStream {
   cdp: CDPSession | null
   viewers: Set<WebSocket>
   starting: Promise<void> | null
+  // Remote devicePixelRatio — frames arrive at CSS px × dsf; the client needs
+  // it to map mouse coordinates back to CSS pixels.
+  dsf: number
 }
 
 const sessionStreams = new Map<string, SessionStream>()
@@ -190,7 +207,12 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       if (!current) return
       const buf = Buffer.from(ev.data, "base64")
       for (const ws of current.viewers) {
-        if (ws.readyState === WebSocket.OPEN) ws.send(buf)
+        // Latest-frame-wins: frames are self-contained JPEGs, so when a viewer
+        // can't keep up (send buffer still holds ~2 frames), drop this frame
+        // for that viewer instead of queueing lag behind the socket.
+        if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
+          ws.send(buf)
+        }
       }
       cdp.send("Page.screencastFrameAck", { sessionId: ev.sessionId }).catch(() => {})
     })
@@ -202,13 +224,15 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       }
     })
     await cdp.send("Page.enable")
+    // Caps sized for 2x (retina) frames of up to ~1920 CSS px viewports.
     await cdp.send("Page.startScreencast", {
       format: "jpeg",
-      quality: 60,
-      maxWidth: 1920,
-      maxHeight: 1920,
+      quality: 70,
+      maxWidth: 3840,
+      maxHeight: 3840,
       everyNthFrame: 1,
     })
+    stream.dsf = await page.evaluate(() => window.devicePixelRatio).catch(() => 1)
     stream.cdp = cdp
     // End the stream cleanly when the session's page goes away
     page.once("close", () => teardownStream(sessionId))
@@ -237,7 +261,7 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
 
   let stream = sessionStreams.get(sessionId)
   if (!stream) {
-    stream = { cdp: null, viewers: new Set(), starting: null }
+    stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1 }
     sessionStreams.set(sessionId, stream)
   }
   stream.viewers.add(ws)
@@ -254,6 +278,7 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   }
 
   ws.send(JSON.stringify({ type: "mode", mode: "streaming" }))
+  ws.send(JSON.stringify({ type: "dsf", dsf: stream.dsf || 1 }))
   ws.send(JSON.stringify({ type: "url", url: activeSess.page.url() }))
 
   // Inputs arrive as JSON messages on the same socket (lower latency than REST)
@@ -321,7 +346,9 @@ const server = http.createServer(async (req, res) => {
         return
       }
       try {
-        const buffer = await activeSess.page.screenshot({ type: "jpeg", quality: 55 })
+        // scale "css" keeps polling frames at CSS pixels so mouse-coordinate
+        // mapping stays 1:1 regardless of the context's deviceScaleFactor.
+        const buffer = await activeSess.page.screenshot({ type: "jpeg", quality: 55, scale: "css" })
         sendJson(res, 200, {
           frame: `data:image/jpeg;base64,${buffer.toString("base64")}`,
           url: activeSess.page.url(),

@@ -30,9 +30,6 @@ export async function GET(
         include: {
           testCase: {
             include: {
-              moduleRelation: true,
-              feature: true,
-              component: true,
               steps: {
                 orderBy: { stepNumber: "asc" }
               }

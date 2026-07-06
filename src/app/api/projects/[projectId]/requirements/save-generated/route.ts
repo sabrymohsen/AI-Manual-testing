@@ -32,16 +32,14 @@ export async function POST(
     const {
       testCases,
       importId,
-      moduleId,
+      epicId,
       featureId,
-      componentId,
       saveRequirements = true,
     }: {
       testCases: (GeneratedTestCaseFromReq & { selected?: boolean })[]
       importId?: string
-      moduleId?: string
+      epicId?: string
       featureId?: string
-      componentId?: string
       saveRequirements?: boolean
     } = body
 
@@ -57,67 +55,26 @@ export async function POST(
     const savedTestCases: any[] = []
     const savedRequirements: any[] = []
 
-    // Resolve hierarchy by name if IDs not provided
-    const resolvedModuleId = moduleId || null
-    const resolvedFeatureId = featureId || null
-    const resolvedComponentId = componentId || null
+    // Optional Epic/Feature placement for the requirements created below;
+    // assigning a feature auto-aligns the epic.
+    let storyEpicId = epicId || null
+    const storyFeatureId = featureId || null
+    if (storyFeatureId) {
+      const feature = await prisma.feature.findFirst({
+        where: { id: storyFeatureId, projectId: params.projectId },
+      })
+      if (feature && !storyEpicId && feature.epicId) storyEpicId = feature.epicId
+    }
 
     await prisma.$transaction(async (tx) => {
       for (const tc of selectedCases) {
-        // Resolve module from tc.module name if no explicit moduleId
-        let tcModuleId = resolvedModuleId
-        let tcFeatureId = resolvedFeatureId
-        let tcComponentId = resolvedComponentId
-        let tcModuleName = tc.module || "General"
-
-        if (!tcModuleId && tc.module) {
-          let mod = await tx.projectModule.findFirst({
-            where: { projectId: params.projectId, name: { equals: tc.module, mode: "insensitive" } },
-          })
-          if (!mod) {
-            mod = await tx.projectModule.create({
-              data: { projectId: params.projectId, name: tc.module },
-            })
-          }
-          tcModuleId = mod.id
-          tcModuleName = mod.name
-        }
-
-        if (!tcFeatureId && tc.feature && tcModuleId) {
-          let feat = await tx.projectFeature.findFirst({
-            where: { projectId: params.projectId, moduleId: tcModuleId, name: { equals: tc.feature, mode: "insensitive" } },
-          })
-          if (!feat) {
-            feat = await tx.projectFeature.create({
-              data: { projectId: params.projectId, moduleId: tcModuleId, name: tc.feature },
-            })
-          }
-          tcFeatureId = feat.id
-        }
-
-        if (!tcComponentId && tc.component && tcFeatureId) {
-          let comp = await tx.projectComponent.findFirst({
-            where: { projectId: params.projectId, featureId: tcFeatureId, name: { equals: tc.component, mode: "insensitive" } },
-          })
-          if (!comp) {
-            comp = await tx.projectComponent.create({
-              data: { projectId: params.projectId, featureId: tcFeatureId, moduleId: tcModuleId!, name: tc.component },
-            })
-          }
-          tcComponentId = comp.id
-        }
-
         const created = await tx.testCase.create({
           data: {
             projectId: params.projectId,
             title: tc.title,
-            module: tcModuleName,
             priority: tc.priority as any,
             preconditions: tc.preconditions || null,
             source: "RequirementFile",
-            moduleId: tcModuleId,
-            featureId: tcFeatureId,
-            componentId: tcComponentId,
             tags: tc.tags || [],
             testData: tc.testData as any || null,
             steps: {
@@ -152,9 +109,8 @@ export async function POST(
                 priority: tc.priority as any,
                 status: "ReadyForTesting",
                 source: "AIGenerated",
-                moduleId: tcModuleId,
-                featureId: tcFeatureId,
-                componentId: tcComponentId,
+                epicId: storyEpicId,
+                featureId: storyFeatureId,
                 sourceImportId: importId || null,
               },
             })

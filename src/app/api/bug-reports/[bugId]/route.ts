@@ -14,9 +14,6 @@ export async function GET(
       include: {
         project: { select: { id: true, name: true } },
         reporter: { select: { id: true, name: true, email: true } },
-        moduleRelation: { select: { id: true, name: true } },
-        feature: { select: { id: true, name: true } },
-        component: { select: { id: true, name: true } },
         testCase: { select: { id: true, title: true } },
         requirements: { include: { requirement: true } },
         testRun: {
@@ -85,9 +82,6 @@ export async function PUT(
       stepsToReproduce,
       expectedResult,
       actualResult,
-      moduleId,
-      featureId,
-      componentId,
       requirementIds,
       testCaseId,
       testRunId
@@ -153,9 +147,6 @@ export async function PUT(
           stepsToReproduce: stepsToReproduce !== undefined ? stepsToReproduce : undefined,
           expectedResult: expectedResult !== undefined ? expectedResult : undefined,
           actualResult: actualResult !== undefined ? actualResult : undefined,
-          moduleId: moduleId !== undefined ? (moduleId || null) : undefined,
-          featureId: featureId !== undefined ? (featureId || null) : undefined,
-          componentId: componentId !== undefined ? (componentId || null) : undefined,
           testCaseId: testCaseId !== undefined ? (testCaseId || null) : undefined,
           testRunId: testRunId !== undefined ? (testRunId || null) : undefined,
           requirements: requirementIds !== undefined

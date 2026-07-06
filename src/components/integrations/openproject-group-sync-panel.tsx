@@ -420,7 +420,7 @@ export function OpenProjectGroupSyncPanel({
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left"
                     >
                       <Settings className="h-3.5 w-3.5 text-muted-foreground" />
-                      Module Settings
+                      Feature Settings
                     </button>
 
                     <div className="border-t my-1" />

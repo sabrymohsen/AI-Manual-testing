@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StepBuilder } from "@/components/test-cases/step-builder"
-import { HierarchySelector } from "@/components/hierarchy/hierarchy-selector"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 
 interface Step {
@@ -28,9 +27,6 @@ export default function NewTestCasePage() {
   const [error, setError] = useState("")
   const [executionType, setExecutionType] = useState<"Manual" | "Automated">("Manual")
 
-  const [moduleId, setModuleId] = useState("")
-  const [featureId, setFeatureId] = useState("")
-  const [componentId, setComponentId] = useState("")
 
   const [requirementIds, setRequirementIds] = useState<string[]>([])
 
@@ -42,9 +38,6 @@ export default function NewTestCasePage() {
     const form = new FormData(e.currentTarget)
     const body = {
       title: form.get("title"),
-      moduleId: moduleId || null,
-      featureId: featureId || null,
-      componentId: componentId || null,
       priority: form.get("priority"),
       preconditions: form.get("preconditions") || null,
       source: "Manual",
@@ -133,19 +126,6 @@ export default function NewTestCasePage() {
               <p className="text-[11px] text-muted-foreground mt-1">Steps are executed by Playwright. Requires selectors and actionable step types.</p>
             </button>
           </div>
-        </div>
-
-        <div className="border p-5 rounded-2xl bg-accent/5 space-y-3 shadow-sm border-accent/20">
-          <h3 className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Test Suite Hierarchy</h3>
-          <HierarchySelector
-            projectId={params.id as string}
-            moduleId={moduleId}
-            onChangeModuleId={setModuleId}
-            featureId={featureId}
-            onChangeFeatureId={setFeatureId}
-            componentId={componentId}
-            onChangeComponentId={setComponentId}
-          />
         </div>
 
         <LinkedRequirementsSelector

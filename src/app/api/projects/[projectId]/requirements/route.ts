@@ -16,9 +16,7 @@ export async function GET(
       where: { projectId: params.projectId },
       include: {
         epic: { select: { id: true, epicKey: true, title: true, status: true, priority: true } },
-        module: { select: { id: true, name: true } },
-        feature: { select: { id: true, name: true } },
-        component: { select: { id: true, name: true } },
+        feature: { select: { id: true, featureKey: true, name: true, epicId: true } },
         testCases: {
           include: {
             testCase: {
@@ -111,14 +109,13 @@ export async function POST(
       status,
       source,
       epicId,
-      moduleId,
       featureId,
-      componentId,
       figmaUrl,
       externalUrl,
       externalSystem
     } = parsed.data
 
+    let resolvedEpicId = epicId || null
     if (epicId) {
       const epic = await prisma.epic.findFirst({
         where: { id: epicId, projectId: params.projectId }
@@ -126,6 +123,16 @@ export async function POST(
       if (!epic) {
         return badRequestResponse("Epic not found in this project")
       }
+    }
+    if (featureId) {
+      const feature = await prisma.feature.findFirst({
+        where: { id: featureId, projectId: params.projectId }
+      })
+      if (!feature) {
+        return badRequestResponse("Feature not found in this project")
+      }
+      // Assigning a feature auto-aligns the story's epic
+      if (!resolvedEpicId && feature.epicId) resolvedEpicId = feature.epicId
     }
 
     // Enforce uniqueness of key per project
@@ -153,10 +160,8 @@ export async function POST(
         priority: priority || "Medium",
         status: status || "Draft",
         source: source || "Manual",
-        epicId: epicId || null,
-        moduleId: moduleId || null,
+        epicId: resolvedEpicId,
         featureId: featureId || null,
-        componentId: componentId || null,
         figmaUrl: figmaUrl || null,
         externalUrl: externalUrl || null,
         externalSystem: externalSystem || null

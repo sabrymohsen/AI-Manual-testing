@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     },
     include: {
       credentials: { select: { id: true } },
-      modules: { select: { id: true } },
+      epics: { select: { id: true } },
       requirements: {
         select: {
           id: true,
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
     let setupCompleted = 0
     if (project.webAppUrl && project.webAppUrl.length > 5) setupCompleted++
     if (project.credentials.length > 0) setupCompleted++
-    if (project.modules.length > 0) setupCompleted++
+    if (project.epics.length > 0) setupCompleted++
     if (totalCases > 0) setupCompleted++
     if (totalReqs > 0) setupCompleted++
     if (totalRuns > 0) setupCompleted++

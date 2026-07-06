@@ -34,9 +34,6 @@ export async function onTestRunCompleted(testRunId: string): Promise<void> {
         project: { include: { integrationConfig: true } },
         testCase: {
           include: {
-            moduleRelation: { select: { name: true } },
-            feature: { select: { name: true } },
-            component: { select: { name: true } },
             steps: { orderBy: { stepNumber: "asc" } },
           },
         },
@@ -184,9 +181,6 @@ async function autoCreateOrUpdateBug(testRun: any): Promise<string | null> {
         projectId: testRun.projectId,
         testCaseId: testRun.testCaseId,
         testRunId: testRun.id,
-        moduleId: tc.moduleId || null,
-        featureId: tc.featureId || null,
-        componentId: tc.componentId || null,
         severity: tc.priority || "High",
         priority: tc.priority || "High",
         status: "Open",

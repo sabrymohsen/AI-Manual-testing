@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { updateTestCaseSchema } from "@/schemas"
+import { createAuditLog } from "@/lib/auth/audit"
 
 export async function GET(
   _request: Request,
@@ -44,41 +45,14 @@ export async function PUT(
   if (!parsed.success) {
     return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
-  const { steps, moduleId, featureId, componentId, requirementIds, ...testCaseData } = parsed.data
-
-  let moduleName = testCaseData.module || "General"
-  let finalModuleId = moduleId || null
-  let finalFeatureId = featureId || null
-  let finalComponentId = componentId || null
-
-  if (finalComponentId && (!finalFeatureId || !finalModuleId)) {
-    const c = await prisma.projectComponent.findUnique({ where: { id: finalComponentId } })
-    if (c) {
-      finalFeatureId = c.featureId
-      finalModuleId = c.moduleId
-    }
-  } else if (finalFeatureId && !finalModuleId) {
-    const f = await prisma.projectFeature.findUnique({ where: { id: finalFeatureId } })
-    if (f) {
-      finalModuleId = f.moduleId
-    }
-  }
-
-  if (finalModuleId) {
-    const m = await prisma.projectModule.findUnique({ where: { id: finalModuleId } })
-    if (m) {
-      moduleName = m.name
-    }
-  }
+  // Hierarchy fields are legacy — classification now flows through linked
+  // user stories; strip and ignore anything the client still sends.
+  const { steps, moduleId, featureId, componentId, module: _legacyModule, requirementIds, ...testCaseData } = parsed.data as any
 
   const testCase = await prisma.testCase.update({
     where: { id: params.tcId },
     data: {
       ...testCaseData,
-      moduleId: finalModuleId,
-      featureId: finalFeatureId,
-      componentId: finalComponentId,
-      module: moduleName,
       steps: steps
         ? {
             deleteMany: {},
@@ -186,6 +160,13 @@ export async function DELETE(
       await tx.testCaseRequirement.deleteMany({ where: { testCaseId: params.tcId } })
       await tx.testStep.deleteMany({ where: { testCaseId: params.tcId } })
       await tx.testCase.delete({ where: { id: params.tcId } })
+    })
+
+    await createAuditLog({
+      action: "Delete Test Case",
+      details: `Deleted test case: ${testCase.title} (${testCase.testRuns.length} runs, cascade cleanup)`,
+      userId: auth.session!.user.id,
+      projectId: params.projectId,
     })
 
     return NextResponse.json({ success: true })

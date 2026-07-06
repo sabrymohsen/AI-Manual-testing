@@ -226,8 +226,10 @@ export async function startSession(
     )
   }
 
-  let width = 1280
-  let height = 800
+  // Desktop defaults: Live QA uses 1512x778 so the streamed frame matches the
+  // in-app live view area 1:1; Recorder Studio keeps a classic 1280x800 window.
+  let width = sessionMode === "Workstation" ? 1512 : 1280
+  let height = sessionMode === "Workstation" ? 778 : 800
   if (options.viewport === "Tablet") {
     width = 768
     height = 1024
@@ -261,7 +263,15 @@ export async function startSession(
     // app through the live view (frame streaming + input forwarding), so no
     // external window opens. Recorder Studio keeps a visible window with the
     // injected toolbar.
-    browser = await launcher.launch({ headless: sessionMode === "Workstation" })
+    browser = await launcher.launch({
+      headless: sessionMode === "Workstation",
+      // Live QA on Chromium: force 2x rendering so CDP screencast frames come
+      // out at retina resolution (context deviceScaleFactor alone doesn't
+      // change screencast capture size — only this flag does).
+      ...(sessionMode === "Workstation" && options.browserType === "Chromium"
+        ? { args: ["--force-device-scale-factor=2"] }
+        : {}),
+    })
   } catch (err: any) {
     console.error("[RECORDER] Playwright browser launch failed. Actual error:", err.message, err.stack)
     const actualError = err.message || "Unknown browser launch error"
@@ -284,6 +294,12 @@ export async function startSession(
   // so its contexts skip recordVideo entirely.
   const context = await browser.newContext({
     viewport: { width, height },
+    // Live QA on Chromium renders at 2x (retina) so streamed frames stay crisp
+    // on HiDPI displays; the client corrects input coordinates via the "dsf"
+    // stream message. Other browsers keep 1x (REST polling path).
+    ...(sessionMode === "Workstation" && options.browserType === "Chromium"
+      ? { deviceScaleFactor: 2 }
+      : {}),
     bypassCSP: true,
     ...(sessionMode === "Workstation"
       ? {}
@@ -331,23 +347,11 @@ export async function startSession(
 
   // 3. Create RecordingSession in DB (already created above with Starting status)
 
-  let resolvedModuleName = options.module || "General"
-  if (options.moduleId) {
-    const m = await prisma.projectModule.findUnique({ where: { id: options.moduleId } })
-    if (m) {
-      resolvedModuleName = m.name
-    }
-  }
-
   // 4. Create initial draft RecordedTestCase in DB
   const dbCase = await prisma.recordedTestCase.create({
     data: {
       sessionId: dbSession.id,
       title: options.title,
-      module: resolvedModuleName,
-      moduleId: options.moduleId || null,
-      featureId: options.featureId || null,
-      componentId: options.componentId || null,
       priority: (options.priority as any) || "Medium",
       preconditions: options.preconditions || null,
       requiredCredentialId: options.requiredCredentialId || null,
@@ -965,22 +969,10 @@ export async function startNewRecordedTestCase(
   })
   if (!sessionDb) throw new Error("Session database record not found")
 
-  let resolvedModuleName = metadata.module || "General"
-  if (metadata.moduleId) {
-    const m = await prisma.projectModule.findUnique({ where: { id: metadata.moduleId } })
-    if (m) {
-      resolvedModuleName = m.name
-    }
-  }
-
   const dbCase = await prisma.recordedTestCase.create({
     data: {
       sessionId,
       title: metadata.title,
-      module: resolvedModuleName,
-      moduleId: metadata.moduleId || null,
-      featureId: metadata.featureId || null,
-      componentId: metadata.componentId || null,
       priority: (metadata.priority as any) || "Medium",
       preconditions: metadata.preconditions || null,
       requiredCredentialId: metadata.requiredCredentialId || sessionDb.credentialId || null,
@@ -1178,9 +1170,6 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
       bugKey,
       title: bugData.title || `Bug in test case: ${draftCase.title}`,
       projectId: activeSess.projectId,
-      moduleId: draftCase.moduleId || null,
-      featureId: draftCase.featureId || null,
-      componentId: draftCase.componentId || null,
       recordedTestCaseId: draftCase.id,
       severity: bugData.severity || "Medium",
       priority: bugData.priority || "Medium",

@@ -35,10 +35,7 @@ interface Requirement {
   priority: string
   status: string
   source: string
-  moduleId: string | null
   featureId: string | null
-  componentId: string | null
-  module: { id: string; name: string } | null
   feature: { id: string; name: string } | null
   component: { id: string; name: string } | null
   figmaUrl: string | null
@@ -92,6 +89,11 @@ export default function RequirementDetails() {
   const requirementId = params.requirementId as string
 
   const [requirement, setRequirement] = useState<Requirement | null>(null)
+  // Bulk bug linking (dormant link-bugs/unlink-bugs endpoints)
+  const [showLinkBugsModal, setShowLinkBugsModal] = useState(false)
+  const [projectBugs, setProjectBugs] = useState<any[]>([])
+  const [selectedBugIdsToLink, setSelectedBugIdsToLink] = useState<string[]>([])
+  const [bugLinkSaving, setBugLinkSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
 
@@ -234,9 +236,7 @@ export default function RequirementDetails() {
             title: dCase.title,
             priority: dCase.priority || "Medium",
             preconditions: dCase.preconditions || "",
-            moduleId: requirement?.moduleId || null,
             featureId: requirement?.featureId || null,
-            componentId: requirement?.componentId || null,
             steps: dCase.steps.map((st, sIdx) => ({
               stepNumber: sIdx + 1,
               actionDescription: st.actionDescription,
@@ -307,6 +307,49 @@ export default function RequirementDetails() {
         ⚠️ Requirement not found.
       </div>
     )
+  }
+
+  const openLinkBugsModal = async () => {
+    if (!requirement) return
+    setSelectedBugIdsToLink(requirement.bugReports.map((l: any) => l.bugReport.id))
+    setShowLinkBugsModal(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/bug-reports`)
+      if (res.ok) {
+        const data = await res.json()
+        setProjectBugs(data.bugReports || data.items || [])
+      }
+    } catch {}
+  }
+
+  const handleSaveBugLinks = async () => {
+    if (!requirement) return
+    setBugLinkSaving(true)
+    try {
+      const originalIds = requirement.bugReports.map((l: any) => l.bugReport.id)
+      const toUnlink = originalIds.filter((id: string) => !selectedBugIdsToLink.includes(id))
+      const toLink = selectedBugIdsToLink.filter((id: string) => !originalIds.includes(id))
+      if (toUnlink.length > 0) {
+        await fetch(`/api/requirements/${requirementId}/unlink-bugs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bugReportIds: toUnlink })
+        })
+      }
+      if (toLink.length > 0) {
+        await fetch(`/api/requirements/${requirementId}/link-bugs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bugReportIds: toLink })
+        })
+      }
+      setShowLinkBugsModal(false)
+      fetchRequirementDetails()
+    } catch {
+      alert("Failed to update linked bugs")
+    } finally {
+      setBugLinkSaving(false)
+    }
   }
 
   return (
@@ -625,8 +668,11 @@ export default function RequirementDetails() {
 
           {/* Related Bugs list */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-2.5 flex items-center gap-1">
-              <Bug size={14} className="text-red-500" /> Related Bugs ({requirement.bugReports.length})
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b pb-2.5 flex items-center justify-between gap-1">
+              <span className="flex items-center gap-1"><Bug size={14} className="text-red-500" /> Related Bugs ({requirement.bugReports.length})</span>
+              <button onClick={openLinkBugsModal} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 normal-case">
+                Link Bugs
+              </button>
             </h3>
 
             {requirement.bugReports.length === 0 ? (
@@ -650,6 +696,64 @@ export default function RequirementDetails() {
         </div>
 
       </div>
+
+      {/* Link Bugs modal — bulk link/unlink via BugReportRequirement */}
+      {showLinkBugsModal && requirement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-xl max-h-[80vh] overflow-hidden flex flex-col shadow-2xl border border-slate-100">
+            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+              <h2 className="text-lg font-bold text-slate-800">Link Bugs</h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Select bugs to associate with <span className="font-bold">{requirement.requirementKey}</span> — {selectedBugIdsToLink.length} selected.
+              </p>
+            </div>
+            <div className="flex-grow p-6 overflow-y-auto space-y-2">
+              {projectBugs.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-12">No bugs found in this project.</p>
+              ) : (
+                projectBugs.map((bug: any) => {
+                  const isChecked = selectedBugIdsToLink.includes(bug.id)
+                  return (
+                    <div
+                      key={bug.id}
+                      onClick={() =>
+                        setSelectedBugIdsToLink(prev =>
+                          prev.includes(bug.id) ? prev.filter(id => id !== bug.id) : [...prev, bug.id]
+                        )
+                      }
+                      className={`p-3 rounded-xl border cursor-pointer hover:bg-slate-50 transition-colors flex items-center gap-3 ${
+                        isChecked ? "bg-red-50/20 border-red-200" : "bg-white border-slate-200"
+                      }`}
+                    >
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all shrink-0 ${
+                        isChecked ? "border-red-600 bg-red-600 text-white" : "border-slate-300 bg-white"
+                      }`}>
+                        {isChecked && <span className="text-[9px] font-bold">✓</span>}
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <span className="text-xs font-semibold text-slate-800 block truncate">{bug.bugKey ? `${bug.bugKey} — ` : ""}{bug.title}</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">{bug.severity} · {bug.status}</span>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+              <button onClick={() => setShowLinkBugsModal(false)} className="text-xs h-9 px-4 rounded-lg border border-slate-200 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveBugLinks}
+                disabled={bugLinkSaving}
+                className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow disabled:opacity-50"
+              >
+                {bugLinkSaving ? "Saving…" : "Save Links"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Generate draft review drawer panel */}
       {showAiDraftPanel && (

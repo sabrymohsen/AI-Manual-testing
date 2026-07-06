@@ -86,7 +86,6 @@ export async function POST(
     data: {
       projectId: params.projectId,
       title: body.title || `${collection.name} (from collection)`,
-      module: "General",
       priority: "Medium",
       source: "Recorder",
       executionType: "Automated",

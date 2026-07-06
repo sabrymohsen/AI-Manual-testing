@@ -7,12 +7,8 @@ interface Requirement {
   id: string
   requirementKey: string
   title: string
-  moduleId: string | null
-  featureId: string | null
-  componentId: string | null
-  module: { name: string } | null
-  feature: { name: string } | null
-  component: { name: string } | null
+  epic: { epicKey: string; title: string } | null
+  feature: { featureKey: string; name: string } | null
 }
 
 interface LinkedRequirementsSelectorProps {
@@ -134,11 +130,10 @@ export function LinkedRequirementsSelector({
                   <span className="font-bold text-slate-800 block">
                     {req.requirementKey} — {req.title}
                   </span>
-                  {req.module && (
+                  {(req.epic || req.feature) && (
                     <span className="text-[10px] text-slate-400 block mt-0.5">
-                      Path: {req.module.name}
-                      {req.feature && ` / ${req.feature.name}`}
-                      {req.component && ` / ${req.component.name}`}
+                      Path: {req.epic ? `${req.epic.epicKey} ${req.epic.title}` : ""}
+                      {req.feature && `${req.epic ? " / " : ""}${req.feature.name}`}
                     </span>
                   )}
                 </div>

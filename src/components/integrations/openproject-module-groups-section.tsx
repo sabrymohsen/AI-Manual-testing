@@ -82,7 +82,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
           className="flex items-center gap-2 text-sm font-bold text-foreground/80 hover:text-foreground"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          Module Coverage
+          Feature Coverage
           {!loading && !error && groups.length > 0 && (
             <span className="text-xs font-normal text-muted-foreground">
               {groups.length} modules
@@ -224,7 +224,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                         groupName={group.groupName}
                         totalCases={group.totalCases}
                         opStatus={group.openProject}
-                        moduleConfig={group.moduleConfig}
+                        moduleConfig={(group as any).featureConfig || group.moduleConfig}
                         onStatusRefresh={loadGroups}
                       />
                     </div>

@@ -27,9 +27,7 @@ interface MatrixRow {
   title: string
   priority: string
   epic: { id: string; epicKey: string; title: string } | null
-  module: string | null
   feature: string | null
-  component: string | null
   coverageStatus: string
   risk: "High" | "Medium" | "Low"
   linkedTestCases: Array<{
@@ -78,7 +76,7 @@ export default function CoverageMatrixPage() {
     const matchSearch =
       row.requirementKey.toLowerCase().includes(searchLower) ||
       row.title.toLowerCase().includes(searchLower) ||
-      (row.module && row.module.toLowerCase().includes(searchLower))
+      (row.feature && row.feature.toLowerCase().includes(searchLower))
 
     if (!matchSearch) return false
     if (riskFilter !== "ALL" && row.risk !== riskFilter) return false
@@ -93,9 +91,7 @@ export default function CoverageMatrixPage() {
       "Requirement Key": r.requirementKey,
       "Requirement Title": r.title,
       "Epic": r.epic ? `${r.epic.epicKey} — ${r.epic.title}` : "No Epic",
-      "Module": r.module || "Unassigned",
       "Feature": r.feature || "N/A",
-      "Component": r.component || "N/A",
       "Priority": r.priority,
       "Coverage Status": r.coverageStatus,
       "Risk Level": r.risk,
@@ -112,13 +108,13 @@ export default function CoverageMatrixPage() {
   // Export to Markdown
   const handleExportMarkdown = () => {
     let md = `# Requirements Traceability Matrix - Project ${projectId}\n\n`
-    md += `| Requirement Key | Title | Module | Priority | Coverage Status | Risk | Test Cases | Bugs |\n`
+    md += `| Requirement Key | Title | Feature | Priority | Coverage Status | Risk | Test Cases | Bugs |\n`
     md += `| --- | --- | --- | --- | --- | --- | --- | --- |\n`
 
     filteredMatrix.forEach((r) => {
       const casesStr = r.linkedTestCases.map(tc => tc.title).join("<br>") || "None"
       const bugsStr = r.openBugs.map(b => `${b.title} (${b.severity})`).join("<br>") || "None"
-      md += `| **${r.requirementKey}** | ${r.title} | ${r.module || "Unassigned"} | ${r.priority} | ${r.coverageStatus} | **${r.risk}** | ${casesStr} | ${bugsStr} |\n`
+      md += `| **${r.requirementKey}** | ${r.title} | ${r.feature || "Unassigned"} | ${r.priority} | ${r.coverageStatus} | **${r.risk}** | ${casesStr} | ${bugsStr} |\n`
     })
 
     const blob = new Blob([md], { type: "text/markdown;charset=utf-8;" })
@@ -266,7 +262,7 @@ export default function CoverageMatrixPage() {
                 <tr>
                   <th className="p-4 w-24">Req Key</th>
                   <th className="p-4 w-48">Requirement Title</th>
-                  <th className="p-4 w-40">Module Breadcrumb</th>
+                  <th className="p-4 w-40">Feature</th>
                   <th className="p-4 w-32">Coverage Status</th>
                   <th className="p-4 w-28">Risk Factor</th>
                   <th className="p-4">Linked Test Cases</th>
@@ -325,15 +321,7 @@ export default function CoverageMatrixPage() {
                       </Link>
                     </td>
                     <td className="p-4 text-slate-400">
-                      {row.module ? (
-                        <span>
-                          {row.module} 
-                          {row.feature && ` / ${row.feature}`} 
-                          {row.component && ` / ${row.component}`}
-                        </span>
-                      ) : (
-                        "Unassigned"
-                      )}
+                      {row.feature || "Unassigned"}
                     </td>
                     <td className="p-4">{getCoverageBadge(row.coverageStatus)}</td>
                     <td className="p-4">{getRiskBadge(row.risk)}</td>
