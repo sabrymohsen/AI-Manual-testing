@@ -8,7 +8,7 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: auth.session!.user.id },
-    select: { id: true, email: true, name: true, plan: true },
+    select: { id: true, email: true, name: true, plan: true, role: true },
   })
   if (!user) return unauthorizedResponse("User not found")
 
