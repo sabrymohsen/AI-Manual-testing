@@ -1,0 +1,24 @@
+[INFO ] 2026-07-07 12:41:18.041 [main] ReportManager - 
+[1;36m════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+                                           ⚡ Powered by [1;35mSHAFT[22;39m v.[1m10.3.20260707[22m                                           
+                                   Visit SHAFT's user guide [4mhttps://shafthq.github.io/[24m to learn more                                   
+[1;36m════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+[0m
+[INFO ] 2026-07-07 12:41:18.284 [main] ReportManager - 
+[1;36m════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+                                                         Test Execution Summary Results                                                         
+                             Total: 0  ·  [32m✓ Passed: 0[39m  ·  [31m✗ Failed: 0[39m  ·  [33m⊘ Skipped: 0[39m                             
+[1;36m════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+[0m
+[INFO ] 2026-07-07 12:41:18.285 [main] ReportManager - 
+[1;36m════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+                                  ⚡ This test run was powered by [1;35mSHAFT[22;39m v.[1m10.3.20260707[22m                                  
+                               SHAFT [1;4mis and will always be 100% FREE[22;24m for commercial and private use                               
+                                                   in compliance with the [1mMIT license[22m                                                   
+                                   Visit SHAFT's user guide [4mhttps://shafthq.github.io/[24m to learn more                                   
+[1;36m════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+[0m
+[INFO ] 2026-07-07 12:41:18.486 [] ReportManager - Sending anonymous usage information...
+Note: the client IP is forwarded to Google Analytics for anonymous country-level reporting only.
+To disable telemetry, set `telemetry.enabled=false` in your custom.properties file.
+[INFO ] 2026-07-07 12:41:19.734 [] ReportManager - You're using the latest engine version "10.3.20260707". 👍

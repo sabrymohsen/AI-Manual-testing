@@ -1922,3 +1922,52 @@ model OpenProjectFeatureConfig {
   @@unique([projectId, featureId])
   @@index([projectId])
 }
+
+model TestScript {
+  id          String           @id @default(uuid())
+  name        String
+  type        String           // "Web" | "API" | "Database"
+  code        String           @db.Text
+  tags        String[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  executions  TestExecution[]
+}
+
+model TestExecution {
+  id           String      @id @default(uuid())
+  scriptId     String
+  script       TestScript  @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  status       String      // "Passed" | "Failed" | "Running"
+  logOutput    String      @db.Text
+  allureLink   String?
+  browser      String?     // "Chrome" | "Firefox" | "Edge" | "Headless"
+  createdAt    DateTime    @default(now())
+}
+
+model HealingEvent {
+  id               String   @id @default(uuid())
+  originalLocator  String
+  recoveredLocator String
+  confidence       Float    // e.g. 0.85
+  pageUrl          String
+  testName         String
+  status           String   // "recovered" | "failed" | "needs_review"
+  createdAt        DateTime @default(now())
+}
+
+model FlakyTest {
+  id             String   @id @default(uuid())
+  testName       String
+  flakinessScore Float
+  totalRuns      Int
+  failures       Int
+  retries        Int
+  rootCause      String
+  suggestedFix   String
+  trendDirection String   // "up" | "down" | "flat"
+  lastAnalyzed   DateTime @default(now())
+}
+
+
+
