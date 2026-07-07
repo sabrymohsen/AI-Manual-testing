@@ -40,6 +40,19 @@ export default function DashboardPage() {
   const [recentBugs, setRecentBugs] = useState<any[]>([])
 
   useEffect(() => {
+    // Redirect admin users to the system administration dashboard
+    fetch("/api/me")
+      .then(res => {
+        if (res.ok) return res.json()
+        throw new Error()
+      })
+      .then(data => {
+        if (data?.user?.role === "Admin") {
+          router.push("/admin")
+        }
+      })
+      .catch(() => {})
+
     // Load all projects for the workspace gate
     fetch("/api/projects")
       .then(res => res.json())
@@ -53,7 +66,7 @@ export default function DashboardPage() {
         .then(data => setRecentBugs((data.bugReports || []).slice(0, 5)))
         .catch(() => {})
     }
-  }, [activeProjectId])
+  }, [activeProjectId, router])
 
   const selectProject = (pId: string) => {
     localStorage.setItem("activeProjectId", pId)
