@@ -166,7 +166,7 @@ export async function registerUser(
     data: { email, passwordHash, name },
   })
 
-  const authUser: AuthUser = { id: user.id, email: user.email, name: user.name }
+  const authUser: AuthUser = { id: user.id, email: user.email, name: user.name, role: user.role as "User" | "Admin" }
   const token = await createToken(authUser)
 
   return { user: authUser, token }
@@ -186,7 +186,11 @@ export async function loginUser(
     throw new Error("Invalid email or password")
   }
 
-  const authUser: AuthUser = { id: user.id, email: user.email, name: user.name }
+  if (!user.isActive) {
+    throw new Error("Your account has been deactivated. Contact an administrator.")
+  }
+
+  const authUser: AuthUser = { id: user.id, email: user.email, name: user.name, role: user.role as "User" | "Admin" }
   const token = await createToken(authUser)
 
   return { user: authUser, token }

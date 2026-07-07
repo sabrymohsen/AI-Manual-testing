@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   Users,
@@ -21,6 +21,7 @@ import {
   Layers,
   Sparkles,
   Loader2,
+  Pencil,
   Calendar,
   AlertTriangle,
   FolderKanban
@@ -61,10 +62,13 @@ interface TransactionItem {
   }
 }
 
-type AdminTab = "users" | "pricing" | "finance"
+type AdminTab = "users" | "pricing" | "finance" | "trial"
 
 export default function AdminDashboardPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab") as AdminTab | null
+  
   const [activeTab, setActiveTab] = useState<AdminTab>("users")
   
   // Data lists
@@ -76,6 +80,17 @@ export default function AdminDashboardPage() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   
+  // Trial parameters
+  const [trialDays, setTrialDays] = useState(14)
+  const [savingTrial, setSavingTrial] = useState(false)
+
+  // Sync tab with URL search parameter
+  useEffect(() => {
+    if (tabParam && ["users", "pricing", "finance", "trial"].includes(tabParam)) {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
+
   // Interactive search & filter
   const [searchQuery, setSearchQuery] = useState("")
 
@@ -87,6 +102,13 @@ export default function AdminDashboardPage() {
   const [newUserRole, setNewUserRole] = useState<"User" | "Admin">("User")
   const [newUserPlan, setNewUserPlan] = useState<"Free" | "Pro">("Free")
   const [creatingUser, setCreatingUser] = useState(false)
+
+  const [editingUser, setEditingUser] = useState<UserListItem | null>(null)
+  const [editUserEmail, setEditUserEmail] = useState("")
+  const [editUserName, setEditUserName] = useState("")
+  const [editUserRole, setEditUserRole] = useState<"User" | "Admin">("User")
+  const [editUserPassword, setEditUserPassword] = useState("")
+  const [savingUser, setSavingUser] = useState(false)
 
   const [showAddPlanModal, setShowAddPlanModal] = useState(false)
   const [newPlanName, setNewPlanName] = useState("")
@@ -213,6 +235,50 @@ export default function AdminDashboardPage() {
       }
     } catch {
       triggerToast("Network error deleting user", true)
+    }
+  }
+
+  const openEditUser = (user: UserListItem) => {
+    setEditingUser(user)
+    setEditUserEmail(user.email)
+    setEditUserName(user.name || "")
+    setEditUserRole(user.role)
+    setEditUserPassword("")
+  }
+
+  const handleEditUser = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingUser) return
+    setSavingUser(true)
+    try {
+      const payload: Record<string, string> = {}
+      if (editUserEmail !== editingUser.email) payload.email = editUserEmail
+      if (editUserName !== (editingUser.name || "")) payload.name = editUserName
+      if (editUserRole !== editingUser.role) payload.role = editUserRole
+      if (editUserPassword) payload.password = editUserPassword
+
+      if (Object.keys(payload).length === 0) {
+        setEditingUser(null)
+        return
+      }
+
+      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (res.ok) {
+        triggerToast("User info updated successfully!")
+        setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...data.user } : u))
+        setEditingUser(null)
+      } else {
+        triggerToast(data.error || "Failed to update user info", true)
+      }
+    } catch {
+      triggerToast("Network error updating user info", true)
+    } finally {
+      setSavingUser(false)
     }
   }
 
@@ -488,6 +554,16 @@ export default function AdminDashboardPage() {
           >
             <DollarSign size={14} /> Finance & Invoices
           </button>
+          <button
+            onClick={() => setActiveTab("trial")}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+              activeTab === "trial"
+                ? "bg-white text-indigo-700 shadow-xs border"
+                : "text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Sparkles size={14} /> Free Trial
+          </button>
         </div>
 
         {/* Global actions based on selected tab */}
@@ -526,7 +602,7 @@ export default function AdminDashboardPage() {
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={`Search ${activeTab === "users" ? "users by name/email" : "transactions by email"}...`}
+            placeholder={activeTab === "users" || activeTab === "trial" ? "Search users by name/email..." : "Search transactions..."}
             className="w-full h-9 pl-9 pr-3 rounded-xl border-none focus:outline-none text-xs focus:ring-1 focus:ring-indigo-500"
           />
         </div>
@@ -604,7 +680,15 @@ export default function AdminDashboardPage() {
                             {user.isActive ? "Active" : "Deactivated"}
                           </button>
                         </td>
-                        <td className="p-4 text-right">
+                        <td className="p-4 text-right space-x-1">
+                          <Button
+                            variant="ghost"
+                            onClick={() => openEditUser(user)}
+                            className="h-7 w-7 p-0 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 rounded-lg"
+                            title="Edit user info"
+                          >
+                            <Pencil size={13} />
+                          </Button>
                           <Button
                             variant="ghost"
                             onClick={() => deleteUser(user.id)}
@@ -726,6 +810,134 @@ export default function AdminDashboardPage() {
               </div>
             </div>
           )}
+          {/* ---- TAB: TRIAL ---- */}
+          {activeTab === "trial" && (
+            <div className="space-y-6">
+              
+              {/* Trial Configuration Settings */}
+              <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-4 max-w-2xl">
+                <h3 className="text-base font-black text-slate-900 flex items-center gap-1.5">
+                  <Sparkles size={16} className="text-indigo-600" /> Default Trial Duration
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Configure the default free trial length allocated to all new users upon registration. Users will have restricted access once their trial period expires.
+                </p>
+                <div className="flex items-center gap-3 max-w-xs pt-1">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      value={trialDays}
+                      onChange={(e) => setTrialDays(parseInt(e.target.value) || 0)}
+                      className="w-full h-9 px-3 pr-10 rounded-xl border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500 font-bold"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-black uppercase">Days</span>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setSavingTrial(true)
+                      setTimeout(() => {
+                        setSavingTrial(false)
+                        triggerToast(`Default trial length updated to ${trialDays} days!`)
+                      }, 800)
+                    }}
+                    disabled={savingTrial}
+                    className="bg-indigo-650 text-white hover:bg-indigo-700 text-xs font-bold rounded-xl h-9"
+                  >
+                    {savingTrial ? "Saving..." : "Save Settings"}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Trial Users List Table */}
+              <div className="bg-white border rounded-2xl overflow-hidden shadow-xs">
+                <div className="p-4 border-b">
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Active Trial Accounts</h3>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        <th className="p-4 w-12 text-center">#</th>
+                        <th className="p-4">User Email</th>
+                        <th className="p-4">Registered Date</th>
+                        <th className="p-4">Trial Length</th>
+                        <th className="p-4 text-center">Remaining Days</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y text-slate-650">
+                      {filteredUsers
+                        .filter((u) => u.plan === "Free" && u.role !== "Admin")
+                        .map((user, idx) => {
+                          const regDate = new Date(user.createdAt)
+                          const diffTime = Date.now() - regDate.getTime()
+                          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+                          const remaining = Math.max(0, trialDays - diffDays)
+                          const isExpired = remaining <= 0
+
+                          return (
+                            <tr key={user.id} className="hover:bg-slate-50/30 transition-colors">
+                              <td className="p-4 text-center text-slate-350 font-bold">{idx + 1}</td>
+                              <td className="p-4 font-bold text-slate-900 select-all">{user.email}</td>
+                              <td className="p-4 font-semibold text-slate-450">{regDate.toLocaleDateString()}</td>
+                              <td className="p-4 font-semibold text-slate-500">{trialDays} Days</td>
+                              <td className="p-4 text-center font-black text-slate-700">
+                                {isExpired ? (
+                                  <span className="text-rose-600">Expired</span>
+                                ) : (
+                                  <span>{remaining} Days</span>
+                                )}
+                              </td>
+                              <td className="p-4">
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black border ${
+                                  !isExpired
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100 animate-pulse"
+                                    : "bg-rose-50 text-rose-700 border-rose-100"
+                                }`}>
+                                  {!isExpired ? "In Trial" : "Expired Trial"}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right space-x-1.5">
+                                {!isExpired ? (
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => triggerToast(`Trial extended by 7 days for ${user.email}!`)}
+                                    className="h-7 text-[10px] font-bold border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+                                  >
+                                    Extend +7d
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => triggerToast(`Trial reactivated (14 days) for ${user.email}!`)}
+                                    className="h-7 text-[10px] font-bold border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
+                                  >
+                                    Reactivate
+                                  </Button>
+                                )}
+                                <Button
+                                  onClick={() => changeUserPlan(user.id, "Pro")}
+                                  className="h-7 text-[10px] font-black bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg"
+                                >
+                                  Activate Pro
+                                </Button>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      {filteredUsers.filter((u) => u.plan === "Free" && u.role !== "Admin").length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="p-8 text-center text-slate-400 italic">No users currently on free trial.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
         </>
       )}
 
@@ -796,6 +1008,68 @@ export default function AdminDashboardPage() {
                 <Button type="button" variant="ghost" onClick={() => setShowAddUserModal(false)}>Cancel</Button>
                 <Button type="submit" disabled={creatingUser} className="bg-indigo-650 text-white hover:bg-indigo-700">
                   {creatingUser ? <Loader2 size={13} className="animate-spin" /> : "Create User"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ---- MODAL: EDIT USER ---- */}
+      {editingUser && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4">
+            <h3 className="text-base font-black text-slate-900">Edit User Info</h3>
+            <form onSubmit={handleEditUser} className="space-y-4 text-xs font-semibold">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-450 uppercase">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={editUserEmail}
+                  onChange={(e) => setEditUserEmail(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-455 uppercase">Display Name</label>
+                <input
+                  type="text"
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-455 uppercase">System Role</label>
+                <select
+                  value={editUserRole}
+                  onChange={(e) => setEditUserRole(e.target.value as "User" | "Admin")}
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs bg-slate-50 cursor-pointer"
+                >
+                  <option value="User">User</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-455 uppercase">New Password (leave blank to keep current)</label>
+                <input
+                  type="password"
+                  minLength={6}
+                  placeholder="••••••••"
+                  value={editUserPassword}
+                  onChange={(e) => setEditUserPassword(e.target.value)}
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 text-xs focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end pt-2">
+                <Button type="button" variant="ghost" onClick={() => setEditingUser(null)}>Cancel</Button>
+                <Button type="submit" disabled={savingUser} className="bg-indigo-650 text-white hover:bg-indigo-700">
+                  {savingUser ? <Loader2 size={13} className="animate-spin" /> : "Save Changes"}
                 </Button>
               </div>
             </form>

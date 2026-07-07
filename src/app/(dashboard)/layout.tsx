@@ -25,7 +25,10 @@ import {
   Plus,
   FlaskConical,
   ListOrdered,
-  ShieldCheck
+  ShieldCheck,
+  Users,
+  DollarSign,
+  CreditCard
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 
@@ -93,7 +96,10 @@ export default function DashboardLayout({
         const res = await fetch("/api/me")
         if (res.ok) {
           const data = await res.json()
+          console.log("LAYOUT LOADED USER:", data.user)
           setUser(data.user)
+        } else {
+          console.error("Failed to load user context, status:", res.status)
         }
       } catch (err) {
         console.error("Error loading user context:", err)
@@ -196,112 +202,146 @@ export default function DashboardLayout({
         </div>
 
         {/* Global Project Selection dropdown */}
-        <div className="p-4 border-b space-y-1.5 select-none">
-          <span className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60">Selected Scope</span>
-          <select 
-            value={activeProjectId} 
-            onChange={(e) => handleSelectProject(e.target.value)}
-            className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
-          >
-            {projects.length === 0 ? (
-              <option value="">-- No project --</option>
-            ) : (
-              projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)
-            )}
-          </select>
-        </div>
+        {user?.role !== "Admin" && (
+          <div className="p-4 border-b space-y-1.5 select-none">
+            <span className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60">Selected Scope</span>
+            <select 
+              value={activeProjectId} 
+              onChange={(e) => handleSelectProject(e.target.value)}
+              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
+            >
+              {projects.length === 0 ? (
+                <option value="">-- No project --</option>
+              ) : (
+                projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)
+              )}
+            </select>
+          </div>
+        )}
 
         <nav className="flex flex-col gap-1 p-4 flex-grow">
-          {navItems.map((item) => {
-            const dest = getHref(item.href)
-            const isActive = pathname === dest || pathname === item.href
-            return (
-              <Link
-                key={item.href}
-                href={dest}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                  isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          <div className="border-t my-2" />
-          <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">QA Workflows</span>
-
-          {workflowItems.map((item) => {
-            const dest = getHref(item.href)
-            const isActive = pathname === dest || pathname.startsWith(dest + "/")
-            return (
-              <Link
-                key={item.href}
-                href={dest}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                  isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          <div className="border-t my-2" />
-          <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Management</span>
-
-          {managementItems.map((item) => {
-            const dest = getHref(item.href)
-            const isActive = pathname === dest || pathname.startsWith(dest + "/")
-            return (
-              <Link
-                key={item.href}
-                href={dest}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                  isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          <div className="border-t my-2" />
-          <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Configuration</span>
-
-          {configItems.map((item) => {
-            const dest = getHref(item.href)
-            const isActive = pathname === dest || pathname.startsWith(dest + "/")
-            return (
-              <Link
-                key={item.href}
-                href={dest}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                  isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            )
-          })}
-
-          {user?.role === "Admin" && (
+          {user?.role === "Admin" ? (
             <>
-              <div className="border-t my-2" />
               <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Administration</span>
+              
               <Link
-                href="/admin"
+                href="/admin?tab=users"
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                  pathname === "/admin" || pathname.startsWith("/admin/") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
                 }`}
               >
-                <ShieldCheck className="h-4 w-4 shrink-0 text-indigo-600" />
-                Admin Dashboard
+                <Users className="h-4 w-4 shrink-0 text-indigo-600" />
+                Users
               </Link>
+
+              <Link
+                href="/admin?tab=finance"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                }`}
+              >
+                <DollarSign className="h-4 w-4 shrink-0 text-indigo-600" />
+                Finance
+              </Link>
+
+              <Link
+                href="/admin?tab=pricing"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                }`}
+              >
+                <CreditCard className="h-4 w-4 shrink-0 text-indigo-600" />
+                Subscription Panel
+              </Link>
+
+              <Link
+                href="/admin?tab=trial"
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                }`}
+              >
+                <Sparkles className="h-4 w-4 shrink-0 text-indigo-600" />
+                Free Trial
+              </Link>
+            </>
+          ) : (
+            <>
+              {navItems.map((item) => {
+                const dest = getHref(item.href)
+                const isActive = pathname === dest || pathname === item.href
+                return (
+                  <Link
+                    key={item.href}
+                    href={dest}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                )
+              })}
+
+              <div className="border-t my-2" />
+              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">QA Workflows</span>
+
+              {workflowItems.map((item) => {
+                const dest = getHref(item.href)
+                const isActive = pathname === dest || pathname.startsWith(dest + "/")
+                return (
+                  <Link
+                    key={item.href}
+                    href={dest}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                )
+              })}
+
+              <div className="border-t my-2" />
+              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Management</span>
+
+              {managementItems.map((item) => {
+                const dest = getHref(item.href)
+                const isActive = pathname === dest || pathname.startsWith(dest + "/")
+                return (
+                  <Link
+                    key={item.href}
+                    href={dest}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                )
+              })}
+
+              <div className="border-t my-2" />
+              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Configuration</span>
+
+              {configItems.map((item) => {
+                const dest = getHref(item.href)
+                const isActive = pathname === dest || pathname.startsWith(dest + "/")
+                return (
+                  <Link
+                    key={item.href}
+                    href={dest}
+                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                    }`}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                )
+              })}
             </>
           )}
         </nav>
