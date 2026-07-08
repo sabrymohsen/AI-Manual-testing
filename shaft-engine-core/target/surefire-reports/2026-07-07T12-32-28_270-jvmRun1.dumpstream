@@ -1,3 +1,0 @@
-# Created at 2026-07-07T12:32:29.960
-java.lang.UnsupportedClassVersionError: com/shaft/listeners/JunitListener has been compiled by a more recent version of the Java Runtime (class file version 69.0), this version of the Java Runtime only recognizes class file versions up to 67.0
-

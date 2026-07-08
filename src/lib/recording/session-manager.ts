@@ -32,6 +32,8 @@ export interface ActiveSession {
   // mode keeps the legacy always-save behavior.
   videoEnabled: boolean
   videoEverEnabled: boolean
+  activeFileChooser?: any
+  onFileChooser?: (fileChooser: any) => void
 }
 
 export type SessionConnectionStatus = {
@@ -266,8 +268,9 @@ export async function startSession(
     browser = await launcher.launch({
       headless: sessionMode === "Workstation",
       // Live QA on Chromium: force 2x rendering so CDP screencast frames come
-      // out at retina resolution (context deviceScaleFactor alone doesn't
-      // change screencast capture size — only this flag does).
+      // out at retina resolution (context deviceScaleFactor alone doesn't change
+      // screencast capture size — only this flag does). Frame size is not the
+      // bottleneck on localhost; smoothness is handled client-side.
       ...(sessionMode === "Workstation" && options.browserType === "Chromium"
         ? { args: ["--force-device-scale-factor=2"] }
         : {}),
@@ -374,6 +377,14 @@ export async function startSession(
     browserType: (options.browserType as "Chromium" | "Firefox" | "WebKit") || "Chromium",
     videoEnabled: false,
     videoEverEnabled: false,
+  })
+
+  page.on("filechooser", (fileChooser) => {
+    const sess = activeSessions.get(sessionId)
+    if (sess) {
+      sess.activeFileChooser = fileChooser
+      sess.onFileChooser?.(fileChooser)
+    }
   })
 
   await prisma.recordingSession.update({

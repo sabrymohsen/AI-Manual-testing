@@ -38,3 +38,13 @@ Redesigned the Bug Reports workspace from a simple list into a professional, fea
 - Modified PUT `/api/bug-reports/[bugId]` to support `testCaseId` and `testRunId` updates.
 - Created `/api/bug-reports/[bugId]/mark-duplicate` to map duplicate occurrences.
 - Created `/api/bug-reports/[bugId]/retest` to auto-queue retests.
+
+---
+
+## 5. Visual Device Emulation Gallery & Live QA Performance Upgrades
+
+- **Visual Preset cards**: Added a device emulation gallery featuring rich cards for standard devices (iPhone 14/15, Pixel 7/8, Samsung S24, iPad Pro/Air, Desktop HD) showing details like resolutions and OS.
+- **Custom presets**: Added a Custom Device builder modal allowing users to save and reuse custom viewports in `localStorage`.
+- **Orientation switcher**: Supports switching between Landscape/Portrait viewports.
+- **Live QA image view**: Refactored the live browser stream to render on a high-performance native `<img>` tag instead of laggy `<canvas>` updates, improving speed, sharpness, and event dispatch coordinates accuracy. Maintained a hidden canvas in the background to sustain video recording capabilities.
+- **Arabic key press inputs**: Upgraded `recorder.worker.ts` input router to intercept single-character keystrokes (like Arabic letters) and input them using `keyboard.insertText`, enabling typing in Arabic and other Unicode characters during testing.

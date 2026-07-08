@@ -11,6 +11,8 @@ import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import {
   Maximize,
   Maximize2,
+  ZoomIn,
+  ZoomOut,
   Minimize2,
   Monitor,
   Pencil,
@@ -155,6 +157,9 @@ export default function LiveQASessionPage() {
   const [recordings, setRecordings] = useState<SessionClip[]>([])
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recChunksRef = useRef<Blob[]>([])
+  // Synchronous mirror of `recording` so the frame handler can skip the extra
+  // per-frame canvas decode whenever we're NOT recording video.
+  const recordingRef = useRef(false)
 
   // Session timers + redesigned layout state
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null)
@@ -162,12 +167,17 @@ export default function LiveQASessionPage() {
   const [eventDrawerOpen, setEventDrawerOpen] = useState(false)
   const [fullView, setFullView] = useState(false)
   const [rightTab, setRightTab] = useState<"screenshots" | "selectors" | "steps">("screenshots")
+  const [showFileChooserModal, setShowFileChooserModal] = useState(false)
+  const [uploadingFile, setUploadingFile] = useState(false)
 
   // Embedded live browser view (headless Playwright streamed into the app).
   // Chromium sessions stream via CDP screencast over WebSocket; Firefox/WebKit
   // (or a dropped socket) fall back to REST frame polling.
   const [showLivePreview, setShowLivePreview] = useState(true)
   const [hasFrame, setHasFrame] = useState(false)
+  // Client-side magnification of the live view (does not touch the stream).
+  const [zoom, setZoom] = useState(1)
+  const zoomRef = useRef(1)
   const [streamMode, setStreamMode] = useState<"connecting" | "streaming" | "polling">("connecting")
   const [liveUrl, setLiveUrl] = useState<string | null>(null)
   const [urlInput, setUrlInput] = useState("")
@@ -176,10 +186,13 @@ export default function LiveQASessionPage() {
   const frameBusyRef = useRef(false)
   const liveViewRef = useRef<HTMLDivElement | null>(null)
   const liveCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  // Frames are painted imperatively onto imgRef (no per-frame React state).
+  // hasFrameRef mirrors hasFrame so the hot path can flip it exactly once.
+  const hasFrameRef = useRef(false)
+  const imgRef = useRef<HTMLImageElement | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const inputQueueRef = useRef<Promise<any>>(Promise.resolve())
   const lastMoveSentRef = useRef(0)
-  const lastWheelSentRef = useRef(0)
   const lastPasteSentRef = useRef(0)
 
   // Timers & Pollers
@@ -303,8 +316,32 @@ export default function LiveQASessionPage() {
   // always map back to remote CSS pixels.
   const streamDsfRef = useRef(1)
   const frameDsfRef = useRef(1)
+  const lastObjectUrlRef = useRef<string | null>(null)
 
   function drawFrameBlob(blob: Blob) {
+    const url = URL.createObjectURL(blob)
+    if (lastObjectUrlRef.current) {
+      URL.revokeObjectURL(lastObjectUrlRef.current)
+    }
+    lastObjectUrlRef.current = url
+    // The <img> is the visible path; keep the input-mapping scale in sync here
+    // so it's correct even when the canvas decode below is skipped.
+    frameDsfRef.current = streamDsfRef.current
+    // Paint imperatively: set the <img> src directly instead of via React state.
+    // At 30–60fps a setState per frame would re-render this whole (large)
+    // component every frame and saturate the main thread — the real cause of the
+    // scroll/interaction lag. The browser decodes the JPEG off the main thread.
+    if (imgRef.current) imgRef.current.src = url
+    if (!hasFrameRef.current) {
+      hasFrameRef.current = true
+      setHasFrame(true)
+    }
+
+    // Decoding each frame into the hidden canvas is only needed while recording
+    // video (MediaRecorder captures that canvas). Skip it otherwise — it halves
+    // the client's per-frame work and keeps the live view fluid.
+    if (!recordingRef.current) return
+
     pendingFrameRef.current = blob
     if (decodingFrameRef.current) return
     decodingFrameRef.current = true
@@ -315,7 +352,6 @@ export default function LiveQASessionPage() {
         try {
           const bitmap = await createImageBitmap(next)
           drawToCanvas(bitmap.width, bitmap.height, (ctx) => ctx.drawImage(bitmap, 0, 0))
-          frameDsfRef.current = streamDsfRef.current
           bitmap.close()
         } catch {}
       }
@@ -324,12 +360,13 @@ export default function LiveQASessionPage() {
   }
 
   function drawFrameDataUrl(dataUrl: string) {
-    const img = new Image()
-    img.onload = () => {
-      drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
-      frameDsfRef.current = 1 // polling frames are plain CSS pixels
+    // REST-polling path (Firefox/WebKit/reconnect): also paint imperatively.
+    frameDsfRef.current = 1 // polling frames are plain CSS pixels
+    if (imgRef.current) imgRef.current.src = dataUrl
+    if (!hasFrameRef.current) {
+      hasFrameRef.current = true
+      setHasFrame(true)
     }
-    img.src = dataUrl
   }
 
   async function fetchLiveFrame() {
@@ -342,6 +379,9 @@ export default function LiveQASessionPage() {
         if (data.frame) {
           drawFrameDataUrl(data.frame)
           setLiveUrl(data.url)
+          if (data.fileChooserOpen) {
+            setShowFileChooserModal(true)
+          }
         }
       }
     } catch {} finally {
@@ -357,7 +397,7 @@ export default function LiveQASessionPage() {
       return
     }
     fetchLiveFrame()
-    framePollerRef.current = setInterval(fetchLiveFrame, 600)
+    framePollerRef.current = setInterval(fetchLiveFrame, 350)
     return () => {
       if (framePollerRef.current) clearInterval(framePollerRef.current)
     }
@@ -404,7 +444,9 @@ export default function LiveQASessionPage() {
                 streamDsfRef.current = Number(msg.dsf) || 1
               } else if (msg.type === "url" && msg.url) {
                 setLiveUrl(msg.url)
-                }
+              } else if (msg.type === "filechooser" && msg.open) {
+                setShowFileChooserModal(true)
+              }
             } catch {}
           } else {
             drawFrameBlob(ev.data as Blob)
@@ -498,9 +540,18 @@ export default function LiveQASessionPage() {
       .catch(() => {})
   }
 
-  // Map a mouse event on the scaled frame canvas to remote CSS-px coordinates
-  // (the frame bitmap may be dsf× larger than the remote CSS viewport)
+  // Map a mouse event on the scaled frame view (image or fallback canvas) to remote CSS-px coordinates
   function liveViewCoords(e: { clientX: number; clientY: number }) {
+    const img = imgRef.current
+    if (img && img.naturalWidth) {
+      const rect = img.getBoundingClientRect()
+      if (rect.width === 0 || rect.height === 0) return null
+      const dsf = frameDsfRef.current || 1
+      return {
+        x: Math.round(((e.clientX - rect.left) / rect.width) * (img.naturalWidth / dsf)),
+        y: Math.round(((e.clientY - rect.top) / rect.height) * (img.naturalHeight / dsf))
+      }
+    }
     const canvas = liveCanvasRef.current
     if (!canvas || !canvas.width) return null
     const rect = canvas.getBoundingClientRect()
@@ -528,28 +579,55 @@ export default function LiveQASessionPage() {
   }
 
   // Wheel needs a non-passive native listener so we can preventDefault and
-  // scroll the remote page instead of this one.
+  // scroll the remote page instead of this one. Deltas are ACCUMULATED and
+  // flushed once per animation frame: the old fixed 80ms throttle simply
+  // dropped the skipped events, so fast scrolls lost distance and felt sluggish.
+  // Coalescing sends the summed delta (~60/s max) — smooth, nothing lost.
   useEffect(() => {
     const el = liveViewRef.current
     if (!el) return
-    function onWheel(ev: WheelEvent) {
-      ev.preventDefault()
-      const now = Date.now()
-      if (now - lastWheelSentRef.current < 80) return
-      lastWheelSentRef.current = now
-      const coords = liveViewCoords(ev)
-      if (coords) {
-        sendBrowserInput({
-          type: "wheel",
-          ...coords,
-          deltaX: Math.round(ev.deltaX),
-          deltaY: Math.round(ev.deltaY)
-        })
+    let accX = 0
+    let accY = 0
+    let raf = 0
+    let lastCoords: { x: number; y: number } | null = null
+
+    const flush = () => {
+      raf = 0
+      if (accX === 0 && accY === 0) return
+      const dx = accX
+      const dy = accY
+      accX = 0
+      accY = 0
+      if (lastCoords) {
+        sendBrowserInput({ type: "wheel", ...lastCoords, deltaX: Math.round(dx), deltaY: Math.round(dy) })
       }
     }
+
+    function onWheel(ev: WheelEvent) {
+      // When zoomed in, let the wheel pan the magnified view locally instead of
+      // scrolling the remote page.
+      if (zoomRef.current > 1) return
+      ev.preventDefault()
+      const coords = liveViewCoords(ev)
+      if (coords) lastCoords = coords
+      accX += ev.deltaX
+      accY += ev.deltaY
+      if (!raf) raf = requestAnimationFrame(flush)
+    }
     el.addEventListener("wheel", onWheel, { passive: false })
-    return () => el.removeEventListener("wheel", onWheel)
+    return () => {
+      el.removeEventListener("wheel", onWheel)
+      if (raf) cancelAnimationFrame(raf)
+    }
   }, [sessionId, sessionStatus, showLivePreview])
+
+  // Zoom the live view locally (0.5x–3x). zoomRef mirrors the state so the
+  // native wheel listener reads the current value without re-subscribing.
+  function applyZoom(next: number) {
+    const clamped = Math.min(3, Math.max(0.5, Math.round(next * 100) / 100))
+    zoomRef.current = clamped
+    setZoom(clamped)
+  }
 
   // Fit-to-container: keep the remote viewport matched to the live view's
   // visible area so the stream fills it edge-to-edge (no letterboxing).
@@ -735,6 +813,39 @@ export default function LiveQASessionPage() {
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !sessionId) return
+    setUploadingFile(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      const res = await fetch(`/api/recording/${sessionId}/upload-file`, {
+        method: "POST",
+        body: formData
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setToast({ message: d.error || "Failed to upload file to browser", type: "error" })
+      } else {
+        setToast({ message: `File "${file.name}" uploaded successfully!`, type: "success" })
+        setShowFileChooserModal(false)
+      }
+    } catch (err: any) {
+      setToast({ message: err.message || "Failed to upload file to browser", type: "error" })
+    } finally {
+      setUploadingFile(false)
+    }
+  }
+
+  const handleCancelFileChooser = async () => {
+    if (!sessionId) return
+    try {
+      await fetch(`/api/recording/${sessionId}/cancel-file`, { method: "POST" })
+    } catch {}
+    setShowFileChooserModal(false)
+  }
+
   function handleStartRecording() {
     const canvas = liveCanvasRef.current
     if (!canvas || !hasFrame) {
@@ -742,6 +853,15 @@ export default function LiveQASessionPage() {
       return
     }
     try {
+      // Seed the canvas with the frame that's on screen right now, and enable
+      // per-frame canvas decoding, so the recording captures content even if
+      // the page stays static after we start.
+      const img = imgRef.current
+      if (img && img.naturalWidth) {
+        drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
+      }
+      recordingRef.current = true
+
       const stream = canvas.captureStream(30)
       const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
         .find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m))
@@ -755,6 +875,7 @@ export default function LiveQASessionPage() {
       setRecording(true)
       setRecStartedAt(Date.now())
     } catch {
+      recordingRef.current = false
       setToast({ message: "Could not start recording in this browser.", type: "error" })
     }
   }
@@ -763,6 +884,7 @@ export default function LiveQASessionPage() {
     const recorder = mediaRecorderRef.current
     if (!recorder) return
     mediaRecorderRef.current = null
+    recordingRef.current = false
     const startedAt = recStartedAt
 
     const stopped = new Promise<void>((resolve) => {
@@ -1209,6 +1331,32 @@ export default function LiveQASessionPage() {
                   >
                     {streamMode === "streaming" ? "Streaming" : streamMode === "connecting" ? "Connecting…" : browserType === "Chromium" ? "Reconnecting" : "Polling"}
                   </span>
+                  {/* Zoom controls — magnify the live view locally (client-side). */}
+                  <div className="flex items-center gap-0.5 shrink-0 border-l pl-1 ml-0.5">
+                    <button
+                      onClick={() => applyZoom(zoom - 0.25)}
+                      disabled={zoom <= 0.5}
+                      className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
+                      title="Zoom out"
+                    >
+                      <ZoomOut className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => applyZoom(1)}
+                      className="text-[10px] font-semibold text-muted-foreground hover:text-foreground w-9 text-center tabular-nums"
+                      title="Reset zoom to 100%"
+                    >
+                      {Math.round(zoom * 100)}%
+                    </button>
+                    <button
+                      onClick={() => applyZoom(zoom + 0.25)}
+                      disabled={zoom >= 3}
+                      className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
+                      title="Zoom in"
+                    >
+                      <ZoomIn className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -1235,7 +1383,7 @@ export default function LiveQASessionPage() {
                     <div
                       ref={liveViewRef}
                       tabIndex={0}
-                      className="relative flex-1 min-h-0 flex items-center justify-center outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/60 select-none"
+                      className={`relative flex-1 min-h-0 flex outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/60 select-none ${zoom > 1 ? "overflow-auto items-start justify-start" : "overflow-hidden items-center justify-center"}`}
                       onKeyDown={(e) => {
                         // Cmd/Ctrl+V: the remote browser's clipboard is empty —
                         // the text must come from the local clipboard. Don't
@@ -1279,7 +1427,16 @@ export default function LiveQASessionPage() {
                     >
                       <canvas
                         ref={liveCanvasRef}
-                        className={`max-w-full max-h-full w-auto h-auto block cursor-default ${hasFrame ? "" : "hidden"}`}
+                        className="hidden"
+                      />
+                      {/* Frames are painted imperatively onto this <img> (src set
+                          via imgRef), so it renders unconditionally. */}
+                      <img
+                        ref={imgRef}
+                        alt="Live browser view"
+                        className={`max-w-full max-h-full w-auto h-auto block select-none cursor-default ${hasFrame ? "" : "hidden"}`}
+                        style={zoom !== 1 ? { transform: `scale(${zoom})`, transformOrigin: zoom > 1 ? "top left" : "center center" } : undefined}
+                        draggable={false}
                         onMouseDown={(e) => {
                           liveViewRef.current?.focus()
                           const coords = liveViewCoords(e)
@@ -1287,7 +1444,7 @@ export default function LiveQASessionPage() {
                         }}
                         onMouseMove={(e) => {
                           const now = Date.now()
-                          if (now - lastMoveSentRef.current < 80) return
+                          if (now - lastMoveSentRef.current < 40) return
                           lastMoveSentRef.current = now
                           const coords = liveViewCoords(e)
                           if (coords) sendBrowserInput({ type: "mousemove", ...coords })
@@ -1722,6 +1879,64 @@ export default function LiveQASessionPage() {
           onCancel={() => setAnnotatingShot(null)}
           saving={savingAnnotation}
         />
+      )}
+      {/* REMOTE FILE CHOOSER DIALOG OVERLAY */}
+      {showFileChooserModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs select-none">
+          <div className="bg-white rounded-3xl border shadow-2xl w-full max-w-sm p-6 space-y-4 text-left animate-in zoom-in duration-150">
+            <div className="flex items-center justify-between border-b pb-2.5">
+              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
+                <Camera size={14} className="text-indigo-650" /> Upload File to Browser
+              </h3>
+              <button
+                onClick={handleCancelFileChooser}
+                className="text-slate-400 hover:text-slate-650 p-1"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-[10px] text-slate-500 font-bold leading-relaxed">
+                The web page in the remote browser requested a file upload. Choose a local file to forward to it:
+              </p>
+
+              <div className="border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-2xl p-6 transition-all bg-slate-50/50 hover:bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer relative">
+                <Input
+                  type="file"
+                  onChange={handleFileUpload}
+                  disabled={uploadingFile}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+                {uploadingFile ? (
+                  <>
+                    <Loader2 size={24} className="text-indigo-600 animate-spin" />
+                    <span className="text-[10px] font-black text-indigo-750 uppercase">Uploading file...</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-2.5 rounded-2xl bg-white border shadow-3xs text-slate-450">
+                      <Camera size={20} />
+                    </div>
+                    <span className="text-[10.5px] font-black text-slate-800 uppercase tracking-wide">Select Local File</span>
+                    <span className="text-[9px] font-bold text-slate-450">Drag and drop or click here</span>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t">
+              <Button
+                variant="outline"
+                onClick={handleCancelFileChooser}
+                disabled={uploadingFile}
+                className="flex-1 rounded-xl h-9 text-xs font-black border-slate-200 text-slate-650 bg-white"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

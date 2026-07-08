@@ -705,6 +705,48 @@ export async function POST(
       }
     }
 
+    // POST /api/recording/[sessionId]/upload-file
+    if (path.length === 2 && path[1] === "upload-file") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const formData = await request.formData().catch(() => null)
+      if (!formData) {
+        return NextResponse.json({ error: "Invalid form data" }, { status: 400 })
+      }
+      const file = formData.get("file") as File
+      if (!file) {
+        return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
+      }
+      try {
+        const bytes = await file.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+        const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/upload-file`, {
+          method: "POST",
+          body: JSON.stringify({
+            filename: file.name,
+            contentBase64: buffer.toString("base64")
+          })
+        })
+        return NextResponse.json(result)
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
+    }
+
+    // POST /api/recording/[sessionId]/cancel-file
+    if (path.length === 2 && path[1] === "cancel-file") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      try {
+        const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/cancel-file`, {
+          method: "POST"
+        })
+        return NextResponse.json(result)
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
+    }
+
     // 10. POST /api/recording/[sessionId]/test-case/start-new
     if (path.length === 3 && path[1] === "test-case" && path[2] === "start-new") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)

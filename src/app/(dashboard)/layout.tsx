@@ -29,7 +29,10 @@ import {
   Users,
   DollarSign,
   CreditCard,
-  Shield
+  Shield,
+  Cpu,
+  FolderOpen,
+  Camera
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 
@@ -155,9 +158,7 @@ export default function DashboardLayout({
 
   const workflowItems = [
     { href: "/test-cases", label: "Test Cases", icon: FileText },
-    { href: "/autotest", label: "AutoTest Engine", icon: Play },
-    { href: "/heal-center", label: "Heal Center", icon: Shield },
-    { href: "/flake-detector", label: "Flake Detector", icon: Activity },
+    { href: "/automation-hub", label: "Automation Hub", icon: Cpu },
     { href: "/live-qa-session", label: "Live QA Session", icon: FlaskConical },
     { href: "/recorder-studio", label: "Recorder Studio", icon: Video },
     { href: "/bug-reports", label: "Bug Reports", icon: Bug },
@@ -177,9 +178,7 @@ export default function DashboardLayout({
   const getHref = (basePath: string) => {
     if (!activeProjectId) return basePath
     if (basePath === "/test-cases") return `/projects/${activeProjectId}/test-cases`
-    if (basePath === "/autotest") return `/projects/${activeProjectId}/autotest`
-    if (basePath === "/heal-center") return `/projects/${activeProjectId}/heal-center`
-    if (basePath === "/flake-detector") return `/projects/${activeProjectId}/flake-detector`
+    if (basePath === "/automation-hub") return `/projects/${activeProjectId}/automation-hub`
     if (basePath === "/live-qa-session") return `/projects/${activeProjectId}/live-qa-session`
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
