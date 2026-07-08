@@ -1924,25 +1924,100 @@ model OpenProjectFeatureConfig {
 }
 
 model TestScript {
-  id          String           @id @default(uuid())
-  name        String
-  type        String           // "Web" | "API" | "Database"
-  code        String           @db.Text
-  tags        String[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  executions  TestExecution[]
+  id                   String           @id @default(uuid())
+  name                 String
+  type                 String           // "Web" | "API" | "Database"
+  code                 String           @db.Text
+  tags                 String[]
+  accessibilityEnabled Boolean          @default(false) // run WCAG audit on execution (Section 1b)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  executions           TestExecution[]
 }
 
 model TestExecution {
-  id           String      @id @default(uuid())
-  scriptId     String
-  script       TestScript  @relation(fields: [scriptId], references: [id], onDelete: Cascade)
-  status       String      // "Passed" | "Failed" | "Running"
-  logOutput    String      @db.Text
-  allureLink   String?
-  browser      String?     // "Chrome" | "Firefox" | "Edge" | "Headless"
-  createdAt    DateTime    @default(now())
+  id             String      @id @default(uuid())
+  scriptId       String
+  script         TestScript  @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  status         String      // "Passed" | "Failed" | "Running"
+  logOutput      String      @db.Text
+  allureLink     String?
+  browser        String?     // "Chrome" | "Firefox" | "Edge" | "Headless"
+  duration       Int?        // execution duration in milliseconds
+  screenshotPath String?     // absolute path of the captured screenshot evidence
+  executionTarget String?    // name of the execution target it ran on (Section 1c), null = Local
+  createdAt      DateTime    @default(now())
+}
+
+// Section 1a: external SHAFT test data files (data-driven testing)
+model TestDataFile {
+  id              String   @id @default(uuid())
+  name            String   // display name, e.g. "loginUsers"
+  fileName        String   @unique // on-disk name, e.g. "loginUsers.json"
+  filePath        String   // absolute path under src/test/resources/testDataFiles/
+  content         String   @db.Text // JSON content — DB is source of truth, mirrored to disk
+  jsonSchema      Json?    // optional field definitions produced by the Create Data Set wizard
+  linkedScriptIds String[] // TestScript ids this data file feeds (1:N)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Section 1b: WCAG accessibility audit results parsed from SHAFT/Allure artifacts
+model AccessibilityResult {
+  id              String   @id @default(uuid())
+  testExecutionId String   @unique
+  scriptId        String?
+  wcagLevel       String   // "A" | "AA" | "AAA" | "None"
+  passCount       Int      @default(0)
+  violationCount  Int      @default(0)
+  violations      Json     // [{ ruleId, severity, element, description, fix }]
+  createdAt       DateTime @default(now())
+
+  @@index([scriptId])
+}
+
+// Section 1c: remote/Docker/Grid execution targets
+model ExecutionTarget {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // "local" | "docker" | "grid" | "browserstack"
+  url         String   @default("") // SHAFT executionAddress (e.g. localhost:4444)
+  platform    String   @default("Linux") // "Linux" | "Windows" | "Mac"
+  browser     String   @default("chrome")
+  headless    Boolean  @default(false)
+  credentials Json?    // { username, accessKey } — for BrowserStack/grid auth
+  isDefault   Boolean  @default(false)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Automation Hub AI Agent (Section 8)
+model AgentChatMessage {
+  id        String   @id @default(uuid())
+  role      String // "user" | "assistant"
+  content   String   @db.Text
+  actions   Json? // embedded action buttons [{label, kind, payload}]
+  createdAt DateTime @default(now())
+}
+
+model AgentToolCall {
+  id        String   @id @default(uuid())
+  tool      String
+  params    Json?
+  status    String // "success" | "error" | "denied"
+  result    String   @db.Text
+  duration  Int // milliseconds
+  createdAt DateTime @default(now())
+}
+
+model AgentSettings {
+  id         String   @id @default("agent-settings")
+  provider   String   @default("Anthropic") // "Anthropic" | "OpenAI" | "Gemini" | "Ollama"
+  apiKey     String   @default("")
+  model      String   @default("claude-opus-4-8")
+  permission String   @default("Execute Tests") // "Read-Only" | "Execute Tests" | "Full Control"
+  updatedAt  DateTime @updatedAt
 }
 
 model HealingEvent {
@@ -1969,5 +2044,221 @@ model FlakyTest {
   lastAnalyzed   DateTime @default(now())
 }
 
+model Diagnosis {
+  id                   String   @id @default(uuid())
+  testExecutionId      String
+  testName             String
+  errorMessage         String   @db.Text
+  errorType            String   @default("Error")
+  primaryCause         String
+  confidence           Float
+  findings             Json?
+  remediationSteps     String   @db.Text
+  status               String   @default("new") // "new" | "diagnosing" | "resolved"
+  similarFailuresCount Int      @default(0)
+  doctorReportPath     String
+  createdAt            DateTime @default(now())
+  resolvedAt           DateTime?
+}
+
+model EvidenceFile {
+  id              String   @id @default(uuid())
+  testExecutionId String
+  fileType        String   // "screenshot" | "video" | "log" | "har"
+  filePath        String
+  stepNumber      Int
+  pageUrl         String
+  elementLocator  String
+  status          String   // "pass" | "fail" | "info"
+  tags            String[]
+  createdAt       DateTime @default(now())
+}
+
+model CrossBrowserResult {
+  id             String   @id @default(uuid())
+  testId         String
+  browserName    String   // "Chrome" | "Firefox" | "Edge" | "Safari"
+  status         String   // "pass" | "fail" | "flaky" | "not_run"
+  duration       Int      // duration in ms
+  screenshotPath String?
+  errorMessage   String?  @db.Text
+  executionDate  DateTime @default(now())
+}
+
+model McpConfig {
+  id              String   @id @default(uuid())
+  serverUrl       String   @default("http://localhost:4000")
+  provider        String   @default("Gemini")
+  apiKey          String   @default("")
+  model           String   @default("gpt-4o")
+  permissionLevel String   @default("Can Execute Tests")
+  updatedAt       DateTime @updatedAt
+}
+
+model McpActivity {
+  id        String   @id @default(uuid())
+  action    String
+  status    String   // "success" | "failed" | "pending"
+  duration  Int      // in ms
+  result    String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model RecorderSession {
+  id        String   @id @default(uuid())
+  url       String
+  browser   String   // "Chrome" | "Edge"
+  device    String   // "Desktop" | "Mobile"
+  code      String   @db.Text
+  status    String   // "recording" | "completed"
+  createdAt DateTime @default(now())
+}
+
+model AgentChatHistory {
+  id        String   @id @default(uuid())
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  mcpCalls  Json?    // stores tool calls logs details
+  createdAt DateTime @default(now())
+}
 
 
+
+
+
+
+
+
+
+
+// ===== Visual Diff (Section 9) — visual regression testing =====
+
+model VisualBaseline {
+  id          String             @id @default(uuid())
+  testName    String
+  pageName    String
+  browser     String             @default("chrome")
+  viewport    String             @default("") // e.g. "1920x1080"
+  filePath    String             // stored PNG path under public/uploads/visual/baselines
+  versionTag  String             @default("")
+  provider    String             @default("shaft-opencv") // "shaft-opencv" | "applitools" | "shutterbug"
+  width       Int?
+  height      Int?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  comparisons VisualComparison[]
+}
+
+model VisualComparison {
+  id              String         @id @default(uuid())
+  baselineId      String
+  baseline        VisualBaseline @relation(fields: [baselineId], references: [id], onDelete: Cascade)
+  currentFilePath String
+  diffFilePath    String         @default("")
+  diffScore       Float          @default(0) // percentage of changed pixels 0..100
+  threshold       Float          @default(5) // percentage
+  status          String         @default("pass") // "pass" | "fail" | "approved" | "rejected"
+  provider        String         @default("shaft-opencv")
+  dimensionMismatch Boolean      @default(false)
+  createdAt       DateTime       @default(now())
+}
+
+// Section 12: Data & Config — centralized SHAFT configuration management.
+// A SHAFT property whose value diverges from the built-in catalog default.
+// The catalog itself lives in code (src/lib/hub-properties.ts); this table
+// only persists overrides so we can attribute who changed what.
+model ShaftProperty {
+  id            String   @id @default(uuid())
+  propertyName  String   @unique
+  value         String   @db.Text
+  description   String   @default("")
+  propertyGroup String   @default("Other") // Browser | Execution | Synchronization | Evidence | Healing | AI | Other
+  isCustom      Boolean  @default(true)    // false = tracked but equals catalog default
+  updatedBy     String?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+}
+
+// Audit trail of every property value change (Properties Editor change history).
+model PropertyHistory {
+  id           String   @id @default(uuid())
+  propertyName String
+  oldValue     String   @db.Text @default("")
+  newValue     String   @db.Text @default("")
+  changedBy    String?
+  changedAt    DateTime @default(now())
+
+  @@index([propertyName])
+  @@index([changedAt])
+}
+
+// Environment variables + Secrets manager. Non-secret values are stored in
+// plaintext; secrets are AES-256-GCM encrypted (src/lib/crypto) and the
+// ciphertext bundle is kept in valueEncrypted as JSON.
+model EnvironmentVariable {
+  id             String   @id @default(uuid())
+  name           String
+  valuePlain     String?  @db.Text // present when isSecret = false
+  valueEncrypted Json?    // { encrypted, iv, authTag, keyVersion } when isSecret = true
+  scope          String   @default("global") // "global" | "project"
+  isSecret       Boolean  @default(false)
+  projectId      String?
+  createdBy      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([name, scope, projectId])
+  @@index([projectId])
+}
+
+// Section 11 (enhanced): AI Provider Management. One row per provider so each
+// can be independently enabled, keyed, and pointed at a chosen model. The
+// isDefault provider is what the agent uses (falls back to AgentSettings).
+model AiProviderConfig {
+  id        String   @id @default(uuid())
+  provider  String   @unique // "OpenAI" | "Anthropic" | "Gemini" | "Ollama"
+  enabled   Boolean  @default(false)
+  apiKey    String   @default("")
+  model     String   @default("")
+  isDefault Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+// Real token usage recorded after each provider call (from the API's own usage
+// fields). costUsd is derived from the per-model price table in code.
+model AiUsageEvent {
+  id               String   @id @default(uuid())
+  provider         String
+  model            String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  costUsd          Float    @default(0)
+  command          String? // originating command/prompt label, if any
+  createdAt        DateTime @default(now())
+
+  @@index([provider])
+  @@index([createdAt])
+}
+
+// Consent, privacy and spend policy for AI usage (single row).
+model AiPolicy {
+  id              String   @id @default("ai-policy")
+  allowDataAccess Boolean  @default(true)  // may test data be sent to the provider
+  redactSensitive Boolean  @default(true)  // mask emails/keys/tokens before sending
+  monthlyBudgetUsd Float   @default(0)     // 0 = unlimited
+  updatedAt       DateTime @updatedAt
+}
+
+// Audit of what test data was sent to an AI provider and when.
+model AiDataAccessLog {
+  id          String   @id @default(uuid())
+  provider    String
+  dataSummary String   // e.g. "list_tests → 5 scripts (1.2 KB)"
+  redacted    Boolean  @default(false)
+  withheld    Boolean  @default(false) // true when policy blocked the data entirely
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}

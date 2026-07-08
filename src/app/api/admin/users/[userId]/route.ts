@@ -25,7 +25,7 @@ export async function PATCH(
     const body = await request.json()
     const { isActive, plan, role, name, email, password } = body
 
-    if (isActive === false && auth.session.user.id === userId) {
+    if (isActive === false && auth.session!.user.id === userId) {
       return badRequestResponse("Cannot deactivate your own admin account")
     }
 
@@ -80,7 +80,7 @@ export async function DELETE(
 
   const { userId } = params
 
-  if (auth.session.user.id === userId) {
+  if (auth.session!.user.id === userId) {
     return badRequestResponse("Cannot delete your own admin account")
   }
 

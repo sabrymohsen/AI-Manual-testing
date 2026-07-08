@@ -90,9 +90,15 @@ async function applyInput(
         await page.mouse.move(body.x || 0, body.y || 0)
         await page.mouse.wheel(body.deltaX || 0, body.deltaY || 0)
         break
-      case "key":
-        await page.keyboard.press(body.key)
+      case "key": {
+        const key = String(body.key || "")
+        if (key.length === 1) {
+          await page.keyboard.insertText(key)
+        } else {
+          await page.keyboard.press(key)
+        }
         break
+      }
       case "type":
         await page.keyboard.insertText(body.text || "")
         break
@@ -224,10 +230,12 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       }
     })
     await cdp.send("Page.enable")
-    // Caps sized for 2x (retina) frames of up to ~1920 CSS px viewports.
+    // The live view runs on localhost, so frame *size* is not the bottleneck —
+    // client-side per-frame rendering is (fixed on the client). Keep quality high
+    // for a sharp image; caps sized for 2x (retina) frames up to ~1920 CSS px.
     await cdp.send("Page.startScreencast", {
       format: "jpeg",
-      quality: 70,
+      quality: 90,
       maxWidth: 3840,
       maxHeight: 3840,
       everyNthFrame: 1,
@@ -348,15 +356,67 @@ const server = http.createServer(async (req, res) => {
       try {
         // scale "css" keeps polling frames at CSS pixels so mouse-coordinate
         // mapping stays 1:1 regardless of the context's deviceScaleFactor.
-        const buffer = await activeSess.page.screenshot({ type: "jpeg", quality: 55, scale: "css" })
+        const buffer = await activeSess.page.screenshot({ type: "jpeg", quality: 95, scale: "css" })
         sendJson(res, 200, {
           frame: `data:image/jpeg;base64,${buffer.toString("base64")}`,
           url: activeSess.page.url(),
+          fileChooserOpen: !!activeSess.activeFileChooser,
         })
       } catch {
         // Screenshot can fail transiently mid-navigation — not an error state.
         sendJson(res, 200, { frame: null, url: null })
       }
+      return
+    }
+
+    // Live preview file upload: receive base64 content and write to temporary path to complete file selection
+    if (req.method === "POST" && path.match(/^\/sessions\/[^/]+\/upload-file$/)) {
+      const sessionId = path.split("/")[2]
+      const activeSess = activeSessions.get(sessionId)
+      if (!activeSess) {
+        sendJson(res, 404, { error: "Active session not found" })
+        return
+      }
+      const body = await readBody(req)
+      const { filename, contentBase64 } = body
+      if (!contentBase64 || !activeSess.activeFileChooser) {
+        sendJson(res, 400, { error: "No file content or active file chooser" })
+        return
+      }
+      try {
+        const fs = await import("node:fs/promises")
+        const pathModule = await import("node:path")
+        const os = await import("node:os")
+        
+        // Write the base64 content to a temp file
+        const tempDir = os.tmpdir()
+        const tempFilePath = pathModule.join(tempDir, filename || "upload.tmp")
+        await fs.writeFile(tempFilePath, Buffer.from(contentBase64, "base64"))
+        
+        // Resolve Playwright fileChooser
+        await activeSess.activeFileChooser.setFiles(tempFilePath)
+        activeSess.activeFileChooser = null
+        
+        // Clean up the temp file after Playwright consumes it
+        fs.unlink(tempFilePath).catch(() => {})
+        
+        sendJson(res, 200, { success: true })
+      } catch (err: any) {
+        sendJson(res, 500, { error: err.message })
+      }
+      return
+    }
+
+    // Live preview cancel file chooser
+    if (req.method === "POST" && path.match(/^\/sessions\/[^/]+\/cancel-file$/)) {
+      const sessionId = path.split("/")[2]
+      const activeSess = activeSessions.get(sessionId)
+      if (!activeSess) {
+        sendJson(res, 404, { error: "Active session not found" })
+        return
+      }
+      activeSess.activeFileChooser = null
+      sendJson(res, 200, { success: true })
       return
     }
 
@@ -368,6 +428,18 @@ const server = http.createServer(async (req, res) => {
         return
       }
       const result = await startSession(projectId, userId, options)
+      const sid = result.session?.id
+      if (sid) {
+        const activeSess = activeSessions.get(sid)
+        if (activeSess) {
+          activeSess.onFileChooser = (fileChooser) => {
+            const stream = sessionStreams.get(sid)
+            if (stream) {
+              broadcastJson(stream, { type: "filechooser", open: true })
+            }
+          }
+        }
+      }
       sendJson(res, 201, result)
       return
     }
