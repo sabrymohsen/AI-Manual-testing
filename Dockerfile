@@ -32,6 +32,12 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 USER nextjs
 EXPOSE 3000
 ENV PORT 3000
-# Apply any pending migrations, then start the server. migrate deploy is
-# idempotent and takes an advisory lock, so it's safe across multiple instances.
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+# Sync the database to schema.prisma, then start the server.
+#
+# We use `db push` (not `migrate deploy`) because schema.prisma is the source of
+# truth for this project — the migrations/ history is incomplete (many models,
+# e.g. VisualBaseline/ShaftProperty, and enum values like TestCaseSource.Recorder
+# were only ever applied via db push, never captured in a migration). db push
+# reconciles the live DB to the full schema on every deploy. --accept-data-loss
+# makes it non-interactive; note this can drop columns if the schema removes them.
+CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --accept-data-loss --skip-generate && node server.js"]
