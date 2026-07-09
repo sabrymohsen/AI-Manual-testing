@@ -9,6 +9,7 @@ import {
   startSession,
   pauseSession,
   resumeSession,
+  setStepRecording,
   finishSession,
   cancelSession,
   startNewRecordedTestCase,
@@ -37,7 +38,7 @@ const PORT = Number(process.env.RECORDER_WORKER_PORT) || 3847
 // (together with REQUIRED_WORKER_VERSION in worker-client.ts) whenever the
 // worker's HTTP/WS contract changes, so a stale worker process fails loudly
 // instead of silently missing endpoints.
-export const WORKER_VERSION = "2.1.0"
+export const WORKER_VERSION = "2.2.0"
 
 function sendJson(res: http.ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "Content-Type": "application/json" })
@@ -461,6 +462,13 @@ const server = http.createServer(async (req, res) => {
           await resumeSession(sessionId)
           sendJson(res, 200, { success: true })
           return
+        case "step-recording": {
+          // Live QA scenario recording start/stop. In-memory flag on the
+          // active session — no DB write.
+          const result = setStepRecording(sessionId, body.enabled !== false)
+          sendJson(res, 200, { success: true, ...result })
+          return
+        }
         case "finish":
           await finishSession(sessionId)
           sendJson(res, 200, { success: true })

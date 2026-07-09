@@ -51,7 +51,7 @@ export async function checkRecorderWorkerHealth(): Promise<RecorderWorkerHealth>
 // means the running worker process predates the current code — sessions
 // started against it would misbehave (e.g. headed browsers, missing
 // endpoints), so we refuse loudly instead.
-export const REQUIRED_WORKER_VERSION = "2.1.0"
+export const REQUIRED_WORKER_VERSION = "2.2.0"
 
 export async function recorderWorkerRequest<T>(
   path: string,

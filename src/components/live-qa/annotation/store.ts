@@ -85,7 +85,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ color: c })
   },
   setStrokeWidth: (n) => set({ strokeWidth: n }),
-  setFontSize: (n) => set({ fontSize: n }),
+  setFontSize: (n) => {
+    // Mirror setColor: if a text/sticker/number is selected, resize it live
+    // (with one undo entry) so the size control edits the placed label too.
+    const { selectedId, annotations } = get()
+    const sel = annotations.find((a) => a.id === selectedId)
+    if (sel && (sel.type === "text" || sel.type === "sticker" || sel.type === "number")) {
+      get().commit()
+      set({ annotations: annotations.map((a) => (a.id === selectedId ? { ...a, fontSize: n } : a)) })
+    }
+    set({ fontSize: n })
+  },
   setSticker: (k) => set({ sticker: k }),
   setMagnifierPower: (n) => set({ magnifierPower: n }),
   setZoom: (z) => set({ zoom: clampZoom(z), announcement: `Zoom ${Math.round(clampZoom(z) * 100)}%` }),

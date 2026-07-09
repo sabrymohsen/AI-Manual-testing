@@ -49,6 +49,7 @@ import { ImportModal } from "@/components/test-cases/import-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { StepBuilder } from "@/components/test-cases/step-builder"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
+import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 
 // Interfaces matching database structure
 interface TestStep {
@@ -1428,6 +1429,9 @@ export default function TestCasesPage() {
                               </span>
                             </>
                           )}
+                          {(tc.requirements || []).slice(0, 2).map((l) => l.requirement && (
+                            <OpenOnBoardLink key={l.requirementId} projectId={projectId} requirementId={l.requirementId} requirementKey={l.requirement.requirementKey} />
+                          ))}
                         </div>
                       </div>
 

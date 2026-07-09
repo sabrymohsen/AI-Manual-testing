@@ -541,6 +541,23 @@ export async function POST(
       }
     }
 
+    // POST /api/recording/[sessionId]/step-recording — body: { enabled: boolean }
+    // Live QA scenario recording start/stop (in-memory flag on the worker).
+    if (path.length === 2 && path[1] === "step-recording") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const body = await request.json().catch(() => ({}))
+      try {
+        const result = await recorderWorkerRequest<{ stepRecording: boolean }>(
+          `/sessions/${sessionId}/step-recording`,
+          { method: "POST", body: JSON.stringify({ enabled: body.enabled !== false }) }
+        )
+        return NextResponse.json({ success: true, stepRecording: result.stepRecording })
+      } catch (err) {
+        return workerErrorResponse(err)
+      }
+    }
+
     // 8. POST /api/recording/[sessionId]/finish
     if (path.length === 2 && path[1] === "finish") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)

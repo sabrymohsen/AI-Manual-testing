@@ -735,6 +735,65 @@ export class OpenProjectClient {
     return patchRes.status === 200
   }
 
+  /**
+   * True if the work package already appears in ANY free/basic board column
+   * (i.e. it is present in some widget's id filter). Used to keep placement
+   * idempotent: if the card is already on the board — possibly moved by the user
+   * to a different column — re-placing it would duplicate it.
+   */
+  async boardContainsWorkPackage(boardId: number, wpId: string | number): Promise<boolean> {
+    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
+    if (!gridRes.ok) return false
+    const grid = await gridRes.json()
+    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+    const target = String(wpId)
+    return widgets.some((w: any) => {
+      const values: any[] = w?.options?.filters?.[0]?.id?.values || []
+      return values.map(String).includes(target)
+    })
+  }
+
+  /**
+   * Reconciles a work package onto a free/basic board so it sits in EXACTLY one
+   * column: adds it to the target widget's id filter and removes it from every
+   * other column's filter in a single grid PATCH. Idempotent — a no-op when the
+   * card is already only in the target column — so it moves a card without ever
+   * duplicating it. Use this when the user has chosen a specific column in-app.
+   */
+  async setBoardCardColumn(boardId: number, targetWidgetId: number, wpId: string | number): Promise<boolean> {
+    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
+    if (!gridRes.ok) return false
+    const grid = await gridRes.json()
+    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+    const target = String(wpId)
+
+    let changed = false
+    const updatedWidgets = widgets.map((w: any) => {
+      const values: string[] = (w?.options?.filters?.[0]?.id?.values || []).map(String)
+      const has = values.includes(target)
+      if (w.id === targetWidgetId) {
+        if (has) return w
+        changed = true
+        const merged = Array.from(new Set([...values, target]))
+        return { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: merged } }] } }
+      }
+      // Any other column that currently holds the card: drop it (that's the "move").
+      if (!has) return w
+      changed = true
+      const filtered = values.filter((v) => v !== target)
+      return { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: filtered } }] } }
+    })
+
+    if (!changed) return true // already correct — nothing to write
+
+    const patchRes = await this.apiFetch(`/api/v3/grids/${boardId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ widgets: updatedWidgets }),
+    })
+    return patchRes.status === 200
+  }
+
   async addWorkPackageComment(wpId: string | number, markdown: string): Promise<boolean> {
     const res = await this.apiFetch(
       `/api/v3/work_packages/${wpId}/activities`,
