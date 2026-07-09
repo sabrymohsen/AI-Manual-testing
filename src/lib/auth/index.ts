@@ -1,6 +1,8 @@
 import bcrypt from "bcryptjs"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/db"
+import { getTrialDays } from "@/lib/settings"
+import { daysToDate } from "@/lib/trial"
 
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET
 if (!NEXTAUTH_SECRET) {
@@ -162,8 +164,22 @@ export async function registerUser(
   }
 
   const passwordHash = await hashPassword(password)
+
+  // New signups start on a Pro free trial (configurable in the admin panel).
+  // When the trial elapses they are auto-downgraded to Free (see getSession /
+  // expireDueTrials). A trial length of 0 means "no trial" → straight to Free.
+  const trialDays = await getTrialDays()
+  const now = new Date()
+  const startsTrial = trialDays > 0
   const user = await prisma.user.create({
-    data: { email, passwordHash, name },
+    data: {
+      email,
+      passwordHash,
+      name,
+      plan: startsTrial ? "Pro" : "Free",
+      trialStartedAt: startsTrial ? now : null,
+      trialEndsAt: startsTrial ? daysToDate(trialDays, now) : null,
+    },
   })
 
   const authUser: AuthUser = { id: user.id, email: user.email, name: user.name, role: user.role as "User" | "Admin" }
@@ -206,9 +222,15 @@ export async function getSession(): Promise<AuthSession | null> {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { id: true, email: true, name: true, role: true, isActive: true },
+    select: { id: true, email: true, name: true, role: true, isActive: true, plan: true, trialEndsAt: true },
   })
   if (!dbUser || dbUser.isActive === false) return null
+
+  // Lazily downgrade this user if their Pro trial has elapsed (paid Pro users
+  // have trialEndsAt = null and are unaffected).
+  if (dbUser.plan === "Pro" && dbUser.trialEndsAt && dbUser.trialEndsAt.getTime() <= Date.now()) {
+    await prisma.user.update({ where: { id: dbUser.id }, data: { plan: "Free" } })
+  }
 
   const authUser: AuthUser = {
     id: dbUser.id,

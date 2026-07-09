@@ -72,7 +72,8 @@ export async function POST(request: Request) {
       }),
       prisma.user.update({
         where: { id: userId },
-        data: { plan }
+        // A paid plan clears any trial window so it never auto-downgrades.
+        data: { plan, trialEndsAt: null }
       })
     ])
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAdmin, unauthorizedResponse, badRequestResponse, forbiddenResponse } from "@/lib/api-guards"
 import { hashPassword } from "@/lib/auth"
+import { expireDueTrials } from "@/lib/trial"
 
 // GET /api/admin/users - List all users
 export async function GET(request: Request) {
@@ -12,6 +13,9 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Keep plans honest before listing: downgrade any elapsed Pro trials.
+    await expireDueTrials()
+
     const users = await prisma.user.findMany({
       select: {
         id: true,
@@ -20,6 +24,8 @@ export async function GET(request: Request) {
         plan: true,
         role: true,
         isActive: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
         createdAt: true,
         _count: {
           select: {

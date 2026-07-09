@@ -209,6 +209,12 @@ model User {
   plan         UserPlan   @default(Free)
   role         UserRole   @default(User)
   isActive     Boolean    @default(true)
+  // Free-trial lifecycle. On signup a user gets a Pro trial: plan=Pro with
+  // trialEndsAt in the future. When trialEndsAt elapses they are downgraded to
+  // Free (trialEndsAt is kept, in the past, so it reads as an "expired trial").
+  // A paid Pro user has trialEndsAt = null (never auto-downgrades).
+  trialStartedAt DateTime?
+  trialEndsAt    DateTime?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
@@ -216,6 +222,13 @@ model User {
   auditLogs    AuditLog[]
   reportedBugs BugReport[] @relation("BugReporter")
   transactions Transaction[]
+}
+
+// Generic platform key/value settings (e.g. default trial length). Admin-editable.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model PricingPlan {
