@@ -8,9 +8,14 @@ export async function GET() {
 
   const user = await prisma.user.findUnique({
     where: { id: auth.session!.user.id },
-    select: { id: true, email: true, name: true, plan: true, role: true },
+    select: { id: true, email: true, name: true, plan: true, role: true, trialStartedAt: true, trialEndsAt: true },
   })
   if (!user) return unauthorizedResponse("User not found")
 
-  return NextResponse.json({ user })
+  const trialActive = !!user.trialEndsAt && user.trialEndsAt.getTime() > Date.now()
+  const trialDaysRemaining = user.trialEndsAt
+    ? Math.max(0, Math.ceil((user.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : 0
+
+  return NextResponse.json({ user: { ...user, trialActive, trialDaysRemaining } })
 }

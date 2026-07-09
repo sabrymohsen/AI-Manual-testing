@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAdmin, unauthorizedResponse, badRequestResponse, forbiddenResponse, notFoundResponse } from "@/lib/api-guards"
 import { hashPassword } from "@/lib/auth"
+import { getTrialDays } from "@/lib/settings"
+import { daysToDate } from "@/lib/trial"
 
 // PATCH /api/admin/users/[userId] - Toggle isActive or change Plan/Role
 export async function PATCH(
@@ -23,7 +25,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { isActive, plan, role, name, email, password } = body
+    const { isActive, plan, role, name, email, password, extendDays, reactivateTrial } = body
 
     if (isActive === false && auth.session!.user.id === userId) {
       return badRequestResponse("Cannot deactivate your own admin account")
@@ -40,11 +42,34 @@ export async function PATCH(
       return badRequestResponse("Password must be at least 6 characters")
     }
 
+    // Trial operations take priority over a raw `plan` change. A manual plan
+    // assignment (paid grant / manual downgrade) always clears the trial so the
+    // account never auto-downgrades again.
+    const trialData: { plan?: "Free" | "Pro"; trialStartedAt?: Date | null; trialEndsAt?: Date | null } = {}
+    if (reactivateTrial) {
+      const days = await getTrialDays()
+      trialData.plan = "Pro"
+      trialData.trialStartedAt = new Date()
+      trialData.trialEndsAt = daysToDate(days)
+    } else if (extendDays !== undefined) {
+      const n = Number(extendDays)
+      if (!Number.isFinite(n) || n <= 0) {
+        return badRequestResponse("extendDays must be a positive number")
+      }
+      // Extend from the later of now / current end so an expired trial revives.
+      const base = user.trialEndsAt && user.trialEndsAt.getTime() > Date.now() ? user.trialEndsAt : new Date()
+      trialData.plan = "Pro"
+      trialData.trialEndsAt = daysToDate(n, base)
+    } else if (plan !== undefined) {
+      trialData.plan = plan
+      trialData.trialEndsAt = null
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
         ...(isActive !== undefined && { isActive }),
-        ...(plan !== undefined && { plan }),
+        ...trialData,
         ...(role !== undefined && { role }),
         ...(name !== undefined && { name }),
         ...(email !== undefined && { email }),
@@ -57,6 +82,8 @@ export async function PATCH(
         plan: true,
         role: true,
         isActive: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
         createdAt: true
       }
     })

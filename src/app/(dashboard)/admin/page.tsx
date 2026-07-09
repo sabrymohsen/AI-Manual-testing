@@ -34,6 +34,8 @@ interface UserListItem {
   plan: "Free" | "Pro"
   role: "User" | "Admin"
   isActive: boolean
+  trialStartedAt?: string | null
+  trialEndsAt?: string | null
   createdAt: string
   _count: {
     projects: number
@@ -173,10 +175,11 @@ function AdminDashboardContent() {
     setLoading(true)
     setErrorMsg(null)
     try {
-      const [uRes, pRes, tRes] = await Promise.all([
+      const [uRes, pRes, tRes, sRes] = await Promise.all([
         fetch("/api/admin/users"),
         fetch("/api/admin/pricing-plans"),
-        fetch("/api/admin/transactions")
+        fetch("/api/admin/transactions"),
+        fetch("/api/admin/settings")
       ])
 
       if (!uRes.ok || !pRes.ok || !tRes.ok) {
@@ -190,6 +193,11 @@ function AdminDashboardContent() {
       setUsers(uData.users || [])
       setPricingPlans(pData.plans || [])
       setTransactions(tData.transactions || [])
+
+      if (sRes.ok) {
+        const sData = await sRes.json()
+        if (typeof sData.settings?.trialDays === "number") setTrialDays(sData.settings.trialDays)
+      }
     } catch (err: any) {
       console.error(err)
       setErrorMsg(err.message || "Failed to load dashboard parameters.")
@@ -227,12 +235,56 @@ function AdminDashboardContent() {
       })
       if (res.ok) {
         triggerToast(`User plan updated to ${newPlan}`)
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: newPlan } : u))
+        // A manual plan change clears the trial server-side; mirror that locally.
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: newPlan, trialEndsAt: null } : u))
       } else {
         triggerToast("Failed to update user plan", true)
       }
     } catch {
       triggerToast("Network error updating plan", true)
+    }
+  }
+
+  // Persist the default trial length (admin platform setting).
+  const saveTrialSettings = async () => {
+    setSavingTrial(true)
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trialDays })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        if (typeof data.settings?.trialDays === "number") setTrialDays(data.settings.trialDays)
+        triggerToast(`Default trial length saved: ${data.settings?.trialDays ?? trialDays} days`)
+      } else {
+        triggerToast(data.error || "Failed to save trial settings", true)
+      }
+    } catch {
+      triggerToast("Network error saving trial settings", true)
+    } finally {
+      setSavingTrial(false)
+    }
+  }
+
+  // Extend or (re)activate a user's trial via the per-user admin endpoint.
+  const runTrialAction = async (userId: string, payload: { extendDays: number } | { reactivateTrial: true }, successMsg: string) => {
+    try {
+      const res = await fetch(`/api/admin/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      const data = await res.json()
+      if (res.ok) {
+        triggerToast(successMsg)
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...data.user } : u))
+      } else {
+        triggerToast(data.error || "Trial update failed", true)
+      }
+    } catch {
+      triggerToast("Network error updating trial", true)
     }
   }
 
@@ -442,6 +494,11 @@ function AdminDashboardContent() {
       (u.name && u.name.toLowerCase().includes(q))
     )
   }, [users, searchQuery])
+
+  // Users who have (or had) a trial window, respecting the search filter.
+  const trialUsers = useMemo(() => {
+    return filteredUsers.filter((u) => u.role !== "Admin" && !!u.trialEndsAt)
+  }, [filteredUsers])
 
   const filteredTransactions = useMemo(() => {
     const q = searchQuery.toLowerCase()
@@ -847,15 +904,9 @@ function AdminDashboardContent() {
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-black uppercase">Days</span>
                   </div>
                   <Button
-                    onClick={() => {
-                      setSavingTrial(true)
-                      setTimeout(() => {
-                        setSavingTrial(false)
-                        triggerToast(`Default trial length updated to ${trialDays} days!`)
-                      }, 800)
-                    }}
+                    onClick={saveTrialSettings}
                     disabled={savingTrial}
-                    className="bg-indigo-650 text-white hover:bg-indigo-700 text-xs font-bold rounded-xl h-9"
+                    className="bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold rounded-xl h-9"
                   >
                     {savingTrial ? "Saving..." : "Save Settings"}
                   </Button>
@@ -881,21 +932,23 @@ function AdminDashboardContent() {
                       </tr>
                     </thead>
                     <tbody className="divide-y text-slate-650">
-                      {filteredUsers
-                        .filter((u) => u.plan === "Free" && u.role !== "Admin")
-                        .map((user, idx) => {
+                      {trialUsers.map((user, idx) => {
                           const regDate = new Date(user.createdAt)
-                          const diffTime = Date.now() - regDate.getTime()
-                          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-                          const remaining = Math.max(0, trialDays - diffDays)
+                          const endsAt = user.trialEndsAt ? new Date(user.trialEndsAt) : null
+                          const startedAt = user.trialStartedAt ? new Date(user.trialStartedAt) : null
+                          const remainingMs = endsAt ? endsAt.getTime() - Date.now() : 0
+                          const remaining = remainingMs > 0 ? Math.ceil(remainingMs / (1000 * 60 * 60 * 24)) : 0
                           const isExpired = remaining <= 0
+                          const lengthDays = startedAt && endsAt
+                            ? Math.max(1, Math.round((endsAt.getTime() - startedAt.getTime()) / (1000 * 60 * 60 * 24)))
+                            : null
 
                           return (
                             <tr key={user.id} className="hover:bg-slate-50/30 transition-colors">
                               <td className="p-4 text-center text-slate-350 font-bold">{idx + 1}</td>
                               <td className="p-4 font-bold text-slate-900 select-all">{user.email}</td>
                               <td className="p-4 font-semibold text-slate-450">{regDate.toLocaleDateString()}</td>
-                              <td className="p-4 font-semibold text-slate-500">{trialDays} Days</td>
+                              <td className="p-4 font-semibold text-slate-500">{lengthDays ? `${lengthDays} Days` : "—"}</td>
                               <td className="p-4 text-center font-black text-slate-700">
                                 {isExpired ? (
                                   <span className="text-rose-600">Expired</span>
@@ -916,7 +969,7 @@ function AdminDashboardContent() {
                                 {!isExpired ? (
                                   <Button
                                     variant="outline"
-                                    onClick={() => triggerToast(`Trial extended by 7 days for ${user.email}!`)}
+                                    onClick={() => runTrialAction(user.id, { extendDays: 7 }, `Trial extended by 7 days for ${user.email}`)}
                                     className="h-7 text-[10px] font-bold border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
                                   >
                                     Extend +7d
@@ -924,7 +977,7 @@ function AdminDashboardContent() {
                                 ) : (
                                   <Button
                                     variant="outline"
-                                    onClick={() => triggerToast(`Trial reactivated (14 days) for ${user.email}!`)}
+                                    onClick={() => runTrialAction(user.id, { reactivateTrial: true }, `Trial reactivated for ${user.email}`)}
                                     className="h-7 text-[10px] font-bold border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50"
                                   >
                                     Reactivate
@@ -932,7 +985,8 @@ function AdminDashboardContent() {
                                 )}
                                 <Button
                                   onClick={() => changeUserPlan(user.id, "Pro")}
-                                  className="h-7 text-[10px] font-black bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg"
+                                  className="h-7 text-[10px] font-black bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                                  title="Grant paid Pro (clears the trial)"
                                 >
                                   Activate Pro
                                 </Button>
@@ -940,9 +994,9 @@ function AdminDashboardContent() {
                             </tr>
                           )
                         })}
-                      {filteredUsers.filter((u) => u.plan === "Free" && u.role !== "Admin").length === 0 && (
+                      {trialUsers.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="p-8 text-center text-slate-400 italic">No users currently on free trial.</td>
+                          <td colSpan={7} className="p-8 text-center text-slate-400 italic">No users currently or previously on a free trial.</td>
                         </tr>
                       )}
                     </tbody>
