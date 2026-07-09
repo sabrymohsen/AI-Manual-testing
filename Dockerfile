@@ -16,8 +16,9 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV production
-# Prisma's engine binaries need libc6-compat on Alpine (query + schema engines).
-RUN apk add --no-cache libc6-compat
+# Prisma's engine binaries need libc6-compat + openssl on Alpine (query + schema
+# engines); openssl also lets Prisma detect the right libssl version.
+RUN apk add --no-cache libc6-compat openssl
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
