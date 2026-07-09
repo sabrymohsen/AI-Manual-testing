@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "worker": "tsx src/workers/test-runner.worker.ts",
+    "workers": "tsx src/workers/index.ts",
     "recorder-worker": "tsx src/workers/recorder.worker.ts",
     "test": "vitest",
     "test:e2e": "playwright test",
