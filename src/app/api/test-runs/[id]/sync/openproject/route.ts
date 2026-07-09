@@ -98,7 +98,7 @@ export async function POST(
         commentBody += `\n\`\`\`\n${sr.errorDetails}\n\`\`\`\n`
       }
     }
-    commentBody += `\n*Synced from AI Manual QA Tester*`
+    commentBody += `\n*Synced from QA Engine*`
 
     // Post comment
     const commentOk = await client.addWorkPackageComment(mapping.externalId, commentBody)

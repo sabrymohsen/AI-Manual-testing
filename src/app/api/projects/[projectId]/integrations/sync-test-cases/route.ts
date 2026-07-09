@@ -65,7 +65,7 @@ function buildTestCaseDescription(tc: any): string {
   }
 
   md += `## Execution Status\nNot Executed\n\n`
-  md += `*Generated from [AI Manual QA Tester](${APP_URL})*`
+  md += `*Generated from [QA Engine](${APP_URL})*`
   return md
 }
 

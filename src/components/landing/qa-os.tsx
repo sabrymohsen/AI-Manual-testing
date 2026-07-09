@@ -1,13 +1,13 @@
 import { Terminal, Zap } from "lucide-react"
 
-/** QA OS ENGINE brand mark used on the public pages (landing + auth). */
+/** QA Engine brand mark used on the public pages (landing + auth). */
 export function BrandMark({ size = "base" }: { size?: "base" | "sm" }) {
   return (
     <span className={`inline-flex items-center gap-2 font-black tracking-tight text-white ${size === "sm" ? "text-sm" : "text-base"}`}>
       <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/30">
         <Zap className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} fill="currentColor" />
       </span>
-      QA&nbsp;OS&nbsp;<span className="text-violet-400">ENGINE</span>
+      QA&nbsp;<span className="text-violet-400">Engine</span>
     </span>
   )
 }

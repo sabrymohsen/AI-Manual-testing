@@ -255,7 +255,7 @@ async function syncRunResultToOpenProject(
       commentBody += `**Actual:** ${failedStep.actualResult || failedStep.errorDetails || "N/A"}\n\n`
     }
 
-    commentBody += `*Synced from AI Manual QA Tester*`
+    commentBody += `*Synced from QA Engine*`
 
     // POST comment to work package
     const commentOk = await client.addWorkPackageComment(wpId, commentBody)
@@ -355,7 +355,7 @@ async function syncBugToOpenProject(
     description += `## Expected Result\n${bug.expectedResult}\n\n`
     description += `## Actual Result\n${bug.actualResult}\n\n`
     description += `[View Report](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
-    description += `*Created automatically by AI Manual QA Tester*\n\n`
+    description += `*Created automatically by QA Engine*\n\n`
     description += `<!-- AI-Manual-QA-Tester:BugReport:${bug.id} -->`
 
     // Build _links

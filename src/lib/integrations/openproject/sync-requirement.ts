@@ -139,7 +139,7 @@ export async function syncRequirementToOpenProject(
     description += `\n`
   }
   description += `[View User Story](${APP_URL}/projects/${req.projectId}/requirements/${req.id})\n\n`
-  description += `*Synced by AI Manual QA Tester*\n\n`
+  description += `*Synced by QA Engine*\n\n`
   description += `<!-- AI-Manual-QA-Tester:Requirement:${req.id} -->`
 
   const subject = `[STORY] ${req.title}`

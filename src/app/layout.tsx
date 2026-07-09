@@ -6,8 +6,12 @@ import { AlertProvider } from "@/components/ui/alert-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "AI Manual QA Tester",
+  title: "QA Engine",
   description: "Create and execute browser-based functional tests with AI assistance",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
 }
 
 export default function RootLayout({

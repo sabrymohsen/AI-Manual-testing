@@ -209,7 +209,7 @@ export default async function Home() {
           </div>
         </div>
         <footer className="border-t border-white/5 py-6 text-center">
-          <p className="text-[11px] font-mono text-slate-600">© {new Date().getFullYear()} QA OS ENGINE — all systems nominal</p>
+          <p className="text-[11px] font-mono text-slate-600">© {new Date().getFullYear()} QA Engine — all systems nominal</p>
         </footer>
       </section>
     </div>

@@ -91,7 +91,7 @@ export async function POST(
   }
 
   md += `## Latest Execution Result\nNot Executed\n\n`
-  md += `*Generated from [AI Manual QA Tester](${APP_URL})*\n\n`
+  md += `*Generated from [QA Engine](${APP_URL})*\n\n`
   md += `<!-- AI-Manual-QA-Tester:TestCase:${testCase.id} -->`
 
   const subject = `[TC] ${testCase.title}`
