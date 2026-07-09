@@ -106,33 +106,57 @@ async function syncBugAttachmentsToWp(
 }
 
 /**
- * Makes a synced bug work package show up on the given OpenProject board.
- * - Free/basic boards (the OpenProject CE case): append the WP id to the first
- *   column widget's filter, preserving any WPs already placed there.
- * - Attribute boards (version/assignee): set that attribute so the WP lands in
- *   the first column. Status boards need no action — the WP shows by its status.
+ * Places / moves a synced bug work package on the given OpenProject board,
+ * idempotently — a re-sync never produces a duplicate card.
+ *
+ * Column resolution: an explicitly chosen column (bug.openProjectBoardColumnId)
+ * is authoritative; otherwise the first column is only a fallback for brand-new
+ * cards.
+ *
+ * - Free/basic boards:
+ *     • explicit column → reconcile the card to sit in EXACTLY that column
+ *       (moves it out of any other column; no-op if already there). This is what
+ *       makes an in-app column change actually move the card on re-sync.
+ *     • no explicit column → if the card is already on the board anywhere, leave
+ *       it where it is (respects a manual move; never re-adds a duplicate); only
+ *       place a genuinely new card into the first column.
+ * - Attribute boards (version/assignee): set that attribute when a column is
+ *   chosen, or when first creating the card. On a plain re-sync with no chosen
+ *   column we leave the attribute as-is so we don't fight the board's state.
+ * - Status boards: nothing to do — the WP shows by its status.
+ *
  * Best-effort: never throws, so a board/permission issue can't fail the sync.
  */
 async function placeBugOnBoard(
   client: OpenProjectClient,
   boardId: string,
   wpId: string,
-  columnWidgetId?: string | null
+  columnWidgetId: string | null | undefined,
+  isCreate: boolean
 ): Promise<void> {
   try {
     const columns = await client.getBoardColumns(Number(boardId))
     if (!columns.length) return
-    // Place under the explicitly chosen column when provided, else the first column.
-    const col =
-      (columnWidgetId && columns.find(c => String(c.widgetId) === String(columnWidgetId))) ||
-      columns[0]
+    const explicit = columnWidgetId
+      ? columns.find(c => String(c.widgetId) === String(columnWidgetId)) || null
+      : null
+    const col = explicit || columns[0]
 
     if (col.columnType === "basic") {
-      await client.addWorkPackageToBoardWidget(Number(boardId), col.widgetId, wpId)
+      if (explicit) {
+        // Authoritative target column → move the card there (single column only).
+        await client.setBoardCardColumn(Number(boardId), col.widgetId, wpId)
+      } else if (!(await client.boardContainsWorkPackage(Number(boardId), wpId))) {
+        // Not on the board yet → drop a new card into the first column.
+        await client.addWorkPackageToBoardWidget(Number(boardId), col.widgetId, wpId)
+      }
       return
     }
 
     if (col.attributeId && (col.columnType === "version" || col.columnType === "assignee")) {
+      // Only set the attribute when the user chose the column or the card is new;
+      // otherwise leave the WP's current value untouched on re-sync.
+      if (!explicit && !isCreate) return
       const links: Record<string, { href: string }> = {}
       if (col.columnType === "version") links.version = { href: client.versionHref(col.attributeId) }
       else if (col.columnType === "assignee") links.assignee = { href: client.assigneeHref(col.attributeId) }
@@ -175,6 +199,31 @@ function applyBugCustomFields(
     }
   }
   return body
+}
+
+/**
+ * Maps the app-side "Bug Source" value onto the OpenProject list custom field it
+ * came from (auto-detected by a name matching /source/i on the bug type), so the
+ * chosen source is reflected on the work package when syncing. Best-effort: a
+ * missing field / unmatched value / API error just leaves the source unset.
+ */
+async function applyBugSource(
+  client: OpenProjectClient,
+  bugTypeId: string | null,
+  source: string | null | undefined,
+  links: Record<string, any>
+): Promise<void> {
+  if (!source || !bugTypeId) return
+  try {
+    const fields = await client.getTypeCustomFields(bugTypeId, { onlyRequired: false })
+    const sf = fields.find(f => /source/i.test(f.name) && f.allowedValues.length > 0)
+    if (!sf) return
+    const match = sf.allowedValues.find(v => v.title === source)
+    if (!match) return
+    links[sf.key] = sf.isMulti ? [{ href: match.href }] : { href: match.href }
+  } catch (err: any) {
+    console.warn(`[sync-bug-report] Bug source mapping skipped: ${err?.message}`)
+  }
 }
 
 export type BugSyncResult =
@@ -264,6 +313,7 @@ export async function syncBugReportToOpenProject(
 
   // _links can hold single ({href}) or multi ([{href}]) values (multi-value custom fields).
   const links: Record<string, any> = {}
+  let bugTypeId: string | null = integration.bugTypeId || null
   if (integration.bugTypeId) {
     links.type = { href: client.typeHref(integration.bugTypeId) }
   } else {
@@ -273,6 +323,7 @@ export async function syncBugReportToOpenProject(
       const types = await client.getTypes()
       const bugType = types.find(t => t.name.toLowerCase() === "bug")
       if (bugType) {
+        bugTypeId = String(bugType.id)
         links.type = { href: client.typeHref(String(bugType.id)) }
         // Persist it so the integration config reflects it and future syncs skip
         // the lookup. Best-effort — a failure here must not fail the sync.
@@ -323,6 +374,9 @@ export async function syncBugReportToOpenProject(
   // are merged into `links`; scalar/formattable fields become body properties.
   const customFieldBody = applyBugCustomFields(bug.openProjectCustomFields, links)
 
+  // Reflect the app-side "Bug Source" onto its OpenProject list field, if any.
+  await applyBugSource(client, bugTypeId, bug.source, links)
+
   if (existingMapping) {
     const wp = await client.getWorkPackage(existingMapping.externalId)
     await client.updateWorkPackage(
@@ -336,9 +390,13 @@ export async function syncBugReportToOpenProject(
       wp.lockVersion
     )
 
+    // Re-sync placement is idempotent (see placeBugOnBoard): an explicit in-app
+    // column moves the card there; otherwise a card already on the board is left
+    // untouched. So this reflects an in-app board/column change without ever
+    // duplicating the card.
     const boardId = bug.openProjectBoardId || integration.targetBoardId
     if (boardId) {
-      await placeBugOnBoard(client, boardId, existingMapping.externalId, bug.openProjectBoardColumnId)
+      await placeBugOnBoard(client, boardId, existingMapping.externalId, bug.openProjectBoardColumnId, false)
     }
 
     await syncBugAttachmentsToWp(client, existingMapping.externalId, bug.screenshotPath, bug.bugAttachments)
@@ -366,7 +424,7 @@ export async function syncBugReportToOpenProject(
 
   const boardId = bug.openProjectBoardId || integration.targetBoardId
   if (boardId) {
-    await placeBugOnBoard(client, boardId, String(wp.id), bug.openProjectBoardColumnId)
+    await placeBugOnBoard(client, boardId, String(wp.id), bug.openProjectBoardColumnId, true)
   }
 
   await syncBugAttachmentsToWp(client, String(wp.id), bug.screenshotPath, bug.bugAttachments)

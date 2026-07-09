@@ -9,6 +9,7 @@ import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
+import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 import { 
   Bug, 
   Search, 
@@ -37,7 +38,9 @@ import {
   Eye,
   PlusCircle,
   FolderMinus,
-  CheckSquare
+  CheckSquare,
+  UserPlus,
+  Kanban
 } from "lucide-react"
 
 interface TestStep {
@@ -79,6 +82,7 @@ interface BugReport {
   resolution?: "Fixed" | "WontFix" | "CannotReproduce" | "Duplicate" | "ByDesign" | null
   resolutionNote?: string | null
   tags?: string[]
+  source?: string | null
   reporter?: { id: string; name: string | null; email: string } | null
   environment: string
   roleUsed: string
@@ -133,6 +137,20 @@ interface OpBoardColumn {
 
 type TabType = "overview" | "evidence" | "steps" | "test" | "activity" | "openproject"
 type ViewMode = "list" | "board"
+
+/**
+ * Normalize a stored asset reference into a URL the browser can load.
+ * - Uploaded bug evidence is stored under /uploads/... (served statically).
+ * - Live QA session screenshots/recordings are stored as storage-relative paths
+ *   (e.g. "screenshots/liveqa-….png") that are only reachable through the
+ *   authenticated /api/files proxy — a raw <img src> to those 404s.
+ */
+function assetUrl(p?: string | null): string | null {
+  if (!p) return null
+  if (/^(https?:|data:|blob:)/i.test(p)) return p
+  if (p.startsWith("/uploads/") || p.startsWith("/api/files/")) return p
+  return `/api/files/${encodeURIComponent(p.replace(/^\/+/, ""))}`
+}
 
 export default function ProjectBugReportsPage() {
   const params = useParams()
@@ -189,10 +207,16 @@ export default function ProjectBugReportsPage() {
   // Photo upload state
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
-  // Multi-select + bulk parent assignment
+  // Multi-select + bulk actions (assignee / board+column / parent / delete)
   const [selectedBugIds, setSelectedBugIds] = useState<string[]>([])
   const [bulkParentValue, setBulkParentValue] = useState("")
+  const [bulkAssigneeValue, setBulkAssigneeValue] = useState("")
+  const [bulkBoardValue, setBulkBoardValue] = useState("")
+  const [bulkColumnValue, setBulkColumnValue] = useState("")
+  const [bulkBoardColumns, setBulkBoardColumns] = useState<OpBoardColumn[]>([])
+  const [loadingBulkColumns, setLoadingBulkColumns] = useState(false)
   const [bulkApplying, setBulkApplying] = useState(false)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
 
   // Delete confirmation (offers app-only vs. app + OpenProject)
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; synced: boolean } | null>(null)
@@ -220,6 +244,8 @@ export default function ProjectBugReportsPage() {
   const [loadingColumns, setLoadingColumns] = useState(false)
   // Required custom fields on the OpenProject bug type (e.g. Found in Build, Bug Componant)
   const [opBugFields, setOpBugFields] = useState<OpBugField[]>([])
+  // "Bug Source" dropdown options, pulled from an OpenProject list field
+  const [opSourceOptions, setOpSourceOptions] = useState<string[]>([])
   // Buffered per-bug custom-field values: { fieldKey: { kind, value } }
   const [editCustomFields, setEditCustomFields] = useState<Record<string, { kind: string; value: any }>>({})
 
@@ -253,6 +279,14 @@ export default function ProjectBugReportsPage() {
       .then(res => (res.ok ? res.json() : { fields: [] }))
       .then(data => setOpBugFields(Array.isArray(data.fields) ? data.fields : []))
       .catch(() => setOpBugFields([]))
+  }, [projectId])
+
+  // Load "Bug Source" options from OpenProject (no-op if unconfigured / no field)
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/integrations/openproject/source-options`)
+      .then(res => (res.ok ? res.json() : { options: [] }))
+      .then(data => setOpSourceOptions(Array.isArray(data.options) ? data.options : []))
+      .catch(() => setOpSourceOptions([]))
   }, [projectId])
 
   // Load bugs list with queries
@@ -590,8 +624,28 @@ export default function ProjectBugReportsPage() {
     setSelectedBugIds(prev => (prev.length === bugs.length ? [] : bugs.map(b => b.id)))
   }
 
-  // Apply the same OpenProject parent work package to every selected bug
-  const handleBulkAssignParent = async () => {
+  // Load the columns of a board for the BULK toolbar (kept separate from the
+  // detail drawer's opBoardColumns so the two selectors don't clobber each other).
+  const loadBulkBoardColumns = async (boardId: string) => {
+    if (!boardId) {
+      setBulkBoardColumns([])
+      return
+    }
+    setLoadingBulkColumns(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/board-columns?boardId=${boardId}`)
+      const data = await res.json()
+      setBulkBoardColumns(Array.isArray(data.columns) ? data.columns : [])
+    } catch {
+      setBulkBoardColumns([])
+    } finally {
+      setLoadingBulkColumns(false)
+    }
+  }
+
+  // Generic bulk PUT: apply the same fields to every selected bug. Selection is
+  // kept so several bulk changes can be chained; the user clears when done.
+  const handleBulkUpdate = async (fields: Record<string, any>, label: string) => {
     if (selectedBugIds.length === 0) return
     setBulkApplying(true)
     try {
@@ -600,21 +654,78 @@ export default function ProjectBugReportsPage() {
           fetch(`/api/bug-reports/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ openProjectParentId: bulkParentValue })
+            body: JSON.stringify(fields)
           })
         )
       )
       const failed = results.filter(r => !r.ok).length
-      if (failed === 0) {
-        showToastMsg(`Parent applied to ${selectedBugIds.length} bug(s).`)
-      } else {
-        showToastMsg(`${failed} of ${selectedBugIds.length} update(s) failed.`, "error")
-      }
-      setSelectedBugIds([])
-      setBulkParentValue("")
+      if (failed === 0) showToastMsg(`${label} applied to ${selectedBugIds.length} bug(s).`)
+      else showToastMsg(`${failed} of ${selectedBugIds.length} update(s) failed.`, "error")
       loadBugsList()
-    } catch (err) {
-      showToastMsg("Network error assigning parent", "error")
+    } catch {
+      showToastMsg(`Network error applying ${label.toLowerCase()}`, "error")
+    } finally {
+      setBulkApplying(false)
+    }
+  }
+
+  const handleBulkAssignParent = () => handleBulkUpdate({ openProjectParentId: bulkParentValue }, "Parent")
+  const handleBulkAssignee = () => handleBulkUpdate({ assignedTo: bulkAssigneeValue }, "Assignee")
+
+  // Bulk board/column: for bugs already synced to OpenProject, run the sync so
+  // the card actually MOVES to the chosen column (placeBugOnBoard reconciles it);
+  // for not-yet-synced bugs, just store the target for their first sync.
+  const handleBulkBoardColumn = async () => {
+    if (selectedBugIds.length === 0 || !bulkBoardValue) return
+    setBulkApplying(true)
+    try {
+      const results = await Promise.all(
+        selectedBugIds.map(id => {
+          const bug = bugs.find(b => b.id === id)
+          if (bug && bug.openProjectSyncStatus === "Synced") {
+            return fetch(`/api/bug-reports/${id}/sync/openproject`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ boardId: bulkBoardValue, boardColumnId: bulkColumnValue || null })
+            })
+          }
+          return fetch(`/api/bug-reports/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ openProjectBoardId: bulkBoardValue, openProjectBoardColumnId: bulkColumnValue || null })
+          })
+        })
+      )
+      const failed = results.filter(r => !r.ok).length
+      if (failed === 0) showToastMsg(`Board/column applied to ${selectedBugIds.length} bug(s).`)
+      else showToastMsg(`${failed} of ${selectedBugIds.length} update(s) failed.`, "error")
+      loadBugsList()
+    } catch {
+      showToastMsg("Network error applying board/column", "error")
+    } finally {
+      setBulkApplying(false)
+    }
+  }
+
+  // Bulk delete every selected bug (optionally removing the linked OP work package).
+  const performBulkDelete = async (deleteRemote: boolean) => {
+    if (selectedBugIds.length === 0) return
+    setBulkApplying(true)
+    try {
+      const results = await Promise.all(
+        selectedBugIds.map(id =>
+          fetch(`/api/bug-reports/${id}?deleteRemote=${deleteRemote ? "true" : "false"}`, { method: "DELETE" })
+        )
+      )
+      const failed = results.filter(r => !r.ok).length
+      if (failed === 0) showToastMsg(`Deleted ${selectedBugIds.length} bug(s)${deleteRemote ? " (app + OpenProject)" : ""}.`)
+      else showToastMsg(`${failed} of ${selectedBugIds.length} deletion(s) failed.`, "error")
+      setBulkDeleteOpen(false)
+      setSelectedBugIds([])
+      if (selectedBugId && selectedBugIds.includes(selectedBugId)) setSelectedBugId(null)
+      loadBugsList()
+    } catch {
+      showToastMsg("Network error deleting bugs", "error")
     } finally {
       setBulkApplying(false)
     }
@@ -675,6 +786,55 @@ export default function ProjectBugReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Bulk delete confirmation */}
+      {bulkDeleteOpen && (() => {
+        const syncedCount = selectedBugIds.filter(id => bugs.find(b => b.id === id)?.openProjectSyncStatus === "Synced").length
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-[440px] bg-background rounded-2xl border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
+              <div className="space-y-1.5">
+                <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
+                  <Trash2 className="h-4.5 w-4.5 text-rose-600" /> Delete {selectedBugIds.length} Defect{selectedBugIds.length === 1 ? "" : "s"}
+                </h3>
+                <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                  This action is irreversible.
+                  {syncedCount > 0
+                    ? ` ${syncedCount} of these ${syncedCount === 1 ? "is" : "are"} synced to OpenProject — choose whether to also delete the linked work package${syncedCount === 1 ? "" : "s"}.`
+                    : " None of these are synced to OpenProject."}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Button
+                  onClick={() => performBulkDelete(false)}
+                  disabled={bulkApplying}
+                  className="h-9 w-full bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                >
+                  {bulkApplying ? "Deleting…" : "Delete from app only"}
+                </Button>
+                {syncedCount > 0 && (
+                  <Button
+                    onClick={() => performBulkDelete(true)}
+                    disabled={bulkApplying}
+                    className="h-9 w-full bg-slate-800 hover:bg-slate-900 text-white font-bold"
+                  >
+                    {bulkApplying ? "Deleting…" : "Delete from app and OpenProject"}
+                  </Button>
+                )}
+                <Button
+                  onClick={() => setBulkDeleteOpen(false)}
+                  disabled={bulkApplying}
+                  variant="ghost"
+                  className="h-9 w-full font-bold text-slate-600"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       <AppPageHeader
         title="Bug Reports"
@@ -812,37 +972,108 @@ export default function ProjectBugReportsPage() {
         </div>
       </div>
 
-      {/* Bulk action bar: assign a shared OpenProject parent to multiple bugs at once */}
+      {/* Bulk action bar: assignee / board+column / parent / delete for many bugs at once */}
       {selectedBugIds.length > 0 && (
-        <div className="p-3 border border-indigo-100 bg-indigo-50/60 rounded-2xl flex flex-wrap items-center gap-3 shadow-sm">
-          <span className="flex items-center gap-1.5 font-extrabold text-indigo-700 text-[11px]">
-            <CheckSquare className="h-4 w-4" />
-            {selectedBugIds.length} selected
-          </span>
-          <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-            <Input
-              value={bulkParentValue}
-              onChange={(e) => setBulkParentValue(e.target.value)}
-              placeholder="Parent Task (OpenProject WP ID), e.g. 1234"
-              className="h-8 bg-background flex-1"
-            />
-            <Button
-              onClick={handleBulkAssignParent}
-              disabled={bulkApplying}
-              size="sm"
-              className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0"
-            >
-              {bulkApplying ? "Applying..." : "Assign Parent"}
-            </Button>
+        <div className="p-3 border border-indigo-100 bg-indigo-50/60 rounded-2xl space-y-2.5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 font-extrabold text-indigo-700 text-[11px]">
+              <CheckSquare className="h-4 w-4" />
+              {selectedBugIds.length} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={bulkApplying}
+                size="sm"
+                variant="ghost"
+                className="h-8 font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 shrink-0 gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+              <Button
+                onClick={() => setSelectedBugIds([])}
+                variant="ghost"
+                size="sm"
+                className="h-8 font-bold text-slate-600 shrink-0"
+              >
+                Clear
+              </Button>
+            </div>
           </div>
-          <Button
-            onClick={() => setSelectedBugIds([])}
-            variant="ghost"
-            size="sm"
-            className="h-8 font-bold text-slate-600 shrink-0"
-          >
-            Clear
-          </Button>
+
+          <div className="flex flex-wrap items-end gap-3">
+            {/* Assignee */}
+            <div className="flex items-end gap-1.5">
+              <div className="space-y-1">
+                <span className="text-[9px] font-extrabold uppercase tracking-wide text-indigo-600/80 flex items-center gap-1"><UserPlus className="h-3 w-3" /> Assignee</span>
+                {opMembers.length > 0 ? (
+                  <select
+                    value={bulkAssigneeValue}
+                    onChange={(e) => setBulkAssigneeValue(e.target.value)}
+                    className="h-8 rounded-md border bg-background px-2 text-xs font-bold min-w-[150px]"
+                  >
+                    <option value="">Unassigned</option>
+                    {opMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                ) : (
+                  <Input
+                    value={bulkAssigneeValue}
+                    onChange={(e) => setBulkAssigneeValue(e.target.value)}
+                    placeholder="Assignee email…"
+                    className="h-8 bg-background w-[150px]"
+                  />
+                )}
+              </div>
+              <Button onClick={handleBulkAssignee} disabled={bulkApplying} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0">Apply</Button>
+            </div>
+
+            {/* Board + column */}
+            {opBoards.length > 0 && (
+              <div className="flex items-end gap-1.5">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wide text-indigo-600/80 flex items-center gap-1"><Kanban className="h-3 w-3" /> Board</span>
+                  <select
+                    value={bulkBoardValue}
+                    onChange={(e) => { setBulkBoardValue(e.target.value); setBulkColumnValue(""); loadBulkBoardColumns(e.target.value) }}
+                    className="h-8 rounded-md border bg-background px-2 text-xs font-bold min-w-[140px]"
+                  >
+                    <option value="">— Board —</option>
+                    {opBoards.map(b => <option key={b.id} value={String(b.id)}>{b.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wide text-indigo-600/80">Column</span>
+                  <select
+                    value={bulkColumnValue}
+                    onChange={(e) => setBulkColumnValue(e.target.value)}
+                    disabled={!bulkBoardValue || loadingBulkColumns}
+                    className="h-8 rounded-md border bg-background px-2 text-xs font-bold min-w-[140px] disabled:opacity-50"
+                  >
+                    <option value="">{loadingBulkColumns ? "Loading…" : "First column"}</option>
+                    {bulkBoardColumns.map(c => <option key={c.widgetId} value={String(c.widgetId)}>{c.name}</option>)}
+                  </select>
+                </div>
+                <Button onClick={handleBulkBoardColumn} disabled={bulkApplying || !bulkBoardValue} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0">Apply</Button>
+              </div>
+            )}
+
+            {/* Parent */}
+            <div className="flex items-end gap-1.5">
+              <div className="space-y-1">
+                <span className="text-[9px] font-extrabold uppercase tracking-wide text-indigo-600/80 flex items-center gap-1"><Layers className="h-3 w-3" /> Parent WP</span>
+                <Input
+                  value={bulkParentValue}
+                  onChange={(e) => setBulkParentValue(e.target.value)}
+                  placeholder="e.g. 1234"
+                  className="h-8 bg-background w-[120px]"
+                />
+              </div>
+              <Button onClick={handleBulkAssignParent} disabled={bulkApplying} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0">Apply</Button>
+            </div>
+          </div>
+          {opBoards.length > 0 && (
+            <p className="text-[9px] text-indigo-500/70 font-semibold">Board/column moves already-synced bugs on OpenProject immediately; others store the target for their next sync.</p>
+          )}
         </div>
       )}
 
@@ -1363,6 +1594,27 @@ export default function ProjectBugReportsPage() {
                       )}
                     </div>
 
+                    {/* Bug Source — options pulled from an OpenProject list field */}
+                    {opSourceOptions.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-slate-500 text-[10px] uppercase block">Bug Source</Label>
+                        <select
+                          value={selectedBug.source || ""}
+                          onChange={(e) => handleInlineUpdate({ source: e.target.value } as any)}
+                          className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                        >
+                          <option value="">— Select source —</option>
+                          {/* Preserve any stored value not in the current option list */}
+                          {selectedBug.source && !opSourceOptions.includes(selectedBug.source) && (
+                            <option value={selectedBug.source}>{selectedBug.source}</option>
+                          )}
+                          {opSourceOptions.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="space-y-1">
                       <Label className="text-slate-500 text-[10px] uppercase block">Parent Task (OpenProject WP ID)</Label>
                       <Input
@@ -1514,11 +1766,11 @@ export default function ProjectBugReportsPage() {
                     </div>
                     {selectedBug.screenshotPath ? (
                       <div className="border rounded-2xl overflow-hidden shadow-sm">
-                        <img 
-                          src={selectedBug.screenshotPath} 
+                        <img
+                          src={assetUrl(selectedBug.screenshotPath)!}
                           alt="Bug Screenshot Evidence"
                           className="max-h-[300px] w-full object-contain bg-slate-100 hover:scale-[1.02] transition-transform cursor-pointer"
-                          onClick={() => window.open(selectedBug.screenshotPath!, "_blank")}
+                          onClick={() => window.open(assetUrl(selectedBug.screenshotPath)!, "_blank")}
                         />
                       </div>
                     ) : (
@@ -1533,9 +1785,9 @@ export default function ProjectBugReportsPage() {
                     <Label className="text-slate-550 text-[10px] uppercase">Web Video Recording (Session play)</Label>
                     {selectedBug.videoUrl ? (
                       <div className="border rounded-2xl overflow-hidden shadow-sm bg-black">
-                        <video 
-                          src={selectedBug.videoUrl} 
-                          controls 
+                        <video
+                          src={assetUrl(selectedBug.videoUrl)!}
+                          controls
                           className="w-full max-h-[300px]"
                         />
                       </div>
@@ -1673,6 +1925,13 @@ export default function ProjectBugReportsPage() {
                     <span className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60 block">
                       Linked User Stories ({linkedStoryIds.length})
                     </span>
+                    {(((selectedBug as any).requirements) || []).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {((selectedBug as any).requirements as any[]).map((l) => l.requirement && (
+                          <OpenOnBoardLink key={l.requirementId || l.requirement.id} projectId={projectId} requirementId={l.requirementId || l.requirement.id} requirementKey={l.requirement.requirementKey} />
+                        ))}
+                      </div>
+                    )}
                     <LinkedRequirementsSelector
                       projectId={projectId}
                       selectedIds={linkedStoryIds}
@@ -1862,6 +2121,7 @@ export default function ProjectBugReportsPage() {
         projectId={projectId}
         open={showCreateModal}
         onClose={() => setShowCreateModal(false)}
+        sourceOptions={opSourceOptions}
         onCreated={(bug, { syncedToOpenProject }) => {
           showToastMsg(`Defect ${bug.bugKey || ""} successfully reported!`)
           if (syncedToOpenProject) showToastMsg("Synchronised with OpenProject successfully!")

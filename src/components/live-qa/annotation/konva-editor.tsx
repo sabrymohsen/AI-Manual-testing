@@ -739,6 +739,44 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                 <input type="range" min={2} max={16} value={strokeWidth} onChange={(e) => store.setStrokeWidth(Number(e.target.value))} className="w-16 accent-indigo-600" aria-label="Stroke width" />
               </div>
 
+              {/* Contextual: text size — shown when the text tool is active or a
+                  text label is selected, so labels can be sized before/after typing. */}
+              {(tool === "text" || selected?.type === "text") && (
+                <div className="flex items-center gap-2 border-l pl-2">
+                  <Type className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                  <input
+                    type="range"
+                    min={12}
+                    max={96}
+                    step={2}
+                    value={selected?.type === "text" ? selected.fontSize || fontSize : fontSize}
+                    onChange={(e) => store.setFontSize(Number(e.target.value))}
+                    className="w-20 accent-indigo-600"
+                    aria-label="Text size"
+                    title="Text size"
+                  />
+                  <span className="text-[11px] font-semibold tabular-nums text-muted-foreground w-6">
+                    {selected?.type === "text" ? selected.fontSize || fontSize : fontSize}
+                  </span>
+                  <div className="flex items-center gap-0.5">
+                    {([["S", 18], ["M", 26], ["L", 40]] as const).map(([label, size]) => (
+                      <button
+                        key={label}
+                        onClick={() => store.setFontSize(size)}
+                        className={`h-6 w-6 rounded-md border text-[11px] font-bold ${
+                          (selected?.type === "text" ? selected.fontSize || fontSize : fontSize) === size
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-background text-muted-foreground"
+                        }`}
+                        title={`${label} (${size}px)`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Contextual: sticker picker */}
               {tool === "sticker" && (
                 <div className="flex items-center gap-1 border-l pl-2">

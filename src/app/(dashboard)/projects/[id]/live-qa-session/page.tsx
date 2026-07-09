@@ -153,6 +153,11 @@ export default function LiveQASessionPage() {
   // before the session ends).
   const [recording, setRecording] = useState(false)
   const [uploadingRecording, setUploadingRecording] = useState(false)
+
+  // Scenario step recording: OFF at session start so the tester can explore
+  // freely; toggling on records browser interactions as replay steps until stopped.
+  const [stepRecording, setStepRecording] = useState(false)
+  const [togglingSteps, setTogglingSteps] = useState(false)
   const [recStartedAt, setRecStartedAt] = useState<number | null>(null)
   const [recordings, setRecordings] = useState<SessionClip[]>([])
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -743,6 +748,7 @@ export default function LiveQASessionPage() {
         setConsoleErrors([])
         setNetworkErrors([])
         setRecording(false)
+        setStepRecording(false)
         setRecStartedAt(null)
         setRecordings([])
         setFullView(false)
@@ -934,6 +940,37 @@ export default function LiveQASessionPage() {
     }
   }
 
+  // Start/stop capturing browser interactions as replay steps (Live QA scenario
+  // recording). Independent of video recording.
+  async function handleToggleStepRecording() {
+    if (!sessionId) return
+    const next = !stepRecording
+    setTogglingSteps(true)
+    try {
+      const res = await fetch(`/api/recording/${sessionId}/step-recording`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      })
+      if (res.ok) {
+        setStepRecording(next)
+        setToast({
+          message: next
+            ? "Recording scenario steps — your interactions are now captured."
+            : "Stopped recording steps. Explore freely; start again for the next scenario.",
+          type: "success",
+        })
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setToast({ message: err.error || "Failed to toggle step recording", type: "error" })
+      }
+    } catch {
+      setToast({ message: "Network error toggling step recording", type: "error" })
+    } finally {
+      setTogglingSteps(false)
+    }
+  }
+
   async function handleAddManualStep(e: React.FormEvent) {
     e.preventDefault()
     if (!manualDescription.trim()) return
@@ -1117,7 +1154,7 @@ export default function LiveQASessionPage() {
             <div className="flex items-start gap-2 pt-2 rounded-lg border border-teal-200 bg-teal-50/40 p-3 dark:border-teal-900 dark:bg-teal-950/20">
               <Video className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
               <Label className="cursor-default font-normal text-[11px] leading-relaxed text-teal-800 dark:text-teal-300">
-                The test browser runs fully <b>inside this page</b> — no external window. Session video is <b>not</b> recorded automatically; start and stop it anytime with the <b>Record Video</b> button in the toolbar.
+                The test browser runs fully <b>inside this page</b> — no external window. Nothing is recorded automatically: explore freely, then use <b>Record steps</b> to capture a scenario and <b>Start recording</b> for video — each starts and stops anytime from the toolbar.
               </Label>
             </div>
 
@@ -1213,6 +1250,36 @@ export default function LiveQASessionPage() {
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     : <Video className="h-3.5 w-3.5 text-indigo-500" />}
                   {uploadingRecording ? "Saving…" : "Start recording"}
+                </Button>
+              )}
+            </div>
+
+            {/* Cluster: Steps — scenario step recording (independent of video) */}
+            <div className="flex items-center rounded-lg border bg-background p-0.5 gap-0.5">
+              <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground select-none">Steps</span>
+              {stepRecording ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToggleStepRecording}
+                  disabled={togglingSteps}
+                  className="h-8 px-2.5 text-xs gap-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
+                  title="Stop recording scenario steps"
+                >
+                  {togglingSteps ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
+                  <Square className="h-3 w-3 fill-current" /> Stop steps
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleToggleStepRecording}
+                  disabled={togglingSteps}
+                  className="h-8 px-2.5 text-xs gap-1.5 text-foreground"
+                  title="Start recording your interactions as replay steps"
+                >
+                  {togglingSteps ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MousePointerClick className="h-3.5 w-3.5 text-indigo-500" />}
+                  Record steps
                 </Button>
               )}
             </div>
@@ -1694,9 +1761,27 @@ export default function LiveQASessionPage() {
                         ))}
                       </div>
 
+                      <div className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] font-medium ${
+                        stepRecording
+                          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/25 dark:bg-red-500/[0.08] dark:text-red-400"
+                          : "border-border bg-muted/40 text-muted-foreground"
+                      }`}>
+                        {stepRecording ? (
+                          <>
+                            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                            Recording your interactions as steps…
+                          </>
+                        ) : (
+                          <>
+                            <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
+                            Steps aren&apos;t being recorded. Hit <b>Record steps</b> in the header to capture a scenario.
+                          </>
+                        )}
+                      </div>
+
                       {recordedSteps.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-6 px-4 leading-relaxed">
-                          No steps yet. Interact in the browser view — every action is recorded automatically.
+                          No steps yet. Start step recording, then interact in the browser view to capture a replayable scenario.
                         </p>
                       ) : (
                         <div className="space-y-1.5">
@@ -1760,14 +1845,31 @@ export default function LiveQASessionPage() {
             ? [{
                 filePath: screenshots[screenshots.length - 1].filePath,
                 fileName: screenshots[screenshots.length - 1].filePath.split("/").pop() || "screenshot.png",
+                kind: "image" as const,
               }]
             : []),
           ...(recordings.length > 0 && recordings[recordings.length - 1].filePath
             ? [{
                 filePath: recordings[recordings.length - 1].filePath as string,
                 fileName: (recordings[recordings.length - 1].filePath as string).split("/").pop() || "recording.webm",
+                kind: "video" as const,
               }]
             : []),
+        ]}
+        // Full pool so a tester with many screenshots can pick which to attach.
+        attachmentChoices={[
+          ...screenshots.map((s) => ({
+            filePath: s.filePath,
+            fileName: s.filePath.split("/").pop() || "screenshot.png",
+            kind: "image" as const,
+          })),
+          ...recordings
+            .filter((r) => r.filePath)
+            .map((r) => ({
+              filePath: r.filePath as string,
+              fileName: (r.filePath as string).split("/").pop() || "recording.webm",
+              kind: "video" as const,
+            })),
         ]}
       />
 

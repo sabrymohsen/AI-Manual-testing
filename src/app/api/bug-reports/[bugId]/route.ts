@@ -75,6 +75,7 @@ export async function PUT(
       resolutionNote,
       tags,
       assignedTo,
+      source,
       openProjectParentId,
       openProjectBoardId,
       openProjectBoardColumnId,
@@ -118,6 +119,9 @@ export async function PUT(
     if (tags !== undefined && JSON.stringify(tags) !== JSON.stringify(existingBug.tags)) {
       changes.push(`Tags updated to ${(tags && tags.length) ? tags.join(", ") : "None"}`)
     }
+    if (source !== undefined && source !== existingBug.source) {
+      changes.push(`Bug source updated to ${source || "None"}`)
+    }
     if (title && title !== existingBug.title) {
       changes.push(`Title updated to "${title}"`)
     }
@@ -140,6 +144,7 @@ export async function PUT(
           resolutionNote: resolutionNote !== undefined ? (resolutionNote || null) : undefined,
           tags: tags !== undefined ? tags : undefined,
           assignedTo: assignedTo !== undefined ? assignedTo : undefined,
+          source: source !== undefined ? (source || null) : undefined,
           openProjectParentId: openProjectParentId !== undefined ? (openProjectParentId || null) : undefined,
           openProjectBoardId: openProjectBoardId !== undefined ? (openProjectBoardId || null) : undefined,
           openProjectBoardColumnId: openProjectBoardColumnId !== undefined ? (openProjectBoardColumnId || null) : undefined,

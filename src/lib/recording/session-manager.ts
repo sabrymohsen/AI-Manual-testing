@@ -32,6 +32,11 @@ export interface ActiveSession {
   // mode keeps the legacy always-save behavior.
   videoEnabled: boolean
   videoEverEnabled: boolean
+  // Whether browser interactions are captured as RecordedSteps. Recorder (Test
+  // Studio) sessions record from the start (legacy behavior); Workstation (Live
+  // QA) sessions start OFF so the tester can freely explore, then toggle step
+  // recording on/off per scenario via setStepRecording().
+  stepRecording: boolean
   activeFileChooser?: any
   onFileChooser?: (fileChooser: any) => void
 }
@@ -377,6 +382,8 @@ export async function startSession(
     browserType: (options.browserType as "Chromium" | "Firefox" | "WebKit") || "Chromium",
     videoEnabled: false,
     videoEverEnabled: false,
+    // Test Studio records every action; Live QA waits for an explicit Start.
+    stepRecording: sessionMode === "Recorder",
   })
 
   page.on("filechooser", (fileChooser) => {
@@ -634,6 +641,18 @@ export async function startSession(
         return { success: false, error: "Session is not active" }
       }
 
+      // Step recording gate: when off (Live QA before the tester hits Start, or
+      // after Stop), interactions still drive the live page but are NOT saved as
+      // steps. The tester explores freely, then records only the scenario.
+      if (!activeSess.stepRecording) {
+        return {
+          success: true,
+          skipped: true,
+          consoleErrorsCount: activeSess.consoleErrors.length,
+          networkErrorsCount: activeSess.networkErrors.length,
+        }
+      }
+
       const stepCount = await prisma.recordedStep.count({
         where: { recordedTestCaseId: activeSess.currentTestCaseId },
       })
@@ -886,6 +905,16 @@ export async function resumeSession(sessionId: string) {
     where: { id: sessionId },
     data: { status: "Active" },
   })
+}
+
+// Toggle whether browser interactions are captured as RecordedSteps (Live QA
+// scenario recording start/stop). In-memory only — the flag lives on the active
+// session in the worker process; returns the resulting state.
+export function setStepRecording(sessionId: string, enabled: boolean): { stepRecording: boolean } {
+  const activeSess = activeSessions.get(sessionId)
+  if (!activeSess) throw new Error("Active session not found")
+  activeSess.stepRecording = enabled
+  return { stepRecording: enabled }
 }
 
 export async function finishSession(sessionId: string) {

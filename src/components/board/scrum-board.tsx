@@ -13,22 +13,24 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, Play, CheckCircle2, Trash2, Loader2, Search, Target, X, ListOrdered, LayoutGrid, ListTree, LineChart, Upload } from "lucide-react"
 import { Story, Sprint, EpicLite, StoryCardView, StatusPill, points, issueTypeOf, ConfirmModal } from "./shared"
 import SprintKanban from "./sprint-kanban"
 import SprintReports from "./sprint-reports"
 import BoardList from "./board-list"
 import IssueDrawer from "./issue-drawer"
-import { ImportRequirementsModal } from "@/components/requirements/import-modal"
+import ImportStoriesModal from "./import-stories-modal"
 import BoardToolbar from "./board-toolbar"
 import BoardSettingsDrawer from "./board-settings-drawer"
+import CreateEpicModal from "./create-epic-modal"
 import { loadBoardConfig, saveBoardConfig, type BoardConfig, DEFAULT_CONFIG } from "./board-config"
 
 type View = "backlog" | "board" | "list" | "reports"
 
 export default function ScrumBoard({ projectId }: { projectId: string }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [stories, setStories] = useState<Story[]>([])
   const [sprints, setSprints] = useState<Sprint[]>([])
   const [allEpics, setAllEpics] = useState<EpicLite[]>([])
@@ -38,9 +40,12 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   const [search, setSearch] = useState("")
   const [epicFilter, setEpicFilter] = useState("all")
   const [showCreate, setShowCreate] = useState(false)
+  const [showCreateEpic, setShowCreateEpic] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [openIssueId, setOpenIssueId] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [bulkBusy, setBulkBusy] = useState(false)
   const [config, setConfig] = useState<BoardConfig>(DEFAULT_CONFIG)
   const [showSettings, setShowSettings] = useState(false)
   const [sprintToDelete, setSprintToDelete] = useState<string | null>(null)
@@ -79,6 +84,13 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   const silentReload = useCallback(() => load(true), [load])
 
   useEffect(() => { load() }, [load])
+
+  // Deep-link: /board?story=<requirementId> opens that story's drawer (from the
+  // Test Cases / Bug Reports pages). openStoryObj resolves once stories load.
+  useEffect(() => {
+    const s = searchParams.get("story")
+    if (s) setOpenIssueId(s)
+  }, [searchParams])
 
   const patchStory = useCallback(async (story: Story, body: Record<string, unknown>) => {
     setStories((prev) => prev.map((s) => {
@@ -132,6 +144,23 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
 
   const openStory = useCallback((s: Story) => setOpenIssueId(s.id), [])
   const openStoryObj = stories.find((s) => s.id === openIssueId) || null
+
+  // ── Multi-select (backlog) ──────────────────────────────────────────────
+  const toggleSelect = useCallback((id: string, checked: boolean) => {
+    setSelected((prev) => { const n = new Set(prev); checked ? n.add(id) : n.delete(id); return n })
+  }, [])
+  const clearSelection = useCallback(() => setSelected(new Set()), [])
+
+  // Bulk-assign the selected stories to a sprint or an epic in one go.
+  const bulkAssign = useCallback(async (body: Record<string, unknown>) => {
+    const targets = stories.filter((s) => selected.has(s.id))
+    if (targets.length === 0) return
+    setBulkBusy(true)
+    try {
+      await Promise.all(targets.map((s) => patchStory(s, body)))
+      setSelected(new Set())
+    } finally { setBulkBusy(false) }
+  }, [stories, selected, patchStory])
 
   const activeStory = stories.find((s) => s.id === activeId) || null
   const onDragEnd = async (e: DragEndEvent) => {
@@ -227,6 +256,12 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
             <Upload className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" /> Import
           </button>
           <button
+            onClick={() => setShowCreateEpic(true)}
+            className="h-9 px-4 rounded-xl border border-indigo-100 dark:border-slate-800 bg-background/60 hover:bg-violet-50/10 hover:border-violet-200 dark:hover:border-slate-700 text-xs font-black flex items-center gap-2 transition-all shadow-sm"
+          >
+            <Plus className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" /> Create epic
+          </button>
+          <button
             onClick={() => setShowCreate(true)}
             className="h-9 px-4 rounded-xl border border-indigo-100 dark:border-slate-800 bg-background/60 hover:bg-indigo-50/10 hover:border-indigo-200 dark:hover:border-slate-700 text-xs font-black flex items-center gap-2 transition-all shadow-sm"
           >
@@ -248,7 +283,7 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
           return (
             <button
               key={t.id}
-              onClick={() => setView(t.id)}
+              onClick={() => { setView(t.id); clearSelection() }}
               className={`relative pb-3 pt-1 px-4 text-xs font-bold transition-all duration-200 flex items-center gap-2 ${active ? "text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-muted-foreground hover:text-foreground hover:pb-3.5"}`}
             >
               <t.icon className={`h-4 w-4 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground"}`} />
@@ -335,7 +370,7 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
                       </button>
                     </div>
                   </div>
-                  <StoryList stories={list} onPoints={(s, p) => patchStory(s, { storyPoints: p })} onOpen={openStory} emptyLabel="Drag stories here to plan this sprint" />
+                  <StoryList stories={list} onPoints={(s, p) => patchStory(s, { storyPoints: p })} onOpen={openStory} selectedIds={selected} onSelect={toggleSelect} showCheckbox emptyLabel="Drag stories here to plan this sprint" />
                 </Column>
               )
             })}
@@ -344,7 +379,7 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
                 <span className="font-extrabold text-sm text-slate-800 dark:text-slate-100">Backlog</span>
                 <span className="text-[10px] font-bold text-muted-foreground">{backlog.length} stories · {points(backlog)} pts</span>
               </div>
-              <StoryList stories={backlog} onPoints={(s, p) => patchStory(s, { storyPoints: p })} onOpen={openStory} emptyLabel="No unplanned stories — everything is in a sprint 🎉" />
+              <StoryList stories={backlog} onPoints={(s, p) => patchStory(s, { storyPoints: p })} onOpen={openStory} selectedIds={selected} onSelect={toggleSelect} showCheckbox emptyLabel="No unplanned stories — everything is in a sprint 🎉" />
             </Column>
           </div>
           <DragOverlay>{activeStory ? <StoryCardView story={activeStory} dragging /> : null}</DragOverlay>
@@ -355,11 +390,12 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
       {view === "reports" && <SprintReports stories={stories} sprints={sprints} />}
 
       {showCreate && <CreateSprintModal onClose={() => setShowCreate(false)} onCreate={createSprint} />}
-      <ImportRequirementsModal
+      {showCreateEpic && <CreateEpicModal projectId={projectId} onClose={() => setShowCreateEpic(false)} onCreated={() => load(true)} />}
+      <ImportStoriesModal
         projectId={projectId}
         isOpen={showImport}
         onClose={() => setShowImport(false)}
-        onImportSuccess={() => { setView("backlog"); load() }}
+        onImported={() => { setView("backlog"); load() }}
       />
       {showSettings && (
         <BoardSettingsDrawer config={config} onChange={updateConfig} onClose={() => setShowSettings(false)} />
@@ -388,6 +424,43 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
           onCancel={() => setSprintToDelete(null)}
         />
       )}
+
+      {/* Backlog multi-select action bar */}
+      {view === "backlog" && selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-slate-900 dark:bg-slate-800 text-white rounded-2xl pl-4 pr-3 py-2.5 shadow-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <span className="text-xs font-black whitespace-nowrap">{selected.size} selected</span>
+          {bulkBusy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          <span className="h-4 w-px bg-white/20" />
+
+          <select
+            value=""
+            disabled={bulkBusy}
+            onChange={(e) => { if (e.target.value) bulkAssign({ sprintId: e.target.value === "__backlog__" ? null : e.target.value }) }}
+            className="h-8 rounded-lg bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold px-2 border border-white/10 focus:outline-none cursor-pointer disabled:opacity-50"
+            title="Add selected to a sprint"
+          >
+            <option value="">Add to sprint…</option>
+            <option value="__backlog__">↩ Move to Backlog</option>
+            {sprints.map((s) => <option key={s.id} value={s.id}>{s.name}{s.status === "Active" ? " (active)" : ""}</option>)}
+          </select>
+
+          <select
+            value=""
+            disabled={bulkBusy}
+            onChange={(e) => { if (e.target.value) bulkAssign({ epicId: e.target.value === "__none__" ? null : e.target.value }) }}
+            className="h-8 rounded-lg bg-slate-800 dark:bg-slate-700 text-white text-xs font-bold px-2 border border-white/10 focus:outline-none cursor-pointer disabled:opacity-50"
+            title="Add selected to an epic"
+          >
+            <option value="">Add to epic…</option>
+            <option value="__none__">✕ No epic</option>
+            {allEpics.map((ep) => <option key={ep.id} value={ep.id}>{ep.epicKey} · {ep.title}</option>)}
+          </select>
+
+          <button onClick={clearSelection} className="h-8 w-8 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10" title="Clear selection">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -404,23 +477,23 @@ function Column({ id, children }: { id: string; children: React.ReactNode }) {
   )
 }
 
-function StoryList({ stories, onPoints, onOpen, emptyLabel }: { stories: Story[]; onPoints: (s: Story, p: number) => void; onOpen: (s: Story) => void; emptyLabel: string }) {
+function StoryList({ stories, onPoints, onOpen, emptyLabel, selectedIds, onSelect, showCheckbox }: { stories: Story[]; onPoints: (s: Story, p: number) => void; onOpen: (s: Story) => void; emptyLabel: string; selectedIds?: Set<string>; onSelect?: (id: string, checked: boolean) => void; showCheckbox?: boolean }) {
   return (
     <div className="p-3 space-y-2 min-h-[76px] transition-all duration-200">
       {stories.length === 0 ? (
         <div className="text-[11px] text-muted-foreground/60 text-center py-6 font-medium italic border-2 border-dashed border-slate-100 dark:border-slate-850 rounded-xl">{emptyLabel}</div>
       ) : (
-        stories.map((s) => <DraggableStory key={s.id} story={s} onPoints={onPoints} onOpen={onOpen} />)
+        stories.map((s) => <DraggableStory key={s.id} story={s} onPoints={onPoints} onOpen={onOpen} selected={!!selectedIds?.has(s.id)} onSelect={onSelect} showCheckbox={showCheckbox} />)
       )}
     </div>
   )
 }
 
-function DraggableStory({ story, onPoints, onOpen }: { story: Story; onPoints: (s: Story, p: number) => void; onOpen: (s: Story) => void }) {
+function DraggableStory({ story, onPoints, onOpen, selected, onSelect, showCheckbox }: { story: Story; onPoints: (s: Story, p: number) => void; onOpen: (s: Story) => void; selected?: boolean; onSelect?: (id: string, checked: boolean) => void; showCheckbox?: boolean }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: story.id })
   return (
     <div ref={setNodeRef} className={isDragging ? "opacity-35 scale-95" : "transition-all"}>
-      <StoryCardView story={story} onPoints={onPoints} onOpen={onOpen} handleProps={{ ...attributes, ...listeners }} />
+      <StoryCardView story={story} onPoints={onPoints} onOpen={onOpen} handleProps={{ ...attributes, ...listeners }} selected={selected} onSelect={onSelect} showCheckbox={showCheckbox} />
     </div>
   )
 }

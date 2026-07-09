@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Bug, X, Sparkles, Paperclip, Video, Trash2 } from "lucide-react"
+import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check } from "lucide-react"
 
 /**
  * Shared bug-creation modal — extracted from the Bug Reports page so the same
@@ -23,6 +23,8 @@ interface CreateBugStep {
 export interface SessionAttachment {
   filePath: string
   fileName: string
+  /** "image" renders a thumbnail; "video" renders a labeled tile. Defaults to image. */
+  kind?: "image" | "video"
 }
 
 interface CreateBugModalProps {
@@ -38,6 +40,8 @@ interface CreateBugModalProps {
     actualResult?: string
     environment?: string
   }
+  /** "Bug Source" dropdown options, pulled from an OpenProject list field. */
+  sourceOptions?: string[]
   /** Auto-captured live-session context, passed through the validated API fields. */
   sessionContext?: {
     pageUrl?: string | null
@@ -47,6 +51,13 @@ interface CreateBugModalProps {
   }
   /** Existing server-side artifacts (session screenshots/recordings) to attach after creation. */
   initialAttachmentPaths?: SessionAttachment[]
+  /**
+   * Full pool of session artifacts the tester can pick from (all screenshots +
+   * recordings). Rendered as a selectable thumbnail gallery; the ones in
+   * `initialAttachmentPaths` start selected. Lets a tester with many
+   * screenshots choose which to attach instead of always getting the latest.
+   */
+  attachmentChoices?: SessionAttachment[]
 }
 
 export function CreateBugModal({
@@ -57,6 +68,8 @@ export function CreateBugModal({
   initialValues,
   sessionContext,
   initialAttachmentPaths,
+  attachmentChoices,
+  sourceOptions,
 }: CreateBugModalProps) {
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
@@ -64,6 +77,7 @@ export function CreateBugModal({
   const [priority, setPriority] = useState("Medium")
   const [env, setEnv] = useState("Staging")
   const [browser, setBrowser] = useState("Chromium")
+  const [source, setSource] = useState("")
   const [expected, setExpected] = useState("")
   const [actual, setActual] = useState("")
   const [steps, setSteps] = useState<CreateBugStep[]>([])
@@ -92,6 +106,7 @@ export function CreateBugModal({
     setPriority("Medium")
     setEnv(initialValues?.environment || "Staging")
     setBrowser("Chromium")
+    setSource("")
     setExpected(initialValues?.expectedResult || "")
     setActual(initialValues?.actualResult || "")
     setSteps([])
@@ -176,6 +191,16 @@ export function CreateBugModal({
     }
   }
 
+  // Toggle a session artifact in/out of the attachment selection.
+  const isAttached = (filePath: string) => sessionAttachments.some((a) => a.filePath === filePath)
+  const toggleAttachment = (att: SessionAttachment) => {
+    setSessionAttachments((prev) =>
+      prev.some((a) => a.filePath === att.filePath)
+        ? prev.filter((a) => a.filePath !== att.filePath)
+        : [...prev, att]
+    )
+  }
+
   // Steps builder helpers
   const addStep = () => {
     setSteps([...steps, { stepNumber: steps.length + 1, actionDescription: "" }])
@@ -215,6 +240,7 @@ export function CreateBugModal({
       actualResult: actual,
       status: "Open",
     }
+    if (source) body.source = source
     // A pasted video URL is stored directly; an uploaded video file takes precedence.
     if (videoUrl.trim() && !videoFile) {
       body.videoUrl = videoUrl.trim()
@@ -418,6 +444,23 @@ export function CreateBugModal({
             </div>
           </div>
 
+          {/* Bug Source — options pulled from an OpenProject list field */}
+          {sourceOptions && sourceOptions.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground font-bold">Bug Source</Label>
+              <select
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                className="h-9 w-full rounded-lg border bg-background px-3"
+              >
+                <option value="">— Select source —</option>
+                {sourceOptions.map((o) => (
+                  <option key={o} value={o}>{o}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label className="text-muted-foreground font-bold">General Description / Summary Details</Label>
             <textarea
@@ -529,24 +572,79 @@ export function CreateBugModal({
           <div className="space-y-3 border-t pt-3">
             <span className="font-bold text-foreground">Evidence (optional)</span>
 
-            {sessionAttachments.length > 0 && (
+            {/* Picker gallery: when the caller passes the full pool of session
+                artifacts, let the tester choose which to attach (selected ones
+                start from initialAttachmentPaths). */}
+            {attachmentChoices && attachmentChoices.length > 0 ? (
               <div className="space-y-1.5">
-                <Label className="text-muted-foreground font-bold">From this session</Label>
-                {sessionAttachments.map((att) => (
-                  <div key={att.filePath} className="flex items-center gap-2 p-2 border rounded-lg bg-accent/20">
-                    <Paperclip className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                    <span className="truncate flex-1 text-[11px]" title={att.fileName}>{att.fileName}</span>
-                    <button
-                      type="button"
-                      onClick={() => setSessionAttachments((prev) => prev.filter((a) => a.filePath !== att.filePath))}
-                      className="text-muted-foreground hover:text-rose-600 p-0.5"
-                      title="Remove"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                <Label className="text-muted-foreground font-bold">
+                  From this session &mdash; tap to attach
+                  <span className="ml-1 font-semibold text-[10px] text-muted-foreground/80">
+                    ({sessionAttachments.length} selected)
+                  </span>
+                </Label>
+                <div className="grid grid-cols-3 gap-2 max-h-[190px] overflow-y-auto pr-1">
+                  {attachmentChoices.map((att) => {
+                    const selected = isAttached(att.filePath)
+                    const isVideo = att.kind === "video"
+                    return (
+                      <button
+                        key={att.filePath}
+                        type="button"
+                        onClick={() => toggleAttachment(att)}
+                        title={att.fileName}
+                        className={`group relative border rounded-lg overflow-hidden aspect-[4/3] bg-muted/40 transition-all ${
+                          selected ? "ring-2 ring-indigo-500 border-indigo-500" : "hover:ring-2 hover:ring-indigo-300"
+                        }`}
+                      >
+                        {isVideo ? (
+                          <div className="h-full w-full flex flex-col items-center justify-center gap-1 text-muted-foreground">
+                            <Video className="h-5 w-5 text-indigo-500" />
+                            <span className="text-[8px] font-bold uppercase">Video</span>
+                          </div>
+                        ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={`/api/files/${encodeURIComponent(att.filePath)}`}
+                            alt={att.fileName}
+                            className="h-full w-full object-cover"
+                          />
+                        )}
+                        {selected && (
+                          <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow">
+                            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                          </span>
+                        )}
+                        {!selected && (
+                          <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
+                            Attach
+                          </span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
+            ) : (
+              sessionAttachments.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground font-bold">From this session</Label>
+                  {sessionAttachments.map((att) => (
+                    <div key={att.filePath} className="flex items-center gap-2 p-2 border rounded-lg bg-accent/20">
+                      <Paperclip className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                      <span className="truncate flex-1 text-[11px]" title={att.fileName}>{att.fileName}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSessionAttachments((prev) => prev.filter((a) => a.filePath !== att.filePath))}
+                        className="text-muted-foreground hover:text-rose-600 p-0.5"
+                        title="Remove"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )
             )}
 
             <div className="grid grid-cols-2 gap-4">

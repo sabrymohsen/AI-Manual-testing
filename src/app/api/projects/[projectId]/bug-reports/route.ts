@@ -131,6 +131,7 @@ export async function POST(
     videoUrl: z.string().optional().nullable(),
     openProjectParentId: z.string().optional().nullable(),
     pageUrl: z.string().optional().nullable(),
+    source: z.string().optional().nullable(),
   })
   const parsed = bugReportBodySchema.safeParse(body)
   if (!parsed.success) {
@@ -208,6 +209,7 @@ export async function POST(
         pageUrl: parsed.data.pageUrl || null,
         assignedTo: parsed.data.assignedTo || null,
         openProjectParentId: parsed.data.openProjectParentId || null,
+        source: parsed.data.source || null,
         browser: browser as any,
         viewport: viewport as any,
         testRunId: parsed.data.testRunId || null,

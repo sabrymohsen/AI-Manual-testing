@@ -615,6 +615,11 @@ model BugReport {
   // Free-form triage labels e.g. ["regression", "ui", "security"].
   tags             String[]     @default([])
 
+  // App-side "Bug Source" (e.g. where the defect was found). Free string whose
+  // dropdown options can be pulled from an OpenProject list field; stored here
+  // on the bug and NOT synced to OpenProject as a custom field.
+  source           String?
+
   environment      Environment?
   roleUsed         String?
   browser          BrowserType?
