@@ -285,6 +285,7 @@ model Project {
   agentMemories           AgentMemory[]
   qaAgentRuns             QAAgentRun[]
   openProjectIntegration  OpenProjectIntegration?
+  sprints                 Sprint[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -1097,6 +1098,32 @@ enum EpicStatus {
   Archived
 }
 
+// Scrum board: a sprint groups Requirements(Stories) for a time-box.
+enum SprintStatus {
+  Future
+  Active
+  Completed
+}
+
+model Sprint {
+  id           String       @id @default(uuid())
+  projectId    String
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  goal         String?
+  status       SprintStatus @default(Future)
+  startDate    DateTime?
+  endDate      DateTime?
+  orderIndex   Int          @default(0)
+  completedAt  DateTime?
+  requirements Requirement[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([status])
+}
+
 model Epic {
   id           String        @id @default(uuid())
   projectId    String
@@ -1133,14 +1160,31 @@ model Requirement {
   source           RequirementSource @default(Manual)
   // Ordering position in the product backlog view (lower = higher priority).
   backlogRank      Int?
+  // Scrum board fields (Story = Requirement)
+  storyPoints      Int?
+  assignee         String?  // free-text name/email for Phase 1
+  labels           String[]
+  sprintId         String?
+  sprint           Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  // Rank within a sprint / backlog column (lower = higher). Distinct from backlogRank.
+  boardRank        Int?
   // Optional middle layer: assigning a feature auto-aligns epicId app-side
   featureId        String?
   feature          Feature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
+  // Hierarchy: a Task/Bug hangs off a parent Story (Epic → Story → Task/Bug).
+  parentId         String?
+  parent           Requirement?  @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children         Requirement[] @relation("RequirementChildren")
   figmaUrl         String?
   externalUrl      String?
   externalSystem   String? // Jira, Azure DevOps, GitHub, Manual, Other
   testCases        TestCaseRequirement[]
   bugReports       BugReportRequirement[]
+  subtasks         RequirementSubtask[]
+  dueDate          DateTime?
+  timeEstimate     Int?
+  timeSpent        Int?
+  comments         RequirementComment[]
   sourceImportId   String?
   sourceImport     RequirementImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
   sourceLocation   Json?
@@ -1152,6 +1196,19 @@ model Requirement {
   @@index([epicId])
   @@index([status])
   @@index([featureId])
+  @@index([sprintId])
+  @@index([parentId])
+}
+
+model RequirementComment {
+  id            String      @id @default(uuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  author        String
+  content       String
+  createdAt     DateTime    @default(now())
+
+  @@index([requirementId])
 }
 
 enum RequirementImportStatus {
@@ -1189,6 +1246,21 @@ model TestCaseRequirement {
   createdAt      DateTime    @default(now())
 
   @@unique([requirementId, testCaseId])
+}
+
+// Lightweight checklist items under a story (Jira-style sub-tasks).
+model RequirementSubtask {
+  id             String      @id @default(uuid())
+  requirementId  String
+  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  title          String
+  done           Boolean     @default(false)
+  assignee       String?
+  orderIndex     Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([requirementId])
 }
 
 // ─── External sync mapping (TestCase / BugReport ↔ OpenProject work package) ─
@@ -2249,6 +2321,21 @@ model AiPolicy {
   redactSensitive Boolean  @default(true)  // mask emails/keys/tokens before sending
   monthlyBudgetUsd Float   @default(0)     // 0 = unlimited
   updatedAt       DateTime @updatedAt
+}
+
+// Phase 3 annotation editor: temporary shareable link for an annotated
+// screenshot + its metadata. Public read by unguessable token; optional expiry.
+model SharedAnnotation {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  imageUrl  String // public path, e.g. /uploads/shares/<token>.png
+  title     String   @default("")
+  metadata  Json? // { url, capturedAt, os, browser, dimensions, tags, description, severity }
+  createdBy String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+
+  @@index([token])
 }
 
 // Audit of what test data was sent to an AI provider and when.

@@ -103,11 +103,13 @@ async function applyInput(
         await page.keyboard.insertText(body.text || "")
         break
       case "resize": {
-        // Live view fit-to-container: the client sends its visible area so the
-        // remote viewport matches it exactly (no letterboxing). Clamped to
-        // sane bounds; the CDP screencast follows the new size per-frame.
-        const w = Math.max(320, Math.min(1920, Math.round(body.width || 0)))
-        const h = Math.max(320, Math.min(1920, Math.round(body.height || 0)))
+        // Live view fit-to-container + browser-style zoom: the client sends its
+        // visible area divided by the zoom factor, so the remote viewport
+        // reflows to match (no letterboxing). Wider bounds than the raw
+        // container allow zoom-in (smaller viewport) and zoom-out (larger).
+        // The CDP screencast follows the new size per-frame.
+        const w = Math.max(240, Math.min(2560, Math.round(body.width || 0)))
+        const h = Math.max(240, Math.min(2560, Math.round(body.height || 0)))
         if (w > 0 && h > 0) {
           const current = page.viewportSize()
           if (!current || current.width !== w || current.height !== h) {

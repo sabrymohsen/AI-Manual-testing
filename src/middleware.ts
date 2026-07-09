@@ -17,7 +17,10 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/storage/") ||
-    pathname.startsWith("/api/exports/")
+    pathname.startsWith("/api/exports/") ||
+    // Public annotation share links (page + their statically-served images)
+    pathname.startsWith("/share/") ||
+    pathname.startsWith("/uploads/shares/")
   ) {
     return NextResponse.next()
   }

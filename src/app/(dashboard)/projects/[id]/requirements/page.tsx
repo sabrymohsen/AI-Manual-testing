@@ -978,9 +978,9 @@ export default function RequirementsDashboard() {
             {importingStories ? <Loader2 size={15} className="animate-spin" /> : <CloudDownload size={15} className="text-teal-500" />}
             OpenProject
           </Button>
-          <Link href={`/projects/${projectId}/backlog`}>
+          <Link href={`/projects/${projectId}/board`}>
             <Button variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
-              <ListOrdered size={15} className="text-slate-400" /> Backlog
+              <ListOrdered size={15} className="text-slate-400" /> Board
             </Button>
           </Link>
           <Link href={`/projects/${projectId}/generate-from-file`}>

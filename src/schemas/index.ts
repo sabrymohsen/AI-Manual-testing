@@ -101,6 +101,13 @@ export const createRequirementSchema = z.object({
   figmaUrl: z.string().url().optional().nullable(),
   externalUrl: z.string().url().optional().nullable(),
   externalSystem: z.string().optional().nullable(),
+  // Scrum board fields — let stories be created board-ready in one request.
+  storyPoints: z.number().int().min(0).max(999).optional().nullable(),
+  assignee: z.string().max(200).optional().nullable(),
+  labels: z.array(z.string()).optional(),
+  sprintId: z.string().optional().nullable(),
+  // Parent story (Epic → Story → Task/Bug).
+  parentId: z.string().optional().nullable(),
 })
 
 export const updateRequirementSchema = createRequirementSchema.partial()

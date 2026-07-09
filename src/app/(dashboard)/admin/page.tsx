@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -64,7 +64,21 @@ interface TransactionItem {
 
 type AdminTab = "users" | "pricing" | "finance" | "trial"
 
+
 export default function AdminDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="py-24 flex flex-col items-center gap-2 text-muted-foreground">
+        <Loader2 className="animate-spin" size={26} />
+        <span className="text-xs font-semibold uppercase tracking-wide">Loading Admin Panel…</span>
+      </div>
+    }>
+      <AdminDashboardContent />
+    </Suspense>
+  )
+}
+
+function AdminDashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const tabParam = searchParams.get("tab") as AdminTab | null
