@@ -1,0 +1,26 @@
+# Recorder service — the live-recording HTTP + WebSocket server that drives a
+# Playwright browser for interactive recording sessions.
+#
+# Uses the official Playwright image so Chromium/Firefox/WebKit and system libs
+# match the installed playwright version (1.60.0). Point a Railway service at
+# this file with RAILWAY_DOCKERFILE_PATH=Dockerfile.recorder, give it a public
+# domain (the browser connects to the WSS stream directly), and set
+# RECORDER_WORKER_SECRET (shared with the app) to protect the control endpoints.
+FROM mcr.microsoft.com/playwright:v1.60.0-jammy
+
+WORKDIR /app
+
+# Install all dependencies. tsx is a devDependency, so do NOT omit dev deps.
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# App source + Prisma schema.
+COPY . .
+
+# Generate the Prisma client from the real schema.
+RUN npx prisma generate
+
+ENV NODE_ENV=production
+
+# The server binds 0.0.0.0 and honors $PORT (injected by Railway).
+CMD ["npm", "run", "recorder-worker"]

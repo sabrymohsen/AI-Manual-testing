@@ -32,7 +32,16 @@ import {
   activePickerSessions,
 } from "@/lib/recording/picker-session-manager"
 
-const PORT = Number(process.env.RECORDER_WORKER_PORT) || 3847
+// Railway (and most PaaS) inject PORT and expect the service to listen on it;
+// fall back to RECORDER_WORKER_PORT for local/self-hosted, then a default.
+const PORT = Number(process.env.PORT) || Number(process.env.RECORDER_WORKER_PORT) || 3847
+// Bind all interfaces in containers so the platform proxy / other services can
+// reach us. Override with RECORDER_WORKER_HOST=127.0.0.1 for a local-only bind.
+const HOST = process.env.RECORDER_WORKER_HOST || "0.0.0.0"
+// Optional shared secret guarding the control endpoints. When set, the Next.js
+// app must send it as x-recorder-secret. /health and the token-gated WS stream
+// stay open. Strongly recommended whenever the worker is publicly reachable.
+const RECORDER_WORKER_SECRET = process.env.RECORDER_WORKER_SECRET || ""
 
 // Protocol version, checked by the Next.js side on every request. Bump this
 // (together with REQUIRED_WORKER_VERSION in worker-client.ts) whenever the
@@ -330,6 +339,13 @@ const server = http.createServer(async (req, res) => {
         activeSessionCount: activeSessions.size,
         version: WORKER_VERSION,
       })
+      return
+    }
+
+    // Guard control endpoints with the shared secret when configured. /health
+    // (above) and the WS stream upgrade (own one-time token) are exempt.
+    if (RECORDER_WORKER_SECRET && req.headers["x-recorder-secret"] !== RECORDER_WORKER_SECRET) {
+      sendJson(res, 401, { error: "Unauthorized", code: "WORKER_UNAUTHORIZED" })
       return
     }
 
@@ -645,8 +661,8 @@ server.on("upgrade", (req, socket, head) => {
   }
 })
 
-server.listen(PORT, "127.0.0.1", () => {
-  console.log(`[RECORDER WORKER] Listening on http://127.0.0.1:${PORT}`)
+server.listen(PORT, HOST, () => {
+  console.log(`[RECORDER WORKER] Listening on http://${HOST}:${PORT}`)
 })
 
 process.on("SIGINT", async () => {

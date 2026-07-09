@@ -1,6 +1,14 @@
 export const RECORDER_WORKER_URL =
   process.env.RECORDER_WORKER_URL || "http://127.0.0.1:3847"
 
+// Shared secret for the recorder's guarded control endpoints. Must match
+// RECORDER_WORKER_SECRET on the recorder service. Sent as x-recorder-secret.
+const RECORDER_WORKER_SECRET = process.env.RECORDER_WORKER_SECRET || ""
+
+function workerAuthHeaders(): Record<string, string> {
+  return RECORDER_WORKER_SECRET ? { "x-recorder-secret": RECORDER_WORKER_SECRET } : {}
+}
+
 export class RecorderWorkerError extends Error {
   code: string
   status?: number
@@ -77,6 +85,7 @@ export async function recorderWorkerRequest<T>(
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...workerAuthHeaders(),
         ...(options.headers || {}),
       },
       signal: options.signal || AbortSignal.timeout(120000),
