@@ -48,7 +48,7 @@ function buildTestCaseDescription(tc: any, projectName: string): string {
   }
 
   md += `## Latest Execution Result\nNot Executed\n\n`
-  md += `*Generated from [AI Manual QA Tester](${APP_URL})*\n\n`
+  md += `*Generated from [QA Engine](${APP_URL})*\n\n`
   // Stable marker for duplicate prevention
   md += `<!-- AI-Manual-QA-Tester:TestCase:${tc.id} -->`
   return md

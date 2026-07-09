@@ -204,7 +204,7 @@ function buildTestCaseDescription(tc: any, projectName: string, featureName?: st
   }
 
   md += `## Latest Execution Result\nNot Executed\n\n`
-  md += `*Generated from [AI Manual QA Tester](${APP_URL})*\n\n`
+  md += `*Generated from [QA Engine](${APP_URL})*\n\n`
   md += `<!-- AI-Manual-QA-Tester:TestCase:${tc.id} -->`
   return md
 }

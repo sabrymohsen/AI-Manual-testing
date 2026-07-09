@@ -194,7 +194,7 @@ export default function DashboardLayout({
       <aside className="w-64 border-r bg-card flex flex-col overflow-y-auto shrink-0 select-none text-xs font-semibold">
         <div className="flex h-14 items-center border-b px-6 justify-between select-none">
           <Link href="/dashboard" className="font-extrabold text-indigo-700 text-sm tracking-tight flex items-center gap-1.5 uppercase">
-            <Zap className="h-4.5 w-4.5 fill-current" /> QA OS Engine
+            <Zap className="h-4.5 w-4.5 fill-current" /> QA Engine
           </Link>
           <button 
             onClick={() => setShowSearch(true)} 

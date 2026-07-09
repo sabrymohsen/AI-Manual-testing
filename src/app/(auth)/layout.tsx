@@ -25,7 +25,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        <p className="relative text-[11px] font-mono text-slate-600">© {new Date().getFullYear()} QA OS ENGINE</p>
+        <p className="relative text-[11px] font-mono text-slate-600">© {new Date().getFullYear()} QA Engine</p>
       </div>
 
       {/* Form side */}

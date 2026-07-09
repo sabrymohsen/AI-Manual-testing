@@ -306,7 +306,7 @@ export async function syncBugReportToOpenProject(
   if (bug.networkErrors) description += `## Network Errors\n\`\`\`\n${bug.networkErrors}\n\`\`\`\n\n`
   if (bug.videoUrl) description += `**Session Recording:** ${APP_URL}${bug.videoUrl}\n\n`
   description += `[View Bug Report](${APP_URL}/bug-reports?bug=${bug.id})\n\n`
-  description += `*Created automatically by AI Manual QA Tester*\n\n`
+  description += `*Created automatically by QA Engine*\n\n`
   description += `<!-- AI-Manual-QA-Tester:BugReport:${bug.id} -->`
 
   const subject = `[BUG] ${bug.title}`
