@@ -15,7 +15,6 @@ import {
   Globe,
   Zap,
   ChevronDown,
-  Layers,
   ChevronRight,
   Search,
   Activity,
@@ -24,7 +23,7 @@ import {
   X,
   Plus,
   FlaskConical,
-  ListOrdered,
+  Trello,
   ShieldCheck,
   Users,
   DollarSign,
@@ -167,8 +166,7 @@ export default function DashboardLayout({
 
   const managementItems = [
     { href: "/projects", label: "Projects", icon: FolderKanban },
-    { href: "/requirements", label: "Requirements", icon: Layers },
-    { href: "/backlog", label: "Backlog", icon: ListOrdered },
+    { href: "/board", label: "Board", icon: Trello },
   ]
 
   const configItems = [
@@ -183,7 +181,7 @@ export default function DashboardLayout({
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
     if (basePath === "/openproject-sync") return `/projects/${activeProjectId}/openproject-sync`
-    if (basePath === "/backlog") return `/projects/${activeProjectId}/backlog`
+    if (basePath === "/board") return `/projects/${activeProjectId}/board`
     if (basePath === "/requirements") return `/projects/${activeProjectId}/requirements`
     if (basePath === "/settings") return `/projects/${activeProjectId}/settings`
     return basePath

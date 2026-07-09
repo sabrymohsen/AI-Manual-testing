@@ -17,6 +17,16 @@ const putBodySchema = z.object({
   figmaUrl: z.string().optional().nullable(),
   externalUrl: z.string().optional().nullable(),
   externalSystem: z.string().optional().nullable(),
+  // Scrum board fields
+  storyPoints: z.number().int().min(0).max(999).optional().nullable(),
+  assignee: z.string().optional().nullable(),
+  labels: z.array(z.string()).optional(),
+  sprintId: z.string().optional().nullable(),
+  boardRank: z.number().int().optional().nullable(),
+  parentId: z.string().optional().nullable(),
+  dueDate: z.string().optional().nullable(),
+  timeEstimate: z.number().int().optional().nullable(),
+  timeSpent: z.number().int().optional().nullable(),
 })
 
 export async function GET(
@@ -156,6 +166,15 @@ export async function PUT(
       }
     }
 
+    if (body.sprintId) {
+      const sprint = await prisma.sprint.findFirst({
+        where: { id: body.sprintId, projectId: requirement.projectId }
+      })
+      if (!sprint) {
+        return NextResponse.json({ error: "Sprint not found in this project" }, { status: 400 })
+      }
+    }
+
     if (requirementKey && requirementKey.trim() !== requirement.requirementKey) {
       // Validate key uniqueness
       const existing = await prisma.requirement.findFirst({
@@ -186,7 +205,16 @@ export async function PUT(
         featureId: featureId !== undefined ? featureId : undefined,
         figmaUrl: figmaUrl !== undefined ? figmaUrl : undefined,
         externalUrl: externalUrl !== undefined ? externalUrl : undefined,
-        externalSystem: externalSystem !== undefined ? externalSystem : undefined
+        externalSystem: externalSystem !== undefined ? externalSystem : undefined,
+        storyPoints: body.storyPoints !== undefined ? body.storyPoints : undefined,
+        assignee: body.assignee !== undefined ? body.assignee : undefined,
+        labels: body.labels !== undefined ? body.labels : undefined,
+        sprintId: body.sprintId !== undefined ? body.sprintId : undefined,
+        boardRank: body.boardRank !== undefined ? body.boardRank : undefined,
+        parentId: body.parentId !== undefined ? body.parentId : undefined,
+        dueDate: body.dueDate !== undefined ? (body.dueDate ? new Date(body.dueDate) : null) : undefined,
+        timeEstimate: body.timeEstimate !== undefined ? (body.timeEstimate != null ? Number(body.timeEstimate) : null) : undefined,
+        timeSpent: body.timeSpent !== undefined ? (body.timeSpent != null ? Number(body.timeSpent) : null) : undefined,
       }
     })
 

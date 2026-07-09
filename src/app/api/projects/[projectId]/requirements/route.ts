@@ -21,8 +21,6 @@ export async function GET(
           include: {
             testCase: {
               include: {
-                // Bugs raised against this test case — powers the
-                // story → test case → bug traceability view.
                 bugReports: {
                   select: { id: true, bugKey: true, title: true, severity: true, status: true },
                   orderBy: { createdAt: "desc" }
@@ -45,12 +43,16 @@ export async function GET(
           include: {
             bugReport: true
           }
-        }
+        },
+        subtasks: {
+          orderBy: [{ orderIndex: "asc" }, { createdAt: "asc" }]
+        },
+        parent: { select: { id: true, requirementKey: true, title: true } },
+        children: { select: { id: true, requirementKey: true, title: true, status: true } }
       },
-      orderBy: { requirementKey: "asc" }
+      orderBy: [{ sprintId: "asc" }, { boardRank: "asc" }, { requirementKey: "asc" }]
     })
 
-    // OpenProject sync state for the story rows (badge + WP link in the UI).
     const syncMappings = await prisma.externalSyncMapping.findMany({
       where: {
         projectId: params.projectId,
@@ -60,7 +62,6 @@ export async function GET(
     })
     const syncByReqId = new Map(syncMappings.map((m) => [m.localEntityId, m]))
 
-    // Compute dynamic coverage status for every requirement
     const resolvedRequirements = requirements.map((req) => {
       const links = req.testCases || []
       const bugs = req.bugReports || []
@@ -112,8 +113,33 @@ export async function POST(
       featureId,
       figmaUrl,
       externalUrl,
-      externalSystem
+      externalSystem,
+      storyPoints,
+      assignee,
+      labels,
+      sprintId,
+      parentId
     } = parsed.data
+
+    // Guard sprint ownership so a story can be dropped straight into a sprint.
+    let resolvedSprintId: string | null = null
+    if (sprintId) {
+      const sprint = await prisma.sprint.findFirst({
+        where: { id: sprintId, projectId: params.projectId }
+      })
+      if (!sprint) return badRequestResponse("Sprint not found in this project")
+      resolvedSprintId = sprint.id
+    }
+
+    // Guard parent ownership (a Task/Bug hangs off a Story in the same project).
+    let resolvedParentId: string | null = null
+    if (parentId) {
+      const parent = await prisma.requirement.findFirst({
+        where: { id: parentId, projectId: params.projectId }
+      })
+      if (!parent) return badRequestResponse("Parent story not found in this project")
+      resolvedParentId = parent.id
+    }
 
     let resolvedEpicId = epicId || null
     if (epicId) {
@@ -164,7 +190,12 @@ export async function POST(
         featureId: featureId || null,
         figmaUrl: figmaUrl || null,
         externalUrl: externalUrl || null,
-        externalSystem: externalSystem || null
+        externalSystem: externalSystem || null,
+        storyPoints: storyPoints ?? null,
+        assignee: assignee?.trim() || null,
+        labels: labels || [],
+        sprintId: resolvedSprintId,
+        parentId: resolvedParentId
       }
     })
 

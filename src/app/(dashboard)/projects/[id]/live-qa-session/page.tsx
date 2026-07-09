@@ -175,9 +175,10 @@ export default function LiveQASessionPage() {
   // (or a dropped socket) fall back to REST frame polling.
   const [showLivePreview, setShowLivePreview] = useState(true)
   const [hasFrame, setHasFrame] = useState(false)
-  // Client-side magnification of the live view (does not touch the stream).
+  // Browser-style zoom: drives the remote viewport size (page reflows), not a
+  // client image scale. zoomText backs the editable percentage field.
   const [zoom, setZoom] = useState(1)
-  const zoomRef = useRef(1)
+  const [zoomText, setZoomText] = useState("100")
   const [streamMode, setStreamMode] = useState<"connecting" | "streaming" | "polling">("connecting")
   const [liveUrl, setLiveUrl] = useState<string | null>(null)
   const [urlInput, setUrlInput] = useState("")
@@ -604,9 +605,6 @@ export default function LiveQASessionPage() {
     }
 
     function onWheel(ev: WheelEvent) {
-      // When zoomed in, let the wheel pan the magnified view locally instead of
-      // scrolling the remote page.
-      if (zoomRef.current > 1) return
       ev.preventDefault()
       const coords = liveViewCoords(ev)
       if (coords) lastCoords = coords
@@ -621,12 +619,21 @@ export default function LiveQASessionPage() {
     }
   }, [sessionId, sessionStatus, showLivePreview])
 
-  // Zoom the live view locally (0.5x–3x). zoomRef mirrors the state so the
-  // native wheel listener reads the current value without re-subscribing.
+  // Browser-style zoom, 25%–300%. Changing zoom re-sends the remote viewport
+  // (see the fit-to-container effect, which divides by zoom).
+  const ZOOM_MIN = 0.25
+  const ZOOM_MAX = 3
+  const ZOOM_STEP = 0.1
   function applyZoom(next: number) {
-    const clamped = Math.min(3, Math.max(0.5, Math.round(next * 100) / 100))
-    zoomRef.current = clamped
+    const clamped = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(next * 100) / 100))
     setZoom(clamped)
+    setZoomText(String(Math.round(clamped * 100)))
+  }
+  // Commit a typed percentage (Enter / blur). Invalid input reverts to current.
+  function commitZoomText() {
+    const n = parseInt(zoomText, 10)
+    if (Number.isFinite(n) && n > 0) applyZoom(n / 100)
+    else setZoomText(String(Math.round(zoom * 100)))
   }
 
   // Fit-to-container: keep the remote viewport matched to the live view's
@@ -639,13 +646,17 @@ export default function LiveQASessionPage() {
     let timer: ReturnType<typeof setTimeout> | null = null
     const sendResize = () => {
       const rect = el.getBoundingClientRect()
-      const width = Math.round(rect.width)
-      const height = Math.round(rect.height)
-      if (width < 320 || height < 320) return
+      if (rect.width < 320 || rect.height < 320) return
+      // Browser-style zoom: shrink the REMOTE viewport by the zoom factor so the
+      // page genuinely reflows and re-renders larger (crisp, like Chrome's
+      // Ctrl +/-), instead of magnifying the streamed image. The worker clamps
+      // to sane bounds; the CDP screencast follows the new size per frame.
+      const width = Math.round(rect.width / zoom)
+      const height = Math.round(rect.height / zoom)
       sendBrowserInput({ type: "resize", width, height })
     }
 
-    // Match immediately on session start / view open, then follow changes
+    // Match immediately on session start / view open / zoom change, then follow.
     sendResize()
     const observer = new ResizeObserver(() => {
       if (timer) clearTimeout(timer)
@@ -657,7 +668,7 @@ export default function LiveQASessionPage() {
       observer.disconnect()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, sessionStatus, showLivePreview, fullView])
+  }, [sessionId, sessionStatus, showLivePreview, fullView, zoom])
 
   // ── Session Controls ───────────────────────────────────────────────────────
 
@@ -1331,30 +1342,48 @@ export default function LiveQASessionPage() {
                   >
                     {streamMode === "streaming" ? "Streaming" : streamMode === "connecting" ? "Connecting…" : browserType === "Chromium" ? "Reconnecting" : "Polling"}
                   </span>
-                  {/* Zoom controls — magnify the live view locally (client-side). */}
+                  {/* Zoom controls — real browser zoom: steppers + editable %.
+                      Changing zoom reflows the remote page (crisp, like Chrome). */}
                   <div className="flex items-center gap-0.5 shrink-0 border-l pl-1 ml-0.5">
                     <button
-                      onClick={() => applyZoom(zoom - 0.25)}
-                      disabled={zoom <= 0.5}
+                      onClick={() => applyZoom(zoom - ZOOM_STEP)}
+                      disabled={zoom <= ZOOM_MIN}
                       className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
-                      title="Zoom out"
+                      title="Zoom out (−10%)"
                     >
                       <ZoomOut className="h-3.5 w-3.5" />
                     </button>
+                    <div className="flex items-center">
+                      <input
+                        value={zoomText}
+                        onChange={(e) => setZoomText(e.target.value.replace(/[^\d]/g, ""))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") { commitZoomText(); (e.target as HTMLInputElement).blur() }
+                        }}
+                        onBlur={commitZoomText}
+                        onFocus={(e) => e.target.select()}
+                        inputMode="numeric"
+                        aria-label="Zoom percentage"
+                        title="Type an exact zoom % and press Enter"
+                        className="w-8 text-[10px] font-semibold text-center tabular-nums bg-transparent outline-none focus:bg-muted rounded px-0.5 text-muted-foreground focus:text-foreground"
+                      />
+                      <span className="text-[10px] font-semibold text-muted-foreground select-none">%</span>
+                    </div>
                     <button
-                      onClick={() => applyZoom(1)}
-                      className="text-[10px] font-semibold text-muted-foreground hover:text-foreground w-9 text-center tabular-nums"
-                      title="Reset zoom to 100%"
-                    >
-                      {Math.round(zoom * 100)}%
-                    </button>
-                    <button
-                      onClick={() => applyZoom(zoom + 0.25)}
-                      disabled={zoom >= 3}
+                      onClick={() => applyZoom(zoom + ZOOM_STEP)}
+                      disabled={zoom >= ZOOM_MAX}
                       className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
-                      title="Zoom in"
+                      title="Zoom in (+10%)"
                     >
                       <ZoomIn className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => applyZoom(1)}
+                      disabled={zoom === 1}
+                      className="text-[9px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40 px-1"
+                      title="Reset zoom to 100%"
+                    >
+                      Reset
                     </button>
                   </div>
                   <Button
@@ -1383,7 +1412,7 @@ export default function LiveQASessionPage() {
                     <div
                       ref={liveViewRef}
                       tabIndex={0}
-                      className={`relative flex-1 min-h-0 flex outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/60 select-none ${zoom > 1 ? "overflow-auto items-start justify-start" : "overflow-hidden items-center justify-center"}`}
+                      className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/60 select-none"
                       onKeyDown={(e) => {
                         // Cmd/Ctrl+V: the remote browser's clipboard is empty —
                         // the text must come from the local clipboard. Don't
@@ -1435,7 +1464,6 @@ export default function LiveQASessionPage() {
                         ref={imgRef}
                         alt="Live browser view"
                         className={`max-w-full max-h-full w-auto h-auto block select-none cursor-default ${hasFrame ? "" : "hidden"}`}
-                        style={zoom !== 1 ? { transform: `scale(${zoom})`, transformOrigin: zoom > 1 ? "top left" : "center center" } : undefined}
                         draggable={false}
                         onMouseDown={(e) => {
                           liveViewRef.current?.focus()
