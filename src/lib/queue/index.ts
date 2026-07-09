@@ -6,11 +6,17 @@ const REDIS_HOST = process.env.REDIS_HOST || "localhost"
 const REDIS_PORT = Number(process.env.REDIS_PORT) || 6379
 const REDIS_PASSWORD = process.env.REDIS_PASSWORD || undefined
 
+// family: 0 lets ioredis resolve over both IPv4 and IPv6. Railway's private
+// network (*.railway.internal) is IPv6-only, so this is required to connect to
+// REDIS_PRIVATE_URL; it's harmless for the public IPv4 URL.
+const IP_FAMILY = 0
+
 function defaultConnection() {
   return {
     host: REDIS_HOST,
     port: REDIS_PORT,
     password: REDIS_PASSWORD,
+    family: IP_FAMILY,
   }
 }
 
@@ -21,6 +27,7 @@ function connectionOptions() {
       host: url.hostname || REDIS_HOST,
       port: Number(url.port) || REDIS_PORT,
       password: url.password || REDIS_PASSWORD,
+      family: IP_FAMILY,
     }
   } catch {
     return defaultConnection()
@@ -36,6 +43,7 @@ export const redisClient = new Redis({
   host: conn.host,
   port: conn.port,
   password: conn.password,
+  family: IP_FAMILY,
   maxRetriesPerRequest: null,
 })
 
@@ -45,6 +53,7 @@ export function createRedisClient(): Redis {
     host: conn.host,
     port: conn.port,
     password: conn.password,
+    family: IP_FAMILY,
     maxRetriesPerRequest: null,
   })
 }
