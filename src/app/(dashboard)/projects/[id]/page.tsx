@@ -24,7 +24,8 @@ import {
   TrendingUp,
   Activity,
   CheckCircle2,
-  Trash2
+  Trash2,
+  History
 } from "lucide-react"
 
 type ProjectTab = "overview" | "scope" | "credentials" | "integrations" | "settings"
@@ -210,6 +211,7 @@ export default function ProjectDetailPage() {
                   { title: "Open Bug Reports", desc: "Triage defect tickets and synchronizations.", href: `/projects/${projectId}/bug-reports`, icon: Bug },
                   { title: "Open Recorder Studio", desc: "Launch step pickers to record user actions.", href: `/projects/${projectId}/recorder-studio`, icon: Video },
                   { title: "Open Live QA Session", desc: "Run live QA checks and capture screenshots.", href: `/projects/${projectId}/live-qa-session`, icon: FlaskConical },
+                  { title: "Live QA History", desc: "Past sessions with their bugs, screenshots, and videos.", href: `/projects/${projectId}/live-qa-history`, icon: History },
                   { title: "Open OpenProject Sync", desc: "Configure server hooks and track parent maps.", href: `/projects/${projectId}/openproject-sync`, icon: Globe }
                 ].map((ws, idx) => (
                   <div 

@@ -663,6 +663,11 @@ model BugReport {
 
   manualTestSessionId String?
   manualTestSession   ManualTestSession? @relation(fields: [manualTestSessionId], references: [id], onDelete: SetNull)
+
+  // Live QA Session this bug was filed from (powers the Live QA History bug count).
+  recordingSessionId  String?
+  recordingSession    RecordingSession?  @relation(fields: [recordingSessionId], references: [id], onDelete: SetNull)
+
   requirements        BugReportRequirement[]
   recordedTestCaseId  String?
   recordedTestCase    RecordedTestCase?  @relation(fields: [recordedTestCaseId], references: [id], onDelete: SetNull)
@@ -798,6 +803,7 @@ model RecordingSession {
   notes             RecordingSessionNote[]
   screenshots       SessionScreenshot[]
   recordings        SessionRecording[]
+  bugReports        BugReport[]
 
   @@index([projectId, status])
 }

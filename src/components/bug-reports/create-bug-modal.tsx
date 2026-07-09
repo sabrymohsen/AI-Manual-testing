@@ -14,7 +14,7 @@ import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check } from "lucide-react"
  * uploaded to /api/bug-reports/[bugId]/attachments after creation.
  */
 
-interface CreateBugStep {
+export interface CreateBugStep {
   stepNumber: number
   actionDescription: string
   expectedResult?: string | null
@@ -40,8 +40,17 @@ interface CreateBugModalProps {
     actualResult?: string
     environment?: string
   }
+  /**
+   * Steps recorded during a Live QA Session, offered as an opt-in inside the
+   * modal. The steps list starts empty; the tester can click "Add recorded
+   * steps" to pull these into the editable Reproduction Steps builder (and then
+   * edit, delete, or add more) — or ignore them entirely.
+   */
+  sessionSteps?: CreateBugStep[]
   /** "Bug Source" dropdown options, pulled from an OpenProject list field. */
   sourceOptions?: string[]
+  /** Live QA session id to link this bug to (for Session History bug counts). */
+  recordingSessionId?: string | null
   /** Auto-captured live-session context, passed through the validated API fields. */
   sessionContext?: {
     pageUrl?: string | null
@@ -66,10 +75,12 @@ export function CreateBugModal({
   onClose,
   onCreated,
   initialValues,
+  sessionSteps,
   sessionContext,
   initialAttachmentPaths,
   attachmentChoices,
   sourceOptions,
+  recordingSessionId,
 }: CreateBugModalProps) {
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
@@ -213,6 +224,18 @@ export function CreateBugModal({
     updated[idx].actionDescription = text
     setSteps(updated)
   }
+  // Opt-in import of the Live QA recorded steps — appended to whatever is already
+  // in the builder, then renumbered. Still fully editable/removable afterwards.
+  const addRecordedSteps = () => {
+    if (!sessionSteps || sessionSteps.length === 0) return
+    setSteps((prev) =>
+      [...prev, ...sessionSteps].map((s, i) => ({
+        stepNumber: i + 1,
+        actionDescription: s.actionDescription,
+        expectedResult: s.expectedResult ?? null,
+      }))
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -227,7 +250,9 @@ export function CreateBugModal({
     // Format steps builder as stepsToReproduce string
     let stepsStr = desc + "\n\nSteps:\n"
     steps.forEach((s, idx) => {
-      stepsStr += `${idx + 1}. ${s.actionDescription}\n`
+      stepsStr += `${idx + 1}. ${s.actionDescription}`
+      if (s.expectedResult) stepsStr += ` — Expected: ${s.expectedResult}`
+      stepsStr += "\n"
     })
 
     const body: any = {
@@ -241,6 +266,7 @@ export function CreateBugModal({
       status: "Open",
     }
     if (source) body.source = source
+    if (recordingSessionId) body.recordingSessionId = recordingSessionId
     // A pasted video URL is stored directly; an uploaded video file takes precedence.
     if (videoUrl.trim() && !videoFile) {
       body.videoUrl = videoUrl.trim()
@@ -485,6 +511,19 @@ export function CreateBugModal({
                 + Add Step
               </Button>
             </div>
+
+            {/* Opt-in: pull the steps recorded in this Live QA session into the
+                builder. Shown whenever recorded steps are available. */}
+            {sessionSteps && sessionSteps.length > 0 && (
+              <button
+                type="button"
+                onClick={addRecordedSteps}
+                className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-indigo-300 dark:border-indigo-500/40 bg-indigo-50/60 dark:bg-indigo-500/[0.08] text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/[0.14] transition-colors"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Add {sessionSteps.length} recorded step{sessionSteps.length === 1 ? "" : "s"} from this session
+              </button>
+            )}
 
             {steps.length === 0 ? (
               <p className="text-[10px] text-muted-foreground italic text-center py-2">No steps listed. Click add step to define instructions.</p>
