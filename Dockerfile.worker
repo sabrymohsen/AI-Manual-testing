@@ -1,0 +1,23 @@
+# Worker service — runs the BullMQ queue consumers that drive Playwright browsers.
+#
+# Uses the official Playwright image so Chromium/Firefox/WebKit and all system
+# libraries match the installed playwright version (1.60.0). Point a Railway
+# service at this file with RAILWAY_DOCKERFILE_PATH=Dockerfile.worker.
+FROM mcr.microsoft.com/playwright:v1.60.0-jammy
+
+WORKDIR /app
+
+# Install all dependencies. tsx is a devDependency, so do NOT omit dev deps.
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# App source + Prisma schema.
+COPY . .
+
+# Generate the Prisma client from the real schema (same reason as the app image).
+RUN npx prisma generate
+
+ENV NODE_ENV=production
+
+# Run every background queue worker in a single process.
+CMD ["npm", "run", "workers"]
