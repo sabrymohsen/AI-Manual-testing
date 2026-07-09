@@ -4,9 +4,14 @@ import { prisma } from "@/lib/db"
 import { getTrialDays } from "@/lib/settings"
 import { daysToDate } from "@/lib/trial"
 
-const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET
-if (!NEXTAUTH_SECRET) {
-  throw new Error("NEXTAUTH_SECRET environment variable is required")
+// Resolve the secret lazily so importing this module (e.g. during `next build`
+// page-data collection) doesn't crash when the env var is only present at runtime.
+function requireSecret(): string {
+  const secret = process.env.NEXTAUTH_SECRET
+  if (!secret) {
+    throw new Error("NEXTAUTH_SECRET environment variable is required")
+  }
+  return secret
 }
 const SALT_ROUNDS = 12
 
@@ -108,7 +113,7 @@ export async function createToken(user: AuthUser): Promise<string> {
   const encodedPayload = base64urlEncode(JSON.stringify(payload))
   
   const tokenInput = `${encodedHeader}.${encodedPayload}`
-  const key = await getHMACKey(NEXTAUTH_SECRET!)
+  const key = await getHMACKey(requireSecret())
   const signatureBuffer = await globalThis.crypto.subtle.sign(
     "HMAC",
     key,
@@ -125,7 +130,7 @@ export async function verifyToken(token: string): Promise<AuthUser | null> {
     const [encodedHeader, encodedPayload, encodedSignature] = parts
     
     const tokenInput = `${encodedHeader}.${encodedPayload}`
-    const key = await getHMACKey(NEXTAUTH_SECRET!)
+    const key = await getHMACKey(requireSecret())
     const signatureBuffer = base64UrlToArrayBuffer(encodedSignature)
     
     const isValid = await globalThis.crypto.subtle.verify(
