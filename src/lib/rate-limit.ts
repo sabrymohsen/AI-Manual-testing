@@ -3,6 +3,8 @@ import { Redis } from "ioredis"
 // Fail fast instead of the default 20-retry hang when Redis is unreachable, and
 // don't queue commands while offline so calls reject quickly and we can fail open.
 const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
+  // family: 0 resolves over IPv4/IPv6 (Railway private network is IPv6-only).
+  family: 0,
   maxRetriesPerRequest: 1,
   enableOfflineQueue: false,
   connectTimeout: 3000,
