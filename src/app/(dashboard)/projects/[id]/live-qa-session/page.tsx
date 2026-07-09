@@ -1087,9 +1087,18 @@ export default function LiveQASessionPage() {
         // ═════════════════════════════════════════════════════════════════════
         <div className="flex-1 overflow-y-auto max-w-2xl mx-auto px-6 py-12 space-y-8 select-none text-xs font-semibold">
           <div className="space-y-1.5 border-b pb-4">
-            <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-              <Zap className="h-7 w-7 text-indigo-500 fill-current" /> Live QA Session
-            </h1>
+            <div className="flex items-start justify-between gap-3">
+              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
+                <Zap className="h-7 w-7 text-indigo-500 fill-current" /> Live QA Session
+              </h1>
+              <button
+                type="button"
+                onClick={() => router.push(`/projects/${projectId}/live-qa-history`)}
+                className="shrink-0 mt-1 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <Activity className="h-3.5 w-3.5" /> Session history
+              </button>
+            </div>
             <p className="text-sm text-muted-foreground font-medium">
               Start a live browser session — embedded right in this page — to perform manual validation, record replay steps, capture video, and log defect traces.
             </p>
@@ -1830,6 +1839,12 @@ export default function LiveQASessionPage() {
         onCreated={(bug) => {
           setToast({ message: `Defect ${bug.bugKey || ""} logged successfully!`, type: "success" })
         }}
+        recordingSessionId={sessionId}
+        sessionSteps={recordedSteps.map((s) => ({
+          stepNumber: s.stepNumber,
+          actionDescription: s.actionDescription,
+          expectedResult: s.expectedResult,
+        }))}
         initialValues={{
           actualResult: "Failure observed during live QA session.",
           environment: "Staging",

@@ -132,6 +132,7 @@ export async function POST(
     openProjectParentId: z.string().optional().nullable(),
     pageUrl: z.string().optional().nullable(),
     source: z.string().optional().nullable(),
+    recordingSessionId: z.string().optional().nullable(),
   })
   const parsed = bugReportBodySchema.safeParse(body)
   if (!parsed.success) {
@@ -172,6 +173,17 @@ export async function POST(
     testCaseId = parsed.data.testCaseId
   }
 
+  // Link the bug to the Live QA session it was filed from (ownership-checked so
+  // an arbitrary session id can't be attached). Powers Live QA History bug counts.
+  let recordingSessionId: string | null = null
+  if (parsed.data.recordingSessionId) {
+    const sess = await prisma.recordingSession.findFirst({
+      where: { id: parsed.data.recordingSessionId, projectId: params.projectId },
+      select: { id: true },
+    })
+    if (sess) recordingSessionId = sess.id
+  }
+
   let requirementIds: string[] = []
   if (testCaseId) {
     const tcRequirements = await prisma.testCaseRequirement.findMany({
@@ -210,6 +222,7 @@ export async function POST(
         assignedTo: parsed.data.assignedTo || null,
         openProjectParentId: parsed.data.openProjectParentId || null,
         source: parsed.data.source || null,
+        recordingSessionId,
         browser: browser as any,
         viewport: viewport as any,
         testRunId: parsed.data.testRunId || null,
