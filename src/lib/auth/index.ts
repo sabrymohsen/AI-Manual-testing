@@ -76,7 +76,10 @@ function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
     .replace(/=+$/, "")
 }
 
-function base64UrlToArrayBuffer(base64url: string): ArrayBuffer {
+// Returns a Uint8Array (a TypedArray) rather than the underlying ArrayBuffer:
+// in the Edge runtime a raw `.buffer` can fail SubtleCrypto's cross-realm
+// `instanceof ArrayBuffer` check, but a TypedArray is always accepted.
+function base64UrlToUint8Array(base64url: string): Uint8Array {
   let base64 = base64url.replace(/-/g, "+").replace(/_/g, "/")
   while (base64.length % 4) {
     base64 += "="
@@ -86,7 +89,7 @@ function base64UrlToArrayBuffer(base64url: string): ArrayBuffer {
   for (let i = 0; i < binString.length; i++) {
     bytes[i] = binString.charCodeAt(i)
   }
-  return bytes.buffer
+  return bytes
 }
 
 async function getHMACKey(secret: string): Promise<CryptoKey> {
@@ -131,12 +134,12 @@ export async function verifyToken(token: string): Promise<AuthUser | null> {
     
     const tokenInput = `${encodedHeader}.${encodedPayload}`
     const key = await getHMACKey(requireSecret())
-    const signatureBuffer = base64UrlToArrayBuffer(encodedSignature)
+    const signatureBuffer = base64UrlToUint8Array(encodedSignature)
     
     const isValid = await globalThis.crypto.subtle.verify(
       "HMAC",
       key,
-      signatureBuffer,
+      signatureBuffer as BufferSource,
       new TextEncoder().encode(tokenInput)
     )
     
