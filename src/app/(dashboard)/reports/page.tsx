@@ -1,153 +1,278 @@
 "use client"
 
 /**
- * Reports workspace — pick scope (All Projects roll-up or a single project) + a
- * role-based template + date range, view the tailored charts/tables, and export
- * to PDF / Word / Excel.
+ * QA Analytics Dashboard — a full-screen analytics workspace over real Postgres
+ * data. KPI cards + six interactive charts + tabbed, paginated data tables. All
+ * series come from /api/reports/* (see src/lib/reports/analytics.ts). The
+ * existing role-based report exporters are reused for PDF/Word/Excel.
  */
-import { useCallback, useEffect, useRef, useState } from "react"
-import { AppPageHeader } from "@/components/ui/app-page-header"
-import { Button } from "@/components/ui/button"
-import { FileText, FileSpreadsheet, FileType, Loader2, RefreshCw } from "lucide-react"
-import { ReportBody } from "@/components/reports/sections"
-import { REPORT_TEMPLATES, ROLE_ORDER } from "@/lib/reports/templates"
-import type { AnyReport, ReportRole } from "@/lib/reports/types"
-import { exportPdf, exportDocx, exportXlsx } from "@/lib/reports/export"
-
-const selectClass =
-  "flex h-9 rounded-md border border-input bg-background px-3 py-1 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-
-interface ProjOpt { id: string; name: string }
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { CheckCircle, FileText, Bug, ShieldCheck, Zap, Timer } from "lucide-react"
+import {
+  useProjects,
+  useProjectReport,
+  useSprints,
+  useVelocity,
+  useBurndown,
+  useCumulativeFlow,
+  useDefectTrend,
+  useExecutionFunnel,
+  useTeamPerformance,
+  type DashboardFilters,
+} from "@/hooks/reports/use-analytics"
+import { DashboardHeader, useNow, type DashboardRole, type DatePreset } from "@/components/reports/dashboard/header"
+import { KPICards, type KPICardData } from "@/components/reports/dashboard/kpi-cards"
+import {
+  BurndownChart,
+  VelocityChart,
+  CumulativeFlowChart,
+  DefectTrendChart,
+  TeamPerformanceChart,
+  ExecutionFunnelChart,
+} from "@/components/reports/dashboard/charts"
+import { TabbedTables } from "@/components/reports/dashboard/tables"
+import { ExportMenu } from "@/components/reports/dashboard/export-menu"
 
 function isoDaysAgo(days: number): string {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
 }
+function presetRange(p: DatePreset): { from: string; to: string } {
+  const to = isoDaysAgo(0)
+  if (p === "7D") return { from: isoDaysAgo(7), to }
+  if (p === "30D") return { from: isoDaysAgo(30), to }
+  if (p === "90D") return { from: isoDaysAgo(90), to }
+  if (p === "YTD") return { from: `${new Date().getFullYear()}-01-01`, to }
+  return { from: isoDaysAgo(30), to }
+}
+
+// Which charts each role sees (spec §8). Order matters.
+type ChartKey = "burndown" | "velocity" | "cfd" | "defectTrend" | "team" | "funnel"
+const ROLE_CHARTS: Record<DashboardRole, ChartKey[]> = {
+  PM: ["burndown", "velocity", "defectTrend", "cfd", "funnel"], // hides team
+  "QA Manager": ["burndown", "cfd", "defectTrend", "team", "funnel"], // hides velocity
+  "Test Lead": ["burndown", "velocity", "defectTrend", "team", "funnel"], // hides cfd
+  Developer: ["defectTrend", "burndown", "velocity", "cfd", "team"], // hides funnel
+}
 
 export default function ReportsPage() {
-  const [projects, setProjects] = useState<ProjOpt[]>([])
-  const [scope, setScope] = useState<string>("org") // "org" | projectId
-  const [role, setRole] = useState<ReportRole>("PM")
-  const [from, setFrom] = useState(isoDaysAgo(90))
-  const [to, setTo] = useState(isoDaysAgo(0))
+  const qc = useQueryClient()
+  const { data: projects = [] } = useProjects()
 
-  const [report, setReport] = useState<AnyReport | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [exporting, setExporting] = useState<string | null>(null)
+  const [projectId, setProjectId] = useState("")
+  const [sprintId, setSprintId] = useState<string | undefined>(undefined)
+  const [preset, setPreset] = useState<DatePreset>("30D")
+  const [custom, setCustom] = useState(presetRange("30D"))
+  const [role, setRole] = useState<DashboardRole>("PM")
+  const [autoRefresh, setAutoRefresh] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
+  useNow() // keep "updated X ago" fresh
 
+  // Default to the first project once loaded.
   useEffect(() => {
-    fetch("/api/projects")
-      .then((r) => r.json())
-      .then((d) => setProjects((d.projects || []).map((p: any) => ({ id: p.id, name: p.name }))))
-      .catch(() => {})
-  }, [])
+    if (!projectId && projects.length) setProjectId(projects[0].id)
+  }, [projects, projectId])
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const qs = `?from=${from}&to=${to}`
-      const url = scope === "org" ? `/api/reports/org${qs}` : `/api/reports/project/${scope}${qs}`
-      const res = await fetch(url)
-      const data = await res.json()
-      if (data.error) { setError(data.error); setReport(null) }
-      else setReport(data.report)
-    } catch (err: any) {
-      setError(err?.message || "Failed to load report")
-      setReport(null)
-    } finally {
-      setLoading(false)
+  const range = preset === "Custom" ? custom : presetRange(preset)
+  const filters: DashboardFilters = { projectId, sprintId, from: range.from, to: range.to }
+
+  // ── Data ──
+  const report = useProjectReport(filters)
+  const sprints = useSprints(projectId)
+  const velocity = useVelocity(filters)
+  const burndown = useBurndown(filters)
+  const cfd = useCumulativeFlow(filters)
+  const defect = useDefectTrend(filters)
+  const funnel = useExecutionFunnel(filters)
+  const team = useTeamPerformance(filters)
+
+  const anyFetching =
+    report.isFetching ||
+    velocity.isFetching ||
+    burndown.isFetching ||
+    cfd.isFetching ||
+    defect.isFetching ||
+    funnel.isFetching ||
+    team.isFetching
+
+  // Track last successful update.
+  useEffect(() => {
+    if (report.dataUpdatedAt) setLastUpdated(new Date(report.dataUpdatedAt))
+  }, [report.dataUpdatedAt])
+
+  // Central auto-refresh (60s) so the header toggle governs it.
+  useEffect(() => {
+    if (!autoRefresh) return
+    const t = setInterval(() => qc.invalidateQueries({ queryKey: ["reports"] }), 60_000)
+    return () => clearInterval(t)
+  }, [autoRefresh, qc])
+
+  const refresh = () => qc.invalidateQueries({ queryKey: ["reports"] })
+
+  // ── KPI cards (real data) ──
+  const cards = useMemo<KPICardData[]>(() => {
+    const r = report.data
+    const trend = r?.executionTrend ?? []
+    const passSpark = trend.map((t) => t.passRate).slice(-7)
+    const passChange = passSpark.length > 1 ? passSpark[passSpark.length - 1] - passSpark[0] : 0
+
+    const openSpark = (defect.data ?? []).map((d) => d.cumulativeOpen).slice(-7)
+    const openChange = openSpark.length > 1 ? openSpark[openSpark.length - 1] - openSpark[0] : 0
+
+    const velSprints = velocity.data?.sprints ?? []
+    const velSpark = velSprints.map((s) => s.completed).slice(-7)
+    const velChange = velSpark.length > 1 ? velSpark[velSpark.length - 1] - velSpark[velSpark.length - 2] : 0
+
+    const coverage = r ? (r.coverage.requirementsTotal ? Math.round((r.coverage.requirementsCovered / r.coverage.requirementsTotal) * 100) : 0) : 0
+
+    // Active sprint day X/Y.
+    const active = (sprints.data?.rows ?? []).find((s) => s.status === "Active") ?? (sprints.data?.rows ?? [])[0]
+    let sprintValue = "—"
+    let sprintProgress = 0
+    if (active?.startDate && active?.endDate) {
+      const start = new Date(active.startDate).getTime()
+      const end = new Date(active.endDate).getTime()
+      const totalDays = Math.max(1, Math.round((end - start) / 86400000))
+      const dayNow = Math.min(totalDays, Math.max(0, Math.round((Date.now() - start) / 86400000)))
+      sprintValue = `${dayNow} / ${totalDays}`
+      sprintProgress = Math.round((dayNow / totalDays) * 100)
     }
-  }, [scope, from, to])
 
-  useEffect(() => { load() }, [load])
+    return [
+      {
+        key: "pass",
+        label: "Pass Rate",
+        value: `${r?.summary.passRate ?? 0}%`,
+        change: `${passChange >= 0 ? "+" : ""}${passChange}%`,
+        trend: passChange > 0 ? "up" : passChange < 0 ? "down" : "neutral",
+        icon: CheckCircle,
+        color: "emerald",
+        sparkline: passSpark,
+        goodDirection: "up",
+        targetId: "chart-defect-trend",
+      },
+      {
+        key: "tests",
+        label: "Test Cases",
+        value: (r?.summary.testCases ?? 0).toLocaleString(),
+        change: `${r?.summary.automated ?? 0} auto`,
+        trend: "neutral",
+        icon: FileText,
+        color: "blue",
+        sparkline: [],
+        targetId: "data-tables",
+      },
+      {
+        key: "bugs",
+        label: "Open Bugs",
+        value: String(r?.summary.openDefects ?? 0),
+        change: `${openChange >= 0 ? "+" : ""}${openChange}`,
+        trend: openChange > 0 ? "up" : openChange < 0 ? "down" : "neutral",
+        icon: Bug,
+        color: "rose",
+        sparkline: openSpark,
+        goodDirection: "down",
+        targetId: "chart-defect-trend",
+      },
+      {
+        key: "coverage",
+        label: "Req Coverage",
+        value: `${coverage}%`,
+        change: `${r?.coverage.requirementsCovered ?? 0}/${r?.coverage.requirementsTotal ?? 0}`,
+        trend: "neutral",
+        icon: ShieldCheck,
+        color: "violet",
+        sparkline: [],
+        targetId: "chart-cfd",
+      },
+      {
+        key: "velocity",
+        label: "Velocity",
+        value: `${velocity.data?.averageVelocity ?? 0} pts`,
+        change: `${velChange >= 0 ? "+" : ""}${velChange}`,
+        trend: velChange > 0 ? "up" : velChange < 0 ? "down" : "neutral",
+        icon: Zap,
+        color: "amber",
+        sparkline: velSpark,
+        goodDirection: "up",
+        targetId: "chart-velocity",
+      },
+      {
+        key: "sprint",
+        label: "Sprint Day",
+        value: sprintValue,
+        change: `${sprintProgress}%`,
+        trend: "neutral",
+        icon: Timer,
+        color: "slate",
+        sparkline: [],
+        progress: sprintProgress,
+        targetId: "chart-burndown",
+      },
+    ]
+  }, [report.data, defect.data, velocity.data, sprints.data])
 
-  const runExport = async (kind: "pdf" | "docx" | "xlsx") => {
-    if (!report) return
-    setExporting(kind)
-    try {
-      if (kind === "xlsx") await exportXlsx(report)
-      else if (canvasRef.current) {
-        if (kind === "pdf") await exportPdf(canvasRef.current, report)
-        else await exportDocx(canvasRef.current, report, REPORT_TEMPLATES[role].label)
-      }
-    } catch (err: any) {
-      setError(`Export failed: ${err?.message || kind}`)
-    } finally {
-      setExporting(null)
+  const chartFor = (key: ChartKey) => {
+    switch (key) {
+      case "burndown":
+        return <BurndownChart key="burndown" data={burndown.data} loading={burndown.isLoading} />
+      case "velocity":
+        return <VelocityChart key="velocity" data={velocity.data} loading={velocity.isLoading} />
+      case "cfd":
+        return <CumulativeFlowChart key="cfd" data={cfd.data} loading={cfd.isLoading} />
+      case "defectTrend":
+        return <DefectTrendChart key="defectTrend" data={defect.data} loading={defect.isLoading} />
+      case "team":
+        return <TeamPerformanceChart key="team" data={team.data} loading={team.isLoading} />
+      case "funnel":
+        return <ExecutionFunnelChart key="funnel" data={funnel.data} loading={funnel.isLoading} />
     }
   }
 
-  const scopeName = scope === "org" ? "All Projects" : projects.find((p) => p.id === scope)?.name || "Project"
+  const visibleCharts = ROLE_CHARTS[role]
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold">
-      <AppPageHeader
-        title="Reports"
-        subtitle="Generate role-based QA reports across all projects or per project, with charts and PDF / Word / Excel export."
-        breadcrumb="Executive Hub > Reports"
+    <div className="min-h-full bg-slate-50">
+      <DashboardHeader
+        projects={projects}
+        projectId={projectId}
+        onProject={(id) => {
+          setProjectId(id)
+          setSprintId(undefined)
+        }}
+        sprints={sprints.data?.rows ?? []}
+        sprintId={sprintId}
+        onSprint={setSprintId}
+        preset={preset}
+        onPreset={setPreset}
+        from={custom.from}
+        to={custom.to}
+        onFrom={(v) => setCustom((c) => ({ ...c, from: v }))}
+        onTo={(v) => setCustom((c) => ({ ...c, to: v }))}
+        role={role}
+        onRole={setRole}
+        onRefresh={refresh}
+        isFetching={anyFetching}
+        lastUpdated={lastUpdated}
+        autoRefresh={autoRefresh}
+        onToggleAutoRefresh={() => setAutoRefresh((v) => !v)}
+        exportSlot={<ExportMenu report={report.data} captureRef={canvasRef} roleLabel={role} />}
       />
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-end gap-3 p-4 border border-slate-100 shadow-sm rounded-2xl bg-card">
-        <div className="space-y-1">
-          <label className="block text-[9px] uppercase font-extrabold text-muted-foreground/60">Scope</label>
-          <select className={selectClass} value={scope} onChange={(e) => setScope(e.target.value)}>
-            <option value="org">All Projects (roll-up)</option>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+      {!projectId ? (
+        <div className="p-16 text-center text-sm text-slate-400">
+          {projects.length === 0 ? "No projects found. Create a project to see analytics." : "Select a project to begin."}
         </div>
-        <div className="space-y-1">
-          <label className="block text-[9px] uppercase font-extrabold text-muted-foreground/60">Template</label>
-          <select className={selectClass} value={role} onChange={(e) => setRole(e.target.value as ReportRole)}>
-            {ROLE_ORDER.map((r) => <option key={r} value={r}>{REPORT_TEMPLATES[r].label}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="block text-[9px] uppercase font-extrabold text-muted-foreground/60">From</label>
-          <input type="date" className={selectClass} value={from} onChange={(e) => setFrom(e.target.value)} />
-        </div>
-        <div className="space-y-1">
-          <label className="block text-[9px] uppercase font-extrabold text-muted-foreground/60">To</label>
-          <input type="date" className={selectClass} value={to} onChange={(e) => setTo(e.target.value)} />
-        </div>
-        <Button variant="outline" onClick={load} disabled={loading} className="h-9">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-        </Button>
+      ) : (
+        <div ref={canvasRef} className="space-y-6 p-6" style={{ colorScheme: "light" }}>
+          <KPICards cards={cards} loading={report.isLoading && !report.data} />
 
-        <div className="ml-auto flex gap-2">
-          <Button variant="outline" onClick={() => runExport("pdf")} disabled={!report || !!exporting} className="h-9">
-            {exporting === "pdf" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <FileText className="h-4 w-4 mr-1" />} PDF
-          </Button>
-          <Button variant="outline" onClick={() => runExport("docx")} disabled={!report || !!exporting} className="h-9">
-            {exporting === "docx" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <FileType className="h-4 w-4 mr-1" />} Word
-          </Button>
-          <Button variant="outline" onClick={() => runExport("xlsx")} disabled={!report || !!exporting} className="h-9">
-            {exporting === "xlsx" ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <FileSpreadsheet className="h-4 w-4 mr-1" />} Excel
-          </Button>
+          <div className="grid gap-6 lg:grid-cols-2">{visibleCharts.map((k) => chartFor(k))}</div>
+
+          <TabbedTables projectId={projectId} />
         </div>
-      </div>
-
-      {error && <div className="p-3 rounded-md border border-red-200 bg-red-50 text-red-700 text-sm">{error}</div>}
-
-      {/* Report canvas (captured for PDF/Word export) */}
-      <div ref={canvasRef} className="p-6 rounded-2xl bg-white border border-slate-100 shadow-sm space-y-4" style={{ colorScheme: "light" }}>
-        <div className="border-b pb-3">
-          <h2 className="text-lg font-extrabold text-slate-800">{scopeName} — {REPORT_TEMPLATES[role].label} Report</h2>
-          <p className="text-[10px] text-slate-400 font-medium">
-            {REPORT_TEMPLATES[role].audience} · {from} → {to} · generated {report ? new Date(report.generatedAt).toLocaleString() : "—"}
-          </p>
-        </div>
-
-        {loading ? (
-          <div className="py-16 text-center text-slate-400 animate-pulse">Building report…</div>
-        ) : report ? (
-          <ReportBody report={report} role={role} />
-        ) : (
-          <div className="py-16 text-center text-slate-400 italic">No report data.</div>
-        )}
-      </div>
+      )}
     </div>
   )
 }

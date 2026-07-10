@@ -42,6 +42,7 @@ export const createTestCaseSchema = z.object({
   executionType: z.enum(["Manual", "Automated"]).optional(),
   testData: z.any().optional().nullable(),
   tags: z.array(z.string()).optional(),
+  assignee: z.string().optional().nullable(),
   requirementIds: z.array(z.string()).optional(),
   steps: z.array(
     z.object({

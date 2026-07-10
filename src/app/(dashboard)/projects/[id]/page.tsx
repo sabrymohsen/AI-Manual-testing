@@ -17,10 +17,12 @@ import {
   Globe,
   Settings,
   ShieldAlert,
-  Trash2
+  Trash2,
+  Users
 } from "lucide-react"
+import { TeamPanel } from "@/components/team/team-panel"
 
-type ProjectTab = "scope" | "credentials" | "integrations" | "settings"
+type ProjectTab = "scope" | "credentials" | "integrations" | "team" | "settings"
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -36,7 +38,7 @@ export default function ProjectDetailPage() {
   // Deep-link support: ?tab=scope|credentials|integrations|general (general → settings tab).
   const tabParam = searchParams.get("tab")
   const initialTab: ProjectTab =
-    tabParam === "credentials" || tabParam === "integrations" || tabParam === "scope"
+    tabParam === "credentials" || tabParam === "integrations" || tabParam === "scope" || tabParam === "team"
       ? tabParam
       : tabParam === "general" || tabParam === "settings"
         ? "settings"
@@ -150,6 +152,7 @@ export default function ProjectDetailPage() {
           { id: "scope", label: "Scope / Modules", icon: Layers },
           { id: "credentials", label: "Credentials Vault", icon: Key },
           { id: "integrations", label: integrationTabLabel, icon: Globe },
+          { id: "team", label: "Team", icon: Users },
           { id: "settings", label: "General Settings", icon: Settings }
         ].map((tab) => {
           const Icon = tab.icon
@@ -250,6 +253,15 @@ export default function ProjectDetailPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* TEAM TAB */}
+        {activeTab === "team" && (
+          <TeamPanel
+            projectId={projectId}
+            providerName={integrationName || integrationProvider}
+            connected={integrationConnected}
+          />
         )}
 
         {/* SETTINGS TAB */}

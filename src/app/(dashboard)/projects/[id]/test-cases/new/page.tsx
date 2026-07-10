@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StepBuilder } from "@/components/test-cases/step-builder"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
+import { AssigneeSelect } from "@/components/team/assignee-select"
 
 interface Step {
   actionDescription: string
@@ -26,7 +27,7 @@ export default function NewTestCasePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [executionType, setExecutionType] = useState<"Manual" | "Automated">("Manual")
-
+  const [assignee, setAssignee] = useState("")
 
   const [requirementIds, setRequirementIds] = useState<string[]>([])
 
@@ -44,6 +45,7 @@ export default function NewTestCasePage() {
       executionType,
       testData: null,
       tags: [],
+      assignee: assignee || null,
       steps: steps.map((s) => ({
         ...s,
         timeoutMs: s.timeoutMs || 10000,
@@ -83,6 +85,16 @@ export default function NewTestCasePage() {
               <option value="High">High</option>
               <option value="Critical">Critical</option>
             </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignee">Assignee</Label>
+            <AssigneeSelect
+              id="assignee"
+              projectId={params.id as string}
+              value={assignee}
+              onChange={setAssignee}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
           </div>
           <div className="space-y-2 col-span-2">
             <Label htmlFor="preconditions">Preconditions</Label>
