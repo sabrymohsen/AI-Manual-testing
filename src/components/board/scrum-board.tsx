@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Plus, Play, CheckCircle2, Trash2, Loader2, Search, Target, X, ListOrdered, LayoutGrid, ListTree, LineChart, Upload, ChevronRight } from "lucide-react"
+import { Plus, Play, CheckCircle2, Trash2, Loader2, Search, Target, X, ListOrdered, LayoutGrid, ListTree, LineChart, Upload, ChevronRight, Zap, SlidersHorizontal, Users, MoreHorizontal } from "lucide-react"
 import { Story, Sprint, EpicLite, StoryCardView, StatusPill, points, issueTypeOf, ConfirmModal } from "./shared"
 import SprintKanban from "./sprint-kanban"
 import SprintReports from "./sprint-reports"
@@ -248,88 +248,98 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-6">
       {/* Redesigned Glassmorphic Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap bg-surface-container-lowest border-b border-outline-variant px-margin-desktop py-4 -mx-6 -mt-6">
-        <div>
-          <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground mb-1 select-none">
-            <span>Projects</span>
-            <ChevronRight className="h-3 w-3" />
-            <span>Sprint Board</span>
-          </div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2 select-none">
-            <Target className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-            Scrum Board
-          </h2>
-        </div>
-        <div className="flex items-center gap-4 flex-wrap">
-          {view !== "reports" && view !== "board" && (
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search stories…"
-                  className="pl-9 pr-3 h-9 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-background w-44 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
-                />
-              </div>
-              <select
-                value={epicFilter}
-                onChange={(e) => setEpicFilter(e.target.value)}
-                className="h-9 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-800 bg-background px-3 focus:ring-1 focus:ring-indigo-500 outline-none cursor-pointer shadow-sm"
-              >
-                <option value="all">All epics</option>
-                {epics.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
-              </select>
+      {/* Redesigned Glassmorphic Header */}
+      <div className="flex items-center justify-between gap-4 flex-wrap bg-white border-b border-outline-variant px-6 py-4 -mx-6 -mt-6">
+        <div className="flex items-center gap-4 flex-1">
+          <div>
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-400 mb-1 select-none">
+              <span>Projects</span>
+              <ChevronRight className="h-3 w-3" />
+              <span>Sprint Board</span>
             </div>
-          )}
-          
-          {/* User avatars group */}
-          <div className="flex -space-x-2 mr-2 select-none">
-            <img className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-30 shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
-            <img className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-20 shadow-sm" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
-            <img className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-10 shadow-sm" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
-            <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-slate-200 dark:bg-slate-800 text-[10px] text-muted-foreground flex items-center justify-center font-extrabold z-0 shadow-sm">+3</div>
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2 select-none">
+              <div className="h-6 w-6 rounded-full border-2 border-blue-600 flex items-center justify-center shrink-0">
+                <div className="h-2.5 w-2.5 rounded-full bg-blue-600 animate-pulse" />
+              </div>
+              Scrum Board
+            </h2>
           </div>
 
-          <div className="flex items-center gap-2 border-l border-outline-variant pl-4">
-            <button
-              onClick={() => setShowImport(true)}
-              className="h-9 px-4 rounded-lg border border-outline-variant bg-background hover:bg-slate-50 text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
-              title="Import user stories from Excel or CSV"
-            >
-              <Upload className="h-4 w-4 text-slate-500" /> Import
-            </button>
+          {/* Search bar inside header next to title */}
+          <div className="relative max-w-xs w-full ml-4">
+            <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search stories..."
+              className="w-full pl-10 pr-4 h-9.5 text-xs rounded-full border-0 bg-[#eff4ff] text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm"
+            />
+          </div>
+
+          {/* User avatars group next to search bar */}
+          <div className="flex -space-x-1.5 ml-4 select-none items-center">
+            <img className="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm z-30" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
+            <img className="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm z-20" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
+            <img className="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm z-10" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
+            <div className="w-7 h-7 rounded-full border-2 border-white bg-blue-50 text-[9px] text-blue-700 flex items-center justify-center font-bold shadow-sm z-0">+3</div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 border-l border-outline-variant pl-4">
             <button
               onClick={() => setShowCreateEpic(true)}
-              className="h-9 px-4 rounded-lg border border-outline-variant bg-background hover:bg-slate-50 text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+              className="h-9 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-all shadow-sm"
             >
-              <Plus className="h-4 w-4 text-slate-500" /> Create Epic
+              <Plus className="h-4 w-4 text-slate-400" /> Create Epic
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+              className="h-9 px-4 bg-blue-750 hover:bg-blue-800 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
             >
-              <Plus className="h-4 w-4" /> Create Sprint
+              <Zap className="h-3.5 w-3.5 fill-current" /> Create Sprint
             </button>
           </div>
         </div>
       </div>
 
-      {/* Redesigned Stripe/Linear-Style Tabs */}
-      <div className="flex items-center gap-1 border-b border-outline-variant pb-px">
-        {TABS.map((t) => {
-          const active = view === t.id
-          return (
-            <button
-              key={t.id}
-              onClick={() => { setView(t.id); clearSelection() }}
-              className={`relative pb-3 pt-2 px-4 text-xs font-bold transition-all duration-200 flex items-center gap-2 ${active ? "text-indigo-600 dark:text-indigo-400 font-extrabold border-b-2 border-indigo-600 dark:border-indigo-400 -mb-px bg-slate-50/50 dark:bg-slate-900/30 rounded-t-lg" : "text-muted-foreground hover:text-foreground"}`}
-            >
-              <t.icon className={`h-4 w-4 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground"}`} />
-              {t.label}
-            </button>
-          )
-        })}
+      {/* Subheader tabs & filters row */}
+      <div className="flex items-center justify-between border-b border-outline-variant pb-px flex-wrap gap-4 select-none">
+        {/* Left tabs */}
+        <div className="flex items-center gap-1">
+          {TABS.map((t) => {
+            const active = view === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => { setView(t.id); clearSelection() }}
+                className={`relative pb-3 pt-3 px-4 text-xs font-semibold transition-all duration-200 flex items-center gap-2 ${active ? "text-blue-600 dark:text-blue-400 font-bold border-b-2 border-blue-600 dark:border-blue-400 -mb-px" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                <t.icon className={`h-4 w-4 ${active ? "text-blue-600 dark:text-blue-400" : "text-slate-400"}`} />
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Right filter controls */}
+        <div className="flex items-center gap-2.5 pb-2.5">
+          <button className="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-2 shadow-sm">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-slate-400" />
+            <span>Filter</span>
+            <span className="h-4.5 min-w-4.5 px-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold flex items-center justify-center">2</span>
+          </button>
+          
+          <button className="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-2 shadow-sm">
+            <Users className="h-3.5 w-3.5 text-slate-400" />
+            <span>Assignee</span>
+            <span className="text-[10px] text-slate-400">▼</span>
+          </button>
+
+          <button className="h-9 w-9 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-lg flex items-center justify-center shadow-sm">
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {view === "board" && (
