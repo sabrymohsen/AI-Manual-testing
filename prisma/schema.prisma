@@ -207,26 +207,38 @@ enum UserRole {
 }
 
 model User {
-  id           String     @id @default(uuid())
-  email        String     @unique
-  passwordHash String
-  name         String?
-  plan         UserPlan   @default(Free)
-  role         UserRole   @default(User)
-  isActive     Boolean    @default(true)
+  id             String    @id @default(uuid())
+  email          String    @unique
+  passwordHash   String
+  name           String?
+  plan           UserPlan  @default(Free)
+  role           UserRole  @default(User)
+  isActive       Boolean   @default(true)
   // Free-trial lifecycle. On signup a user gets a Pro trial: plan=Pro with
   // trialEndsAt in the future. When trialEndsAt elapses they are downgraded to
   // Free (trialEndsAt is kept, in the past, so it reads as an "expired trial").
   // A paid Pro user has trialEndsAt = null (never auto-downgrades).
   trialStartedAt DateTime?
   trialEndsAt    DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   projects     Project[]
   auditLogs    AuditLog[]
-  reportedBugs BugReport[] @relation("BugReporter")
+  reportedBugs BugReport[]   @relation("BugReporter")
   transactions Transaction[]
+
+  // ── Scrum board (spec-literal parallel system) ──
+  avatarUrl              String?
+  scrumTasks             Task[]           @relation("ScrumTaskAssignees")
+  reportedScrumTasks     Task[]           @relation("ScrumTaskReporter")
+  votedScrumTasks        Task[]           @relation("ScrumTaskVoters")
+  watchedScrumTasks      Task[]           @relation("ScrumTaskWatchers")
+  scrumTaskAttachments   TaskAttachment[] @relation("ScrumTaskAttachmentUploader")
+  scrumWorkLogs          WorkLog[]        @relation("ScrumWorkLogAuthor")
+  scrumComments          Comment[]
+  scrumActivities        Activity[]
+  projectMemberships     ProjectMember[]
 }
 
 // Generic platform key/value settings (e.g. default trial length). Admin-editable.
@@ -237,13 +249,13 @@ model AppSetting {
 }
 
 model PricingPlan {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   name          String
   price         Float
-  billingPeriod String    // "monthly" | "yearly"
-  features      String[]  @default([])
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  billingPeriod String // "monthly" | "yearly"
+  features      String[] @default([])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Transaction {
@@ -251,7 +263,7 @@ model Transaction {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   amount    Float
-  status    String   // "Success" | "Failed"
+  status    String // "Success" | "Failed"
   plan      UserPlan
   createdAt DateTime @default(now())
 
@@ -259,41 +271,41 @@ model Transaction {
 }
 
 model Project {
-  id          String       @id @default(uuid())
+  id          String        @id @default(uuid())
   name        String
   webAppUrl   String
   figmaUrl    String?
   description String?
-  environment Environment  @default(Staging)
-  browserType BrowserType  @default(Chromium)
-  viewport    ViewportType @default(Desktop)
-  testType    TestType     @default(Functional)
+  environment Environment   @default(Staging)
+  browserType BrowserType   @default(Chromium)
+  viewport    ViewportType  @default(Desktop)
+  testType    TestType      @default(Functional)
   status      ProjectStatus @default(Active)
 
   customViewportWidth  Int?
   customViewportHeight Int?
 
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  credentials ProjectCredential[]
-  figmaConfig FigmaConfig?
-  integrationConfig IntegrationConfig?
-  testCases   TestCase[]
-  testRuns    TestRun[]
-  auditLogs   AuditLog[]
-  elementLocators ElementLocator[]
+  credentials        ProjectCredential[]
+  figmaConfig        FigmaConfig?
+  integrationConfig  IntegrationConfig?
+  testCases          TestCase[]
+  testRuns           TestRun[]
+  auditLogs          AuditLog[]
+  elementLocators    ElementLocator[]
   elementCollections ElementCollection[]
-  recordingSessions RecordingSession[]
-  features    Feature[]
+  recordingSessions  RecordingSession[]
+  features           Feature[]
 
-  manualTestSessions ManualTestSession[]
-  reusableStepFlows   ReusableStepFlow[]
-  testDataVariables   TestDataVariable[]
-  requirements        Requirement[]
-  epics               Epic[]
-  requirementImports  RequirementImport[]
-  bugReports          BugReport[]
+  manualTestSessions      ManualTestSession[]
+  reusableStepFlows       ReusableStepFlow[]
+  testDataVariables       TestDataVariable[]
+  requirements            Requirement[]
+  epics                   Epic[]
+  requirementImports      RequirementImport[]
+  bugReports              BugReport[]
   figmaFrames             FigmaFrame[]
   visualCheckMappings     VisualCheckMapping[]
   visualToleranceProfiles VisualToleranceProfile[]
@@ -305,9 +317,19 @@ model Project {
   openProjectIntegration  OpenProjectIntegration?
   projectIntegration      ProjectIntegration?
   sprints                 Sprint[]
+  teamVelocities          TeamVelocity[]
 
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  // ── Scrum board (spec-literal parallel system) ──
+  boardKey       String?
+  scrumSprints   ScrumSprint[]
+  scrumEpics     ScrumEpic[]
+  scrumTasks     Task[]
+  boardColumns   BoardColumn[]
+  projectMembers ProjectMember[]
+  teamMembers    ProjectTeamMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -316,73 +338,75 @@ model Project {
 }
 
 model ProjectCredential {
-  id                String   @id @default(uuid())
+  id                String  @id @default(uuid())
   roleName          String
   username          String
   encryptedPassword String
   encryptionIv      String
   encryptionAuthTag String
-  keyVersion        String   @default("v1")
+  keyVersion        String  @default("v1")
   loginUrl          String?
   notes             String?
 
-  projectId         String
-  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  auditLogs         AuditLog[]
-  testRuns          TestRun[]
-  testCases         TestCase[]
-  recordingSessions RecordingSession[]
+  auditLogs          AuditLog[]
+  testRuns           TestRun[]
+  testCases          TestCase[]
+  recordingSessions  RecordingSession[]
   manualTestSessions ManualTestSession[]
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([roleName])
 }
 
 model FigmaConfig {
-  id                      String   @id @default(uuid())
-  projectId               String   @unique
-  project                 Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  encryptedApiToken       String?
-  encryptionIv            String?
-  encryptionAuthTag       String?
-  keyVersion              String   @default("v1")
+  encryptedApiToken String?
+  encryptionIv      String?
+  encryptionAuthTag String?
+  keyVersion        String  @default("v1")
 
-  fileKey                 String?
-  nodeId                  String?
-  visualTolerancePercent  Float    @default(1.0)
-  lastFetchedAt           DateTime?
+  fileKey                String?
+  nodeId                 String?
+  visualTolerancePercent Float     @default(1.0)
+  lastFetchedAt          DateTime?
 }
 
 model TestCase {
-  id              String          @id @default(uuid())
-  title           String
-  priority        Priority        @default(Medium)
-  preconditions   String?
-  source          TestCaseSource  @default(Manual)
-  executionType   ExecutionType   @default(Manual)
+  id            String         @id @default(uuid())
+  title         String
+  priority      Priority       @default(Medium)
+  preconditions String?
+  source        TestCaseSource @default(Manual)
+  executionType ExecutionType  @default(Manual)
 
   requiredCredentialId String?
   requiredCredential   ProjectCredential? @relation(fields: [requiredCredentialId], references: [id], onDelete: SetNull)
 
-  testData        Json?
-  tags            String[]
+  testData Json?
+  tags     String[]
+  assignee String? // team-member id/name from the project's assignee pool (ProjectTeamMember)
 
-  projectId       String
-  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  steps           TestStep[]
-  testRuns        TestRun[]
+  steps              TestStep[]
+  testRuns           TestRun[]
   manualSessionCases ManualSessionCase[]
-  requirements    TestCaseRequirement[]
-  bugReports      BugReport[]
+  requirements       TestCaseRequirement[]
+  bugReports         BugReport[]
+  scrumTaskLinks     TaskTestCase[]
 
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([priority])
@@ -391,20 +415,20 @@ model TestCase {
 }
 
 model TestStep {
-  id                String      @id @default(uuid())
-  testCaseId        String
-  testCase          TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  testCaseId String
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
 
   stepNumber        Int
   actionDescription String
   expectedResult    String
 
-  actionType        ActionType  @default(custom_instruction)
-  targetType        TargetType  @default(none)
-  targetValue       String?
-  inputValue        String?
-  timeoutMs         Int         @default(10000)
-  assertions        Json?
+  actionType  ActionType @default(custom_instruction)
+  targetType  TargetType @default(none)
+  targetValue String?
+  inputValue  String?
+  timeoutMs   Int        @default(10000)
+  assertions  Json?
 
   componentType       String?
   groupId             String?
@@ -416,8 +440,8 @@ model TestStep {
   validationStatus    String?
   validationMessage   String?
 
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   stepResults       TestStepResult[]
   manualStepResults ManualStepResult[]
@@ -427,31 +451,31 @@ model TestStep {
 }
 
 model TestRun {
-  id            String             @id @default(uuid())
+  id String @id @default(uuid())
 
-  projectId     String
-  project       Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  testCaseId    String?
-  testCase      TestCase?          @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  testCaseId String?
+  testCase   TestCase? @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
 
-  credentialId  String?
-  credential    ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  credentialId String?
+  credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
 
-  status        TestRunStatus      @default(Queued)
-  roleUsed      String             @default("None")
-  executionMode ExecutionMode      @default(SelfHealing)
+  status        TestRunStatus @default(Queued)
+  roleUsed      String        @default("None")
+  executionMode ExecutionMode @default(SelfHealing)
 
-  browserType   BrowserType
-  viewport      ViewportType
-  viewportWidth Int?
+  browserType    BrowserType
+  viewport       ViewportType
+  viewportWidth  Int?
   viewportHeight Int?
 
-  triggeredBy   TestCaseSource     @default(Manual)
+  triggeredBy TestCaseSource @default(Manual)
 
-  startedAt     DateTime?
-  completedAt   DateTime?
-  durationMs    Int                @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int       @default(0)
 
   autonomousAgentRunId String?
   autonomousAgentRun   AutonomousAgentRun? @relation(fields: [autonomousAgentRunId], references: [id], onDelete: SetNull)
@@ -466,8 +490,8 @@ model TestRun {
   attachments   Attachment[]
   visualResults VisualComparisonResult[]
 
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([testCaseId])
@@ -478,14 +502,14 @@ model TestRun {
 }
 
 model TestJob {
-  id          String    @id @default(uuid())
-  testRunId   String    @unique
-  testRun     TestRun   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  testRunId String  @unique
+  testRun   TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
-  status      JobStatus @default(Queued)
-  attempts    Int       @default(0)
-  error       String?
-  workerId    String?
+  status   JobStatus @default(Queued)
+  attempts Int       @default(0)
+  error    String?
+  workerId String?
 
   createdAt   DateTime  @default(now())
   startedAt   DateTime?
@@ -493,35 +517,35 @@ model TestJob {
 }
 
 model TestStepResult {
-  id                String      @id @default(uuid())
+  id String @id @default(uuid())
 
-  testRunId         String
-  testRun           TestRun     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testRunId String
+  testRun   TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
-  testStepId        String?
-  testStep          TestStep?   @relation(fields: [testStepId], references: [id], onDelete: SetNull)
+  testStepId String?
+  testStep   TestStep? @relation(fields: [testStepId], references: [id], onDelete: SetNull)
 
   stepNumber        Int
   actionDescription String
   expectedResult    String
   actualResult      String?
 
-  status            StepStatus  @default(Pending)
+  status StepStatus @default(Pending)
 
-  screenshotBefore  String?
-  screenshotAfter   String?
-  errorDetails      String?
-  notes             String?
-  durationMs        Int         @default(0)
-  actionMetadata    Json?
+  screenshotBefore String?
+  screenshotAfter  String?
+  errorDetails     String?
+  notes            String?
+  durationMs       Int     @default(0)
+  actionMetadata   Json?
 
-  logs              Log[]
-  networkLogs       NetworkLog[]
-  visualResults     VisualComparisonResult[]
-  bugReports        BugReport[]
+  logs          Log[]
+  networkLogs   NetworkLog[]
+  visualResults VisualComparisonResult[]
+  bugReports    BugReport[]
 
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([testRunId])
   @@index([testStepId])
@@ -529,20 +553,20 @@ model TestStepResult {
 }
 
 model Log {
-  id               String          @id @default(uuid())
+  id String @id @default(uuid())
 
-  testRunId        String
-  testRun          TestRun         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testRunId String
+  testRun   TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
   testStepResultId String?
   testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: Cascade)
 
-  source           LogSource
-  level            LogLevel
-  message          String
-  raw              Json?
+  source  LogSource
+  level   LogLevel
+  message String
+  raw     Json?
 
-  timestamp        DateTime        @default(now())
+  timestamp DateTime @default(now())
 
   @@index([testRunId])
   @@index([testStepResultId])
@@ -550,26 +574,26 @@ model Log {
 }
 
 model NetworkLog {
-  id               String          @id @default(uuid())
+  id String @id @default(uuid())
 
-  testRunId        String
-  testRun          TestRun         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testRunId String
+  testRun   TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
   testStepResultId String?
   testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: Cascade)
 
-  url              String
-  method           String
-  status           Int?
-  error            String?
-  resourceType     String?
-  durationMs       Int             @default(0)
+  url          String
+  method       String
+  status       Int?
+  error        String?
+  resourceType String?
+  durationMs   Int     @default(0)
 
-  requestHeaders   Json?
-  responseHeaders  Json?
+  requestHeaders      Json?
+  responseHeaders     Json?
   responseBodyPreview String?
 
-  timestamp        DateTime        @default(now())
+  timestamp DateTime @default(now())
 
   @@index([testRunId])
   @@index([testStepResultId])
@@ -577,17 +601,17 @@ model NetworkLog {
 }
 
 model VisualComparisonResult {
-  id               String      @id @default(uuid())
+  id String @id @default(uuid())
 
-  testRunId        String
-  testRun          TestRun     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testRunId String
+  testRun   TestRun @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
-  stepResultId     String?
-  stepResult       TestStepResult? @relation(fields: [stepResultId], references: [id], onDelete: SetNull)
+  stepResultId String?
+  stepResult   TestStepResult? @relation(fields: [stepResultId], references: [id], onDelete: SetNull)
 
-  figmaImagePath   String
-  actualImagePath  String
-  diffImagePath    String?
+  figmaImagePath  String
+  actualImagePath String
+  diffImagePath   String?
 
   mismatchPercent  Float
   tolerancePercent Float
@@ -595,25 +619,25 @@ model VisualComparisonResult {
   viewportHeight   Int
   status           StepStatus
 
-  createdAt        DateTime    @default(now())
+  createdAt DateTime @default(now())
 
   @@index([testRunId])
   @@index([stepResultId])
 }
 
 model BugReport {
-  id               String       @id @default(uuid())
-  bugKey           String?      // e.g. BUG-0001
-  title            String
+  id     String  @id @default(uuid())
+  bugKey String? // e.g. BUG-0001
+  title  String
 
-  projectId        String?
-  project          Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  testCaseId       String?
-  testCase         TestCase?    @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
+  testCaseId String?
+  testCase   TestCase? @relation(fields: [testCaseId], references: [id], onDelete: SetNull)
 
-  testRunId        String?
-  testRun          TestRun?     @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testRunId String?
+  testRun   TestRun? @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
   autonomousAgentRunId String?
   autonomousAgentRun   AutonomousAgentRun? @relation(fields: [autonomousAgentRunId], references: [id], onDelete: SetNull)
@@ -623,50 +647,50 @@ model BugReport {
   testStepResultId String?
   testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: SetNull)
 
-  severity         Priority
-  priority         Priority
-  status           BugStatus    @default(Open)
+  severity Priority
+  priority Priority
+  status   BugStatus @default(Open)
 
   // How the bug was resolved (set when moving to Resolved/Closed/Rejected).
-  resolution       BugResolution?
-  resolutionNote   String?
+  resolution     BugResolution?
+  resolutionNote String?
 
   // Free-form triage labels e.g. ["regression", "ui", "security"].
-  tags             String[]     @default([])
+  tags String[] @default([])
 
   // App-side "Bug Source" (e.g. where the defect was found). Free string whose
   // dropdown options can be pulled from an OpenProject list field; stored here
   // on the bug and NOT synced to OpenProject as a custom field.
-  source           String?
+  source String?
 
-  environment      Environment?
-  roleUsed         String?
-  browser          BrowserType?
-  viewport         ViewportType?
+  environment Environment?
+  roleUsed    String?
+  browser     BrowserType?
+  viewport    ViewportType?
 
-  assignedTo       String?
+  assignedTo String?
 
   // Who filed the bug (auto-set to the creating user).
-  reporterId       String?
-  reporter         User?        @relation("BugReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  reporterId String?
+  reporter   User?   @relation("BugReporter", fields: [reporterId], references: [id], onDelete: SetNull)
 
   // OpenProject parent work package to nest this bug under when synced.
-  openProjectParentId String?
+  openProjectParentId      String?
   // OpenProject board (grid id) the synced bug should be placed on.
-  openProjectBoardId  String?
+  openProjectBoardId       String?
   // OpenProject board column (widget id) the synced bug should be placed under.
   openProjectBoardColumnId String?
   // Values for OpenProject required/custom fields on the bug type, keyed by
   // schema field key (e.g. { "customField6": { type, value } }).
-  openProjectCustomFields Json?
+  openProjectCustomFields  Json?
 
   stepsToReproduce String
   expectedResult   String
   actualResult     String
 
-  screenshotPath   String?
-  consoleLogs      String?
-  networkErrors    String?
+  screenshotPath String?
+  consoleLogs    String?
+  networkErrors  String?
 
   // Auto-captured live-session context (Testing Workstation)
   pageUrl          String?
@@ -674,27 +698,28 @@ model BugReport {
   screenResolution String?
   videoUrl         String?
 
-  comments         BugComment[]
-  activities       BugActivity[]
-  bugAttachments   BugAttachment[]
+  comments       BugComment[]
+  activities     BugActivity[]
+  bugAttachments BugAttachment[]
 
-  attachments      Attachment[]
+  attachments Attachment[]
 
   manualTestSessionId String?
   manualTestSession   ManualTestSession? @relation(fields: [manualTestSessionId], references: [id], onDelete: SetNull)
 
   // Live QA Session this bug was filed from (powers the Live QA History bug count).
-  recordingSessionId  String?
-  recordingSession    RecordingSession?  @relation(fields: [recordingSessionId], references: [id], onDelete: SetNull)
+  recordingSessionId String?
+  recordingSession   RecordingSession? @relation(fields: [recordingSessionId], references: [id], onDelete: SetNull)
 
-  requirements        BugReportRequirement[]
-  recordedTestCaseId  String?
-  recordedTestCase    RecordedTestCase?  @relation(fields: [recordedTestCaseId], references: [id], onDelete: SetNull)
-  visualIssues        VisualDifferenceIssue[]
-  occurrences         BugOccurrence[]
+  requirements       BugReportRequirement[]
+  scrumTaskLinks     TaskBug[]
+  recordedTestCaseId String?
+  recordedTestCase   RecordedTestCase?       @relation(fields: [recordedTestCaseId], references: [id], onDelete: SetNull)
+  visualIssues       VisualDifferenceIssue[]
+  occurrences        BugOccurrence[]
 
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -706,38 +731,38 @@ model BugReport {
 }
 
 model Attachment {
-  id          String     @id @default(uuid())
+  id String @id @default(uuid())
 
-  testRunId   String?
-  testRun     TestRun?   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testRunId String?
+  testRun   TestRun? @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
   bugReportId String?
   bugReport   BugReport? @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
 
-  fileName    String
-  filePath    String
-  fileType    String
-  fileSize    Int?
+  fileName String
+  filePath String
+  fileType String
+  fileSize Int?
 
-  createdAt   DateTime   @default(now())
+  createdAt DateTime @default(now())
 }
 
 model AuditLog {
-  id           String             @id @default(uuid())
+  id String @id @default(uuid())
 
-  action       String
-  details      String
+  action  String
+  details String
 
-  userId       String
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  projectId    String?
-  project      Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   credentialId String?
   credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
 
-  createdAt    DateTime           @default(now())
+  createdAt DateTime @default(now())
 
   @@index([userId])
   @@index([projectId])
@@ -745,9 +770,9 @@ model AuditLog {
 }
 
 model ElementLocator {
-  id                  String            @id @default(uuid())
+  id                  String             @id @default(uuid())
   projectId           String
-  project             Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project             Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
   friendlyName        String
   description         String?
   pageUrl             String
@@ -764,17 +789,17 @@ model ElementLocator {
   textSelector        String?
   labelSelector       String?
   placeholderSelector String?
-  reliabilityScore    Int               @default(0)
+  reliabilityScore    Int                @default(0)
   attributes          Json?
   screenshotPath      String?
-  isValidated         Boolean           @default(false)
+  isValidated         Boolean            @default(false)
   matchCount          Int?
   lastValidatedAt     DateTime?
   collectionId        String?
   collection          ElementCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
   actionType          String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   @@index([projectId])
   @@index([locatorType])
@@ -796,27 +821,27 @@ model ElementCollection {
 }
 
 model RecordingSession {
-  id           String             @id @default(uuid())
-  projectId    String
-  project      Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  credentialId String?
-  credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
-  status       RecordingSessionStatus @default(Starting)
-  browserType  BrowserType
-  viewport     ViewportType
-  startUrl     String
-  currentUrl   String?
-  recordingMode String?           @default("Fast")
+  id                        String                 @id @default(uuid())
+  projectId                 String
+  project                   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  credentialId              String?
+  credential                ProjectCredential?     @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+  status                    RecordingSessionStatus @default(Starting)
+  browserType               BrowserType
+  viewport                  ViewportType
+  startUrl                  String
+  currentUrl                String?
+  recordingMode             String?                @default("Fast")
   currentRecordedTestCaseId String?
-  connectionStatus String?       @default("Connected")
-  lastError    String?
-  keepBrowserOpen Boolean         @default(true)
+  connectionStatus          String?                @default("Connected")
+  lastError                 String?
+  keepBrowserOpen           Boolean                @default(true)
   // "Studio" (Recorder Studio) or "LiveQA" (Live QA Session)
-  kind         String             @default("Studio")
-  startedAt    DateTime           @default(now())
-  finishedAt   DateTime?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  kind                      String                 @default("Studio")
+  startedAt                 DateTime               @default(now())
+  finishedAt                DateTime?
+  createdAt                 DateTime               @default(now())
+  updatedAt                 DateTime               @updatedAt
 
   recordedTestCases RecordedTestCase[]
   notes             RecordingSessionNote[]
@@ -862,61 +887,61 @@ model SessionRecording {
 }
 
 model RecordedTestCase {
-  id                   String            @id @default(uuid())
+  id                   String                 @id @default(uuid())
   sessionId            String
-  session              RecordingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session              RecordingSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   title                String
-  module               String?           @default("General")
+  module               String?                @default("General")
   moduleId             String?
   featureId            String?
   componentId          String?
-  priority             Priority          @default(Medium)
+  priority             Priority               @default(Medium)
   preconditions        String?
   requiredCredentialId String?
   requirementLinks     Json?
   status               RecordedTestCaseStatus @default(Draft)
   finalTestCaseId      String?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
   savedAt              DateTime?
 
-  steps                RecordedStep[]
-  bugs                 BugReport[]
+  steps RecordedStep[]
+  bugs  BugReport[]
 }
 
 model RecordedStep {
-  id                  String           @id @default(uuid())
-  recordedTestCaseId  String
-  recordedTestCase    RecordedTestCase @relation(fields: [recordedTestCaseId], references: [id], onDelete: Cascade)
-  stepNumber          Int
-  pageUrl             String
-  actionType          ActionType
-  actionDescription   String
-  targetType          TargetType
-  targetValue         String?
-  inputValue          String?
-  expectedResult      String?
-  actualResult        String?
-  notes               String?
-  assertionType       String?
-  assertionValue      String?
-  tagName             String?
-  visibleText         String?
-  recommendedSelector String?
-  cssSelector         String?
-  xpathSelector       String?
-  idSelector          String?
-  testIdSelector      String?
-  roleSelector        String?
-  labelSelector       String?
-  placeholderSelector String?
-  reliabilityScore    Int              @default(0)
-  attributes          Json?
-  alternativeLocators Json?
-  assertions          Json?
-  screenshotBefore    String?
-  screenshotAfter     String?
-  includeInFinalTestCase Boolean       @default(true)
+  id                     String           @id @default(uuid())
+  recordedTestCaseId     String
+  recordedTestCase       RecordedTestCase @relation(fields: [recordedTestCaseId], references: [id], onDelete: Cascade)
+  stepNumber             Int
+  pageUrl                String
+  actionType             ActionType
+  actionDescription      String
+  targetType             TargetType
+  targetValue            String?
+  inputValue             String?
+  expectedResult         String?
+  actualResult           String?
+  notes                  String?
+  assertionType          String?
+  assertionValue         String?
+  tagName                String?
+  visibleText            String?
+  recommendedSelector    String?
+  cssSelector            String?
+  xpathSelector          String?
+  idSelector             String?
+  testIdSelector         String?
+  roleSelector           String?
+  labelSelector          String?
+  placeholderSelector    String?
+  reliabilityScore       Int              @default(0)
+  attributes             Json?
+  alternativeLocators    Json?
+  assertions             Json?
+  screenshotBefore       String?
+  screenshotAfter        String?
+  includeInFinalTestCase Boolean          @default(true)
 
   componentType       String?
   groupId             String?
@@ -928,31 +953,31 @@ model RecordedStep {
   validationStatus    String?
   validationMessage   String?
 
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model IntegrationConfig {
-  id                String   @id @default(uuid())
-  projectId         String   @unique
-  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  provider          String   // "jira" | "azure_devops" | "openproject"
-  enabled           Boolean  @default(false)
+  provider String // "jira" | "azure_devops" | "openproject"
+  enabled  Boolean @default(false)
 
-  host              String?  // e.g., "jira-domain.atlassian.net"
-  projectKey        String?  // e.g., Jira Project Key / ADO Project / OpenProject ID
-  username          String?  // Jira email / ADO username / OpenProject username
+  host       String? // e.g., "jira-domain.atlassian.net"
+  projectKey String? // e.g., Jira Project Key / ADO Project / OpenProject ID
+  username   String? // Jira email / ADO username / OpenProject username
 
   encryptedToken    String?
   encryptionIv      String?
   encryptionAuthTag String?
-  keyVersion        String   @default("v1")
+  keyVersion        String  @default("v1")
 
-  triggerOn         String   @default("Failed") // "Failed" | "All"
+  triggerOn String @default("Failed") // "Failed" | "All"
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── Feature — hierarchy layer between Epic and User Story ──────────────────
@@ -976,73 +1001,73 @@ model Feature {
 }
 
 model ReusableStepFlow {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   name        String
   description String?
   category    String?
 
-  steps       ReusableStep[]
+  steps ReusableStep[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ReusableStep {
-  id                String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  flowId            String
-  flow              ReusableStepFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  flowId String
+  flow   ReusableStepFlow @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
   stepNumber        Int
   actionDescription String
   expectedResult    String?
 
-  actionType        ActionType
-  targetType        TargetType
-  targetValue       String?
-  inputValue        String?
-  assertions        Json?
+  actionType  ActionType
+  targetType  TargetType
+  targetValue String?
+  inputValue  String?
+  assertions  Json?
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TestDataVariable {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  key         String
-  value       String?
-  encryptedValue String?
-  encryptionIv String?
+  key               String
+  value             String?
+  encryptedValue    String?
+  encryptionIv      String?
   encryptionAuthTag String?
-  keyVersion String?
+  keyVersion        String?
 
-  dataType    String   @default("text") // text, number, boolean, date, json, secret
+  dataType    String       @default("text") // text, number, boolean, date, json, secret
   environment Environment?
-  isSensitive Boolean  @default(false)
+  isSensitive Boolean      @default(false)
   notes       String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, key])
 }
 
 model ManualTestSession {
-  id          String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  projectId   String
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  name        String
-  status      String   @default("Active") // Active, Completed, Cancelled
+  name   String
+  status String @default("Active") // Active, Completed, Cancelled
 
   credentialId String?
   credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
@@ -1054,9 +1079,9 @@ model ManualTestSession {
   keepBrowserSession Boolean @default(true)
   stopOnFailure      Boolean @default(false)
 
-  startedAt   DateTime @default(now())
+  startedAt   DateTime  @default(now())
   completedAt DateTime?
-  durationMs  Int      @default(0)
+  durationMs  Int       @default(0)
 
   sessionCases ManualSessionCase[]
   notes        ManualSessionNote[]
@@ -1064,59 +1089,59 @@ model ManualTestSession {
 }
 
 model ManualSessionCase {
-  id          String @id @default(uuid())
+  id String @id @default(uuid())
 
-  sessionId   String
-  session     ManualTestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   ManualTestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  testCaseId  String
-  testCase    TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testCaseId String
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
 
-  orderIndex  Int @default(0)
-  status      StepStatus @default(Pending)
+  orderIndex Int        @default(0)
+  status     StepStatus @default(Pending)
 
   startedAt   DateTime?
   completedAt DateTime?
-  durationMs  Int @default(0)
+  durationMs  Int       @default(0)
 
   stepResults ManualStepResult[]
 }
 
 model ManualStepResult {
-  id              String @id @default(uuid())
+  id String @id @default(uuid())
 
-  sessionCaseId   String
-  sessionCase     ManualSessionCase @relation(fields: [sessionCaseId], references: [id], onDelete: Cascade)
+  sessionCaseId String
+  sessionCase   ManualSessionCase @relation(fields: [sessionCaseId], references: [id], onDelete: Cascade)
 
-  testStepId      String?
-  testStep        TestStep? @relation(fields: [testStepId], references: [id], onDelete: SetNull)
+  testStepId String?
+  testStep   TestStep? @relation(fields: [testStepId], references: [id], onDelete: SetNull)
 
-  stepNumber      Int
+  stepNumber        Int
   actionDescription String
-  expectedResult  String?
-  actualResult    String?
+  expectedResult    String?
+  actualResult      String?
 
-  status          StepStatus @default(Pending)
-  notes           String?
+  status StepStatus @default(Pending)
+  notes  String?
 
-  screenshotPath  String?
-  bugReportId     String?
+  screenshotPath String?
+  bugReportId    String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ManualSessionNote {
-  id          String @id @default(uuid())
+  id String @id @default(uuid())
 
-  sessionId   String
-  session     ManualTestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  session   ManualTestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  note        String
+  note           String
   screenshotPath String?
-  pageUrl     String?
+  pageUrl        String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 // ─── Epic — hierarchy layer above Requirement (user story) ──────────────────
@@ -1136,22 +1161,59 @@ enum SprintStatus {
 }
 
 model Sprint {
-  id           String       @id @default(uuid())
+  id           String        @id @default(uuid())
   projectId    String
-  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name         String
   goal         String?
-  status       SprintStatus @default(Future)
+  status       SprintStatus  @default(Future)
   startDate    DateTime?
   endDate      DateTime?
-  orderIndex   Int          @default(0)
+  orderIndex   Int           @default(0)
   completedAt  DateTime?
   requirements Requirement[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  metrics      SprintMetric[]
+  velocities   TeamVelocity[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@index([projectId])
   @@index([status])
+}
+
+// Daily snapshot of a sprint's burndown / throughput, for analytics. Optional —
+// analytics endpoints derive live from Requirements when no snapshots exist, but
+// these rows let a scheduled job persist an exact historical series.
+model SprintMetric {
+  id                   String   @id @default(cuid())
+  sprintId             String
+  sprint               Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  date                 DateTime @db.Date
+  storyPointsCommitted Int
+  storyPointsCompleted Int
+  tasksCreated         Int
+  tasksCompleted       Int
+  bugsFound            Int
+  bugsResolved         Int
+  createdAt            DateTime @default(now())
+
+  @@unique([sprintId, date])
+  @@index([sprintId])
+}
+
+// Per-sprint velocity vs capacity snapshot for the velocity chart.
+model TeamVelocity {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprintId  String
+  sprint    Sprint   @relation(fields: [sprintId], references: [id], onDelete: Cascade)
+  velocity  Int      // story points completed
+  capacity  Int      // team capacity in story points
+  createdAt DateTime @default(now())
+
+  @@unique([sprintId])
+  @@index([projectId])
 }
 
 model Epic {
@@ -1174,52 +1236,52 @@ model Epic {
 }
 
 model Requirement {
-  id              String   @id @default(uuid())
-  projectId        String
-  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id                 String                 @id @default(uuid())
+  projectId          String
+  project            Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   // Deleting an Epic never deletes stories at the DB level — SetNull orphans
   // them; cascade delete of children is an explicit app-side choice.
-  epicId           String?
-  epic             Epic?    @relation(fields: [epicId], references: [id], onDelete: SetNull)
-  requirementKey   String
-  title            String
-  description      String?
+  epicId             String?
+  epic               Epic?                  @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  requirementKey     String
+  title              String
+  description        String?
   acceptanceCriteria String?
-  priority         Priority @default(Medium)
-  status           RequirementStatus @default(Draft)
-  source           RequirementSource @default(Manual)
+  priority           Priority               @default(Medium)
+  status             RequirementStatus      @default(Draft)
+  source             RequirementSource      @default(Manual)
   // Ordering position in the product backlog view (lower = higher priority).
-  backlogRank      Int?
+  backlogRank        Int?
   // Scrum board fields (Story = Requirement)
-  storyPoints      Int?
-  assignee         String?  // free-text name/email for Phase 1
-  labels           String[]
-  sprintId         String?
-  sprint           Sprint?  @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  storyPoints        Int?
+  assignee           String? // free-text name/email for Phase 1
+  labels             String[]
+  sprintId           String?
+  sprint             Sprint?                @relation(fields: [sprintId], references: [id], onDelete: SetNull)
   // Rank within a sprint / backlog column (lower = higher). Distinct from backlogRank.
-  boardRank        Int?
+  boardRank          Int?
   // Optional middle layer: assigning a feature auto-aligns epicId app-side
-  featureId        String?
-  feature          Feature? @relation(fields: [featureId], references: [id], onDelete: SetNull)
+  featureId          String?
+  feature            Feature?               @relation(fields: [featureId], references: [id], onDelete: SetNull)
   // Hierarchy: a Task/Bug hangs off a parent Story (Epic → Story → Task/Bug).
-  parentId         String?
-  parent           Requirement?  @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: SetNull)
-  children         Requirement[] @relation("RequirementChildren")
-  figmaUrl         String?
-  externalUrl      String?
-  externalSystem   String? // Jira, Azure DevOps, GitHub, Manual, Other
-  testCases        TestCaseRequirement[]
-  bugReports       BugReportRequirement[]
-  subtasks         RequirementSubtask[]
-  dueDate          DateTime?
-  timeEstimate     Int?
-  timeSpent        Int?
-  comments         RequirementComment[]
-  sourceImportId   String?
-  sourceImport     RequirementImport? @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
-  sourceLocation   Json?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  parentId           String?
+  parent             Requirement?           @relation("RequirementChildren", fields: [parentId], references: [id], onDelete: SetNull)
+  children           Requirement[]          @relation("RequirementChildren")
+  figmaUrl           String?
+  externalUrl        String?
+  externalSystem     String? // Jira, Azure DevOps, GitHub, Manual, Other
+  testCases          TestCaseRequirement[]
+  bugReports         BugReportRequirement[]
+  subtasks           RequirementSubtask[]
+  dueDate            DateTime?
+  timeEstimate       Int?
+  timeSpent          Int?
+  comments           RequirementComment[]
+  sourceImportId     String?
+  sourceImport       RequirementImport?     @relation(fields: [sourceImportId], references: [id], onDelete: SetNull)
+  sourceLocation     Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   @@unique([projectId, requirementKey])
   @@index([projectId])
@@ -1258,8 +1320,8 @@ model RequirementImport {
   language     String?
   status       RequirementImportStatus @default(Parsed)
   rawText      String?
-  parsedItems  Json?                   // Array of normalized requirement items
-  summary      Json?                   // Parsing/generation summary metadata
+  parsedItems  Json? // Array of normalized requirement items
+  summary      Json? // Parsing/generation summary metadata
   requirements Requirement[]
   createdAt    DateTime                @default(now())
   updatedAt    DateTime                @updatedAt
@@ -1268,27 +1330,27 @@ model RequirementImport {
 }
 
 model TestCaseRequirement {
-  id             String      @id @default(uuid())
-  requirementId  String
-  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-  testCaseId     String
-  testCase       TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  createdAt      DateTime    @default(now())
+  id            String      @id @default(uuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  testCaseId    String
+  testCase      TestCase    @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
 
   @@unique([requirementId, testCaseId])
 }
 
 // Lightweight checklist items under a story (Jira-style sub-tasks).
 model RequirementSubtask {
-  id             String      @id @default(uuid())
-  requirementId  String
-  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-  title          String
-  done           Boolean     @default(false)
-  assignee       String?
-  orderIndex     Int         @default(0)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id            String      @id @default(uuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  title         String
+  done          Boolean     @default(false)
+  assignee      String?
+  orderIndex    Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([requirementId])
 }
@@ -1302,23 +1364,23 @@ enum ExternalProvider {
 }
 
 model ExternalSyncMapping {
-  id              String           @id @default(uuid())
-  projectId       String
+  id        String @id @default(uuid())
+  projectId String
 
   provider        ExternalProvider
-  localEntityType String           // "TestCase" | "BugReport"
+  localEntityType String // "TestCase" | "BugReport"
   localEntityId   String
 
-  externalId      String           // OpenProject work package ID (numeric as string)
-  externalUrl     String?          // Direct URL to the work package
-  externalType    String?          // work package type name
+  externalId   String // OpenProject work package ID (numeric as string)
+  externalUrl  String? // Direct URL to the work package
+  externalType String? // work package type name
 
-  lastSyncedAt    DateTime?
-  lastSyncStatus  String?          // "success" | "failed" | "pending"
-  lastSyncError   String?
+  lastSyncedAt   DateTime?
+  lastSyncStatus String? // "success" | "failed" | "pending"
+  lastSyncError  String?
 
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([provider, localEntityType, localEntityId])
   @@index([projectId])
@@ -1332,18 +1394,18 @@ model BugOccurrence {
   bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
   testRunId   String
   occurredAt  DateTime  @default(now())
-  evidence    Json?     // screenshot paths, error details snapshot
+  evidence    Json? // screenshot paths, error details snapshot
 
   @@index([bugReportId])
 }
 
 model BugReportRequirement {
-  id             String      @id @default(uuid())
-  requirementId  String
-  requirement    Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
-  bugReportId    String
-  bugReport      BugReport   @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
-  createdAt      DateTime    @default(now())
+  id            String      @id @default(uuid())
+  requirementId String
+  requirement   Requirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  bugReportId   String
+  bugReport     BugReport   @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
 
   @@unique([requirementId, bugReportId])
 }
@@ -1368,32 +1430,32 @@ enum BugResolution {
 }
 
 model BugComment {
-  id        String @id @default(uuid())
+  id        String    @id @default(uuid())
   bugId     String
   bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
   authorId  String?
   comment   String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model BugActivity {
-  id        String @id @default(uuid())
+  id        String    @id @default(uuid())
   bugId     String
   bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
   action    String
   details   String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model BugAttachment {
-  id        String @id @default(uuid())
+  id        String    @id @default(uuid())
   bugId     String
   bug       BugReport @relation(fields: [bugId], references: [id], onDelete: Cascade)
   fileName  String
   filePath  String
   fileType  String
   fileSize  Int?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model RecordingSessionNote {
@@ -1428,10 +1490,10 @@ enum ProjectStatus {
 }
 
 model FigmaFrame {
-  id                 String               @id @default(uuid())
-  projectId          String
-  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   fileKey            String
   nodeId             String
   name               String
@@ -1442,51 +1504,51 @@ model FigmaFrame {
   referenceImagePath String?
   lastSyncedAt       DateTime?
   figmaUpdatedAt     DateTime?
-  
-  mappings           VisualCheckMapping[]
-  
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+
+  mappings VisualCheckMapping[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, fileKey, nodeId])
 }
 
 model VisualCheckMapping {
-  id                 String               @id @default(uuid())
-  projectId          String
-  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  figmaFrameId       String
-  figmaFrame         FigmaFrame           @relation(fields: [figmaFrameId], references: [id], onDelete: Cascade)
-  
-  appUrl             String
-  routeName          String?
-  moduleId           String?
-  featureId          String?
-  componentId        String?
-  
-  viewportName       String
-  viewportWidth      Int
-  viewportHeight     Int
-  deviceScaleFactor  Float                @default(1)
-  
-  browserType        BrowserType          @default(Chromium)
-  credentialId       String?
-  
-  waitStrategy       String               @default("network_idle")
-  waitSelector       String?
-  fixedDelayMs       Int?
-  
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  figmaFrameId String
+  figmaFrame   FigmaFrame @relation(fields: [figmaFrameId], references: [id], onDelete: Cascade)
+
+  appUrl      String
+  routeName   String?
+  moduleId    String?
+  featureId   String?
+  componentId String?
+
+  viewportName      String
+  viewportWidth     Int
+  viewportHeight    Int
+  deviceScaleFactor Float  @default(1)
+
+  browserType  BrowserType @default(Chromium)
+  credentialId String?
+
+  waitStrategy String  @default("network_idle")
+  waitSelector String?
+  fixedDelayMs Int?
+
   toleranceProfileId String?
   toleranceProfile   VisualToleranceProfile? @relation(fields: [toleranceProfileId], references: [id], onDelete: SetNull)
-  
-  isActive           Boolean              @default(true)
-  
-  ignoredRegions     VisualIgnoredRegion[]
-  runs               VisualCheckRun[]
-  
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+
+  isActive Boolean @default(true)
+
+  ignoredRegions VisualIgnoredRegion[]
+  runs           VisualCheckRun[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([figmaFrameId])
@@ -1494,70 +1556,70 @@ model VisualCheckMapping {
 }
 
 model VisualIgnoredRegion {
-  id                 String               @id @default(uuid())
-  mappingId          String
-  mapping            VisualCheckMapping   @relation(fields: [mappingId], references: [id], onDelete: Cascade)
-  
-  x                  Int
-  y                  Int
-  width              Int
-  height             Int
-  reason             String
-  appliesToViewport  String?
-  
-  createdAt          DateTime             @default(now())
+  id        String             @id @default(uuid())
+  mappingId String
+  mapping   VisualCheckMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  x                 Int
+  y                 Int
+  width             Int
+  height            Int
+  reason            String
+  appliesToViewport String?
+
+  createdAt DateTime @default(now())
 }
 
 model VisualToleranceProfile {
-  id                     String               @id @default(uuid())
-  projectId              String
-  project                Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
   name                   String
-  allowedMismatchPercent Float                @default(2.0)
-  pixelThreshold         Float                @default(0.1)
-  minRegionArea          Int                  @default(25)
-  ignoreAntiAliasing     Boolean              @default(true)
-  layoutShiftTolerancePx Int                  @default(2)
-  
-  mappings               VisualCheckMapping[]
-  
-  createdAt              DateTime             @default(now())
-  updatedAt              DateTime             @updatedAt
+  allowedMismatchPercent Float   @default(2.0)
+  pixelThreshold         Float   @default(0.1)
+  minRegionArea          Int     @default(25)
+  ignoreAntiAliasing     Boolean @default(true)
+  layoutShiftTolerancePx Int     @default(2)
+
+  mappings VisualCheckMapping[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
 }
 
 model VisualCheckRun {
-  id              String                  @id @default(uuid())
-  mappingId       String
-  mapping         VisualCheckMapping      @relation(fields: [mappingId], references: [id], onDelete: Cascade)
-  
-  projectId       String
-  project         Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  status          VisualCheckStatus       @default(NeedsReview)
-  
+  id        String             @id @default(uuid())
+  mappingId String
+  mapping   VisualCheckMapping @relation(fields: [mappingId], references: [id], onDelete: Cascade)
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  status VisualCheckStatus @default(NeedsReview)
+
   figmaImagePath  String
   actualImagePath String
   diffImagePath   String?
-  
+
   mismatchPercent Float
-  totalRegions    Int                     @default(0)
-  
-  browserType     BrowserType
-  viewportName    String
-  viewportWidth   Int
-  viewportHeight  Int
-  roleUsed        String?
-  
-  startedAt       DateTime                @default(now())
-  completedAt     DateTime?
-  durationMs      Int                     @default(0)
-  
-  issues          VisualDifferenceIssue[]
-  
-  createdAt       DateTime                @default(now())
+  totalRegions    Int   @default(0)
+
+  browserType    BrowserType
+  viewportName   String
+  viewportWidth  Int
+  viewportHeight Int
+  roleUsed       String?
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  durationMs  Int       @default(0)
+
+  issues VisualDifferenceIssue[]
+
+  createdAt DateTime @default(now())
 
   @@index([mappingId])
   @@index([projectId])
@@ -1565,32 +1627,32 @@ model VisualCheckRun {
 }
 
 model VisualDifferenceIssue {
-  id              String                    @id @default(uuid())
-  runId           String
-  run             VisualCheckRun            @relation(fields: [runId], references: [id], onDelete: Cascade)
-  
-  x               Int
-  y               Int
-  width           Int
-  height          Int
-  
+  id    String         @id @default(uuid())
+  runId String
+  run   VisualCheckRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  x      Int
+  y      Int
+  width  Int
+  height Int
+
   mismatchPercent Float
   regionArea      Int
-  
-  category        VisualDifferenceCategory  @default(Unknown)
-  severity        Priority                  @default(Medium)
-  status          VisualIssueStatus         @default(New)
-  
+
+  category VisualDifferenceCategory @default(Unknown)
+  severity Priority                 @default(Medium)
+  status   VisualIssueStatus        @default(New)
+
   expectedCropPath String?
   actualCropPath   String?
   diffCropPath     String?
-  
-  notes           String?
-  bugReportId     String?
-  bugReport       BugReport?                @relation(fields: [bugReportId], references: [id], onDelete: SetNull)
-  
-  createdAt       DateTime                  @default(now())
-  updatedAt       DateTime                  @updatedAt
+
+  notes       String?
+  bugReportId String?
+  bugReport   BugReport? @relation(fields: [bugReportId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum VisualCheckStatus {
@@ -1642,28 +1704,28 @@ enum AgentRunMode {
 }
 
 model AutonomousAgentRun {
-  id                String         @id @default(uuid())
-  projectId         String
-  project           Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  status            AgentRunStatus @default(Queued)
-  mode              AgentRunMode   @default(Balanced)
-  
-  safetyDoNotDelete Boolean        @default(true)
-  safetyDoNotModify Boolean        @default(false)
-  
-  summary           String?
-  coverageReport    Json?
-  metrics           Json?
-  
-  testRuns          TestRun[]
-  bugReports        BugReport[]
-  
-  startedAt         DateTime?
-  completedAt       DateTime?
-  durationMs        Int            @default(0)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  status AgentRunStatus @default(Queued)
+  mode   AgentRunMode   @default(Balanced)
+
+  safetyDoNotDelete Boolean @default(true)
+  safetyDoNotModify Boolean @default(false)
+
+  summary        String?
+  coverageReport Json?
+  metrics        Json?
+
+  testRuns   TestRun[]
+  bugReports BugReport[]
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  durationMs  Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -1689,13 +1751,13 @@ enum AgentBrainStatus {
 }
 
 model AgentMemory {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  key       String   
-  value     Json     
-  
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  key   String
+  value Json
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1704,31 +1766,31 @@ model AgentMemory {
 }
 
 model AgentBrainRun {
-  id                 String           @id @default(uuid())
-  projectId          String
-  project            Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  status             AgentBrainStatus @default(Queued)
-  mode               AgentBrainMode   @default(Autonomous)
-  
-  safetyDoNotDelete  Boolean          @default(true)
-  safetyDoNotModify  Boolean          @default(false)
-  userInstruction    String?          
-  
-  appUnderstanding   Json?            
-  executionPlan      Json?            
-  memorySnapshot     Json?            
-  
-  summary            String?
-  metrics            Json?            
-  
-  testRuns           TestRun[]
-  bugReports         BugReport[]
-  
-  startedAt          DateTime?
-  completedAt        DateTime?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  status AgentBrainStatus @default(Queued)
+  mode   AgentBrainMode   @default(Autonomous)
+
+  safetyDoNotDelete Boolean @default(true)
+  safetyDoNotModify Boolean @default(false)
+  userInstruction   String?
+
+  appUnderstanding Json?
+  executionPlan    Json?
+  memorySnapshot   Json?
+
+  summary String?
+  metrics Json?
+
+  testRuns   TestRun[]
+  bugReports BugReport[]
+
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -1773,40 +1835,40 @@ enum QAAgentFindingType {
 }
 
 model QAAgentRun {
-  id              String             @id @default(uuid())
-  projectId       String
-  project         Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  mode            QAAgentMode
-  goal            String
-  scope           Json?
-  status          QAAgentRunStatus   @default(Queued)
-  credentialId    String?
-  browserType     BrowserType?
-  viewport        String?
-  safetyLevel     QAAgentSafetyLevel @default(ReadOnly)
-  plan            Json?
-  scannerResult   Json?
-  executionResult Json?
-  summary         Json?
-  startedAt       DateTime?
-  completedAt     DateTime?
-  durationMs      Int                @default(0)
-  progress        Int                @default(0)
-  steps           QAAgentRunStep[]
-  findings        QAAgentFinding[]
-  events          QAAgentRunEvent[]
+  id                    String             @id @default(uuid())
+  projectId             String
+  project               Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mode                  QAAgentMode
+  goal                  String
+  scope                 Json?
+  status                QAAgentRunStatus   @default(Queued)
+  credentialId          String?
+  browserType           BrowserType?
+  viewport              String?
+  safetyLevel           QAAgentSafetyLevel @default(ReadOnly)
+  plan                  Json?
+  scannerResult         Json?
+  executionResult       Json?
+  summary               Json?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  durationMs            Int                @default(0)
+  progress              Int                @default(0)
+  steps                 QAAgentRunStep[]
+  findings              QAAgentFinding[]
+  events                QAAgentRunEvent[]
   currentPhase          String?
   currentPhaseStartedAt DateTime?
   currentMessage        String?
   lastHeartbeatAt       DateTime?
-  failedReason    String?
-  failedAt        DateTime?
-  errorStack      String?
-  jobId           String?
-  cancelRequested Boolean            @default(false)
-  cancelRequestedAt DateTime?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  failedReason          String?
+  failedAt              DateTime?
+  errorStack            String?
+  jobId                 String?
+  cancelRequested       Boolean            @default(false)
+  cancelRequestedAt     DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -1814,9 +1876,9 @@ model QAAgentRun {
 }
 
 model QAAgentRunStep {
-  id             String      @id @default(uuid())
+  id             String     @id @default(uuid())
   agentRunId     String
-  agentRun       QAAgentRun  @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  agentRun       QAAgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
   stepNumber     Int
   phase          String?
   name           String
@@ -1828,9 +1890,9 @@ model QAAgentRunStep {
   error          String?
   startedAt      DateTime?
   completedAt    DateTime?
-  durationMs     Int         @default(0)
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  durationMs     Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 model QAAgentFinding {
@@ -1849,14 +1911,14 @@ model QAAgentFinding {
 }
 
 model QAAgentRunEvent {
-  id          String     @id @default(uuid())
-  agentRunId  String
-  agentRun    QAAgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
-  level       String
-  phase       String?
-  message     String
-  details     Json?
-  createdAt   DateTime   @default(now())
+  id         String     @id @default(uuid())
+  agentRunId String
+  agentRun   QAAgentRun @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+  level      String
+  phase      String?
+  message    String
+  details    Json?
+  createdAt  DateTime   @default(now())
 
   @@index([agentRunId])
 }
@@ -1875,12 +1937,12 @@ enum IntegrationProvider {
 }
 
 model ProjectIntegration {
-  id                 String              @id @default(uuid())
-  projectId          String              @unique
-  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  provider           IntegrationProvider
-  enabled            Boolean             @default(true)
+  provider IntegrationProvider
+  enabled  Boolean             @default(true)
 
   baseUrl            String
   // OP slug | Jira project key | ADO project | ClickUp list id
@@ -1891,7 +1953,7 @@ model ProjectIntegration {
   apiTokenEncrypted  String
   apiTokenIv         String
   apiTokenAuthTag    String
-  apiTokenKeyVersion String              @default("v1")
+  apiTokenKeyVersion String @default("v1")
 
   // Provider-agnostic mapping config (see src/lib/integrations/core/types)
   typeMapping        Json? // { testCase, bug, userStory } -> external type id
@@ -1901,13 +1963,13 @@ model ProjectIntegration {
   customFieldMapping Json?
 
   // Auto-sync toggles (parity with the legacy OpenProject flags)
-  autoSyncTestCases   Boolean @default(false)
-  autoSyncResults     Boolean @default(true)
+  autoSyncTestCases      Boolean @default(false)
+  autoSyncResults        Boolean @default(true)
   autoCreateBugOnFailure Boolean @default(true)
   autoSyncBugToTracker   Boolean @default(false)
 
   // Two-way (inbound) sync
-  inboundSyncEnabled Boolean  @default(false)
+  inboundSyncEnabled Boolean   @default(false)
   webhookSecret      String?
   externalWebhookId  String? // id of the webhook/service-hook we registered, for cleanup
   lastInboundAt      DateTime?
@@ -1943,101 +2005,101 @@ enum OpenProjectBoardStrategy {
 }
 
 model OpenProjectIntegration {
-  id                            String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  projectId                     String   @unique
-  project                       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  baseUrl                       String
-  openProjectProjectIdentifier  String
+  baseUrl                      String
+  openProjectProjectIdentifier String
 
   // Encrypted API token (AES-256-GCM)
-  apiTokenEncrypted             String
-  apiTokenIv                    String
-  apiTokenAuthTag               String
-  apiTokenKeyVersion            String   @default("v1")
+  apiTokenEncrypted  String
+  apiTokenIv         String
+  apiTokenAuthTag    String
+  apiTokenKeyVersion String @default("v1")
 
   // Type mapping (IDs loaded dynamically from OpenProject)
-  testCaseTypeId                String?
-  bugTypeId                     String?
-  userStoryTypeId               String?
+  testCaseTypeId  String?
+  bugTypeId       String?
+  userStoryTypeId String?
 
   // Status mapping (local status → OpenProject status ID)
-  defaultStatusId               String?
-  notExecutedStatusId           String?
-  runningStatusId               String?
-  passedStatusId                String?
-  failedStatusId                String?
-  blockedStatusId               String?
+  defaultStatusId     String?
+  notExecutedStatusId String?
+  runningStatusId     String?
+  passedStatusId      String?
+  failedStatusId      String?
+  blockedStatusId     String?
 
   // Parent strategy
-  parentStrategy                OpenProjectParentStrategy @default(None)
-  defaultParentWorkPackageId    String?
+  parentStrategy             OpenProjectParentStrategy @default(None)
+  defaultParentWorkPackageId String?
 
   // Board strategy
-  boardStrategy                 OpenProjectBoardStrategy  @default(StatusBased)
-  targetBoardId                 String?
-  targetColumnStatusId          String?   // status ID of the board column to place WPs in
-  targetVersionId               String?
-  targetAssigneeId              String?
-  customFieldMapping            Json?
+  boardStrategy        OpenProjectBoardStrategy @default(StatusBased)
+  targetBoardId        String?
+  targetColumnStatusId String? // status ID of the board column to place WPs in
+  targetVersionId      String?
+  targetAssigneeId     String?
+  customFieldMapping   Json?
 
   // Auto-sync toggles
-  autoSyncTestCases             Boolean  @default(false)
-  autoSyncResults               Boolean  @default(true)
-  autoCreateBugOnFailure        Boolean  @default(true)
-  autoSyncBugToOpenProject      Boolean  @default(false)
+  autoSyncTestCases        Boolean @default(false)
+  autoSyncResults          Boolean @default(true)
+  autoCreateBugOnFailure   Boolean @default(true)
+  autoSyncBugToOpenProject Boolean @default(false)
 
   // Monitoring
-  lastConnectionStatus          String?
-  lastConnectionCheckedAt       DateTime?
-  lastSyncAt                    DateTime?
+  lastConnectionStatus    String?
+  lastConnectionCheckedAt DateTime?
+  lastSyncAt              DateTime?
 
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OpenProjectParentMapping {
-  id                        String    @id @default(uuid())
-  projectId                 String
-  mappingType               String    // "Module" | "Feature" | "Requirement" | "TestSuite"
-  localEntityId             String
-  localEntityName           String?
+  id              String  @id @default(uuid())
+  projectId       String
+  mappingType     String // "Module" | "Feature" | "Requirement" | "TestSuite"
+  localEntityId   String
+  localEntityName String?
 
-  openProjectParentId       String
-  openProjectParentSubject  String?
-  openProjectParentUrl      String?
+  openProjectParentId      String
+  openProjectParentSubject String?
+  openProjectParentUrl     String?
 
-  validationStatus          String?   // "valid" | "invalid" | "unchecked"
-  lastValidatedAt           DateTime?
+  validationStatus String? // "valid" | "invalid" | "unchecked"
+  lastValidatedAt  DateTime?
 
-  createdAt                 DateTime  @default(now())
-  updatedAt                 DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([projectId, mappingType, localEntityId])
   @@index([projectId])
 }
 
 model OpenProjectSyncRun {
-  id            String    @id @default(uuid())
-  projectId     String
-  operation     String    // "bulk-sync-test-cases" | "apply-parent" | "sync-to-board" | "check-board" | etc.
-  status        String    // "Queued" | "Running" | "Completed" | "Failed"
+  id        String @id @default(uuid())
+  projectId String
+  operation String // "bulk-sync-test-cases" | "apply-parent" | "sync-to-board" | "check-board" | etc.
+  status    String // "Queued" | "Running" | "Completed" | "Failed"
 
-  totalCount    Int       @default(0)
-  createdCount  Int       @default(0)
-  updatedCount  Int       @default(0)
-  skippedCount  Int       @default(0)
-  failedCount   Int       @default(0)
+  totalCount   Int @default(0)
+  createdCount Int @default(0)
+  updatedCount Int @default(0)
+  skippedCount Int @default(0)
+  failedCount  Int @default(0)
 
-  details       Json?     // Array of per-item results
-  error         String?
+  details Json? // Array of per-item results
+  error   String?
 
-  startedAt     DateTime?
-  completedAt   DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([status])
@@ -2073,14 +2135,14 @@ model OpenProjectFeatureConfig {
   defaultStatusId String?
 
   // Board & version targeting (null = inherit from project config)
-  targetBoardId         String?
-  targetBoardType       String? // "status" | "version" | "assignee" | "basic"
-  targetColumnStatusId  String? // status ID of the board column to place WPs in
-  targetVersionId       String?
+  targetBoardId        String?
+  targetBoardType      String? // "status" | "version" | "assignee" | "basic"
+  targetColumnStatusId String? // status ID of the board column to place WPs in
+  targetVersionId      String?
 
   // Last sync outcome for this feature
   lastSyncAt     DateTime?
-  lastSyncStatus String?   // "success" | "failed"
+  lastSyncStatus String? // "success" | "failed"
   lastSyncError  String?
 
   createdAt DateTime @default(now())
@@ -2091,39 +2153,39 @@ model OpenProjectFeatureConfig {
 }
 
 model TestScript {
-  id                   String           @id @default(uuid())
+  id                   String          @id @default(uuid())
   name                 String
-  type                 String           // "Web" | "API" | "Database"
-  code                 String           @db.Text
+  type                 String // "Web" | "API" | "Database"
+  code                 String          @db.Text
   tags                 String[]
-  accessibilityEnabled Boolean          @default(false) // run WCAG audit on execution (Section 1b)
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  accessibilityEnabled Boolean         @default(false) // run WCAG audit on execution (Section 1b)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
   executions           TestExecution[]
 }
 
 model TestExecution {
-  id             String      @id @default(uuid())
-  scriptId       String
-  script         TestScript  @relation(fields: [scriptId], references: [id], onDelete: Cascade)
-  status         String      // "Passed" | "Failed" | "Running"
-  logOutput      String      @db.Text
-  allureLink     String?
-  browser        String?     // "Chrome" | "Firefox" | "Edge" | "Headless"
-  duration       Int?        // execution duration in milliseconds
-  screenshotPath String?     // absolute path of the captured screenshot evidence
-  executionTarget String?    // name of the execution target it ran on (Section 1c), null = Local
-  createdAt      DateTime    @default(now())
+  id              String     @id @default(uuid())
+  scriptId        String
+  script          TestScript @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  status          String // "Passed" | "Failed" | "Running"
+  logOutput       String     @db.Text
+  allureLink      String?
+  browser         String? // "Chrome" | "Firefox" | "Edge" | "Headless"
+  duration        Int? // execution duration in milliseconds
+  screenshotPath  String? // absolute path of the captured screenshot evidence
+  executionTarget String? // name of the execution target it ran on (Section 1c), null = Local
+  createdAt       DateTime   @default(now())
 }
 
 // Section 1a: external SHAFT test data files (data-driven testing)
 model TestDataFile {
   id              String   @id @default(uuid())
-  name            String   // display name, e.g. "loginUsers"
+  name            String // display name, e.g. "loginUsers"
   fileName        String   @unique // on-disk name, e.g. "loginUsers.json"
-  filePath        String   // absolute path under src/test/resources/testDataFiles/
+  filePath        String // absolute path under src/test/resources/testDataFiles/
   content         String   @db.Text // JSON content — DB is source of truth, mirrored to disk
-  jsonSchema      Json?    // optional field definitions produced by the Create Data Set wizard
+  jsonSchema      Json? // optional field definitions produced by the Create Data Set wizard
   linkedScriptIds String[] // TestScript ids this data file feeds (1:N)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -2134,10 +2196,10 @@ model AccessibilityResult {
   id              String   @id @default(uuid())
   testExecutionId String   @unique
   scriptId        String?
-  wcagLevel       String   // "A" | "AA" | "AAA" | "None"
+  wcagLevel       String // "A" | "AA" | "AAA" | "None"
   passCount       Int      @default(0)
   violationCount  Int      @default(0)
-  violations      Json     // [{ ruleId, severity, element, description, fix }]
+  violations      Json // [{ ruleId, severity, element, description, fix }]
   createdAt       DateTime @default(now())
 
   @@index([scriptId])
@@ -2147,12 +2209,12 @@ model AccessibilityResult {
 model ExecutionTarget {
   id          String   @id @default(uuid())
   name        String
-  type        String   // "local" | "docker" | "grid" | "browserstack"
+  type        String // "local" | "docker" | "grid" | "browserstack"
   url         String   @default("") // SHAFT executionAddress (e.g. localhost:4444)
   platform    String   @default("Linux") // "Linux" | "Windows" | "Mac"
   browser     String   @default("chrome")
   headless    Boolean  @default(false)
-  credentials Json?    // { username, accessKey } — for BrowserStack/grid auth
+  credentials Json? // { username, accessKey } — for BrowserStack/grid auth
   isDefault   Boolean  @default(false)
   createdBy   String?
   createdAt   DateTime @default(now())
@@ -2191,10 +2253,10 @@ model HealingEvent {
   id               String   @id @default(uuid())
   originalLocator  String
   recoveredLocator String
-  confidence       Float    // e.g. 0.85
+  confidence       Float // e.g. 0.85
   pageUrl          String
   testName         String
-  status           String   // "recovered" | "failed" | "needs_review"
+  status           String // "recovered" | "failed" | "needs_review"
   createdAt        DateTime @default(now())
 }
 
@@ -2207,36 +2269,36 @@ model FlakyTest {
   retries        Int
   rootCause      String
   suggestedFix   String
-  trendDirection String   // "up" | "down" | "flat"
+  trendDirection String // "up" | "down" | "flat"
   lastAnalyzed   DateTime @default(now())
 }
 
 model Diagnosis {
-  id                   String   @id @default(uuid())
+  id                   String    @id @default(uuid())
   testExecutionId      String
   testName             String
-  errorMessage         String   @db.Text
-  errorType            String   @default("Error")
+  errorMessage         String    @db.Text
+  errorType            String    @default("Error")
   primaryCause         String
   confidence           Float
   findings             Json?
-  remediationSteps     String   @db.Text
-  status               String   @default("new") // "new" | "diagnosing" | "resolved"
-  similarFailuresCount Int      @default(0)
+  remediationSteps     String    @db.Text
+  status               String    @default("new") // "new" | "diagnosing" | "resolved"
+  similarFailuresCount Int       @default(0)
   doctorReportPath     String
-  createdAt            DateTime @default(now())
+  createdAt            DateTime  @default(now())
   resolvedAt           DateTime?
 }
 
 model EvidenceFile {
   id              String   @id @default(uuid())
   testExecutionId String
-  fileType        String   // "screenshot" | "video" | "log" | "har"
+  fileType        String // "screenshot" | "video" | "log" | "har"
   filePath        String
   stepNumber      Int
   pageUrl         String
   elementLocator  String
-  status          String   // "pass" | "fail" | "info"
+  status          String // "pass" | "fail" | "info"
   tags            String[]
   createdAt       DateTime @default(now())
 }
@@ -2244,9 +2306,9 @@ model EvidenceFile {
 model CrossBrowserResult {
   id             String   @id @default(uuid())
   testId         String
-  browserName    String   // "Chrome" | "Firefox" | "Edge" | "Safari"
-  status         String   // "pass" | "fail" | "flaky" | "not_run"
-  duration       Int      // duration in ms
+  browserName    String // "Chrome" | "Firefox" | "Edge" | "Safari"
+  status         String // "pass" | "fail" | "flaky" | "not_run"
+  duration       Int // duration in ms
   screenshotPath String?
   errorMessage   String?  @db.Text
   executionDate  DateTime @default(now())
@@ -2265,8 +2327,8 @@ model McpConfig {
 model McpActivity {
   id        String   @id @default(uuid())
   action    String
-  status    String   // "success" | "failed" | "pending"
-  duration  Int      // in ms
+  status    String // "success" | "failed" | "pending"
+  duration  Int // in ms
   result    String   @db.Text
   createdAt DateTime @default(now())
 }
@@ -2274,29 +2336,20 @@ model McpActivity {
 model RecorderSession {
   id        String   @id @default(uuid())
   url       String
-  browser   String   // "Chrome" | "Edge"
-  device    String   // "Desktop" | "Mobile"
+  browser   String // "Chrome" | "Edge"
+  device    String // "Desktop" | "Mobile"
   code      String   @db.Text
-  status    String   // "recording" | "completed"
+  status    String // "recording" | "completed"
   createdAt DateTime @default(now())
 }
 
 model AgentChatHistory {
   id        String   @id @default(uuid())
-  role      String   // "user" | "assistant"
+  role      String // "user" | "assistant"
   content   String   @db.Text
-  mcpCalls  Json?    // stores tool calls logs details
+  mcpCalls  Json? // stores tool calls logs details
   createdAt DateTime @default(now())
 }
-
-
-
-
-
-
-
-
-
 
 // ===== Visual Diff (Section 9) — visual regression testing =====
 
@@ -2306,7 +2359,7 @@ model VisualBaseline {
   pageName    String
   browser     String             @default("chrome")
   viewport    String             @default("") // e.g. "1920x1080"
-  filePath    String             // stored PNG path under public/uploads/visual/baselines
+  filePath    String // stored PNG path under public/uploads/visual/baselines
   versionTag  String             @default("")
   provider    String             @default("shaft-opencv") // "shaft-opencv" | "applitools" | "shutterbug"
   width       Int?
@@ -2317,17 +2370,17 @@ model VisualBaseline {
 }
 
 model VisualComparison {
-  id              String         @id @default(uuid())
-  baselineId      String
-  baseline        VisualBaseline @relation(fields: [baselineId], references: [id], onDelete: Cascade)
-  currentFilePath String
-  diffFilePath    String         @default("")
-  diffScore       Float          @default(0) // percentage of changed pixels 0..100
-  threshold       Float          @default(5) // percentage
-  status          String         @default("pass") // "pass" | "fail" | "approved" | "rejected"
-  provider        String         @default("shaft-opencv")
-  dimensionMismatch Boolean      @default(false)
-  createdAt       DateTime       @default(now())
+  id                String         @id @default(uuid())
+  baselineId        String
+  baseline          VisualBaseline @relation(fields: [baselineId], references: [id], onDelete: Cascade)
+  currentFilePath   String
+  diffFilePath      String         @default("")
+  diffScore         Float          @default(0) // percentage of changed pixels 0..100
+  threshold         Float          @default(5) // percentage
+  status            String         @default("pass") // "pass" | "fail" | "approved" | "rejected"
+  provider          String         @default("shaft-opencv")
+  dimensionMismatch Boolean        @default(false)
+  createdAt         DateTime       @default(now())
 }
 
 // Section 12: Data & Config — centralized SHAFT configuration management.
@@ -2340,7 +2393,7 @@ model ShaftProperty {
   value         String   @db.Text
   description   String   @default("")
   propertyGroup String   @default("Other") // Browser | Execution | Synchronization | Evidence | Healing | AI | Other
-  isCustom      Boolean  @default(true)    // false = tracked but equals catalog default
+  isCustom      Boolean  @default(true) // false = tracked but equals catalog default
   updatedBy     String?
   updatedAt     DateTime @updatedAt
   createdAt     DateTime @default(now())
@@ -2350,8 +2403,8 @@ model ShaftProperty {
 model PropertyHistory {
   id           String   @id @default(uuid())
   propertyName String
-  oldValue     String   @db.Text @default("")
-  newValue     String   @db.Text @default("")
+  oldValue     String   @default("") @db.Text
+  newValue     String   @default("") @db.Text
   changedBy    String?
   changedAt    DateTime @default(now())
 
@@ -2366,7 +2419,7 @@ model EnvironmentVariable {
   id             String   @id @default(uuid())
   name           String
   valuePlain     String?  @db.Text // present when isSecret = false
-  valueEncrypted Json?    // { encrypted, iv, authTag, keyVersion } when isSecret = true
+  valueEncrypted Json? // { encrypted, iv, authTag, keyVersion } when isSecret = true
   scope          String   @default("global") // "global" | "project"
   isSecret       Boolean  @default(false)
   projectId      String?
@@ -2411,23 +2464,23 @@ model AiUsageEvent {
 
 // Consent, privacy and spend policy for AI usage (single row).
 model AiPolicy {
-  id              String   @id @default("ai-policy")
-  allowDataAccess Boolean  @default(true)  // may test data be sent to the provider
-  redactSensitive Boolean  @default(true)  // mask emails/keys/tokens before sending
-  monthlyBudgetUsd Float   @default(0)     // 0 = unlimited
-  updatedAt       DateTime @updatedAt
+  id               String   @id @default("ai-policy")
+  allowDataAccess  Boolean  @default(true) // may test data be sent to the provider
+  redactSensitive  Boolean  @default(true) // mask emails/keys/tokens before sending
+  monthlyBudgetUsd Float    @default(0) // 0 = unlimited
+  updatedAt        DateTime @updatedAt
 }
 
 // Phase 3 annotation editor: temporary shareable link for an annotated
 // screenshot + its metadata. Public read by unguessable token; optional expiry.
 model SharedAnnotation {
-  id        String   @id @default(uuid())
-  token     String   @unique
+  id        String    @id @default(uuid())
+  token     String    @unique
   imageUrl  String // public path, e.g. /uploads/shares/<token>.png
-  title     String   @default("")
+  title     String    @default("")
   metadata  Json? // { url, capturedAt, os, browser, dimensions, tags, description, severity }
   createdBy String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   expiresAt DateTime?
 
   @@index([token])
@@ -2437,10 +2490,293 @@ model SharedAnnotation {
 model AiDataAccessLog {
   id          String   @id @default(uuid())
   provider    String
-  dataSummary String   // e.g. "list_tests → 5 scripts (1.2 KB)"
+  dataSummary String // e.g. "list_tests → 5 scripts (1.2 KB)"
   redacted    Boolean  @default(false)
   withheld    Boolean  @default(false) // true when policy blocked the data entirely
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  SCRUM BOARD (spec-literal parallel system) — Task/BoardColumn/ProjectMember
+//  Coexists with the existing Requirement/Sprint/Epic board. Names prefixed
+//  where they would collide with existing models/enums.
+// ═══════════════════════════════════════════════════════════════════════════
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  REVIEW
+  TESTING
+  DEPLOYED
+}
+
+enum TaskPriority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum ScrumSprintStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+enum TaskType {
+  STORY
+  BUG
+  TASK
+  SUBTASK
+  EPIC
+}
+
+enum TaskResolution {
+  DONE
+  WONT_FIX
+  DUPLICATE
+  CANNOT_REPRODUCE
+}
+
+model ProjectMember {
+  id        String   @id @default(cuid())
+  role      String   @default("member") // admin, manager, member
+  userId    String
+  projectId String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@index([projectId])
+}
+
+model ScrumSprint {
+  id        String            @id @default(cuid())
+  name      String
+  goal      String?
+  status    ScrumSprintStatus @default(PLANNED)
+  startDate DateTime?
+  endDate   DateTime?
+  projectId String
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+  createdAt DateTime          @default(now())
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model ScrumEpic {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  color       String   @default("#3B82F6")
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Task {
+  id          String          @id @default(cuid())
+  taskNumber  Int             @default(autoincrement())
+  title       String
+  description String?         @db.Text
+  type        TaskType        @default(STORY)
+  resolution  TaskResolution?
+  status      TaskStatus      @default(TODO)
+  priority    TaskPriority    @default(MEDIUM)
+  storyPoints Float?
+  dueDate     DateTime?
+  branchName  String?
+  progress    Int             @default(0) // 0-100
+  boardRank   Int             @default(0) // ordering within a column
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprintId    String?
+  sprint      ScrumSprint?    @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+  epicId      String?
+  epic        ScrumEpic?      @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  reporterId  String?
+  reporter    User?           @relation("ScrumTaskReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  assignees   User[]          @relation("ScrumTaskAssignees")
+  subtasks    Subtask[]
+  comments    Comment[]
+  activities  Activity[]
+  testCaseLinks TaskTestCase[]
+  bugLinks    TaskBug[]
+  tags        String[]        @default([])
+
+  // Jira-style detail fields
+  originalEstimate  Int?     // minutes
+  remainingEstimate Int?     // minutes
+  timeSpent         Int?     // minutes
+  environment       String?
+  fixVersions       String[] @default([])
+  affectedVersions  String[] @default([])
+  components        String[] @default([])
+  labels            String[] @default([])
+  votes             Int      @default(0)
+  votedBy           User[]   @relation("ScrumTaskVoters")
+  watchers          User[]   @relation("ScrumTaskWatchers")
+  linkedTasks       TaskLink[]       @relation("SourceTask")
+  linkedToTasks     TaskLink[]       @relation("TargetTask")
+  taskAttachments   TaskAttachment[]
+  workLogs          WorkLog[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([projectId])
+  @@index([sprintId])
+  @@index([epicId])
+  @@index([status])
+}
+
+model TaskLink {
+  id        String   @id @default(cuid())
+  type      String   // blocks, is blocked by, relates to, duplicates, clones
+  sourceId  String
+  targetId  String
+  source    Task     @relation("SourceTask", fields: [sourceId], references: [id], onDelete: Cascade)
+  target    Task     @relation("TargetTask", fields: [targetId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([sourceId, targetId, type])
+  @@index([sourceId])
+  @@index([targetId])
+}
+
+model TaskAttachment {
+  id           String   @id @default(cuid())
+  name         String
+  url          String
+  size         Int      // bytes
+  mimeType     String
+  taskId       String
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String?
+  uploadedBy   User?    @relation("ScrumTaskAttachmentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model WorkLog {
+  id          String   @id @default(cuid())
+  timeSpent   Int      // minutes
+  description String?  @db.Text
+  startedAt   DateTime
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation("ScrumWorkLogAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  action    String // created, moved, assigned, updated, commented, ...
+  details   String?  @db.Text
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model BoardColumn {
+  id        String     @id @default(cuid())
+  name      String
+  status    TaskStatus
+  order     Int
+  wipLimit  Int?
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime   @default(now())
+
+  @@index([projectId])
+}
+
+// Scrum traceability: link a Task (User Story) to existing TestCases and Bugs.
+model TaskTestCase {
+  id         String   @id @default(cuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  testCaseId String
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([taskId, testCaseId])
+  @@index([taskId])
+  @@index([testCaseId])
+}
+
+model TaskBug {
+  id          String    @id @default(cuid())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  bugReportId String
+  bugReport   BugReport @relation(fields: [bugReportId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([taskId, bugReportId])
+  @@index([taskId])
+  @@index([bugReportId])
+}
+
+// Cross-feature assignee pool: users pulled from the connected management tool
+// (Jira/Azure/OpenProject/ClickUp) plus manually-added people, each with an
+// optional app-assigned free-text role. Used by Bug Reports, Test Cases, etc.
+model ProjectTeamMember {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  source     String   @default("synced") // "synced" | "manual"
+  provider   String?  // integration provider when synced (OpenProject/Jira/AzureDevOps/ClickUp)
+  externalId String?  // the tool's user id (null for manual)
+  name       String
+  email      String?
+  role       String?  // app-assigned, optional, free text
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([projectId, provider, externalId])
+  @@index([projectId])
 }

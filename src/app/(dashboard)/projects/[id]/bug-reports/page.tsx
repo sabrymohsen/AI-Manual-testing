@@ -261,11 +261,19 @@ export default function ProjectBugReportsPage() {
       .catch(err => console.error("Error loading project scope details:", err))
   }, [projectId])
 
-  // Load assignable OpenProject members (no-op if integration isn't configured)
+  // Load the project's assignee pool (synced from Jira/Azure/OpenProject + manual).
+  // Replaces the old OpenProject-only members endpoint so assignment works for
+  // every tracker. Falls back to an empty list if the pool is empty.
   useEffect(() => {
-    fetch(`/api/projects/${projectId}/integrations/openproject/members`)
+    fetch(`/api/projects/${projectId}/team`)
       .then(res => (res.ok ? res.json() : { members: [] }))
-      .then(data => setOpMembers(Array.isArray(data.members) ? data.members : []))
+      .then(data =>
+        setOpMembers(
+          Array.isArray(data.members)
+            ? data.members.filter((m: any) => m.active).map((m: any) => ({ id: m.id, name: m.name }))
+            : []
+        )
+      )
       .catch(() => setOpMembers([]))
   }, [projectId])
 

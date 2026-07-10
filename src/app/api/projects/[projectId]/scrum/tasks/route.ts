@@ -1,0 +1,123 @@
+import { NextResponse } from "next/server"
+import { prisma } from "@/lib/db"
+import { requireProjectOwner } from "@/lib/api-guards"
+import { z } from "zod"
+import { Prisma } from "@prisma/client"
+import { taskInclude, serializeTask, logActivity } from "@/lib/scrum/server"
+
+const STATUSES = ["TODO", "IN_PROGRESS", "DONE", "REVIEW", "TESTING", "DEPLOYED"] as const
+const PRIORITIES = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"] as const
+
+const createSchema = z.object({
+  title: z.string().min(1).max(300),
+  description: z.string().optional().nullable(),
+  status: z.enum(STATUSES).optional(),
+  priority: z.enum(PRIORITIES).optional(),
+  storyPoints: z.number().int().min(0).max(999).optional().nullable(),
+  dueDate: z.string().datetime().optional().nullable(),
+  branchName: z.string().optional().nullable(),
+  sprintId: z.string().optional().nullable(),
+  epicId: z.string().optional().nullable(),
+  assigneeIds: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+})
+
+// GET /api/projects/:projectId/scrum/tasks?status=&priority=&assignee=&sprint=&epic=&search=&sort=
+export async function GET(
+  request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const url = new URL(request.url)
+  const statuses = url.searchParams.getAll("status").filter((s) => (STATUSES as readonly string[]).includes(s))
+  const priorities = url.searchParams.getAll("priority").filter((p) => (PRIORITIES as readonly string[]).includes(p))
+  const assignees = url.searchParams.getAll("assignee").filter(Boolean)
+  const sprint = url.searchParams.get("sprint") || undefined
+  const epic = url.searchParams.get("epic") || undefined
+  const search = url.searchParams.get("search")?.trim() || undefined
+  const sort = url.searchParams.get("sort") || "boardRank"
+
+  const where: Prisma.TaskWhereInput = { projectId: params.projectId }
+  if (statuses.length) where.status = { in: statuses as any }
+  if (priorities.length) where.priority = { in: priorities as any }
+  if (assignees.length) where.assignees = { some: { id: { in: assignees } } }
+  if (sprint) where.sprintId = sprint
+  if (epic) where.epicId = epic
+  if (search) {
+    const asNum = Number(search.replace(/^\D+/, ""))
+    where.OR = [
+      { title: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      ...(Number.isFinite(asNum) && asNum > 0 ? [{ taskNumber: asNum }] : []),
+    ]
+  }
+
+  const orderBy: Prisma.TaskOrderByWithRelationInput =
+    sort === "priority" ? { priority: "desc" }
+    : sort === "dueDate" ? { dueDate: "asc" }
+    : sort === "title" ? { title: "asc" }
+    : sort === "createdAt" ? { createdAt: "desc" }
+    : { boardRank: "asc" }
+
+  const [project, tasks] = await Promise.all([
+    prisma.project.findUnique({ where: { id: params.projectId }, select: { boardKey: true } }),
+    prisma.task.findMany({ where, orderBy, include: taskInclude }),
+  ])
+
+  return NextResponse.json({ tasks: tasks.map((t) => serializeTask(t, project?.boardKey)) })
+}
+
+// POST /api/projects/:projectId/scrum/tasks
+export async function POST(
+  request: Request,
+  { params }: { params: { projectId: string } }
+) {
+  const auth = await requireProjectOwner(params.projectId)
+  if (auth.error !== null) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  let body: unknown
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+  }
+  const parsed = createSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 })
+  }
+  const data = parsed.data
+
+  // New task drops at the bottom of its column.
+  const status = data.status ?? "TODO"
+  const last = await prisma.task.aggregate({
+    where: { projectId: params.projectId, status },
+    _max: { boardRank: true },
+  })
+
+  const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { boardKey: true } })
+
+  const task = await prisma.task.create({
+    data: {
+      projectId: params.projectId,
+      title: data.title,
+      description: data.description ?? null,
+      status,
+      priority: data.priority ?? "MEDIUM",
+      storyPoints: data.storyPoints ?? null,
+      dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      branchName: data.branchName ?? null,
+      sprintId: data.sprintId ?? null,
+      epicId: data.epicId ?? null,
+      tags: data.tags ?? [],
+      boardRank: (last._max.boardRank ?? -1) + 1,
+      assignees: data.assigneeIds?.length ? { connect: data.assigneeIds.map((id) => ({ id })) } : undefined,
+    },
+    include: taskInclude,
+  })
+
+  await logActivity(task.id, "created", `Task created in ${status}`, auth.session.user.id)
+
+  return NextResponse.json({ task: serializeTask(task, project?.boardKey) }, { status: 201 })
+}

@@ -30,8 +30,6 @@ import {
   Cpu,
   FolderOpen,
   Camera,
-  ListOrdered,
-  LayoutGrid,
   LineChart,
   Settings2
 } from "lucide-react"
@@ -158,14 +156,24 @@ export default function DashboardLayout({
     localStorage.setItem("activeProjectId", projectId)
     // Dispatch event to wake up page listeners
     window.dispatchEvent(new Event("projectChanged"))
+
+    // If we're on a project-scoped page (e.g. the Scrum board at
+    // /projects/[id]/scrum), swap the project id in the URL and client-side
+    // navigate to the same section for the newly selected project — the page
+    // re-renders with the new id and refetches, no full reload.
+    const match = pathname.match(/^\/projects\/[^/]+\/([^/]+)/)
+    if (match) {
+      const section = match[1] // "scrum", "board", "test-cases", …
+      const query = section === "board" && activeTab ? `?tab=${activeTab}` : ""
+      router.push(`/projects/${projectId}/${section}${query}`)
+    }
   }
 
   // Navigation Items
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { href: "/board?tab=backlog", label: "Backlog", icon: ListOrdered },
-    { href: "/board?tab=board", label: "Sprint Board", icon: LayoutGrid },
-    { href: "/board?tab=reports", label: "Reports", icon: LineChart },
+    { href: "/scrum", label: "Scrum Board", icon: Trello },
+    { href: "/reports", label: "Reports", icon: LineChart },
   ]
 
   const workflowItems = [
@@ -191,6 +199,7 @@ export default function DashboardLayout({
       const query = basePath.includes("?") ? basePath.substring(basePath.indexOf("?")) : ""
       return `/projects/${activeProjectId}/board${query}`
     }
+    if (basePath === "/scrum") return `/projects/${activeProjectId}/scrum`
     if (basePath === "/requirements") return `/projects/${activeProjectId}/requirements`
     return basePath
   }

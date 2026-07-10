@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StepBuilder } from "@/components/test-cases/step-builder"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
+import { AssigneeSelect } from "@/components/team/assignee-select"
 
 export default function EditTestCasePage() {
   const params = useParams()
@@ -15,7 +16,7 @@ export default function EditTestCasePage() {
   const [steps, setSteps] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-
+  const [assignee, setAssignee] = useState("")
 
   const [requirementIds, setRequirementIds] = useState<string[]>([])
 
@@ -24,6 +25,7 @@ export default function EditTestCasePage() {
       .then((res) => res.json())
       .then((data) => {
         setTestCase(data.testCase)
+        setAssignee(data.testCase.assignee || "")
         setRequirementIds((data.testCase.requirements || []).map((r: any) => r.requirementId))
         setSteps(
           data.testCase.steps.map((s: any) => ({
@@ -50,6 +52,7 @@ export default function EditTestCasePage() {
       title: form.get("title"),
       priority: form.get("priority"),
       preconditions: form.get("preconditions") || null,
+      assignee: assignee || null,
       steps,
       requirementIds
     }
@@ -88,6 +91,16 @@ export default function EditTestCasePage() {
               <option value="High">High</option>
               <option value="Critical">Critical</option>
             </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="assignee">Assignee</Label>
+            <AssigneeSelect
+              id="assignee"
+              projectId={params.id as string}
+              value={assignee}
+              onChange={setAssignee}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
           </div>
           <div className="space-y-2 col-span-2">
             <Label htmlFor="preconditions">Preconditions</Label>
