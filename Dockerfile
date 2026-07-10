@@ -10,6 +10,13 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# NEXTAUTH_SECRET must be present at build time so Next.js inlines it into the
+# Edge middleware bundle (the middleware verifies session JWTs, and the Edge
+# runtime can't read runtime-only env vars). Railway passes the service variable
+# to the build; the Node API routes still read it at runtime. Use the SAME value
+# for build and runtime, or issued tokens won't verify.
+ARG NEXTAUTH_SECRET
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
 RUN npx prisma generate
 RUN npm run build
 
