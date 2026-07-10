@@ -169,44 +169,55 @@
   <!-- Main View Container -->
   <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
     <!-- Top Header -->
-    <header class="bg-surface border-b border-outline-variant h-16 shrink-0 flex items-center justify-between px-6 z-10 select-none">
+    <header class="bg-white border-b border-outline-variant px-6 py-4 shrink-0 z-10 select-none flex flex-col gap-2">
+      <!-- Top Row: Breadcrumbs -->
       <div class="flex items-center gap-4">
         <!-- Mobile menu toggle -->
         <button onclick="toggleMobileSidebar()" class="md:hidden p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors">
           <i class="ph ph-list text-xl"></i>
         </button>
-        <!-- Breadcrumbs -->
-        <div class="flex items-center gap-2 text-sm text-on-surface-variant font-medium">
-          <span class="hover:text-primary cursor-pointer">Projects</span>
+        <div class="flex items-center gap-2 text-[11px] font-semibold text-slate-400 select-none">
+          <span>Projects</span>
           <i class="ph ph-caret-right text-xs"></i>
-          <span id="breadcrumb-current" class="text-on-surface font-semibold">Sprint Board</span>
+          <span id="breadcrumb-current" class="text-slate-500 font-semibold">Sprint Board</span>
         </div>
       </div>
 
-      <!-- Search bar & Right controls -->
-      <div class="flex items-center gap-6">
-        <!-- Real-time filter search bar -->
-        <div class="relative w-64">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-outline"></i>
-          <input id="global-search" oninput="handleSearch(this.value)" class="w-full pl-9 pr-4 py-1.5 bg-surface-container-low border-none rounded-full focus:ring-2 focus:ring-primary focus:bg-surface text-sm transition-all shadow-sm placeholder:text-outline/70" placeholder="Search stories..." type="text">
+      <!-- Bottom Row: Title, Search, Avatars, Buttons -->
+      <div class="flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-4 flex-grow">
+          <h2 class="text-2xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2 select-none">
+            <div class="h-6 w-6 rounded-full border-2 border-primary flex items-center justify-center shrink-0">
+              <div class="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />
+            </div>
+            Scrum Board
+          </h2>
+
+          <!-- Search stories inside main header next to title -->
+          <div class="relative max-w-xs w-full ml-4">
+            <i class="ph ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input id="global-search" oninput="handleSearch(this.value)" class="w-full pl-10 pr-4 h-9.5 text-xs rounded-full border-0 bg-[#eff4ff] text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary shadow-sm" placeholder="Search stories..." type="text">
+          </div>
+
+          <!-- Overlapping avatars list next to search bar -->
+          <div class="flex -space-x-1.5 ml-4 select-none items-center cursor-pointer" onclick="toggleAssigneeFilterDropdown(event)">
+            <img class="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm z-30" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60" alt="Sarah">
+            <img class="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm z-20" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60" alt="Alex">
+            <img class="w-7 h-7 rounded-full border-2 border-white object-cover shadow-sm z-10" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60" alt="Emma">
+            <div class="w-7 h-7 rounded-full border-2 border-white bg-blue-50 text-[9px] text-blue-700 flex items-center justify-center font-bold shadow-sm z-0">+3</div>
+          </div>
         </div>
 
-        <!-- Overlapping Avatar Group -->
-        <div class="relative flex -space-x-2 items-center cursor-pointer" onclick="toggleAssigneeFilterDropdown(event)">
-          <img class="w-8 h-8 rounded-full border-2 border-surface object-cover z-30 shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60" alt="Sarah">
-          <img class="w-8 h-8 rounded-full border-2 border-surface object-cover z-20 shadow-sm" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60" alt="Alex">
-          <img class="w-8 h-8 rounded-full border-2 border-surface object-cover z-10 shadow-sm" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60" alt="Emma">
-          <div class="w-8 h-8 rounded-full border-2 border-surface bg-surface-container-high text-on-surface-variant flex items-center justify-center text-[10px] font-bold z-0 shadow-sm">+3</div>
-        </div>
-
-        <!-- Toolbar Buttons -->
-        <div class="flex items-center gap-2">
-          <button onclick="openCreateEpicModal()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface font-medium text-sm hover:bg-surface-container-low transition-colors flex items-center gap-2 shadow-sm bg-surface">
-            <i class="ph ph-plus"></i> Create Epic
-          </button>
-          <button onclick="openCreateSprintModal()" class="px-4 py-2 bg-primary-container text-on-primary rounded-lg font-medium text-sm hover:bg-primary transition-colors shadow-sm flex items-center gap-2">
-            <i class="ph ph-lightning"></i> Create Sprint
-          </button>
+        <!-- Action buttons on the right -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-3 border-l border-outline-variant pl-4">
+            <button onclick="openCreateEpicModal()" class="h-9 px-4 rounded-lg border border-slate-200 hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center gap-1.5 transition-all shadow-sm bg-white">
+              <i class="ph ph-plus text-slate-400"></i> Create Epic
+            </button>
+            <button onclick="openCreateSprintModal()" class="h-9 px-4 bg-primary text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm hover:opacity-90">
+              <i class="ph-bold ph-lightning"></i> Create Sprint
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -221,21 +232,25 @@
           <i class="ph ph-list"></i> List
         </button>
         <button onclick="switchTab('timeline')" id="tab-timeline" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition-all flex items-center gap-2">
-          <i class="ph ph-timeline"></i> Timeline
+          <i class="ph ph-chart-line"></i> Timeline
         </button>
       </div>
 
       <!-- Right controls and filters -->
-      <div class="flex items-center gap-2">
-        <button onclick="toggleFilterDropdown(event)" class="px-3 py-1.5 rounded-md text-on-surface-variant text-xs font-semibold hover:bg-surface-container-high transition-colors flex items-center gap-1.5 border border-outline-variant bg-surface shadow-sm relative">
-          <i class="ph ph-funnel text-sm"></i>
-          Filter
-          <span id="active-filter-badge" class="bg-primary-container text-on-primary px-1.5 rounded-full text-[9px] font-bold hidden">0</span>
+      <div class="flex items-center gap-2.5">
+        <button onclick="toggleFilterDropdown(event)" class="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-2 shadow-sm relative">
+          <i class="ph ph-sliders text-base text-slate-400"></i>
+          <span>Filter</span>
+          <span id="active-filter-badge" class="h-4.5 min-w-4.5 px-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold flex items-center justify-center">2</span>
         </button>
-        <button onclick="clearAllFilters()" class="px-3 py-1.5 rounded-md text-error text-xs font-semibold hover:bg-error-container/20 transition-colors border border-error/20 bg-surface shadow-sm">
-          Clear Filters
+
+        <button onclick="toggleAssigneeFilterDropdown(event)" class="h-9 px-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-2 shadow-sm">
+          <i class="ph ph-users text-base text-slate-400"></i>
+          <span>Assignee</span>
+          <span class="text-[10px] text-slate-400">▼</span>
         </button>
-        <button onclick="toggleMoreMenu(event)" class="p-2 rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors border border-outline-variant bg-surface shadow-sm ml-1">
+
+        <button onclick="toggleMoreMenu(event)" class="h-9 w-9 bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 rounded-lg flex items-center justify-center shadow-sm">
           <i class="ph ph-dots-three text-lg"></i>
         </button>
       </div>
@@ -745,11 +760,11 @@
     function switchTab(tabName) {
       currentTab = tabName;
       document.querySelectorAll('#tab-bar-container button').forEach(el => {
-        el.className = 'px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition-all flex items-center gap-2 text-on-surface-variant hover:text-primary';
+        el.className = 'relative pb-3 pt-3 px-4 text-xs font-semibold border-b-2 border-transparent text-on-surface-variant hover:text-primary transition-all flex items-center gap-2 -mb-px';
       });
       const activeTabEl = document.getElementById(`tab-${tabName}`);
       if (activeTabEl) {
-        activeTabEl.className = 'px-4 py-2 text-sm font-bold border-b-2 border-primary text-primary transition-all flex items-center gap-2 bg-surface-container-low rounded-t-lg';
+        activeTabEl.className = 'relative pb-3 pt-3 px-4 text-xs font-bold border-b-2 border-primary text-primary transition-all flex items-center gap-2 -mb-px';
       }
       renderActiveTab();
     }
