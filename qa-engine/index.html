@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Engine - Scrum Board</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            background: '#f8f9ff',
+            surface: '#ffffff',
+            'surface-container': '#e5eeff',
+            'surface-container-high': '#dce9ff',
+            'surface-container-low': '#eff4ff',
+            primary: '#004ac6',
+            'primary-container': '#2563eb',
+            'on-primary': '#ffffff',
+            'on-surface': '#0b1c30',
+            'on-surface-variant': '#434655',
+            outline: '#737686',
+            'outline-variant': '#c3c6d7',
+            secondary: '#565e74',
+            'secondary-container': '#dae2fd',
+            tertiary: '#3e3fcc',
+            'tertiary-container': '#585be6',
+            error: '#ba1a1a',
+            'error-container': '#ffdad6',
+            'on-error-container': '#93000a',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Hanken Grotesk', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Thin Scrollbar */
+    .kanban-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .kanban-scroll::-webkit-scrollbar-track {
+      background: #c3c6d7;
+      border-radius: 4px;
+    }
+    .kanban-scroll::-webkit-scrollbar-thumb {
+      background: #737686;
+      border-radius: 4px;
+    }
+    /* Drag over highlight styling */
+    .drag-over-column {
+      border: 2px dashed #2563eb !important;
+      background-color: rgba(229, 238, 255, 0.5) !important;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-sans min-h-screen flex overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-64 border-r border-outline-variant bg-surface flex flex-col h-screen shrink-0 relative transition-all duration-300 z-30 select-none">
+    <!-- Brand / Logo Header -->
+    <div class="p-6 flex items-center justify-between border-b border-outline-variant h-16 shrink-0">
+      <div class="flex items-center gap-2 overflow-hidden">
+        <i class="ph-fill ph-bug-beetle text-primary text-2xl"></i>
+        <div id="brand-text">
+          <h1 class="font-display font-bold text-lg text-primary tracking-tight leading-none">QA ENGINE</h1>
+          <p class="text-[10px] text-outline font-medium tracking-wide">SaaS Enterprise</p>
+        </div>
+      </div>
+      <button onclick="toggleSidebar()" class="text-on-surface-variant hover:text-primary transition-colors p-1 rounded-lg">
+        <i id="sidebar-chevron" class="ph ph-caret-double-left text-lg"></i>
+      </button>
+    </div>
+
+    <!-- CTA Create Button -->
+    <div class="px-4 py-4 shrink-0">
+      <button onclick="openCreateTaskModal()" class="w-full bg-primary-container text-on-primary font-bold py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-primary transition-all shadow-sm">
+        <i class="ph ph-plus text-base"></i>
+        <span class="sidebar-text">Create New Task</span>
+      </button>
+    </div>
+
+    <!-- Menu Links Navigation -->
+    <nav class="flex-1 overflow-y-auto px-2 space-y-6 py-2 kanban-scroll">
+      <!-- MAIN MENU -->
+      <div>
+        <p class="sidebar-text text-[10px] font-bold text-outline uppercase tracking-wider mb-2 px-4">Main Menu</p>
+        <div class="space-y-1">
+          <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-layout-dashboard text-lg"></i>
+            <span class="sidebar-text">Dashboard</span>
+          </button>
+          <button onclick="switchView('backlog')" id="nav-backlog" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-archive text-lg"></i>
+            <span class="sidebar-text">Backlog</span>
+          </button>
+          <button onclick="switchView('board')" id="nav-board" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-columns text-lg"></i>
+            <span class="sidebar-text">Sprint Board</span>
+          </button>
+          <button onclick="switchView('reports')" id="nav-reports" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-bar-chart text-lg"></i>
+            <span class="sidebar-text">Reports</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- QA WORKFLOWS -->
+      <div>
+        <p class="sidebar-text text-[10px] font-bold text-outline uppercase tracking-wider mb-2 px-4">QA Workflows</p>
+        <div class="space-y-1">
+          <button onclick="switchView('test-cases')" id="nav-test-cases" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-clipboard-text text-lg"></i>
+            <span class="sidebar-text">Test Cases</span>
+          </button>
+          <button onclick="switchView('automation-hub')" id="nav-automation-hub" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-cpu text-lg"></i>
+            <span class="sidebar-text">Automation Hub</span>
+          </button>
+          <button onclick="switchView('live-qa')" id="nav-live-qa" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-video text-lg"></i>
+            <span class="sidebar-text">Live QA Session</span>
+          </button>
+          <button onclick="switchView('recorder-studio')" id="nav-recorder-studio" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-record text-lg"></i>
+            <span class="sidebar-text">Recorder Studio</span>
+          </button>
+          <button onclick="switchView('bug-reports')" id="nav-bug-reports" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-bug text-lg"></i>
+            <span class="sidebar-text">Bug Reports</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MANAGEMENT -->
+      <div>
+        <p class="sidebar-text text-[10px] font-bold text-outline uppercase tracking-wider mb-2 px-4">Management</p>
+        <div class="space-y-1">
+          <button onclick="switchView('projects')" id="nav-projects" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-folder text-lg"></i>
+            <span class="sidebar-text">Projects</span>
+          </button>
+          <button onclick="switchView('settings')" id="nav-settings" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium">
+            <i class="ph ph-gear text-lg"></i>
+            <span class="sidebar-text">Settings</span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Sign Out Footer -->
+    <div class="p-4 border-t border-outline-variant shrink-0">
+      <button onclick="triggerSignOut()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-error hover:bg-error-container/20 transition-colors font-medium">
+        <i class="ph ph-sign-out text-lg"></i>
+        <span class="sidebar-text">Sign Out</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main View Container -->
+  <main class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+    <!-- Top Header -->
+    <header class="bg-surface border-b border-outline-variant h-16 shrink-0 flex items-center justify-between px-6 z-10 select-none">
+      <div class="flex items-center gap-4">
+        <!-- Mobile menu toggle -->
+        <button onclick="toggleMobileSidebar()" class="md:hidden p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors">
+          <i class="ph ph-list text-xl"></i>
+        </button>
+        <!-- Breadcrumbs -->
+        <div class="flex items-center gap-2 text-sm text-on-surface-variant font-medium">
+          <span class="hover:text-primary cursor-pointer">Projects</span>
+          <i class="ph ph-caret-right text-xs"></i>
+          <span id="breadcrumb-current" class="text-on-surface font-semibold">Sprint Board</span>
+        </div>
+      </div>
+
+      <!-- Search bar & Right controls -->
+      <div class="flex items-center gap-6">
+        <!-- Real-time filter search bar -->
+        <div class="relative w-64">
+          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-outline"></i>
+          <input id="global-search" oninput="handleSearch(this.value)" class="w-full pl-9 pr-4 py-1.5 bg-surface-container-low border-none rounded-full focus:ring-2 focus:ring-primary focus:bg-surface text-sm transition-all shadow-sm placeholder:text-outline/70" placeholder="Search stories..." type="text">
+        </div>
+
+        <!-- Overlapping Avatar Group -->
+        <div class="relative flex -space-x-2 items-center cursor-pointer" onclick="toggleAssigneeFilterDropdown(event)">
+          <img class="w-8 h-8 rounded-full border-2 border-surface object-cover z-30 shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60" alt="Sarah">
+          <img class="w-8 h-8 rounded-full border-2 border-surface object-cover z-20 shadow-sm" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60" alt="Alex">
+          <img class="w-8 h-8 rounded-full border-2 border-surface object-cover z-10 shadow-sm" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60" alt="Emma">
+          <div class="w-8 h-8 rounded-full border-2 border-surface bg-surface-container-high text-on-surface-variant flex items-center justify-center text-[10px] font-bold z-0 shadow-sm">+3</div>
+        </div>
+
+        <!-- Toolbar Buttons -->
+        <div class="flex items-center gap-2">
+          <button onclick="openCreateEpicModal()" class="px-4 py-2 border border-outline-variant rounded-lg text-on-surface font-medium text-sm hover:bg-surface-container-low transition-colors flex items-center gap-2 shadow-sm bg-surface">
+            <i class="ph ph-plus"></i> Create Epic
+          </button>
+          <button onclick="openCreateSprintModal()" class="px-4 py-2 bg-primary-container text-on-primary rounded-lg font-medium text-sm hover:bg-primary transition-colors shadow-sm flex items-center gap-2">
+            <i class="ph ph-lightning"></i> Create Sprint
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Sub-header Tab Bar (Only visible in Sprint Board) -->
+    <div id="tab-bar-container" class="bg-surface border-b border-outline-variant px-6 py-2 shrink-0 flex items-center justify-between select-none">
+      <div class="flex gap-2">
+        <button onclick="switchTab('board')" id="tab-board" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition-all flex items-center gap-2">
+          <i class="ph ph-columns"></i> Board
+        </button>
+        <button onclick="switchTab('list')" id="tab-list" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition-all flex items-center gap-2">
+          <i class="ph ph-list"></i> List
+        </button>
+        <button onclick="switchTab('timeline')" id="tab-timeline" class="px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition-all flex items-center gap-2">
+          <i class="ph ph-timeline"></i> Timeline
+        </button>
+      </div>
+
+      <!-- Right controls and filters -->
+      <div class="flex items-center gap-2">
+        <button onclick="toggleFilterDropdown(event)" class="px-3 py-1.5 rounded-md text-on-surface-variant text-xs font-semibold hover:bg-surface-container-high transition-colors flex items-center gap-1.5 border border-outline-variant bg-surface shadow-sm relative">
+          <i class="ph ph-funnel text-sm"></i>
+          Filter
+          <span id="active-filter-badge" class="bg-primary-container text-on-primary px-1.5 rounded-full text-[9px] font-bold hidden">0</span>
+        </button>
+        <button onclick="clearAllFilters()" class="px-3 py-1.5 rounded-md text-error text-xs font-semibold hover:bg-error-container/20 transition-colors border border-error/20 bg-surface shadow-sm">
+          Clear Filters
+        </button>
+        <button onclick="toggleMoreMenu(event)" class="p-2 rounded-md text-on-surface-variant hover:bg-surface-container-high transition-colors border border-outline-variant bg-surface shadow-sm ml-1">
+          <i class="ph ph-dots-three text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Active View Area -->
+    <div id="view-content" class="flex-1 overflow-auto kanban-scroll p-6 bg-background relative">
+      <!-- Active content is dynamically injected here -->
+    </div>
+  </main>
+
+  <!-- ── MODAL CONTAINERS ── -->
+
+  <!-- Task Detail / Create Task Modal -->
+  <div id="task-modal" class="fixed inset-0 bg-on-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-surface rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden max-h-[90vh] flex flex-col transform scale-95 transition-transform duration-300 border border-outline-variant">
+      <!-- Header -->
+      <div class="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low shrink-0">
+        <div class="flex items-center gap-3">
+          <span id="modal-task-id-badge" class="text-primary font-bold text-xs bg-surface-container-high px-2.5 py-1 rounded border border-primary/10">SYS-NEW</span>
+          <h3 id="modal-title-header" class="font-display font-semibold text-lg">Create/Edit Task</h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="modal-delete-btn" onclick="deleteCurrentTask()" class="text-error font-semibold text-sm px-3 py-1.5 rounded hover:bg-error-container/40 transition-colors hidden">
+            <i class="ph ph-trash"></i> Delete Task
+          </button>
+          <button onclick="closeTaskModal()" class="text-on-surface-variant hover:bg-surface-container-high p-1.5 rounded-lg transition-colors">
+            <i class="ph ph-x text-lg"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Body -->
+      <div class="flex-grow overflow-y-auto p-6 space-y-6 kanban-scroll">
+        <!-- Title -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Task Title *</label>
+          <input id="modal-task-title" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm shadow-sm" type="text" placeholder="e.g., Implement login form validation">
+        </div>
+        <!-- Description -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Description</label>
+          <textarea id="modal-task-desc" rows="4" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm shadow-sm" placeholder="Provide details of this issue..."></textarea>
+        </div>
+        <!-- Grid Config -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Status</label>
+            <select id="modal-task-status" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm">
+              <option value="todo">To Do</option>
+              <option value="in-progress">In Progress</option>
+              <option value="in-review">In Review</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Priority</label>
+            <select id="modal-task-priority" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm">
+              <option value="lowest">Lowest</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+              <option value="highest">Highest</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Assignee</label>
+            <select id="modal-task-assignee" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm">
+              <option value="">Unassigned</option>
+              <option value="Alex M.">Alex M.</option>
+              <option value="Sarah K.">Sarah K.</option>
+              <option value="Emma W.">Emma W.</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Due Date</label>
+            <input id="modal-task-due" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" type="date">
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Sprint</label>
+            <select id="modal-task-sprint" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm">
+              <option value="">No Sprint (Backlog)</option>
+            </select>
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Epic</label>
+            <select id="modal-task-epic" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm">
+              <option value="">No Epic</option>
+            </select>
+          </div>
+        </div>
+        <!-- Git Branch -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Git Branch Reference</label>
+          <input id="modal-task-branch" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary text-sm shadow-sm" type="text" placeholder="e.g., feat/nav-redesign">
+        </div>
+        <!-- Subtasks Section -->
+        <div class="space-y-3 border-t border-outline-variant pt-4">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-semibold text-outline uppercase tracking-wider">Subtasks Checklist</label>
+            <button onclick="addSubtaskItem()" class="text-xs text-primary font-bold hover:underline">+ Add Subtask</button>
+          </div>
+          <div id="modal-subtask-container" class="space-y-2">
+            <!-- Dynamic Subtasks lists -->
+          </div>
+        </div>
+        <!-- Comments Section -->
+        <div class="space-y-3 border-t border-outline-variant pt-4">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Comments Feed</label>
+          <div class="flex gap-2">
+            <input id="modal-comment-input" class="flex-grow px-3 py-1.5 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" type="text" placeholder="Type a comment...">
+            <button onclick="addCommentItem()" class="px-4 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-semibold hover:bg-primary-container transition-colors">Add</button>
+          </div>
+          <div id="modal-comments-container" class="space-y-3 py-2">
+            <!-- Dynamic Comments lists -->
+          </div>
+        </div>
+        <!-- Attachments Section -->
+        <div class="space-y-3 border-t border-outline-variant pt-4">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Mock Attachments</label>
+          <div class="flex gap-2">
+            <input id="modal-attachment-input" class="flex-grow border border-outline-variant rounded-lg px-2 text-xs focus:ring-2 focus:ring-primary bg-background shadow-sm" type="file">
+            <button onclick="addAttachmentItem()" class="px-4 py-1.5 bg-secondary text-white rounded-lg text-sm font-semibold hover:bg-slate-700 transition-colors">Attach</button>
+          </div>
+          <div id="modal-attachments-container" class="space-y-1.5 py-1">
+            <!-- Dynamic attachments files -->
+          </div>
+        </div>
+        <!-- Activity Log -->
+        <div class="space-y-2 border-t border-outline-variant pt-4">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">System Activity Log</label>
+          <div id="modal-activity-log" class="text-xs text-on-surface-variant space-y-1 bg-surface-container-low p-3 rounded-lg border border-outline-variant/30 font-mono">
+            <!-- Auto activities logs -->
+          </div>
+        </div>
+      </div>
+      <!-- Footer -->
+      <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end gap-2 shrink-0">
+        <button onclick="closeTaskModal()" class="px-4 py-2 border border-outline-variant rounded-lg text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors">Cancel</button>
+        <button onclick="saveTaskModal()" class="px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-bold hover:bg-primary-container transition-colors shadow-sm">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Epic Modal -->
+  <div id="epic-modal" class="fixed inset-0 bg-on-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-surface rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 border border-outline-variant">
+      <div class="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+        <h3 class="font-display font-semibold text-lg">Create New Epic</h3>
+        <button onclick="closeEpicModal()" class="text-on-surface-variant hover:bg-surface-container-high p-1.5 rounded-lg transition-colors">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Epic Name *</label>
+          <input id="epic-name-input" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" type="text" placeholder="e.g., Billing Refactor">
+        </div>
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Description</label>
+          <textarea id="epic-desc-input" rows="3" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" placeholder="Brief outline..."></textarea>
+        </div>
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Epic Color Theme</label>
+          <input id="epic-color-input" class="w-12 h-10 block cursor-pointer border border-outline-variant rounded-lg" type="color" value="#2563eb">
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end gap-2">
+        <button onclick="closeEpicModal()" class="px-4 py-2 border border-outline-variant rounded-lg text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors">Cancel</button>
+        <button onclick="saveEpicModal()" class="px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-bold hover:bg-primary-container transition-colors shadow-sm">Save Epic</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Sprint Modal -->
+  <div id="sprint-modal" class="fixed inset-0 bg-on-surface/40 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="bg-surface rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform scale-95 transition-transform duration-300 border border-outline-variant">
+      <div class="px-6 py-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
+        <h3 class="font-display font-semibold text-lg">Create New Sprint</h3>
+        <button onclick="closeSprintModal()" class="text-on-surface-variant hover:bg-surface-container-high p-1.5 rounded-lg transition-colors">
+          <i class="ph ph-x text-lg"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Sprint Name *</label>
+          <input id="sprint-name-input" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" type="text" placeholder="e.g., Sprint 26">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Start Date</label>
+            <input id="sprint-start-input" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" type="date">
+          </div>
+          <div class="space-y-1.5">
+            <label class="block text-xs font-semibold text-outline uppercase tracking-wider">End Date</label>
+            <input id="sprint-end-input" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" type="date">
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Sprint Goal</label>
+          <textarea id="sprint-goal-input" rows="3" class="w-full px-3 py-2 border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary text-sm shadow-sm" placeholder="Focus for this iteration..."></textarea>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end gap-2">
+        <button onclick="closeSprintModal()" class="px-4 py-2 border border-outline-variant rounded-lg text-sm font-semibold text-on-surface hover:bg-surface-container-high transition-colors">Cancel</button>
+        <button onclick="saveSprintModal()" class="px-5 py-2 bg-primary text-on-primary rounded-lg text-sm font-bold hover:bg-primary-container transition-colors shadow-sm">Save Sprint</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLOATING OVERLAYS (FILTER, ASSIGNEE, MORE MENU) ── -->
+
+  <!-- Filter Dropdown Menu -->
+  <div id="filter-dropdown" class="fixed hidden bg-surface border border-outline-variant rounded-xl shadow-2xl p-4 w-64 space-y-3 z-40 select-none">
+    <div class="space-y-1">
+      <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Priority Filter</label>
+      <select id="filter-priority" onchange="applyFilters()" class="w-full px-3 py-1.5 border border-outline-variant rounded-lg text-xs focus:ring-2 focus:ring-primary">
+        <option value="">All Priorities</option>
+        <option value="lowest">Lowest</option>
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+        <option value="highest">Highest</option>
+      </select>
+    </div>
+    <div class="space-y-1">
+      <label class="block text-xs font-semibold text-outline uppercase tracking-wider">Status Filter</label>
+      <select id="filter-status" onchange="applyFilters()" class="w-full px-3 py-1.5 border border-outline-variant rounded-lg text-xs focus:ring-2 focus:ring-primary">
+        <option value="">All Statuses</option>
+        <option value="todo">To Do</option>
+        <option value="in-progress">In Progress</option>
+        <option value="in-review">In Review</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Assignee Dropdown Menu -->
+  <div id="assignee-dropdown" class="fixed hidden bg-surface border border-outline-variant rounded-xl shadow-2xl p-4 w-60 space-y-2 z-40 select-none">
+    <label class="block text-xs font-semibold text-outline uppercase tracking-wider mb-1">Filter by Assignee</label>
+    <button onclick="setAssigneeFilter('')" class="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2">
+      <div class="w-6 h-6 rounded-full bg-outline-variant flex items-center justify-center text-[10px] font-bold text-on-surface">ALL</div>
+      <span>All Members</span>
+    </button>
+    <button onclick="setAssigneeFilter('Alex M.')" class="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2">
+      <img class="w-6 h-6 rounded-full object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60">
+      <span>Alex M.</span>
+    </button>
+    <button onclick="setAssigneeFilter('Sarah K.')" class="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2">
+      <img class="w-6 h-6 rounded-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60">
+      <span>Sarah K.</span>
+    </button>
+    <button onclick="setAssigneeFilter('Emma W.')" class="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2">
+      <img class="w-6 h-6 rounded-full object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60">
+      <span>Emma W.</span>
+    </button>
+  </div>
+
+  <!-- More (⋯) Menu Dropdown -->
+  <div id="more-dropdown" class="fixed hidden bg-surface border border-outline-variant rounded-xl shadow-2xl p-2 w-48 z-40 select-none">
+    <button onclick="triggerBoardExport()" class="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2">
+      <i class="ph ph-download text-sm"></i> Export Tasks (JSON)
+    </button>
+    <button onclick="triggerClearFilters()" class="w-full text-left px-3 py-2 text-xs font-semibold rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-2 text-error">
+      <i class="ph ph-trash text-sm"></i> Clear Active Filters
+    </button>
+  </div>
+
+  <!-- Toast Notification System -->
+  <div id="toast-container" class="fixed top-6 right-6 space-y-2 z-50 max-w-sm pointer-events-none"></div>
+
+  <!-- ── APPLICATION ENGINE CLIENT JAVASCRIPT ── -->
+  <script>
+    // ── DATA MODEL & BOOTSTRAP ──
+    const DEMO_TASKS = [
+      {
+        id: "SYS-101",
+        title: "Implement new authentication flow using OAuth 2.0",
+        description: "Configure secure authorization endpoints, setup token verification middleware, and integrate Google OAuth flow.",
+        status: "todo",
+        priority: "highest",
+        assignee: "Alex M.",
+        dueDate: "2026-07-20",
+        sprintId: "sprint-24",
+        epicId: "epic-1",
+        labels: [{ name: "security", color: "#ba1a1a" }, { name: "auth", color: "#004ac6" }],
+        subtasks: [
+          { id: "st1", title: "Setup auth backend routes", completed: true },
+          { id: "st2", title: "Integrate OAuth provider credentials", completed: false }
+        ],
+        comments: [
+          { id: "c1", author: "Alex M.", text: "Needs verification regarding scopes in production environments.", timestamp: "2026-07-09T18:00:00Z" }
+        ],
+        attachments: [],
+        branch: "feat/nav-redesign",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "SYS-108",
+        title: "Design database schema for user profiles",
+        description: "Analyze profile parameters, create table schemas in PostgreSQL, migrate fields, and run indexing for query optimization.",
+        status: "todo",
+        priority: "medium",
+        assignee: "",
+        dueDate: "2026-07-25",
+        sprintId: "sprint-24",
+        epicId: "epic-1",
+        labels: [{ name: "database", color: "#565e74" }],
+        subtasks: [
+          { id: "st3", title: "Map relationships", completed: false },
+          { id: "st4", title: "Write schema migration script", completed: false },
+          { id: "st5", title: "Index profile search columns", completed: true }
+        ],
+        comments: [],
+        attachments: [],
+        branch: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "SYS-092",
+        title: "Refactor legacy navigation component to use new design system",
+        description: "Replace legacy custom header code with standard responsive components. Keep styles aligned with HSL colors.",
+        status: "in-progress",
+        priority: "high",
+        assignee: "Sarah K.",
+        dueDate: "2026-07-09",
+        sprintId: "sprint-24",
+        epicId: "",
+        labels: [{ name: "ui-ux", color: "#3e3fcc" }],
+        subtasks: [],
+        comments: [],
+        attachments: [],
+        branch: "feat/nav-redesign",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "SYS-095",
+        title: "Write integration tests for payment gateway",
+        description: "Simulate card authorizations, recurring billing webhooks, and failure fallback modes.",
+        status: "in-progress",
+        priority: "medium",
+        assignee: "",
+        dueDate: "2026-07-15",
+        sprintId: "sprint-25",
+        epicId: "",
+        labels: [],
+        subtasks: [],
+        comments: [],
+        attachments: [],
+        branch: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: "SYS-110",
+        title: "Update API documentation with new endpoints",
+        description: "Document route specifications, response payloads, error models, and add sample curl requests.",
+        status: "todo",
+        priority: "low",
+        assignee: "",
+        dueDate: "2026-07-29",
+        sprintId: "",
+        epicId: "",
+        labels: [],
+        subtasks: [],
+        comments: [],
+        attachments: [],
+        branch: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+    ];
+
+    const DEMO_EPICS = [
+      { id: "epic-1", name: "User Management System", color: "#2563eb", taskIds: ["SYS-101", "SYS-108"] }
+    ];
+
+    const DEMO_SPRINTS = [
+      { id: "sprint-24", name: "Sprint 24", startDate: "2026-07-01", endDate: "2026-07-14", goal: "Complete authorization flows and core database layouts." },
+      { id: "sprint-25", name: "Sprint 25", startDate: "2026-07-15", endDate: "2026-07-28", goal: "Verify payment processing integrations and write test scripts." }
+    ];
+
+    const DEMO_PROJECTS = [
+      { id: "proj-1", name: "Velocity Systems Core Backend", status: "active", taskCount: 5, progress: 40 }
+    ];
+
+    const DEMO_TESTCASES = [
+      { id: "TC-001", title: "OAuth authentication success flow", status: "passed", priority: "high" },
+      { id: "TC-002", title: "Database unique constraints on registration", status: "failed", priority: "medium" }
+    ];
+
+    const DEMO_BUGS = [
+      { id: "BUG-001", title: "Payment authorization webhooks fail randomly", severity: "critical", status: "open" }
+    ];
+
+    const DEMO_AUTOMATIONS = [
+      { id: "auto-1", name: "Sync newly resolved tasks to Jira", enabled: true }
+    ];
+
+    const DEMO_SETTINGS = { theme: "light", collapsedSidebar: false };
+
+    // App state
+    let state = {
+      tasks: [],
+      epics: [],
+      sprints: [],
+      projects: [],
+      testCases: [],
+      bugs: [],
+      automations: [],
+      settings: {}
+    };
+
+    let currentView = 'board';
+    let currentTab = 'board';
+    let searchQuery = '';
+    let filters = { priority: '', status: '', assignee: '' };
+    let currentEditingTaskId = null;
+
+    // Load from local storage or bootstrap
+    function bootstrapData() {
+      if (!localStorage.getItem('qe_tasks')) {
+        localStorage.setItem('qe_tasks', JSON.stringify(DEMO_TASKS));
+        localStorage.setItem('qe_epics', JSON.stringify(DEMO_EPICS));
+        localStorage.setItem('qe_sprints', JSON.stringify(DEMO_SPRINTS));
+        localStorage.setItem('qe_projects', JSON.stringify(DEMO_PROJECTS));
+        localStorage.setItem('qe_testCases', JSON.stringify(DEMO_TESTCASES));
+        localStorage.setItem('qe_bugs', JSON.stringify(DEMO_BUGS));
+        localStorage.setItem('qe_automations', JSON.stringify(DEMO_AUTOMATIONS));
+        localStorage.setItem('qe_settings', JSON.stringify(DEMO_SETTINGS));
+      }
+      state.tasks = JSON.parse(localStorage.getItem('qe_tasks'));
+      state.epics = JSON.parse(localStorage.getItem('qe_epics'));
+      state.sprints = JSON.parse(localStorage.getItem('qe_sprints'));
+      state.projects = JSON.parse(localStorage.getItem('qe_projects'));
+      state.testCases = JSON.parse(localStorage.getItem('qe_testCases'));
+      state.bugs = JSON.parse(localStorage.getItem('qe_bugs'));
+      state.automations = JSON.parse(localStorage.getItem('qe_automations'));
+      state.settings = JSON.parse(localStorage.getItem('qe_settings'));
+    }
+
+    function saveState(key, data) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    // ── TOAST NOTIFICATIONS ──
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg border transition-all duration-300 pointer-events-auto bg-surface transform translate-y-2 opacity-0 text-sm font-semibold select-none`;
+      
+      if (type === 'success') {
+        toast.className += ' text-emerald-800 border-emerald-200 bg-emerald-50';
+        toast.innerHTML = `<i class="ph ph-check-circle text-lg text-emerald-600"></i> ${message}`;
+      } else if (type === 'error') {
+        toast.className += ' text-error border-error-container bg-error-container/20';
+        toast.innerHTML = `<i class="ph ph-x-circle text-lg text-error"></i> ${message}`;
+      } else {
+        toast.className += ' text-on-surface-variant border-outline-variant bg-surface-container-low';
+        toast.innerHTML = `<i class="ph ph-info text-lg text-primary"></i> ${message}`;
+      }
+      
+      container.appendChild(toast);
+      
+      // Animate entry
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 50);
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // ── NAVIGATION & VIEW ROUTING ──
+    function switchView(viewName) {
+      currentView = viewName;
+      
+      // Update sidebar nav highlighting
+      document.querySelectorAll('.nav-item').forEach(el => {
+        el.className = 'nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-secondary hover:bg-surface-container-low transition-colors font-medium';
+      });
+      const activeNav = document.getElementById(`nav-${viewName}`);
+      if (activeNav) {
+        activeNav.className = 'nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-primary font-bold border-l-4 border-primary bg-surface-container-high transition-colors duration-200';
+      }
+
+      // Update breadcrumbs and tab visibility
+      const breadcrumb = document.getElementById('breadcrumb-current');
+      const tabs = document.getElementById('tab-bar-container');
+      
+      breadcrumb.innerText = viewName.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase());
+      
+      if (viewName === 'board') {
+        tabs.classList.remove('hidden');
+        renderActiveTab();
+      } else {
+        tabs.classList.add('hidden');
+        renderSelectedView();
+      }
+    }
+
+    function switchTab(tabName) {
+      currentTab = tabName;
+      document.querySelectorAll('#tab-bar-container button').forEach(el => {
+        el.className = 'px-4 py-2 text-sm font-semibold border-b-2 border-transparent transition-all flex items-center gap-2 text-on-surface-variant hover:text-primary';
+      });
+      const activeTabEl = document.getElementById(`tab-${tabName}`);
+      if (activeTabEl) {
+        activeTabEl.className = 'px-4 py-2 text-sm font-bold border-b-2 border-primary text-primary transition-all flex items-center gap-2 bg-surface-container-low rounded-t-lg';
+      }
+      renderActiveTab();
+    }
+
+    function renderActiveTab() {
+      if (currentTab === 'board') {
+        renderKanbanBoard();
+      } else if (currentTab === 'list') {
+        renderListViewTable();
+      } else if (currentTab === 'timeline') {
+        renderTimelineGantt();
+      }
+    }
+
+    // ── SIDEBAR UTILS ──
+    let sidebarCollapsed = false;
+    function toggleSidebar() {
+      sidebarCollapsed = !sidebarCollapsed;
+      const sidebar = document.getElementById('sidebar');
+      const chevron = document.getElementById('sidebar-chevron');
+      const brand = document.getElementById('brand-text');
+      
+      if (sidebarCollapsed) {
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-20');
+        chevron.className = 'ph ph-caret-double-right text-lg';
+        brand.classList.add('hidden');
+        document.querySelectorAll('.sidebar-text').forEach(el => el.classList.add('hidden'));
+      } else {
+        sidebar.classList.remove('w-20');
+        sidebar.classList.add('w-64');
+        chevron.className = 'ph ph-caret-double-left text-lg';
+        brand.classList.remove('hidden');
+        document.querySelectorAll('.sidebar-text').forEach(el => el.classList.remove('hidden'));
+      }
+    }
+
+    let mobileSidebarOpen = false;
+    function toggleMobileSidebar() {
+      mobileSidebarOpen = !mobileSidebarOpen;
+      const sidebar = document.getElementById('sidebar');
+      if (mobileSidebarOpen) {
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('fixed', 'left-0', 'top-0', 'bottom-0');
+      } else {
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('fixed', 'left-0', 'top-0', 'bottom-0');
+      }
+    }
+
+    // ── SEARCH & FILTER ENGINE ──
+    function getFilteredTasks() {
+      return state.tasks.filter(task => {
+        // Search filter
+        if (searchQuery) {
+          const q = searchQuery.toLowerCase();
+          const matchesTitle = task.title.toLowerCase().includes(q);
+          const matchesId = task.id.toLowerCase().includes(q);
+          const matchesDesc = task.description ? task.description.toLowerCase().includes(q) : false;
+          if (!matchesTitle && !matchesId && !matchesDesc) return false;
+        }
+        // Priority filter
+        if (filters.priority && task.priority !== filters.priority) return false;
+        // Status filter
+        if (filters.status && task.status !== filters.status) return false;
+        // Assignee filter
+        if (filters.assignee && task.assignee !== filters.assignee) return false;
+        
+        return true;
+      });
+    }
+
+    function handleSearch(val) {
+      searchQuery = val;
+      renderActiveTab();
+    }
+
+    function toggleFilterDropdown(e) {
+      e.stopPropagation();
+      closeAllDropdowns();
+      const drop = document.getElementById('filter-dropdown');
+      const rect = e.currentTarget.getBoundingClientRect();
+      drop.style.top = `${rect.bottom + window.scrollY + 8}px`;
+      drop.style.left = `${rect.left + window.scrollX}px`;
+      drop.classList.toggle('hidden');
+    }
+
+    function toggleAssigneeFilterDropdown(e) {
+      e.stopPropagation();
+      closeAllDropdowns();
+      const drop = document.getElementById('assignee-dropdown');
+      const rect = e.currentTarget.getBoundingClientRect();
+      drop.style.top = `${rect.bottom + window.scrollY + 8}px`;
+      drop.style.left = `${rect.left + window.scrollX - 100}px`;
+      drop.classList.toggle('hidden');
+    }
+
+    // Dismiss overlays on document click
+    document.addEventListener('click', () => {
+      closeAllDropdowns();
+    });
+
+    // ── KANBAN BOARD RENDERER ──
+    function renderKanbanBoard() {
+      const container = document.getElementById('view-content');
+      const filtered = getFilteredTasks();
+      
+      const todoList = filtered.filter(t => t.status === 'todo');
+      const inProgressList = filtered.filter(t => t.status === 'in-progress');
+      const inReviewList = filtered.filter(t => t.status === 'in-review');
+      const doneList = filtered.filter(t => t.status === 'done');
+
+      container.innerHTML = `
+        <div class="flex gap-6 h-full pb-4 items-start select-none overflow-x-auto min-w-[1200px]">
+          ${renderColumn('todo', 'To Do', todoList, 'ph-circle')}
+          ${renderColumn('in-progress', 'In Progress', inProgressList, 'ph-spinner', true)}
+          ${renderColumn('in-review', 'In Review', inReviewList, 'ph-eye')}
+          ${renderColumn('done', 'Done', doneList, 'ph-check-circle')}
+          
+          <!-- Empty Column placeholder -->
+          <div onclick="openCreateTaskModal()" class="w-[300px] py-16 flex flex-col items-center justify-center border-2 border-dashed border-outline-variant rounded-xl cursor-pointer hover:border-primary/50 hover:bg-surface/50 transition-all text-on-surface-variant">
+            <i class="ph ph-plus-circle text-4xl mb-2 text-outline"></i>
+            <span class="text-xs font-bold uppercase tracking-wider">Add New Status Column</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderColumn(statusId, label, list, iconClass, animateIcon = false) {
+      const iconAnimateClass = animateIcon ? 'animate-spin' : '';
+      return `
+        <div ondragover="handleDragOverColumn(event)" ondragleave="handleDragLeaveColumn(event)" ondrop="handleDropColumn(event, '${statusId}')" class="w-[300px] flex flex-col max-h-full bg-surface-container-low border border-outline-variant/60 rounded-xl shadow-sm transition-all">
+          <div class="p-4 flex items-center justify-between border-b border-outline-variant/60 bg-surface rounded-t-xl">
+            <div class="flex items-center gap-2">
+              <i class="ph-bold ${iconClass} ${iconAnimateClass} text-primary"></i>
+              <h3 class="font-display font-semibold text-sm text-on-surface">${label}</h3>
+              <span class="bg-surface-container-high text-on-surface font-bold text-xs px-2 py-0.5 rounded-full">${list.length}</span>
+            </div>
+            <button onclick="openCreateTaskModal('${statusId}')" class="text-on-surface-variant hover:text-primary p-1 rounded hover:bg-surface-container-low transition-colors">
+              <i class="ph ph-plus text-sm"></i>
+            </button>
+          </div>
+          <div class="flex-grow overflow-y-auto p-3 space-y-3 kanban-scroll max-h-[65vh]">
+            ${list.map(task => renderTaskCard(task)).join('')}
+            ${list.length === 0 ? `<div class="text-center py-12 text-xs text-outline italic">No tasks in this column</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderTaskCard(task) {
+      // Overdue logic
+      let overdueBadge = '';
+      if (task.dueDate && task.status !== 'done') {
+        const today = new Date();
+        const due = new Date(task.dueDate);
+        if (due < today) {
+          const diffDays = Math.ceil((today - due) / (1000 * 60 * 60 * 24));
+          overdueBadge = `
+            <div class="bg-error-container/20 text-error px-2 py-0.5 rounded border border-error-container/30 text-[10px] font-semibold flex items-center gap-1">
+              <i class="ph ph-calendar-x"></i> Overdue ${diffDays}d
+            </div>
+          `;
+        }
+      }
+
+      // Priority Badge mapping
+      const prioStyles = {
+        lowest: 'bg-surface-container text-secondary',
+        low: 'bg-[#e5eeff] text-[#565e74]',
+        medium: 'bg-[#dae2fd] text-[#004ac6]',
+        high: 'bg-[#ffdad6] text-[#ba1a1a]',
+        highest: 'bg-[#ffdad6] text-[#93000a]'
+      };
+      const badgeStyle = prioStyles[task.priority] || prioStyles.medium;
+
+      // Subtasks Checklist progress bar
+      let checklistProgress = '';
+      if (task.subtasks && task.subtasks.length > 0) {
+        const completed = task.subtasks.filter(st => st.completed).length;
+        const total = task.subtasks.length;
+        const percentage = Math.round((completed / total) * 100);
+        checklistProgress = `
+          <div class="space-y-1.5 w-full">
+            <div class="flex items-center justify-between text-[10px] font-semibold text-on-surface-variant">
+              <span>Subtasks: ${completed}/${total}</span>
+              <span>${percentage}%</span>
+            </div>
+            <div class="w-full bg-surface-container-high h-1 rounded-full overflow-hidden">
+              <div class="bg-primary-container h-full rounded-full" style="width: ${percentage}%"></div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Comment count indicators
+      const commentCount = task.comments ? task.comments.length : 0;
+      const commentIndicator = commentCount > 0 ? `
+        <span class="flex items-center gap-1 text-[11px] font-medium text-on-surface-variant">
+          <i class="ph ph-chat-centered-text"></i> ${commentCount}
+        </span>
+      ` : '';
+
+      // Git branch indicator
+      const branchIndicator = task.branch ? `
+        <div class="inline-flex items-center gap-1 text-[10px] font-semibold text-primary bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30">
+          <i class="ph ph-git-branch"></i> ${task.branch}
+        </div>
+      ` : '';
+
+      return `
+        <div draggable="true" ondragstart="handleCardDragStart(event, '${task.id}')" onclick="openEditTaskModal('${task.id}')" class="bg-surface p-4 rounded-xl border border-outline-variant shadow-sm hover:shadow-md hover:border-primary/30 transition-all cursor-pointer group space-y-3">
+          <div class="flex justify-between items-center">
+            <span class="text-primary font-bold text-xs bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30">${task.id}</span>
+            <div class="flex items-center gap-1.5">
+              ${overdueBadge}
+              <div class="${badgeStyle} px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                ↗ ${task.priority}
+              </div>
+            </div>
+          </div>
+          <h4 class="font-semibold text-on-surface leading-tight group-hover:text-primary transition-colors text-sm line-clamp-2">${task.title}</h4>
+          
+          ${branchIndicator}
+          ${checklistProgress}
+
+          <div class="flex items-center justify-between pt-1 border-t border-outline-variant/20">
+            <div class="flex items-center gap-3">
+              ${commentIndicator}
+            </div>
+            <!-- Assignee avatar representation -->
+            <div class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-[10px] font-bold shadow-sm" title="${task.assignee || 'Unassigned'}">
+              ${task.assignee ? task.assignee.split(' ').map(n => n[0]).join('') : 'UN'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ── DRAG AND DROP HANDLERS ──
+    let draggedTaskId = null;
+
+    function handleCardDragStart(e, taskId) {
+      draggedTaskId = taskId;
+      e.dataTransfer.setData('text/plain', taskId);
+      e.dataTransfer.effectAllowed = 'move';
+      // Set drag ghost opacity
+      setTimeout(() => {
+        e.target.style.opacity = '0.5';
+      }, 0);
+    }
+
+    document.addEventListener('dragend', (e) => {
+      if (e.target.draggable) {
+        e.target.style.opacity = '1';
+      }
+    });
+
+    function handleDragOverColumn(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('drag-over-column');
+    }
+
+    function handleDragLeaveColumn(e) {
+      e.currentTarget.classList.remove('drag-over-column');
+    }
+
+    function handleDropColumn(e, statusId) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over-column');
+      const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+      
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task && task.status !== statusId) {
+        const oldStatus = task.status;
+        task.status = statusId;
+        task.updatedAt = new Date().toISOString();
+        
+        // Log activity
+        if (!task.activity) task.activity = [];
+        task.activity.unshift({
+          text: `Status changed from ${oldStatus} to ${statusId}`,
+          timestamp: new Date().toISOString()
+        });
+
+        saveState('qe_tasks', state.tasks);
+        renderActiveTab();
+        showToast(`Task ${taskId} moved to ${statusId.replace('-', ' ')}`);
+      }
+    }
+
+    // ── LIST VIEW TABLE RENDERER ──
+    let selectedTaskIds = new Set();
+
+    function renderListViewTable() {
+      const container = document.getElementById('view-content');
+      const filtered = getFilteredTasks();
+
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden select-none">
+          <!-- Bulk actions toolbar -->
+          <div id="bulk-action-bar" class="p-3 border-b bg-surface-container-low flex items-center justify-between ${selectedTaskIds.size === 0 ? 'hidden' : ''}">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-outline uppercase tracking-wider">${selectedTaskIds.size} tasks selected</span>
+              <button onclick="bulkChangePriority()" class="px-3 py-1 bg-surface border border-outline-variant rounded text-xs font-semibold hover:bg-surface-container-high transition-colors">Change Priority</button>
+              <button onclick="bulkDeleteTasks()" class="px-3 py-1 bg-error text-on-primary rounded text-xs font-semibold hover:bg-red-700 transition-colors">Delete Selected</button>
+            </div>
+            <button onclick="clearTableSelection()" class="text-xs text-outline font-semibold hover:underline">Cancel</button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse min-w-[800px]">
+              <thead>
+                <tr class="bg-surface-container-low border-b border-outline-variant text-[11px] font-bold text-outline uppercase tracking-wider">
+                  <th class="p-3"><input type="checkbox" onclick="toggleSelectAllRows(this)"></th>
+                  <th class="p-3 cursor-pointer" onclick="sortTable('id')">ID</th>
+                  <th class="p-3 cursor-pointer" onclick="sortTable('title')">Title</th>
+                  <th class="p-3 cursor-pointer" onclick="sortTable('status')">Status</th>
+                  <th class="p-3 cursor-pointer" onclick="sortTable('priority')">Priority</th>
+                  <th class="p-3">Assignee</th>
+                  <th class="p-3 cursor-pointer" onclick="sortTable('dueDate')">Due Date</th>
+                  <th class="p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filtered.map(task => `
+                  <tr class="border-b border-outline-variant/40 hover:bg-surface-container-low/50 transition-colors">
+                    <td class="p-3"><input type="checkbox" ${selectedTaskIds.has(task.id) ? 'checked' : ''} onchange="toggleSelectRow(this, '${task.id}')"></td>
+                    <td class="p-3 text-xs font-bold text-primary font-mono">${task.id}</td>
+                    <td class="p-3 font-medium text-on-surface cursor-pointer" onclick="openEditTaskModal('${task.id}')">
+                      <div class="w-full border-b border-transparent focus:border-primary focus:outline-none" contenteditable="true" onblur="handleInlineTitleSave(this, '${task.id}')">
+                        ${task.title}
+                      </div>
+                    </td>
+                    <td class="p-3">
+                      <select onchange="updateTaskStatus('${task.id}', this.value)" class="text-xs border-outline-variant/60 rounded px-2 py-0.5 bg-surface focus:ring-1 focus:ring-primary shadow-sm font-semibold">
+                        <option value="todo" ${task.status === 'todo' ? 'selected' : ''}>To Do</option>
+                        <option value="in-progress" ${task.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                        <option value="in-review" ${task.status === 'in-review' ? 'selected' : ''}>In Review</option>
+                        <option value="done" ${task.status === 'done' ? 'selected' : ''}>Done</option>
+                      </select>
+                    </td>
+                    <td class="p-3">
+                      <select onchange="updateTaskPriority('${task.id}', this.value)" class="text-xs border-outline-variant/60 rounded px-2 py-0.5 bg-surface focus:ring-1 focus:ring-primary shadow-sm font-semibold">
+                        <option value="lowest" ${task.priority === 'lowest' ? 'selected' : ''}>Lowest</option>
+                        <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low</option>
+                        <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                        <option value="high" ${task.priority === 'high' ? 'selected' : ''}>High</option>
+                        <option value="highest" ${task.priority === 'highest' ? 'selected' : ''}>Highest</option>
+                      </select>
+                    </td>
+                    <td class="p-3 text-xs font-semibold text-on-surface-variant">${task.assignee || 'Unassigned'}</td>
+                    <td class="p-3 text-xs text-outline font-semibold">${task.dueDate || '—'}</td>
+                    <td class="p-3 text-right">
+                      <button onclick="openEditTaskModal('${task.id}')" class="text-on-surface hover:text-primary transition-colors">
+                        <i class="ph ph-pencil"></i>
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    // List sorting logic
+    let sortDirection = 1;
+    let currentSortField = '';
+    function sortTable(field) {
+      sortDirection = currentSortField === field ? sortDirection * -1 : 1;
+      currentSortField = field;
+      state.tasks.sort((a, b) => {
+        let valA = a[field] || '';
+        let valB = b[field] || '';
+        if (typeof valA === 'string') {
+          return valA.localeCompare(valB) * sortDirection;
+        }
+        return (valA < valB ? -1 : 1) * sortDirection;
+      });
+      renderListViewTable();
+    }
+
+    function toggleSelectRow(checkbox, taskId) {
+      if (checkbox.checked) {
+        selectedTaskIds.add(taskId);
+      } else {
+        selectedTaskIds.delete(taskId);
+      }
+      renderListViewTable();
+    }
+
+    function toggleSelectAllRows(checkbox) {
+      const filtered = getFilteredTasks();
+      if (checkbox.checked) {
+        filtered.forEach(t => selectedTaskIds.add(t.id));
+      } else {
+        filtered.forEach(t => selectedTaskIds.delete(t.id));
+      }
+      renderListViewTable();
+    }
+
+    function clearTableSelection() {
+      selectedTaskIds.clear();
+      renderListViewTable();
+    }
+
+    function handleInlineTitleSave(el, taskId) {
+      const newTitle = el.innerText.trim();
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task && newTitle && task.title !== newTitle) {
+        task.title = newTitle;
+        task.updatedAt = new Date().toISOString();
+        saveState('qe_tasks', state.tasks);
+        showToast(`Task ${taskId} title updated inline`);
+      }
+    }
+
+    function updateTaskStatus(taskId, status) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.status = status;
+        task.updatedAt = new Date().toISOString();
+        saveState('qe_tasks', state.tasks);
+        showToast(`Task ${taskId} status changed to ${status}`);
+        renderActiveTab();
+      }
+    }
+
+    function updateTaskPriority(taskId, priority) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        task.priority = priority;
+        task.updatedAt = new Date().toISOString();
+        saveState('qe_tasks', state.tasks);
+        showToast(`Task ${taskId} priority changed to ${priority}`);
+        renderActiveTab();
+      }
+    }
+
+    function bulkDeleteTasks() {
+      if (confirm(`Are you sure you want to delete the ${selectedTaskIds.size} selected tasks?`)) {
+        state.tasks = state.tasks.filter(t => !selectedTaskIds.has(t.id));
+        saveState('qe_tasks', state.tasks);
+        selectedTaskIds.clear();
+        renderActiveTab();
+        showToast('Bulk tasks deleted successfully');
+      }
+    }
+
+    function bulkChangePriority() {
+      const priority = prompt("Enter new priority (lowest, low, medium, high, highest):");
+      if (priority && ['lowest', 'low', 'medium', 'high', 'highest'].includes(priority.toLowerCase())) {
+        state.tasks.forEach(t => {
+          if (selectedTaskIds.has(t.id)) {
+            t.priority = priority.toLowerCase();
+          }
+        });
+        saveState('qe_tasks', state.tasks);
+        selectedTaskIds.clear();
+        renderActiveTab();
+        showToast('Bulk tasks priority updated successfully');
+      } else if (priority) {
+        showToast('Invalid priority entered', 'error');
+      }
+    }
+
+    // ── TIMELINE/GANTT CHART RENDERER ──
+    function renderTimelineGantt() {
+      const container = document.getElementById('view-content');
+      const filtered = getFilteredTasks().filter(t => t.dueDate); // Need due date
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-20 text-on-surface-variant bg-surface border border-outline-variant rounded-xl shadow-sm">
+            <i class="ph ph-calendar text-4xl mb-2 text-outline"></i>
+            <h4 class="font-display font-semibold">No Tasks with Due Dates Found</h4>
+            <p class="text-xs text-outline/80 mt-1">Add due dates inside task detail view to display tasks on the Gantt timeline.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden p-6 space-y-6">
+          <div class="flex items-center justify-between">
+            <h3 class="font-display font-semibold text-base text-on-surface flex items-center gap-2">
+              <i class="ph ph-calendar text-primary"></i> Team Sprint Timeline
+            </h3>
+            <span class="text-xs font-semibold text-outline">Schedule dates dynamically</span>
+          </div>
+
+          <!-- Gantt Grid -->
+          <div class="space-y-4 overflow-x-auto min-w-[800px] py-4">
+            ${filtered.map(task => `
+              <div class="flex items-center gap-4">
+                <!-- Task title labels -->
+                <div class="w-1/3 truncate text-sm font-semibold text-on-surface-variant flex items-center gap-2 cursor-pointer" onclick="openEditTaskModal('${task.id}')">
+                  <span class="text-xs font-bold text-primary font-mono select-none">${task.id}</span>
+                  <span class="truncate hover:underline hover:text-primary transition-colors">${task.title}</span>
+                </div>
+                <!-- Timeline bar track -->
+                <div class="flex-grow bg-surface-container-low border border-outline-variant/30 h-10 rounded-lg relative overflow-hidden">
+                  <!-- Gantt Bar -->
+                  <div onclick="openEditTaskModal('${task.id}')" class="absolute h-6 top-2 rounded bg-primary-container text-on-primary text-xs font-bold flex items-center justify-between px-3 select-none cursor-pointer shadow-sm" style="left: 10%; right: 40%;">
+                    <span>${task.id}</span>
+                    <span>Due: ${task.dueDate}</span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // ── DASHBOARD VIEW ──
+    function renderDashboard() {
+      const container = document.getElementById('view-content');
+      
+      const total = state.tasks.length;
+      const todo = state.tasks.filter(t => t.status === 'todo').length;
+      const inProgress = state.tasks.filter(t => t.status === 'in-progress').length;
+      const inReview = state.tasks.filter(t => t.status === 'in-review').length;
+      const done = state.tasks.filter(t => t.status === 'done').length;
+
+      container.innerHTML = `
+        <div class="space-y-6 max-w-container-max-width mx-auto">
+          <!-- Summary Cards -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            ${renderSummaryCard('Total Tasks', total, 'ph ph-list-numbers', 'text-secondary bg-surface-container-low')}
+            ${renderSummaryCard('To Do', todo, 'ph ph-circle', 'text-outline bg-surface-container-low')}
+            ${renderSummaryCard('In Progress', inProgress, 'ph ph-spinner animate-spin', 'text-primary bg-[#e5eeff]')}
+            ${renderSummaryCard('In Review', inReview, 'ph ph-eye', 'text-tertiary bg-[#dae2fd]')}
+            ${renderSummaryCard('Done', done, 'ph ph-check-circle', 'text-emerald-700 bg-emerald-50')}
+          </div>
+
+          <!-- Status Graph -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Visual Chart -->
+            <div class="bg-surface rounded-xl border border-outline-variant p-6 shadow-sm col-span-2 space-y-4">
+              <h3 class="font-display font-semibold text-base">Sprint Progress Distribution</h3>
+              <div class="flex items-center justify-between gap-4 h-64 relative border-b border-l border-outline-variant/60 p-4">
+                ${renderGraphBar('To Do', todo, total, 'bg-outline')}
+                ${renderGraphBar('In Progress', inProgress, total, 'bg-primary-container')}
+                ${renderGraphBar('In Review', inReview, total, 'bg-tertiary-container')}
+                ${renderGraphBar('Done', done, total, 'bg-emerald-600')}
+              </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="bg-surface rounded-xl border border-outline-variant p-6 shadow-sm space-y-4">
+              <h3 class="font-display font-semibold text-base">Recent Activities</h3>
+              <div class="space-y-3 max-h-64 overflow-y-auto kanban-scroll pr-2 text-xs text-on-surface-variant">
+                ${renderActivityLogsList()}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSummaryCard(label, val, iconClass, colorClass) {
+      return `
+        <div class="bg-surface border border-outline-variant p-5 rounded-xl shadow-sm flex items-center justify-between hover:shadow-md transition-shadow select-none">
+          <div class="space-y-1">
+            <p class="text-xs text-outline font-semibold uppercase tracking-wider">${label}</p>
+            <h4 class="font-display font-bold text-2xl text-on-surface">${val}</h4>
+          </div>
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-sm ${colorClass}">
+            <i class="${iconClass}"></i>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderGraphBar(label, val, total, bgClass) {
+      const heightPercent = total > 0 ? Math.round((val / total) * 100) : 0;
+      return `
+        <div class="flex flex-col items-center justify-end h-full w-1/5 select-none space-y-2">
+          <span class="text-xs font-bold text-on-surface">${val}</span>
+          <div class="w-full ${bgClass} rounded-t" style="height: ${heightPercent}%"></div>
+          <span class="text-xs font-semibold text-outline">${label}</span>
+        </div>
+      `;
+    }
+
+    function renderActivityLogsList() {
+      // Aggregate recent activities from tasks
+      let list = [];
+      state.tasks.forEach(t => {
+        if (t.activity) {
+          t.activity.forEach(a => {
+            list.push({
+              text: `[${t.id}] ${a.text}`,
+              timestamp: new Date(a.timestamp)
+            });
+          });
+        }
+      });
+      list.sort((a, b) => b.timestamp - a.timestamp);
+      
+      if (list.length === 0) return `<div class="italic text-outline">No activity logged yet</div>`;
+
+      return list.slice(0, 10).map(a => `
+        <div class="flex items-start gap-2 border-b border-outline-variant/30 pb-2">
+          <i class="ph ph-info text-primary shrink-0 mt-0.5"></i>
+          <div>
+            <p class="font-medium text-on-surface">${a.text}</p>
+            <span class="text-[10px] text-outline">${a.timestamp.toLocaleTimeString()} · ${a.timestamp.toLocaleDateString()}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ── BACKLOG VIEW ──
+    function renderBacklog() {
+      const container = document.getElementById('view-content');
+      const unplanned = state.tasks.filter(t => !t.sprintId);
+
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden p-6 space-y-6 max-w-container-max-width mx-auto">
+          <div class="flex items-center justify-between border-b border-outline-variant pb-4">
+            <div>
+              <h3 class="font-display font-semibold text-base text-on-surface">Unplanned Backlog</h3>
+              <p class="text-xs text-outline/80 mt-0.5">Drag/edit tasks to assign them to active sprints.</p>
+            </div>
+            <span class="bg-surface-container text-primary font-bold text-xs px-2.5 py-1 rounded-full border border-primary/10">${unplanned.length} Unplanned Issues</span>
+          </div>
+
+          <div class="space-y-3">
+            ${unplanned.map(task => `
+              <div onclick="openEditTaskModal('${task.id}')" class="flex items-center justify-between p-4 bg-background border border-outline-variant rounded-xl cursor-pointer hover:border-primary/40 hover:bg-surface transition-all select-none">
+                <div class="flex items-center gap-3">
+                  <span class="text-primary font-bold text-xs bg-surface-container px-2 py-0.5 rounded border border-outline-variant/30">${task.id}</span>
+                  <h4 class="text-sm font-semibold text-on-surface truncate max-w-md">${task.title}</h4>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="bg-surface-container-high text-on-surface-variant text-xs font-semibold px-2 py-0.5 rounded">Priority: ${task.priority}</span>
+                  <i class="ph ph-pencil text-on-surface-variant hover:text-primary text-sm"></i>
+                </div>
+              </div>
+            `).join('')}
+            ${unplanned.length === 0 ? `<div class="text-center py-20 text-outline italic">Everything is planned in sprints! 🎉</div>` : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // ── REPORTS VIEW ──
+    function renderReports() {
+      const container = document.getElementById('view-content');
+      
+      container.innerHTML = `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-container-max-width mx-auto">
+          <!-- Status Distribution -->
+          <div class="bg-surface border border-outline-variant p-6 rounded-xl shadow-sm space-y-4">
+            <h3 class="font-display font-semibold text-base">Tasks by Status</h3>
+            <canvas id="reportsStatusCanvas" class="w-full h-64 bg-background rounded-lg border border-outline-variant/30"></canvas>
+          </div>
+          <!-- Burndown Trend -->
+          <div class="bg-surface border border-outline-variant p-6 rounded-xl shadow-sm space-y-4">
+            <h3 class="font-display font-semibold text-base">Sprint Burndown Trend</h3>
+            <canvas id="reportsBurndownCanvas" class="w-full h-64 bg-background rounded-lg border border-outline-variant/30"></canvas>
+          </div>
+        </div>
+      `;
+
+      setTimeout(() => {
+        drawStatusChart();
+        drawBurndownChart();
+      }, 50);
+    }
+
+    function drawStatusChart() {
+      const canvas = document.getElementById('reportsStatusCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      
+      const todo = state.tasks.filter(t => t.status === 'todo').length;
+      const inProgress = state.tasks.filter(t => t.status === 'in-progress').length;
+      const inReview = state.tasks.filter(t => t.status === 'in-review').length;
+      const done = state.tasks.filter(t => t.status === 'done').length;
+
+      // Draw custom CSS-backed layout or simple colored bars
+      ctx.fillStyle = '#737686'; ctx.fillRect(20, 20, 40, todo * 30);
+      ctx.fillStyle = '#2563eb'; ctx.fillRect(80, 20, 40, inProgress * 30);
+      ctx.fillStyle = '#3e3fcc'; ctx.fillRect(140, 20, 40, inReview * 30);
+      ctx.fillStyle = '#10b981'; ctx.fillRect(200, 20, 40, done * 30);
+    }
+
+    function drawBurndownChart() {
+      const canvas = document.getElementById('reportsBurndownCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      
+      // Draw static mock line
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(20, 150);
+      ctx.lineTo(80, 120);
+      ctx.lineTo(140, 90);
+      ctx.lineTo(200, 60);
+      ctx.lineTo(260, 20);
+      ctx.stroke();
+    }
+
+    // ── TEST CASES CRUD ──
+    function renderTestCases() {
+      const container = document.getElementById('view-content');
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden p-6 space-y-6 max-w-container-max-width mx-auto">
+          <div class="flex items-center justify-between border-b border-outline-variant pb-4">
+            <div>
+              <h3 class="font-display font-semibold text-base text-on-surface">Test Suite Cases</h3>
+              <p class="text-xs text-outline/80 mt-0.5">Manage functional validations linked to user stories.</p>
+            </div>
+            <button onclick="addTestCasePrompt()" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-bold hover:bg-primary-container transition-colors shadow-sm">
+              + New Test Case
+            </button>
+          </div>
+
+          <div class="overflow-x-auto select-none">
+            <table class="w-full text-left text-sm border-collapse min-w-[700px]">
+              <thead>
+                <tr class="bg-surface-container-low border-b border-outline-variant text-[11px] font-bold text-outline uppercase tracking-wider">
+                  <th class="p-3">ID</th>
+                  <th class="p-3">Title</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3">Priority</th>
+                  <th class="p-3 text-right">Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.testCases.map(tc => `
+                  <tr class="border-b border-outline-variant/35 hover:bg-surface-container-low/40 transition-colors">
+                    <td class="p-3 text-xs font-bold text-primary font-mono">${tc.id}</td>
+                    <td class="p-3 font-semibold text-on-surface">${tc.title}</td>
+                    <td class="p-3 text-xs font-bold text-emerald-600">${tc.status.toUpperCase()}</td>
+                    <td class="p-3 text-xs font-bold text-on-surface-variant">${tc.priority.toUpperCase()}</td>
+                    <td class="p-3 text-right">
+                      <button onclick="deleteTestCase('${tc.id}')" class="text-error hover:text-red-700">
+                        <i class="ph ph-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function addTestCasePrompt() {
+      const title = prompt("Enter test case validation target:");
+      if (title) {
+        const id = `TC-00${state.testCases.length + 1}`;
+        state.testCases.push({ id, title, status: "passed", priority: "medium" });
+        saveState('qe_testCases', state.testCases);
+        renderTestCases();
+        showToast(`Test Case ${id} created`);
+      }
+    }
+
+    function deleteTestCase(id) {
+      if (confirm(`Remove test case ${id}?`)) {
+        state.testCases = state.testCases.filter(tc => tc.id !== id);
+        saveState('qe_testCases', state.testCases);
+        renderTestCases();
+        showToast(`Test Case ${id} deleted`);
+      }
+    }
+
+    // ── AUTOMATION HUB ──
+    function renderAutomationHub() {
+      const container = document.getElementById('view-content');
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-6 space-y-6 max-w-md mx-auto">
+          <div>
+            <h3 class="font-display font-semibold text-base text-on-surface">Automation Orchestration</h3>
+            <p class="text-xs text-outline/80 mt-0.5">Toggle active workflows executing during releases.</p>
+          </div>
+
+          <div class="space-y-4">
+            ${state.automations.map(a => `
+              <div class="flex items-center justify-between p-4 bg-background border border-outline-variant rounded-xl shadow-sm">
+                <div>
+                  <h4 class="font-semibold text-sm text-on-surface">${a.name}</h4>
+                  <span class="text-[10px] text-outline font-semibold">Active Sync Worker</span>
+                </div>
+                <button onclick="toggleAutomation('${a.id}')" class="w-12 h-6 rounded-full transition-colors relative focus:outline-none ${a.enabled ? 'bg-primary' : 'bg-outline-variant'}">
+                  <div class="w-4 h-4 rounded-full bg-surface absolute top-1 transition-transform ${a.enabled ? 'translate-x-7' : 'translate-x-1'}"></div>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // More dropdown overlay toggle
+    function toggleMoreMenu(e) {
+      e.stopPropagation();
+      closeAllDropdowns();
+      const drop = document.getElementById('more-dropdown');
+      const rect = e.currentTarget.getBoundingClientRect();
+      drop.style.top = `${rect.bottom + window.scrollY + 8}px`;
+      drop.style.left = `${rect.left + window.scrollX - 120}px`;
+      drop.classList.toggle('hidden');
+    }
+
+    function toggleAutomation(id) {
+      const auth = state.automations.find(a => a.id === id);
+      if (auth) {
+        auth.enabled = !auth.enabled;
+        saveState('qe_automations', state.automations);
+        renderAutomationHub();
+        showToast(`${auth.name} is now ${auth.enabled ? 'enabled' : 'disabled'}`);
+      }
+    }
+
+    // ── LIVE QA SESSION ──
+    let sessionTimerInterval = null;
+    let sessionSeconds = 0;
+    let isSessionRunning = false;
+
+    function renderLiveQA() {
+      const container = document.getElementById('view-content');
+      
+      const formatTime = (secs) => {
+        const h = Math.floor(secs / 3600).toString().padStart(2, '0');
+        const m = Math.floor((secs % 3600) / 60).toString().padStart(2, '0');
+        const s = (secs % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      };
+
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-6 space-y-6 max-w-md mx-auto">
+          <div>
+            <h3 class="font-display font-semibold text-base text-on-surface">Exploratory Testing Session</h3>
+            <p class="text-xs text-outline/80 mt-0.5">Track time and verify checkpoints live in the workstation.</p>
+          </div>
+
+          <!-- Timer block -->
+          <div class="bg-background border border-outline-variant/60 rounded-xl p-6 text-center space-y-3">
+            <h2 id="session-timer-display" class="font-display font-bold text-3xl tracking-tight text-on-surface select-none">${formatTime(sessionSeconds)}</h2>
+            <div class="flex items-center justify-center gap-2">
+              <button onclick="toggleSessionTimer()" class="px-5 py-2 rounded-lg text-xs font-bold text-on-primary bg-primary hover:bg-primary-container shadow-sm">
+                ${isSessionRunning ? 'Pause Session' : 'Start Session'}
+              </button>
+              <button onclick="resetSessionTimer()" class="px-4 py-2 rounded-lg text-xs font-bold text-on-surface border border-outline-variant bg-surface hover:bg-surface-container-low">
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- Checklist -->
+          <div class="space-y-3">
+            <h4 class="text-xs font-bold text-outline uppercase tracking-wider">Verification Steps</h4>
+            <div class="space-y-2">
+              ${renderSessionCheckboxes()}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSessionCheckboxes() {
+      const steps = [
+        "Login with credential validation",
+        "Inspect responsiveness on viewport resizing",
+        "Check payment validation triggers webhook",
+        "Verify activity stream logging"
+      ];
+      return steps.map((s, idx) => `
+        <label class="flex items-start gap-3 p-3 bg-surface-container-low/50 border border-outline-variant/30 rounded-lg cursor-pointer">
+          <input type="checkbox" class="mt-0.5 rounded border-outline-variant/60 focus:ring-primary text-primary">
+          <span class="text-xs font-semibold text-on-surface-variant select-none">${s}</span>
+        </label>
+      `).join('');
+    }
+
+    function toggleSessionTimer() {
+      isSessionRunning = !isSessionRunning;
+      if (isSessionRunning) {
+        sessionTimerInterval = setInterval(() => {
+          sessionSeconds++;
+          const timer = document.getElementById('session-timer-display');
+          if (timer) {
+            const h = Math.floor(sessionSeconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((sessionSeconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (sessionSeconds % 60).toString().padStart(2, '0');
+            timer.innerText = `${h}:${m}:${s}`;
+          }
+        }, 1000);
+        showToast("Exploratory session started", "info");
+      } else {
+        clearInterval(sessionTimerInterval);
+        showToast("Exploratory session paused", "info");
+      }
+      renderLiveQA();
+    }
+
+    function resetSessionTimer() {
+      clearInterval(sessionTimerInterval);
+      sessionSeconds = 0;
+      isSessionRunning = false;
+      renderLiveQA();
+      showToast("Exploratory session reset", "info");
+    }
+
+    // ── RECORDER STUDIO (COMING SOON PLACEHOLDER) ──
+    function renderRecorderStudio() {
+      const container = document.getElementById('view-content');
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-12 text-center space-y-4 max-w-lg mx-auto">
+          <div class="w-16 h-16 rounded-full bg-[#dae2fd] text-primary text-2xl flex items-center justify-center mx-auto shadow-sm">
+            <i class="ph ph-video-camera"></i>
+          </div>
+          <div class="space-y-1">
+            <h3 class="font-display font-bold text-lg text-on-surface">Recorder Studio</h3>
+            <p class="text-xs text-outline font-semibold uppercase tracking-wider">Feature Coming Soon</p>
+          </div>
+          <p class="text-sm text-on-surface-variant max-w-md mx-auto leading-relaxed">
+            Record manual validations inside local sandboxed instances and output playwright automation scripts directly to target test suites.
+          </p>
+          <div class="bg-surface-container-low p-4 rounded-xl text-[11px] font-mono text-left text-on-surface-variant border border-outline-variant/30">
+            [SYS-WORKER] Hooking browser connection stream... offline
+          </div>
+        </div>
+      `;
+    }
+
+    // ── BUG REPORTS CRUD ──
+    function renderBugReports() {
+      const container = document.getElementById('view-content');
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm overflow-hidden p-6 space-y-6 max-w-container-max-width mx-auto">
+          <div class="flex items-center justify-between border-b border-outline-variant pb-4">
+            <div>
+              <h3 class="font-display font-semibold text-base text-on-surface">Defects Registry</h3>
+              <p class="text-xs text-outline/80 mt-0.5">Track critical system issues discovered during QA cycles.</p>
+            </div>
+            <button onclick="addBugReportPrompt()" class="px-4 py-2 bg-error text-on-primary rounded-lg text-sm font-bold hover:bg-red-700 transition-colors shadow-sm">
+              + File Bug Report
+            </button>
+          </div>
+
+          <div class="overflow-x-auto select-none">
+            <table class="w-full text-left text-sm border-collapse min-w-[700px]">
+              <thead>
+                <tr class="bg-surface-container-low border-b border-outline-variant text-[11px] font-bold text-outline uppercase tracking-wider">
+                  <th class="p-3">ID</th>
+                  <th class="p-3">Title</th>
+                  <th class="p-3">Severity</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 text-right">Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${state.bugs.map(b => `
+                  <tr class="border-b border-outline-variant/35 hover:bg-surface-container-low/40 transition-colors">
+                    <td class="p-3 text-xs font-bold text-error font-mono">${b.id}</td>
+                    <td class="p-3 font-semibold text-on-surface">${b.title}</td>
+                    <td class="p-3 text-xs font-bold text-error uppercase">${b.severity}</td>
+                    <td class="p-3 text-xs font-bold text-on-surface-variant">${b.status.toUpperCase()}</td>
+                    <td class="p-3 text-right">
+                      <button onclick="deleteBugReport('${b.id}')" class="text-error hover:text-red-700">
+                        <i class="ph ph-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function addBugReportPrompt() {
+      const title = prompt("Enter bug description / error payload:");
+      if (title) {
+        const id = `BUG-00${state.bugs.length + 1}`;
+        state.bugs.push({ id, title, severity: "critical", status: "open" });
+        saveState('qe_bugs', state.bugs);
+        renderBugReports();
+        showToast(`Bug ${id} reported`, 'error');
+      }
+    }
+
+    function deleteBugReport(id) {
+      if (confirm(`Remove bug report ${id}?`)) {
+        state.bugs = state.bugs.filter(b => b.id !== id);
+        saveState('qe_bugs', state.bugs);
+        renderBugReports();
+        showToast(`Bug ${id} deleted`);
+      }
+    }
+
+    // ── PROJECTS LIST ──
+    function renderProjects() {
+      const container = document.getElementById('view-content');
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-6 space-y-6 max-w-container-max-width mx-auto">
+          <div class="flex items-center justify-between border-b border-outline-variant pb-4">
+            <div>
+              <h3 class="font-display font-semibold text-base text-on-surface">Tracked Projects Scope</h3>
+              <p class="text-xs text-outline/80 mt-0.5">Summary of core repository scopes mapped in QA Engine.</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            ${state.projects.map(p => `
+              <div class="p-5 bg-background border border-outline-variant rounded-xl shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                  <h4 class="font-display font-semibold text-base text-on-surface">${p.name}</h4>
+                  <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${p.status.toUpperCase()}</span>
+                </div>
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-xs font-semibold text-on-surface-variant">
+                    <span>Validation Coverage</span>
+                    <span>${p.progress}%</span>
+                  </div>
+                  <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                    <div class="bg-primary h-full rounded-full" style="width: ${p.progress}%"></div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // ── SETTINGS & UTILS ──
+    function renderSettings() {
+      const container = document.getElementById('view-content');
+      container.innerHTML = `
+        <div class="bg-surface rounded-xl border border-outline-variant shadow-sm p-6 space-y-6 max-w-md mx-auto">
+          <div>
+            <h3 class="font-display font-semibold text-base text-on-surface">Settings Panel</h3>
+            <p class="text-xs text-outline/80 mt-0.5">Control data backups, reset state, and configure theme settings.</p>
+          </div>
+
+          <div class="space-y-4 select-none">
+            <!-- Theme Toggle -->
+            <div class="flex items-center justify-between p-4 bg-background border border-outline-variant rounded-xl shadow-sm">
+              <div>
+                <h4 class="font-semibold text-sm text-on-surface">Dark Mode</h4>
+                <span class="text-[10px] text-outline font-semibold">Switch visual style</span>
+              </div>
+              <button onclick="toggleTheme()" class="w-12 h-6 rounded-full transition-colors bg-outline-variant relative focus:outline-none">
+                <div class="w-4 h-4 rounded-full bg-surface absolute top-1 left-1 transition-transform"></div>
+              </button>
+            </div>
+
+            <!-- Export backup -->
+            <button onclick="triggerBoardExport()" class="w-full bg-surface border border-outline-variant rounded-xl p-4 flex items-center justify-between hover:bg-surface-container-low transition-colors shadow-sm">
+              <div class="text-left">
+                <h4 class="font-semibold text-sm text-on-surface">Export Workspace Data</h4>
+                <span class="text-[10px] text-outline font-semibold">Download backup JSON file</span>
+              </div>
+              <i class="ph ph-download text-lg text-primary"></i>
+            </button>
+
+            <!-- Import backup -->
+            <div class="bg-surface border border-outline-variant rounded-xl p-4 space-y-3 shadow-sm">
+              <div class="text-left">
+                <h4 class="font-semibold text-sm text-on-surface">Import Workspace Data</h4>
+                <span class="text-[10px] text-outline font-semibold">Select JSON file to restore backups</span>
+              </div>
+              <input id="import-json-file" class="w-full text-xs border border-outline-variant rounded p-1.5 focus:ring-1 focus:ring-primary cursor-pointer shadow-sm" type="file" onchange="triggerBoardImport(event)">
+            </div>
+
+            <!-- Reset Data -->
+            <button onclick="triggerResetData()" class="w-full bg-error-container/20 border border-error-container rounded-xl p-4 flex items-center justify-between hover:bg-error-container/40 transition-colors shadow-sm text-error">
+              <div class="text-left">
+                <h4 class="font-semibold text-sm text-on-error-container">Reset Dashboard</h4>
+                <span class="text-[10px] text-error font-semibold">Wipe localStorage and reload demo data</span>
+              </div>
+              <i class="ph ph-trash text-lg text-error"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleTheme() {
+      showToast("Theme settings will be saved in your preferences.", "info");
+    }
+
+    function triggerBoardExport() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage));
+      const dlAnchorElem = document.createElement('a');
+      dlAnchorElem.setAttribute("href", dataStr);
+      dlAnchorElem.setAttribute("download", `qa_engine_workspace_backup.json`);
+      dlAnchorElem.click();
+      showToast("Workspace exported successfully");
+    }
+
+    function triggerBoardImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        try {
+          const data = JSON.parse(evt.target.result);
+          Object.keys(data).forEach(key => {
+            localStorage.setItem(key, data[key]);
+          });
+          bootstrapData();
+          showToast("Workspace imported and restored!");
+          renderActiveTab();
+        } catch (err) {
+          showToast("Invalid JSON file uploaded", "error");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function triggerResetData() {
+      if (confirm("Wipe all data and reload original demo issues?")) {
+        localStorage.clear();
+        bootstrapData();
+        showToast("Storage wiped. Demo tasks reloaded!");
+        renderActiveTab();
+      }
+    }
+
+    function renderSelectedView() {
+      if (currentView === 'dashboard') renderDashboard();
+      if (currentView === 'backlog') renderBacklog();
+      if (currentView === 'reports') renderReports();
+      if (currentView === 'test-cases') renderTestCases();
+      if (currentView === 'automation-hub') renderAutomationHub();
+      if (currentView === 'live-qa') renderLiveQA();
+      if (currentView === 'recorder-studio') renderRecorderStudio();
+      if (currentView === 'bug-reports') renderBugReports();
+      if (currentView === 'projects') renderProjects();
+      if (currentView === 'settings') renderSettings();
+    }
+
+    function triggerSignOut() {
+      showToast("Signed out. Redirecting...", "info");
+    }
+
+    // ── TASK DETAIL MODAL HANDLERS ──
+    let modalSubtasksList = [];
+    let modalCommentsList = [];
+    let modalAttachmentsList = [];
+
+    function openCreateTaskModal(defaultStatus = 'todo') {
+      currentEditingTaskId = null;
+      document.getElementById('modal-title-header').innerText = "Create New Task";
+      document.getElementById('modal-task-id-badge').innerText = "SYS-NEW";
+      document.getElementById('modal-delete-btn').classList.add('hidden');
+      
+      // Clear inputs
+      document.getElementById('modal-task-title').value = '';
+      document.getElementById('modal-task-desc').value = '';
+      document.getElementById('modal-task-status').value = defaultStatus;
+      document.getElementById('modal-task-priority').value = 'medium';
+      document.getElementById('modal-task-assignee').value = '';
+      document.getElementById('modal-task-due').value = '';
+      document.getElementById('modal-task-branch').value = '';
+      
+      modalSubtasksList = [];
+      modalCommentsList = [];
+      modalAttachmentsList = [];
+      
+      renderModalChecklists();
+      
+      // Load epic and sprint select fields
+      populateModalDropdowns();
+
+      // Show modal
+      const modal = document.getElementById('task-modal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.add('opacity-100');
+        modal.firstElementChild.classList.remove('scale-95');
+      }, 50);
+    }
+
+    function openEditTaskModal(taskId) {
+      currentEditingTaskId = taskId;
+      const task = state.tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      document.getElementById('modal-title-header').innerText = "Edit Task";
+      document.getElementById('modal-task-id-badge').innerText = task.id;
+      document.getElementById('modal-delete-btn').classList.remove('hidden');
+      
+      document.getElementById('modal-task-title').value = task.title;
+      document.getElementById('modal-task-desc').value = task.description || '';
+      document.getElementById('modal-task-status').value = task.status;
+      document.getElementById('modal-task-priority').value = task.priority;
+      document.getElementById('modal-task-assignee').value = task.assignee || '';
+      document.getElementById('modal-task-due').value = task.dueDate || '';
+      document.getElementById('modal-task-branch').value = task.branch || '';
+      
+      modalSubtasksList = task.subtasks ? [...task.subtasks] : [];
+      modalCommentsList = task.comments ? [...task.comments] : [];
+      modalAttachmentsList = task.attachments ? [...task.attachments] : [];
+      
+      renderModalChecklists();
+      populateModalDropdowns(task.sprintId, task.epicId);
+
+      // Render activities logs
+      const actContainer = document.getElementById('modal-activity-log');
+      if (task.activity && task.activity.length > 0) {
+        actContainer.innerHTML = task.activity.map(a => `
+          <div>▸ ${a.text} <span class="text-outline">(${new Date(a.timestamp).toLocaleTimeString()})</span></div>
+        `).join('');
+      } else {
+        actContainer.innerHTML = `<div class="italic text-outline">No activity log found</div>`;
+      }
+
+      // Show modal
+      const modal = document.getElementById('task-modal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.add('opacity-100');
+        modal.firstElementChild.classList.remove('scale-95');
+      }, 50);
+    }
+
+    function populateModalDropdowns(selectedSprintId = '', selectedEpicId = '') {
+      const sprintSelect = document.getElementById('modal-task-sprint');
+      sprintSelect.innerHTML = `<option value="">No Sprint (Backlog)</option>` + state.sprints.map(s => `
+        <option value="${s.id}" ${s.id === selectedSprintId ? 'selected' : ''}>${s.name}</option>
+      `).join('');
+
+      const epicSelect = document.getElementById('modal-task-epic');
+      epicSelect.innerHTML = `<option value="">No Epic</option>` + state.epics.map(e => `
+        <option value="${e.id}" ${e.id === selectedEpicId ? 'selected' : ''}>${e.name}</option>
+      `).join('');
+    }
+
+    function renderModalChecklists() {
+      // Subtasks
+      const subContainer = document.getElementById('modal-subtask-container');
+      subContainer.innerHTML = modalSubtasksList.map((st, index) => `
+        <div class="flex items-center gap-2">
+          <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="toggleSubtaskStatus(${index}, this.checked)" class="rounded border-outline-variant/60 text-primary focus:ring-primary">
+          <input type="text" value="${st.title}" onchange="editSubtaskTitle(${index}, this.value)" class="flex-grow text-xs border border-outline-variant rounded px-2 py-1 focus:ring-1 focus:ring-primary shadow-sm font-semibold">
+          <button onclick="removeSubtaskItem(${index})" class="text-error hover:text-red-700 text-sm"><i class="ph ph-trash"></i></button>
+        </div>
+      `).join('');
+
+      // Comments
+      const commContainer = document.getElementById('modal-comments-container');
+      commContainer.innerHTML = modalCommentsList.map(c => `
+        <div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/30 text-xs">
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-primary">${c.author}</span>
+            <span class="text-outline">${new Date(c.timestamp).toLocaleTimeString()}</span>
+          </div>
+          <p class="text-on-surface-variant font-medium">${c.text}</p>
+        </div>
+      `).join('');
+
+      // Attachments
+      const attContainer = document.getElementById('modal-attachments-container');
+      attContainer.innerHTML = modalAttachmentsList.map((a, index) => `
+        <div class="flex items-center justify-between p-2 rounded bg-surface-container-low border border-outline-variant/20 text-xs">
+          <div class="flex items-center gap-2">
+            <i class="ph ph-file text-lg text-primary"></i>
+            <span class="font-semibold">${a.name} (${a.size})</span>
+          </div>
+          <button onclick="removeAttachmentItem(${index})" class="text-error hover:text-red-700"><i class="ph ph-trash"></i></button>
+        </div>
+      `).join('');
+    }
+
+    function addSubtaskItem() {
+      modalSubtasksList.push({ id: `st-${Date.now()}`, title: "New checkpoint", completed: false });
+      renderModalChecklists();
+    }
+
+    function toggleSubtaskStatus(index, completed) {
+      modalSubtasksList[index].completed = completed;
+    }
+
+    function editSubtaskTitle(index, title) {
+      modalSubtasksList[index].title = title;
+    }
+
+    function removeSubtaskItem(index) {
+      modalSubtasksList.splice(index, 1);
+      renderModalChecklists();
+    }
+
+    function addCommentItem() {
+      const input = document.getElementById('modal-comment-input');
+      const val = input.value.trim();
+      if (val) {
+        modalCommentsList.push({
+          id: `c-${Date.now()}`,
+          author: "QA Engineer",
+          text: val,
+          timestamp: new Date().toISOString()
+        });
+        input.value = '';
+        renderModalChecklists();
+      }
+    }
+
+    function addAttachmentItem() {
+      const input = document.getElementById('modal-attachment-input');
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        modalAttachmentsList.push({
+          name: file.name,
+          size: `${Math.round(file.size / 1024)} KB`,
+          type: file.type
+        });
+        input.value = '';
+        renderModalChecklists();
+      }
+    }
+
+    function removeAttachmentItem(index) {
+      modalAttachmentsList.splice(index, 1);
+      renderModalChecklists();
+    }
+
+    function closeTaskModal() {
+      const modal = document.getElementById('task-modal');
+      modal.classList.add('opacity-0');
+      modal.firstElementChild.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    function saveTaskModal() {
+      const title = document.getElementById('modal-task-title').value.trim();
+      if (!title) {
+        showToast("Task title is required", "error");
+        return;
+      }
+
+      const desc = document.getElementById('modal-task-desc').value.trim();
+      const status = document.getElementById('modal-task-status').value;
+      const priority = document.getElementById('modal-task-priority').value;
+      const assignee = document.getElementById('modal-task-assignee').value;
+      const dueDate = document.getElementById('modal-task-due').value;
+      const sprintId = document.getElementById('modal-task-sprint').value;
+      const epicId = document.getElementById('modal-task-epic').value;
+      const branch = document.getElementById('modal-task-branch').value.trim();
+
+      if (currentEditingTaskId === null) {
+        // Create new task
+        const id = `SYS-${state.tasks.length + 100}`;
+        const newTask = {
+          id, title, description: desc, status, priority, assignee, dueDate, sprintId, epicId, branch,
+          subtasks: modalSubtasksList,
+          comments: modalCommentsList,
+          attachments: modalAttachmentsList,
+          activity: [{ text: "Task created successfully", timestamp: new Date().toISOString() }],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        state.tasks.push(newTask);
+        showToast(`Task ${id} created successfully`);
+      } else {
+        // Update existing task
+        const task = state.tasks.find(t => t.id === currentEditingTaskId);
+        if (task) {
+          const oldStatus = task.status;
+          task.title = title;
+          task.description = desc;
+          task.status = status;
+          task.priority = priority;
+          task.assignee = assignee;
+          task.dueDate = dueDate;
+          task.sprintId = sprintId;
+          task.epicId = epicId;
+          task.branch = branch;
+          task.subtasks = modalSubtasksList;
+          task.comments = modalCommentsList;
+          task.attachments = modalAttachmentsList;
+          task.updatedAt = new Date().toISOString();
+          
+          if (!task.activity) task.activity = [];
+          if (oldStatus !== status) {
+            task.activity.unshift({ text: `Status updated from ${oldStatus} to ${status}`, timestamp: new Date().toISOString() });
+          } else {
+            task.activity.unshift({ text: "Task details modified", timestamp: new Date().toISOString() });
+          }
+          
+          showToast(`Task ${currentEditingTaskId} updated successfully`);
+        }
+      }
+
+      saveState('qe_tasks', state.tasks);
+      closeTaskModal();
+      renderActiveTab();
+    }
+
+    function deleteCurrentTask() {
+      if (currentEditingTaskId && confirm(`Are you sure you want to delete ${currentEditingTaskId}?`)) {
+        state.tasks = state.tasks.filter(t => t.id !== currentEditingTaskId);
+        saveState('qe_tasks', state.tasks);
+        closeTaskModal();
+        renderActiveTab();
+        showToast(`Task ${currentEditingTaskId} deleted successfully`);
+      }
+    }
+
+    // ── EPIC MODAL logic ──
+    function openCreateEpicModal() {
+      document.getElementById('epic-name-input').value = '';
+      document.getElementById('epic-desc-input').value = '';
+      
+      const modal = document.getElementById('epic-modal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.add('opacity-100');
+        modal.firstElementChild.classList.remove('scale-95');
+      }, 50);
+    }
+
+    function closeEpicModal() {
+      const modal = document.getElementById('epic-modal');
+      modal.classList.add('opacity-0');
+      modal.firstElementChild.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    function saveEpicModal() {
+      const name = document.getElementById('epic-name-input').value.trim();
+      if (!name) {
+        showToast("Epic name is required", "error");
+        return;
+      }
+      const desc = document.getElementById('epic-desc-input').value.trim();
+      const color = document.getElementById('epic-color-input').value;
+      const id = `epic-${state.epics.length + 1}`;
+      
+      state.epics.push({ id, name, description: desc, color, taskIds: [] });
+      saveState('qe_epics', state.epics);
+      
+      closeEpicModal();
+      showToast(`Epic "${name}" created successfully`);
+      renderActiveTab();
+    }
+
+    // ── SPRINT MODAL logic ──
+    function openCreateSprintModal() {
+      document.getElementById('sprint-name-input').value = '';
+      document.getElementById('sprint-start-input').value = '';
+      document.getElementById('sprint-end-input').value = '';
+      document.getElementById('sprint-goal-input').value = '';
+      
+      const modal = document.getElementById('sprint-modal');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.add('opacity-100');
+        modal.firstElementChild.classList.remove('scale-95');
+      }, 50);
+    }
+
+    function closeSprintModal() {
+      const modal = document.getElementById('sprint-modal');
+      modal.classList.add('opacity-0');
+      modal.firstElementChild.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    function saveSprintModal() {
+      const name = document.getElementById('sprint-name-input').value.trim();
+      if (!name) {
+        showToast("Sprint name is required", "error");
+        return;
+      }
+      const goal = document.getElementById('sprint-goal-input').value.trim();
+      const id = `sprint-${state.sprints.length + 26}`;
+      
+      state.sprints.push({ id, name, goal });
+      saveState('qe_sprints', state.sprints);
+      
+      closeSprintModal();
+      showToast(`Sprint "${name}" created successfully`);
+      renderActiveTab();
+    }
+
+    // ── APP INITIALIZATION ──
+    bootstrapData();
+    switchView('board');
+  </script>
+</body>
+</html>
