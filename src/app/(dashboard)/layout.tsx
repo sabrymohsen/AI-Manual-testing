@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
   LayoutDashboard,
   FolderKanban,
@@ -61,7 +61,15 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      setActiveTab(params.get("tab"))
+    }
+  }, [pathname])
+
   // Project selector state
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>("")
@@ -275,7 +283,6 @@ export default function DashboardLayout({
                 const dest = getHref(item.href)
                 const hasTab = item.href.includes("?tab=")
                 const targetTab = hasTab ? item.href.split("?tab=")[1] : null
-                const activeTab = searchParams.get("tab")
                 
                 const isTabActive = hasTab 
                   ? (pathname.includes("/board") && activeTab === targetTab)
