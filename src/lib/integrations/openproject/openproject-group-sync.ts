@@ -16,8 +16,26 @@
 import { prisma } from "@/lib/db"
 import { decryptSecret } from "@/lib/crypto"
 import { OpenProjectClient, OpSyncItemResult } from "./openproject.client"
+import { loadIntegration } from "@/lib/integrations/core/load-integration"
+import * as coreGroup from "@/lib/integrations/core/group-sync"
 
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
+
+/**
+ * When a project is on the unified ProjectIntegration model (any provider,
+ * including OpenProject-via-unified), group sync is handled by the provider-
+ * agnostic core engine. Legacy OpenProject-only projects (OpenProjectIntegration
+ * table) fall through to the battle-tested logic below — no behavior change.
+ * Returns the provider id to delegate with, or null to use the legacy path.
+ */
+async function unifiedProvider(projectId: string): Promise<string | null> {
+  try {
+    const loaded = await loadIntegration(projectId)
+    return loaded?.source === "unified" ? loaded.provider : null
+  } catch {
+    return null
+  }
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -212,6 +230,9 @@ function buildTestCaseDescription(tc: any, projectName: string, featureName?: st
 // ─── Core Functions ───────────────────────────────────────────────────────────
 
 export async function getAllGroupsWithStatus(projectId: string): Promise<GroupInfo[]> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.getAllGroupsWithStatus(projectId, up)
+
   // Load all features for this project
   const features = await prisma.feature.findMany({
     where: { projectId },
@@ -337,6 +358,9 @@ function buildRunStats(tcIds: string[], latestRunMap: Map<string, string>) {
 }
 
 export async function getGroupSyncStatus(projectId: string, groupId: string): Promise<GroupInfo> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.getGroupSyncStatus(projectId, groupId, up)
+
   const groups = await getAllGroupsWithStatus(projectId)
   const group = groups.find(g => g.groupId === groupId)
   if (!group) throw new Error(`Group "${groupId}" not found`)
@@ -348,6 +372,9 @@ export async function mapGroupParent(
   groupId: string,
   parentWorkPackageId: string
 ): Promise<{ mapping: any; subject: string | null; url: string | null }> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.mapGroupParent(projectId, groupId, parentWorkPackageId)
+
   const { client, integration } = await getClientAndIntegration(projectId, groupId)
 
   // Validate parent
@@ -389,6 +416,9 @@ export async function syncGroupTestCasesToOpenProject(
   projectId: string,
   groupId: string
 ): Promise<GroupSyncResult> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.syncGroupTestCases(projectId, groupId)
+
   const { client, integration, modCfg } = await getClientAndIntegration(projectId, groupId)
 
   const groupName = await getGroupName(projectId, groupId)
@@ -559,6 +589,9 @@ export async function syncGroupTestCasesToOpenProject(
 }
 
 export async function applyParentToGroup(projectId: string, groupId: string): Promise<{ linked: number; alreadyLinked: number; failed: number; total: number }> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.applyParentToGroup(projectId, groupId)
+
   const { client } = await getClientAndIntegration(projectId, groupId)
 
   const parentMapping = await prisma.openProjectParentMapping.findUnique({
@@ -593,6 +626,9 @@ export async function applyParentToGroup(projectId: string, groupId: string): Pr
 }
 
 export async function syncGroupToBoard(projectId: string, groupId: string): Promise<{ updated: number; failed: number; statusSkipped: number; total: number; boardPlaced: number; boardPermissionDenied: boolean; firstError?: string; debug?: object }> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.syncGroupToBoard(projectId, groupId)
+
   const { client, integration, modCfg } = await getClientAndIntegration(projectId, groupId)
 
   const parentMapping = await prisma.openProjectParentMapping.findUnique({
@@ -700,6 +736,9 @@ export async function syncGroupToBoard(projectId: string, groupId: string): Prom
 }
 
 export async function checkGroupBoardVisibility(projectId: string, groupId: string): Promise<GroupBoardCheckResult> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.checkGroupBoardVisibility(projectId, groupId)
+
   const { client, integration } = await getClientAndIntegration(projectId, groupId)
 
   const groupName = await getGroupName(projectId, groupId)
@@ -751,6 +790,9 @@ export async function checkGroupBoardVisibility(projectId: string, groupId: stri
 }
 
 export async function getGroupSyncedItems(projectId: string, groupId: string): Promise<{ groupName: string; items: GroupSyncedItem[] }> {
+  const up = await unifiedProvider(projectId)
+  if (up) return coreGroup.getGroupSyncedItems(projectId, groupId, up)
+
   const groupName = await getGroupName(projectId, groupId)
   const testCases = await getGroupTestCases(projectId, groupId)
   const tcIds = testCases.map(tc => tc.id)

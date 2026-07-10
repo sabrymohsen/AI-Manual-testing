@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { Button } from "@/components/ui/button"
@@ -9,61 +9,56 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { CredentialsList } from "@/components/credentials/credentials-list"
 import { IntegrationConfig } from "@/components/integrations/integration-config"
-import { 
-  LayoutGrid, 
-  Layers, 
-  Key, 
-  Globe, 
-  Settings, 
-  FileText, 
-  Bug, 
-  Video, 
-  FlaskConical,
+import { IntegrationConnectPanel } from "@/components/integrations/integration-connect-panel"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
+import {
+  Layers,
+  Key,
+  Globe,
+  Settings,
   ShieldAlert,
-  ArrowRight,
-  TrendingUp,
-  Activity,
-  CheckCircle2,
-  Trash2,
-  History
+  Trash2
 } from "lucide-react"
 
-type ProjectTab = "overview" | "scope" | "credentials" | "integrations" | "settings"
+type ProjectTab = "scope" | "credentials" | "integrations" | "settings"
 
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const projectId = params.id as string
+
+  // Connected tracker (Jira / Azure DevOps / ClickUp / OpenProject) for labels + gating.
+  const { provider: integrationProvider, name: integrationName, connected: integrationConnected } =
+    useProjectIntegration(projectId)
+  const integrationTabLabel = integrationConnected ? `${integrationName} Connection` : "Integrations"
+
+  // Deep-link support: ?tab=scope|credentials|integrations|general (general → settings tab).
+  const tabParam = searchParams.get("tab")
+  const initialTab: ProjectTab =
+    tabParam === "credentials" || tabParam === "integrations" || tabParam === "scope"
+      ? tabParam
+      : tabParam === "general" || tabParam === "settings"
+        ? "settings"
+        : "scope"
 
   const [project, setProject] = useState<any>(null)
   const [hierarchyModules, setHierarchyModules] = useState<any[]>([])
-  const [testCasesCount, setTestCasesCount] = useState(0)
-  const [openBugsCount, setOpenBugsCount] = useState(0)
-  const [runsCount, setRunsCount] = useState(0)
-  const [activeTab, setActiveTab] = useState<ProjectTab>("overview")
+  const [activeTab, setActiveTab] = useState<ProjectTab>(initialTab)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
   const loadData = async () => {
     try {
-      const [projRes, casesRes, bugsRes, runsRes, hierRes] = await Promise.all([
+      const [projRes, hierRes] = await Promise.all([
         fetch(`/api/projects/${projectId}`),
-        fetch(`/api/projects/${projectId}/test-cases`),
-        fetch(`/api/projects/${projectId}/bug-reports`),
-        fetch(`/api/projects/${projectId}/test-runs`),
         fetch(`/api/projects/${projectId}/hierarchy`)
       ])
 
       const projData = projRes.ok ? await projRes.json() : {}
-      const casesData = casesRes.ok ? await casesRes.json() : {}
-      const bugsData = bugsRes.ok ? await bugsRes.json() : {}
-      const runsData = runsRes.ok ? await runsRes.json() : {}
       const hierData = hierRes.ok ? await hierRes.json() : {}
 
       setProject(projData.project)
-      setTestCasesCount((casesData.testCases || []).length)
-      setOpenBugsCount((bugsData.bugReports || []).filter((b: any) => b.status === "Open").length)
-      setRunsCount((runsData.testRuns || []).length)
       setHierarchyModules(hierData.modules || [])
     } catch (err) {
       console.error("Error loading project dynamic details:", err)
@@ -152,10 +147,9 @@ export default function ProjectDetailPage() {
       {/* Tabs navigation */}
       <div className="flex border-b pb-px overflow-x-auto gap-4">
         {[
-          { id: "overview", label: "Overview", icon: LayoutGrid },
           { id: "scope", label: "Scope / Modules", icon: Layers },
           { id: "credentials", label: "Credentials Vault", icon: Key },
-          { id: "integrations", label: "OpenProject Connection", icon: Globe },
+          { id: "integrations", label: integrationTabLabel, icon: Globe },
           { id: "settings", label: "General Settings", icon: Settings }
         ].map((tab) => {
           const Icon = tab.icon
@@ -176,63 +170,6 @@ export default function ProjectDetailPage() {
       </div>
 
       <div className="mt-6">
-        {/* OVERVIEW TAB */}
-        {activeTab === "overview" && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-                <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Pass rate</span>
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-500" />
-                  <span className="text-xl font-extrabold text-slate-800">{project.passRate ?? 0}%</span>
-                </div>
-              </div>
-              <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-                <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Test Cases</span>
-                <span className="text-xl font-extrabold text-slate-800">{testCasesCount} cases</span>
-              </div>
-              <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-                <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Open Bugs</span>
-                <span className="text-xl font-extrabold text-rose-600">{openBugsCount} defects</span>
-              </div>
-              <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-                <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Total Runs</span>
-                <span className="text-xl font-extrabold text-slate-800">{runsCount} runs</span>
-              </div>
-            </div>
-
-            {/* Quick links shortcuts only */}
-            <div className="p-5 border border-slate-100 shadow-sm rounded-2xl bg-card space-y-4">
-              <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Primary Workspaces Shortcuts</span>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { title: "Open Test Cases", desc: "Manage functional test case steps suites.", href: `/projects/${projectId}/test-cases`, icon: FileText },
-                  { title: "Open Bug Reports", desc: "Triage defect tickets and synchronizations.", href: `/projects/${projectId}/bug-reports`, icon: Bug },
-                  { title: "Open Recorder Studio", desc: "Launch step pickers to record user actions.", href: `/projects/${projectId}/recorder-studio`, icon: Video },
-                  { title: "Open Live QA Session", desc: "Run live QA checks and capture screenshots.", href: `/projects/${projectId}/live-qa-session`, icon: FlaskConical },
-                  { title: "Live QA History", desc: "Past sessions with their bugs, screenshots, and videos.", href: `/projects/${projectId}/live-qa-history`, icon: History },
-                  { title: "Open OpenProject Sync", desc: "Configure server hooks and track parent maps.", href: `/projects/${projectId}/openproject-sync`, icon: Globe }
-                ].map((ws, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={() => router.push(ws.href)}
-                    className="p-3 border rounded-xl hover:bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer flex items-start gap-3 transition-colors group"
-                  >
-                    <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
-                      <ws.icon className="h-4.5 w-4.5" />
-                    </div>
-                    <div className="space-y-0.5 min-w-0">
-                      <span className="font-extrabold text-slate-800 block truncate group-hover:text-indigo-700 transition-colors">{ws.title}</span>
-                      <span className="text-[10px] text-muted-foreground leading-normal font-medium block">{ws.desc}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* SCOPE TAB */}
         {activeTab === "scope" && (
           <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card space-y-4">
@@ -299,9 +236,19 @@ export default function ProjectDetailPage() {
 
         {/* INTEGRATIONS TAB */}
         {activeTab === "integrations" && (
-          <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
-            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2 mb-4">Host Target API Config</span>
-            <IntegrationConfig projectId={projectId} />
+          <div className="space-y-6">
+            <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
+              <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2 mb-4">Project-Management Integration</span>
+              <IntegrationConnectPanel projectId={projectId} />
+            </div>
+            {/* Advanced OpenProject controls (parent strategy, group/board sync,
+                custom fields) — only relevant when this project uses OpenProject. */}
+            {integrationProvider === "OpenProject" && (
+              <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
+                <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2 mb-4">OpenProject advanced settings</span>
+                <IntegrationConfig projectId={projectId} />
+              </div>
+            )}
           </div>
         )}
 

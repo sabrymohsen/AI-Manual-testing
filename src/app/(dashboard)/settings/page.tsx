@@ -11,7 +11,7 @@ export default function GlobalSettingsGateway() {
   useEffect(() => {
     const activeId = localStorage.getItem("activeProjectId")
     if (activeId) {
-      router.replace(`/projects/${activeId}/settings`)
+      router.replace(`/projects/${activeId}?tab=general`)
     } else {
       setResolved(true)
     }
@@ -26,10 +26,10 @@ export default function GlobalSettingsGateway() {
   }
 
   return (
-    <ProjectSelectionGateway 
+    <ProjectSelectionGateway
       title="Project Settings"
       description="Select a project workspace scope to modify general details and target URLs."
-      targetWorkflow="settings"
+      targetWorkflow="?tab=general"
     />
   )
 }

@@ -6,17 +6,12 @@ import { useActiveProject, useProjectSummary, useTestCaseMetrics, useBugMetrics,
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { Button } from "@/components/ui/button"
-import { 
-  Zap, 
-  FileText, 
-  Bug, 
-  Video, 
-  FlaskConical, 
-  Globe, 
-  TrendingUp, 
-  AlertCircle,
+import {
+  Zap,
+  FileText,
+  Bug,
+  TrendingUp,
   Activity,
-  CheckCircle2,
   FolderOpen
 } from "lucide-react"
 
@@ -208,36 +203,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Shortcuts & Recent activity layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Shortcuts Panel */}
-        <div className="p-5 border border-slate-100 shadow-sm col-span-2 space-y-4 rounded-2xl bg-card">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Primary Workspaces Shortcuts</span>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { title: "Test Cases Cockpit", desc: "Create, import, and organize test steps suites.", href: `/projects/${activeProjectId}/test-cases`, icon: FileText },
-              { title: "Live QA Session", desc: "Execute live QA sessions and report bugs.", href: `/projects/${activeProjectId}/live-qa-session`, icon: FlaskConical },
-              { title: "Recorder Studio", desc: "Record selector elements to build cases.", href: `/projects/${activeProjectId}/recorder-studio`, icon: Video },
-              { title: "OpenProject Sync", desc: "Map and synchronize defects to tasks list.", href: `/projects/${activeProjectId}/openproject-sync`, icon: Globe }
-            ].map((ws, idx) => (
-              <div 
-                key={idx}
-                onClick={() => router.push(ws.href)}
-                className="p-3 border rounded-xl hover:bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer flex items-start gap-3 transition-colors group"
-              >
-                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600 shrink-0">
-                  <ws.icon className="h-4 w-4" />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <span className="font-extrabold text-slate-800 block truncate group-hover:text-indigo-700 transition-colors">{ws.title}</span>
-                  <span className="text-[10px] text-muted-foreground leading-normal font-medium block">{ws.desc}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
+      {/* Recent activity */}
+      <div>
         {/* Recent Bugs Triage */}
         <div className="p-5 border border-slate-100 shadow-sm space-y-4 rounded-2xl bg-card">
           <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>

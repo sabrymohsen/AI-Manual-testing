@@ -14,7 +14,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Plus, Play, CheckCircle2, Trash2, Loader2, Search, Target, X, ListOrdered, LayoutGrid, ListTree, LineChart, Upload } from "lucide-react"
+import { Plus, Play, CheckCircle2, Trash2, Loader2, Search, Target, X, ListOrdered, LayoutGrid, ListTree, LineChart, Upload, ChevronRight } from "lucide-react"
 import { Story, Sprint, EpicLite, StoryCardView, StatusPill, points, issueTypeOf, ConfirmModal } from "./shared"
 import SprintKanban from "./sprint-kanban"
 import SprintReports from "./sprint-reports"
@@ -90,6 +90,10 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   useEffect(() => {
     const s = searchParams.get("story")
     if (s) setOpenIssueId(s)
+    const t = searchParams.get("tab") as View
+    if (t && ["backlog", "board", "list", "reports"].includes(t)) {
+      setView(t)
+    }
   }, [searchParams])
 
   const patchStory = useCallback(async (story: Story, body: Record<string, unknown>) => {
@@ -151,7 +155,24 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   }, [])
   const clearSelection = useCallback(() => setSelected(new Set()), [])
 
-  // Bulk-assign the selected stories to a sprint or an epic in one go.
+  const moveSelectedToSprint = async (sprintId: string | null) => {
+    if (selected.size === 0) return
+    setBulkBusy(true)
+    const list = Array.from(selected)
+    setStories((prev) => prev.map((s) => selected.has(s.id) ? { ...s, sprintId } : s))
+    clearSelection()
+    try {
+      await fetch(`/api/projects/${projectId}/requirements/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: list, sprintId }),
+      })
+      await load()
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   const bulkAssign = useCallback(async (body: Record<string, unknown>) => {
     const targets = stories.filter((s) => selected.has(s.id))
     if (targets.length === 0) return
@@ -171,6 +192,15 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
     const targetSprintId = overId === "backlog" ? null : overId
     if ((story.sprintId || null) === targetSprintId) return
     patchStory(story, { sprintId: targetSprintId })
+  }
+
+  const createStoryInSprint = async (name: string, sprintId: string | null) => {
+    const res = await fetch(`/api/projects/${projectId}/requirements`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: name, sprintId }),
+    })
+    if (res.ok) await load()
   }
 
   const createSprint = async (name: string, goal: string) => {
@@ -200,9 +230,9 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   }
 
   const TABS: { id: View; label: string; icon: any }[] = [
-    { id: "backlog", label: "Backlog", icon: ListOrdered },
-    { id: "board", label: "Sprint Board", icon: LayoutGrid },
-    { id: "list", label: "List", icon: ListTree },
+    { id: "board", label: "Board", icon: LayoutGrid },
+    { id: "backlog", label: "List", icon: ListOrdered },
+    { id: "list", label: "Timeline", icon: ListTree },
     { id: "reports", label: "Reports", icon: LineChart },
   ]
 
@@ -218,15 +248,19 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-6">
       {/* Redesigned Glassmorphic Header */}
-      <div className="flex items-center justify-between gap-4 flex-wrap bg-gradient-to-r from-indigo-500/5 to-purple-500/5 dark:from-indigo-500/10 dark:to-purple-500/10 p-5 rounded-2xl border border-indigo-100/10 dark:border-slate-800/50 backdrop-blur-md">
+      <div className="flex items-center justify-between gap-4 flex-wrap bg-surface-container-lowest border-b border-outline-variant px-margin-desktop py-4 -mx-6 -mt-6">
         <div>
-          <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Target className="h-5.5 w-5.5 text-indigo-600 dark:text-indigo-400" />
+          <div className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground mb-1 select-none">
+            <span>Projects</span>
+            <ChevronRight className="h-3 w-3" />
+            <span>Sprint Board</span>
+          </div>
+          <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2 select-none">
+            <Target className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
             Scrum Board
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5 font-medium">Manage sprints, track issues and run automated live testing.</p>
+          </h2>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-4 flex-wrap">
           {view !== "reports" && view !== "board" && (
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -248,49 +282,51 @@ export default function ScrumBoard({ projectId }: { projectId: string }) {
               </select>
             </div>
           )}
-          <button
-            onClick={() => setShowImport(true)}
-            className="h-9 px-4 rounded-xl border border-indigo-100 dark:border-slate-800 bg-background/60 hover:bg-indigo-50/10 hover:border-indigo-200 dark:hover:border-slate-700 text-xs font-black flex items-center gap-2 transition-all shadow-sm"
-            title="Import user stories from Excel or CSV"
-          >
-            <Upload className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" /> Import
-          </button>
-          <button
-            onClick={() => setShowCreateEpic(true)}
-            className="h-9 px-4 rounded-xl border border-indigo-100 dark:border-slate-800 bg-background/60 hover:bg-violet-50/10 hover:border-violet-200 dark:hover:border-slate-700 text-xs font-black flex items-center gap-2 transition-all shadow-sm"
-          >
-            <Plus className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" /> Create epic
-          </button>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="h-9 px-4 rounded-xl border border-indigo-100 dark:border-slate-800 bg-background/60 hover:bg-indigo-50/10 hover:border-indigo-200 dark:hover:border-slate-700 text-xs font-black flex items-center gap-2 transition-all shadow-sm"
-          >
-            <Plus className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" /> Create sprint
-          </button>
-          <button
-            onClick={() => router.push(`/projects/${projectId}/board/create`)}
-            className="h-9 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center gap-2 transition-all shadow-md hover:shadow-indigo-500/10 hover:shadow-lg"
-          >
-            <Plus className="h-3.5 w-3.5" /> Create
-          </button>
+          
+          {/* User avatars group */}
+          <div className="flex -space-x-2 mr-2 select-none">
+            <img className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-30 shadow-sm" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
+            <img className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-20 shadow-sm" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
+            <img className="w-8 h-8 rounded-full border-2 border-surface-container-lowest object-cover z-10 shadow-sm" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&auto=format&q=60" alt="Avatar" />
+            <div className="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-slate-200 dark:bg-slate-800 text-[10px] text-muted-foreground flex items-center justify-center font-extrabold z-0 shadow-sm">+3</div>
+          </div>
+
+          <div className="flex items-center gap-2 border-l border-outline-variant pl-4">
+            <button
+              onClick={() => setShowImport(true)}
+              className="h-9 px-4 rounded-lg border border-outline-variant bg-background hover:bg-slate-50 text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+              title="Import user stories from Excel or CSV"
+            >
+              <Upload className="h-4 w-4 text-slate-500" /> Import
+            </button>
+            <button
+              onClick={() => setShowCreateEpic(true)}
+              className="h-9 px-4 rounded-lg border border-outline-variant bg-background hover:bg-slate-50 text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+            >
+              <Plus className="h-4 w-4 text-slate-500" /> Create Epic
+            </button>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+            >
+              <Plus className="h-4 w-4" /> Create Sprint
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Redesigned Stripe/Linear-Style Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800/80 pb-0.5">
+      <div className="flex items-center gap-1 border-b border-outline-variant pb-px">
         {TABS.map((t) => {
           const active = view === t.id
           return (
             <button
               key={t.id}
               onClick={() => { setView(t.id); clearSelection() }}
-              className={`relative pb-3 pt-1 px-4 text-xs font-bold transition-all duration-200 flex items-center gap-2 ${active ? "text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-muted-foreground hover:text-foreground hover:pb-3.5"}`}
+              className={`relative pb-3 pt-2 px-4 text-xs font-bold transition-all duration-200 flex items-center gap-2 ${active ? "text-indigo-600 dark:text-indigo-400 font-extrabold border-b-2 border-indigo-600 dark:border-indigo-400 -mb-px bg-slate-50/50 dark:bg-slate-900/30 rounded-t-lg" : "text-muted-foreground hover:text-foreground"}`}
             >
               <t.icon className={`h-4 w-4 ${active ? "text-indigo-600 dark:text-indigo-400" : "text-muted-foreground"}`} />
               {t.label}
-              {active && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-full animate-in fade-in duration-300" />
-              )}
             </button>
           )
         })}

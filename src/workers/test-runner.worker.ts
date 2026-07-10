@@ -243,10 +243,24 @@ const heartbeatInterval = setInterval(async () => {
   }
 }, 5000)
 
+// Inbound integration polling — pulls external status/title changes back into
+// local records for projects with inbound sync enabled (fallback for providers
+// without webhooks, e.g. OpenProject). Runs every 2 minutes.
+const inboundPollInterval = setInterval(async () => {
+  try {
+    const { pollAllInbound } = await import("@/lib/integrations/core/poll")
+    const r = await pollAllInbound()
+    if (r.applied > 0) console.log(`[inbound-poll] applied ${r.applied} change(s) across ${r.projects} project(s)`)
+  } catch (err: any) {
+    console.error("[inbound-poll] failed:", err?.message)
+  }
+}, 120000)
+
 console.log(`All background workers initialized successfully under process: ${workerId}`)
 
 process.on("SIGTERM", async () => {
   clearInterval(heartbeatInterval)
+  clearInterval(inboundPollInterval)
   await testRunWorker.close().catch(() => {})
   await visualCheckWorker.close().catch(() => {})
   await agentRunWorker.close().catch(() => {})

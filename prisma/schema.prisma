@@ -303,6 +303,7 @@ model Project {
   agentMemories           AgentMemory[]
   qaAgentRuns             QAAgentRun[]
   openProjectIntegration  OpenProjectIntegration?
+  projectIntegration      ProjectIntegration?
   sprints                 Sprint[]
 
   createdAt   DateTime     @default(now())
@@ -1295,6 +1296,9 @@ model RequirementSubtask {
 // ─── External sync mapping (TestCase / BugReport ↔ OpenProject work package) ─
 enum ExternalProvider {
   OpenProject
+  Jira
+  AzureDevOps
+  ClickUp
 }
 
 model ExternalSyncMapping {
@@ -1855,6 +1859,68 @@ model QAAgentRunEvent {
   createdAt   DateTime   @default(now())
 
   @@index([agentRunId])
+}
+
+// ─── Unified project-management integration (Jira/Azure DevOps/ClickUp/OpenProject) ─
+// Provider-agnostic replacement for the per-provider config. The connected tool is
+// chosen per project; provider-specific settings live in JSON columns, while the
+// connection/auth/toggles are typed. Reconciled against the WorkItemProvider
+// abstraction in src/lib/integrations/core.
+
+enum IntegrationProvider {
+  OpenProject
+  Jira
+  AzureDevOps
+  ClickUp
+}
+
+model ProjectIntegration {
+  id                 String              @id @default(uuid())
+  projectId          String              @unique
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  provider           IntegrationProvider
+  enabled            Boolean             @default(true)
+
+  baseUrl            String
+  // OP slug | Jira project key | ADO project | ClickUp list id
+  externalProjectKey String
+  username           String? // Jira account email / etc. (token-only providers leave null)
+
+  // Encrypted API token / PAT / personal token (AES-256-GCM, src/lib/crypto)
+  apiTokenEncrypted  String
+  apiTokenIv         String
+  apiTokenAuthTag    String
+  apiTokenKeyVersion String              @default("v1")
+
+  // Provider-agnostic mapping config (see src/lib/integrations/core/types)
+  typeMapping        Json? // { testCase, bug, userStory } -> external type id
+  statusMapping      Json? // local status -> external status/state id
+  boardConfig        Json? // { strategy, boardId, columnId, versionId, assigneeId }
+  parentConfig       Json? // { strategy, defaultParentId }
+  customFieldMapping Json?
+
+  // Auto-sync toggles (parity with the legacy OpenProject flags)
+  autoSyncTestCases   Boolean @default(false)
+  autoSyncResults     Boolean @default(true)
+  autoCreateBugOnFailure Boolean @default(true)
+  autoSyncBugToTracker   Boolean @default(false)
+
+  // Two-way (inbound) sync
+  inboundSyncEnabled Boolean  @default(false)
+  webhookSecret      String?
+  externalWebhookId  String? // id of the webhook/service-hook we registered, for cleanup
+  lastInboundAt      DateTime?
+
+  // Monitoring
+  lastConnectionStatus    String?
+  lastConnectionCheckedAt DateTime?
+  lastSyncAt              DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([provider])
 }
 
 // ─── OpenProject Integration ─────────────────────────────────────────────────
