@@ -139,7 +139,7 @@ export default function SprintKanban({ stories, sprints, onPatch, onOpen, config
       </div>
 
       <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={(e: DragStartEvent) => setActiveId(String(e.active.id))} onDragEnd={onDragEnd}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="flex gap-6 overflow-x-auto pb-4 items-start select-none kanban-scroll min-h-[60vh] min-w-max">
           {BOARD_COLUMNS.map((col) => {
             const isCollapsed = config.collapsedColumns.includes(col.id)
             if (isCollapsed) {
@@ -257,16 +257,19 @@ function KanbanColumn({
     done: "bg-emerald-50/15 dark:bg-emerald-950/5",
   }
 
+  const isInProgress = col.id === "inprogress"
+  const dotColorClass = col.id === "todo" ? "bg-slate-400" : isInProgress ? "bg-primary animate-pulse" : col.id === "blocked" ? "bg-error" : "bg-emerald-500"
+  
   return (
     <div
       ref={setNodeRef}
-      className={`border border-slate-100 dark:border-slate-800/80 border-t-2 ${col.accent} rounded-2xl flex flex-col transition-all duration-300 shadow-sm ${colBgMap[col.id] || "bg-card"} ${isOver ? "ring-2 ring-indigo-400/80 bg-indigo-50/10" : ""} ${overLimit ? "bg-red-50/40 border-red-300 dark:bg-red-950/10" : ""}`}
+      className={`w-[320px] flex flex-col max-h-full bg-[#f8f9ff]/50 rounded-xl border border-outline-variant/60 shadow-sm flex-shrink-0 transition-all duration-300 ${isOver ? "border-2 border-dashed border-primary bg-indigo-50/20" : ""} ${overLimit ? "bg-red-50/40 border-red-300" : ""}`}
     >
-      <div className={`flex items-center justify-between px-3.5 py-3 border-b border-slate-100 dark:border-slate-800/50 backdrop-blur-md rounded-t-2xl ${overLimit ? "bg-red-50/70 dark:bg-red-950/20" : ""}`}>
-        <span className="text-[10px] font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">{col.label}</span>
-        <div className="flex items-center gap-1.5">
-          {overLimit && <AlertTriangle className="h-3.5 w-3.5 text-red-600 animate-bounce" />}
-          <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${overLimit ? "bg-red-100 text-red-700" : "bg-muted text-muted-foreground"}`}>
+      <div className={`flex items-center justify-between px-4 py-3 border-b rounded-t-xl ${isInProgress ? "border-primary/20 bg-indigo-50/40" : "border-outline-variant/50 bg-white"} ${overLimit ? "bg-red-50/70" : ""}`}>
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${dotColorClass}`} />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">{col.label}</span>
+          <span className={`text-[10px] font-black rounded-full px-2 py-0.5 ${isInProgress ? "bg-primary/10 text-primary" : "bg-slate-100 text-slate-600"}`}>
             {count}{wipLimit > 0 ? ` / Limit ${wipLimit}` : ""}
           </span>
         </div>
