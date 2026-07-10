@@ -178,7 +178,6 @@ export default function DashboardLayout({
 
   const managementItems = [
     { href: "/projects", label: "Projects", icon: FolderOpen },
-    { href: "/admin?tab=settings", label: "Settings", icon: Settings2 },
   ]
 
   const getHref = (basePath: string) => {
