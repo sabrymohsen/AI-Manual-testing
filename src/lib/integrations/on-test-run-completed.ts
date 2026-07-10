@@ -2,17 +2,18 @@
  * onTestRunCompleted
  *
  * Central hook called after every test run reaches a terminal status.
- * Handles:
+ * Handles (provider-agnostic — OpenProject / Jira / Azure DevOps / ClickUp):
  *   1. Auto-create bug report on failure (with duplicate prevention via BugOccurrence)
- *   2. Sync result to OpenProject (comment + status update on linked work package)
- *   3. If OpenProject bug sync is enabled and run failed, create/update bug WP in OpenProject
+ *   2. Sync result to the connected tracker (comment + status on the linked test-case item)
+ *   3. If bug sync is enabled and the run failed, create/update the bug in the tracker
  *
  * This must NEVER block or throw — test run completion is always preserved.
  */
 
 import { prisma } from "@/lib/db"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { loadIntegration, type LoadedIntegration } from "@/lib/integrations/core/load-integration"
+import { syncBugReport } from "@/lib/integrations/core/sync-bug-report"
+import type { WorkItemProvider } from "@/lib/integrations/core/provider"
 
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
 
@@ -48,62 +49,40 @@ export async function onTestRunCompleted(testRunId: string): Promise<void> {
 
     const isFailed = testRun.status === "Failed"
 
-    // ── Load dedicated OpenProject integration ────────────────────────────────
-    let opIntegration: any = null
+    // ── Load the connected integration (unified, or legacy OpenProject) ───────
+    let loaded: LoadedIntegration | null = null
     try {
-      opIntegration = await prisma.openProjectIntegration.findUnique({
-        where: { projectId: testRun.projectId },
-      })
+      loaded = await loadIntegration(testRun.projectId)
     } catch {
       // Model might not exist yet — graceful
     }
 
     // ── Step 1: Auto-create/update bug report if failed ───────────────────────
     let autoBugId: string | null = null
-    const shouldCreateBug = opIntegration
-      ? opIntegration.autoCreateBugOnFailure
-      : true // Default behavior if no dedicated integration
+    const shouldCreateBug = loaded ? loaded.autoCreateBugOnFailure : true
 
     if (isFailed && testRun.testCaseId && shouldCreateBug) {
       autoBugId = await autoCreateOrUpdateBug(testRun)
     }
 
-    // ── Step 2: Sync to OpenProject if configured ─────────────────────────────
-    if (opIntegration?.apiTokenEncrypted) {
-      let token = ""
-      try {
-        token = decryptSecret({
-          encrypted: opIntegration.apiTokenEncrypted,
-          iv: opIntegration.apiTokenIv,
-          authTag: opIntegration.apiTokenAuthTag,
-          keyVersion: opIntegration.apiTokenKeyVersion,
-        })
-      } catch {
-        console.error("[onTestRunCompleted] Token decrypt failed")
-        return
+    // ── Step 2: Sync to the connected tracker if configured ───────────────────
+    if (loaded && loaded.autoSyncResults) {
+      const provider = loaded.getClient()
+
+      // Sync result comment + status to the linked test-case item
+      if (testRun.testCaseId) {
+        await syncRunResult(testRun, provider, loaded)
       }
 
-      // Check if we should sync results
-      if (opIntegration.autoSyncResults !== false) {
-        const client = new OpenProjectClient(
-          opIntegration.baseUrl,
-          opIntegration.openProjectProjectIdentifier,
-          token
-        )
-
-        // Sync result comment to linked test-case work package
-        if (testRun.testCaseId) {
-          await syncRunResultToOpenProject(testRun, client, opIntegration)
-        }
-
-        // If failed and bug sync enabled, sync bug to OpenProject
-        if (isFailed && autoBugId && opIntegration.autoSyncBugToOpenProject) {
-          await syncBugToOpenProject(autoBugId, testRun, client, opIntegration)
+      // If failed and bug sync enabled, sync the bug to the tracker via the
+      // provider-agnostic engine (handles create/update + attachments + board).
+      if (isFailed && autoBugId && loaded.autoSyncBugToTracker) {
+        try {
+          await syncBugReport(autoBugId, { requireAutoFlag: true })
+        } catch (err: any) {
+          console.error("[onTestRunCompleted] bug sync failed:", err?.message)
         }
       }
-    } else {
-      // Fallback to legacy IntegrationConfig for non-OpenProject providers
-      // (This path is for Jira/Azure DevOps — handled by legacyNotify in notifier.ts)
     }
   } catch (err) {
     // Never block test run completion
@@ -203,19 +182,19 @@ async function autoCreateOrUpdateBug(testRun: any): Promise<string | null> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SYNC TEST RUN RESULT → OPENPROJECT (comment + status update)
+//  SYNC TEST RUN RESULT → TRACKER (comment + status update, provider-agnostic)
 // ─────────────────────────────────────────────────────────────────────────────
-async function syncRunResultToOpenProject(
+async function syncRunResult(
   testRun: any,
-  client: OpenProjectClient,
-  integration: any
+  provider: WorkItemProvider,
+  loaded: LoadedIntegration
 ): Promise<void> {
   try {
-    // Look up mapping for this test case
+    // Look up the mapping for this test case under the connected provider.
     const mapping = await prisma.externalSyncMapping.findUnique({
       where: {
         provider_localEntityType_localEntityId: {
-          provider: "OpenProject",
+          provider: loaded.provider as any,
           localEntityType: "TestCase",
           localEntityId: testRun.testCaseId,
         },
@@ -223,16 +202,13 @@ async function syncRunResultToOpenProject(
     })
 
     if (!mapping) {
-      // If autoSyncTestCases is enabled, we could sync it first
-      // But for safety, just skip — user should sync test cases explicitly
-      console.log(`[op-sync] No mapping for test case ${testRun.testCaseId} — skipping result sync`)
+      console.log(`[result-sync] No mapping for test case ${testRun.testCaseId} — skipping result sync`)
       return
     }
 
-    const wpId = mapping.externalId
+    const externalId = mapping.externalId
     const statusIcon = testRun.status === "Passed" ? "✅" : testRun.status === "Failed" ? "❌" : "⚠️"
 
-    // Build comment body
     let commentBody = `## ${statusIcon} Test Execution Result\n\n`
     commentBody += `**Result:** ${testRun.status}\n`
     commentBody += `**Run ID:** \`${testRun.id}\`\n`
@@ -242,56 +218,43 @@ async function syncRunResultToOpenProject(
     commentBody += `**Browser:** ${testRun.browserType}\n`
     commentBody += `**Report:** [View Report](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
 
-    // Steps summary
     const passedSteps = (testRun.stepResults || []).filter((s: any) => s.status === "Passed").length
     const failedSteps = (testRun.stepResults || []).filter((s: any) => s.status === "Failed").length
     commentBody += `### Summary\n- Steps Passed: ${passedSteps}\n- Steps Failed: ${failedSteps}\n\n`
 
-    // Failed steps detail
     const failedStep = testRun.stepResults.find((s: any) => s.status === "Failed")
     if (failedStep) {
       commentBody += `### Failed Step\nStep ${failedStep.stepNumber}: ${failedStep.actionDescription}\n\n`
       commentBody += `**Expected:** ${failedStep.expectedResult || "N/A"}\n`
       commentBody += `**Actual:** ${failedStep.actualResult || failedStep.errorDetails || "N/A"}\n\n`
     }
-
     commentBody += `*Synced from QA Engine*`
 
-    // POST comment to work package
-    const commentOk = await client.addWorkPackageComment(wpId, commentBody)
-
-    if (commentOk) {
-      console.log(`[op-sync] Commented on WP #${wpId} for run ${testRun.id}`)
-    } else {
-      console.error(`[op-sync] Comment failed on WP #${wpId}`)
+    let commentOk = false
+    try {
+      commentOk = await provider.addComment(externalId, commentBody)
+    } catch (err: any) {
+      console.error(`[result-sync] Comment failed on ${externalId}: ${err?.message}`)
     }
 
-    // Update status if mapped
-    const statusMap: Record<string, string | null> = {
-      Passed: integration.passedStatusId,
-      Failed: integration.failedStatusId,
-      Blocked: integration.blockedStatusId,
-      Running: integration.runningStatusId,
-      Error: integration.failedStatusId, // Map Error to Failed status
+    // Update status if mapped for this run status.
+    const sm = loaded.statusMapping
+    const statusMap: Record<string, string | null | undefined> = {
+      Passed: sm.passed,
+      Failed: sm.failed,
+      Blocked: sm.blocked,
+      Running: sm.running,
+      Error: sm.failed, // Map Error to Failed status
     }
     const mappedStatusId = statusMap[testRun.status]
-
     if (mappedStatusId) {
       try {
-        const wp = await client.getWorkPackage(wpId)
-        await client.updateWorkPackage(
-          wpId,
-          { _links: { status: { href: client.statusHref(mappedStatusId) } } },
-          wp.lockVersion
-        )
-        console.log(`[op-sync] Status updated on WP #${wpId} to ${mappedStatusId}`)
+        await provider.updateWorkItem(externalId, { statusId: mappedStatusId })
       } catch (statusErr: any) {
-        // Status update failed but comment was posted — don't fail the whole sync
-        console.warn(`[op-sync] Status update failed on WP #${wpId}: ${statusErr.message}`)
+        console.warn(`[result-sync] Status update failed on ${externalId}: ${statusErr.message}`)
       }
     }
 
-    // Update sync mapping timestamp
     await prisma.externalSyncMapping.update({
       where: { id: mapping.id },
       data: {
@@ -301,94 +264,6 @@ async function syncRunResultToOpenProject(
       },
     })
   } catch (err) {
-    console.error("[op-sync] syncRunResultToOpenProject error:", err)
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  SYNC BUG REPORT → OPENPROJECT (create/update work package for the bug)
-// ─────────────────────────────────────────────────────────────────────────────
-async function syncBugToOpenProject(
-  bugId: string,
-  testRun: any,
-  client: OpenProjectClient,
-  integration: any
-): Promise<void> {
-  try {
-    const bug = await prisma.bugReport.findUnique({
-      where: { id: bugId },
-      include: { testCase: true },
-    })
-    if (!bug) return
-
-    // Check if bug already has an OpenProject mapping
-    const existing = await prisma.externalSyncMapping.findUnique({
-      where: {
-        provider_localEntityType_localEntityId: {
-          provider: "OpenProject",
-          localEntityType: "BugReport",
-          localEntityId: bugId,
-        },
-      },
-    })
-
-    if (existing) {
-      // Already synced — just add a comment about the new occurrence
-      await client.addWorkPackageComment(
-        existing.externalId,
-        `## 🔁 Failure Recurrence\n\nRun ID: \`${testRun.id}\` — **${testRun.status}** at ${new Date().toLocaleString()}\n\n[View Run](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)`
-      )
-      return
-    }
-
-    // Build bug work package description
-    const tc = bug.testCase
-    let description = `## Auto-Created Bug from Failed Test\n\n`
-    description += `**Bug ID:** \`${bug.bugKey}\`\n`
-    description += `**Test Case:** ${tc?.title || "N/A"}\n`
-    description += `**Test Run:** \`${testRun.id}\`\n`
-    description += `**Failure Status:** ${testRun.status}\n`
-    description += `**Severity:** ${bug.severity}\n`
-    description += `**Environment:** ${testRun.project?.environment || "N/A"}\n`
-    description += `**Browser:** ${testRun.browserType}\n\n`
-    description += `## Steps to Reproduce\n${bug.stepsToReproduce}\n\n`
-    description += `## Expected Result\n${bug.expectedResult}\n\n`
-    description += `## Actual Result\n${bug.actualResult}\n\n`
-    description += `[View Report](${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report)\n\n`
-    description += `*Created automatically by QA Engine*\n\n`
-    description += `<!-- AI-Manual-QA-Tester:BugReport:${bug.id} -->`
-
-    // Build _links
-    const links: Record<string, { href: string }> = {}
-    if (integration.bugTypeId) {
-      links.type = { href: client.typeHref(integration.bugTypeId) }
-    }
-
-    const wp = await client.createWorkPackage({
-      subject: `[BUG] ${bug.title}`,
-      description: { format: "markdown", raw: description },
-      _links: links,
-    })
-
-    const wpUrl = client.workPackageUrl(wp.id)
-
-    // Save mapping
-    await prisma.externalSyncMapping.create({
-      data: {
-        projectId: testRun.projectId,
-        provider: "OpenProject",
-        localEntityType: "BugReport",
-        localEntityId: bugId,
-        externalId: String(wp.id),
-        externalUrl: wpUrl,
-        externalType: "Bug",
-        lastSyncedAt: new Date(),
-        lastSyncStatus: "success",
-      },
-    })
-
-    console.log(`[op-sync] Bug WP #${wp.id} created for bug ${bug.bugKey}`)
-  } catch (err) {
-    console.error("[op-sync] syncBugToOpenProject error:", err)
+    console.error("[result-sync] syncRunResult error:", err)
   }
 }

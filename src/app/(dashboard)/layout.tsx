@@ -2,17 +2,15 @@
 
 import { useEffect, useState, useRef } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   LayoutDashboard,
   FolderKanban,
   FileText,
   Bug,
-  Settings,
   LogOut,
   Play,
   Video,
-  Globe,
   Zap,
   ChevronDown,
   ChevronRight,
@@ -31,7 +29,11 @@ import {
   Shield,
   Cpu,
   FolderOpen,
-  Camera
+  Camera,
+  ListOrdered,
+  LayoutGrid,
+  LineChart,
+  Settings2
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 
@@ -59,7 +61,7 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-
+  const searchParams = useSearchParams()
   // Project selector state
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>("")
@@ -153,6 +155,9 @@ export default function DashboardLayout({
   // Navigation Items
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/board?tab=backlog", label: "Backlog", icon: ListOrdered },
+    { href: "/board?tab=board", label: "Sprint Board", icon: LayoutGrid },
+    { href: "/board?tab=reports", label: "Reports", icon: LineChart },
   ]
 
   const workflowItems = [
@@ -161,16 +166,11 @@ export default function DashboardLayout({
     { href: "/live-qa-session", label: "Live QA Session", icon: FlaskConical },
     { href: "/recorder-studio", label: "Recorder Studio", icon: Video },
     { href: "/bug-reports", label: "Bug Reports", icon: Bug },
-    { href: "/openproject-sync", label: "OpenProject Sync", icon: Globe },
   ]
 
   const managementItems = [
-    { href: "/projects", label: "Projects", icon: FolderKanban },
-    { href: "/board", label: "Board", icon: Trello },
-  ]
-
-  const configItems = [
-    { href: "/settings", label: "Settings", icon: Settings },
+    { href: "/projects", label: "Projects", icon: FolderOpen },
+    { href: "/admin?tab=settings", label: "Settings", icon: Settings2 },
   ]
 
   const getHref = (basePath: string) => {
@@ -180,10 +180,11 @@ export default function DashboardLayout({
     if (basePath === "/live-qa-session") return `/projects/${activeProjectId}/live-qa-session`
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
-    if (basePath === "/openproject-sync") return `/projects/${activeProjectId}/openproject-sync`
-    if (basePath === "/board") return `/projects/${activeProjectId}/board`
+    if (basePath.startsWith("/board")) {
+      const query = basePath.includes("?") ? basePath.substring(basePath.indexOf("?")) : ""
+      return `/projects/${activeProjectId}/board${query}`
+    }
     if (basePath === "/requirements") return `/projects/${activeProjectId}/requirements`
-    if (basePath === "/settings") return `/projects/${activeProjectId}/settings`
     return basePath
   }
 
@@ -272,16 +273,24 @@ export default function DashboardLayout({
             <>
               {navItems.map((item) => {
                 const dest = getHref(item.href)
-                const isActive = pathname === dest || pathname === item.href
+                const hasTab = item.href.includes("?tab=")
+                const targetTab = hasTab ? item.href.split("?tab=")[1] : null
+                const activeTab = searchParams.get("tab")
+                
+                const isTabActive = hasTab 
+                  ? (pathname.includes("/board") && activeTab === targetTab)
+                  : (pathname.includes("/board") && !activeTab && item.href.endsWith("/board"))
+                
+                const isActive = isTabActive || (pathname === dest && !hasTab)
                 return (
                   <Link
                     key={item.href}
                     href={dest}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
                     }`}
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
+                    <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
                     {item.label}
                   </Link>
                 )
@@ -298,10 +307,10 @@ export default function DashboardLayout({
                     key={item.href}
                     href={dest}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
                     }`}
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
+                    <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
                     {item.label}
                   </Link>
                 )
@@ -318,30 +327,10 @@ export default function DashboardLayout({
                     key={item.href}
                     href={dest}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
+                      isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
                     }`}
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {item.label}
-                  </Link>
-                )
-              })}
-
-              <div className="border-t my-2" />
-              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Configuration</span>
-
-              {configItems.map((item) => {
-                const dest = getHref(item.href)
-                const isActive = pathname === dest || pathname.startsWith(dest + "/")
-                return (
-                  <Link
-                    key={item.href}
-                    href={dest}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                    }`}
-                  >
-                    <item.icon className="h-4 w-4 shrink-0" />
+                    <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
                     {item.label}
                   </Link>
                 )

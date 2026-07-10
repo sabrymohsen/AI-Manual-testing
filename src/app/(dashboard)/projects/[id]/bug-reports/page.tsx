@@ -10,6 +10,7 @@ import { ActiveProjectContextBar } from "@/components/ui/active-project-context-
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { 
   Bug, 
   Search, 
@@ -157,6 +158,9 @@ export default function ProjectBugReportsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = params.id as string
+
+  // Connected tracker name (Jira / Azure DevOps / ClickUp / OpenProject) for labels.
+  const { name: trackerName } = useProjectIntegration(projectId)
 
   // Project details
   const [project, setProject] = useState<any>(null)
@@ -526,7 +530,7 @@ export default function ProjectBugReportsPage() {
         body: JSON.stringify(placement || {})
       })
       if (res.ok) {
-        showToastMsg("Synchronised with OpenProject successfully!")
+        showToastMsg(`Synchronised with ${trackerName} successfully!`)
         handleOpenDetail(bugId)
         loadBugsList()
       } else {
@@ -534,7 +538,7 @@ export default function ProjectBugReportsPage() {
         showToastMsg(data.error || "Sync failed", "error")
       }
     } catch (err) {
-      showToastMsg("Network error syncing with OpenProject", "error")
+      showToastMsg(`Network error syncing with ${trackerName}`, "error")
     } finally {
       setSyncingOP(false)
     }
@@ -2124,7 +2128,7 @@ export default function ProjectBugReportsPage() {
         sourceOptions={opSourceOptions}
         onCreated={(bug, { syncedToOpenProject }) => {
           showToastMsg(`Defect ${bug.bugKey || ""} successfully reported!`)
-          if (syncedToOpenProject) showToastMsg("Synchronised with OpenProject successfully!")
+          if (syncedToOpenProject) showToastMsg(`Synchronised with ${trackerName} successfully!`)
           loadBugsList()
         }}
       />

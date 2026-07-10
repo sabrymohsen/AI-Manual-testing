@@ -45,7 +45,12 @@ export function ProjectSelectionGateway({
   function handleSelect(projectId: string) {
     localStorage.setItem("activeProjectId", projectId)
     window.dispatchEvent(new Event("projectChanged"))
-    router.replace(`/projects/${projectId}/${targetWorkflow}`)
+    // A "?"-prefixed target is a query on the project page (e.g. "?tab=general");
+    // otherwise it's a sub-route segment (e.g. "test-cases").
+    const dest = targetWorkflow.startsWith("?")
+      ? `/projects/${projectId}${targetWorkflow}`
+      : `/projects/${projectId}/${targetWorkflow}`
+    router.replace(dest)
   }
 
   return (

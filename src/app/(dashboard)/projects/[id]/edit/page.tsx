@@ -8,7 +8,7 @@ export default function EditLegacyRedirect() {
   const params = useParams()
 
   useEffect(() => {
-    router.replace(`/projects/${params.id}/settings`)
+    router.replace(`/projects/${params.id}?tab=general`)
   }, [router, params.id])
 
   return (
