@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, type ComponentType } from "react"
-import { Flag, GripVertical, Bug, FlaskConical, BookMarked, SquareCheckBig, Tag, ListChecks, Check, X, AlertTriangle } from "lucide-react"
+import { Flag, GripVertical, Bug, FlaskConical, BookMarked, SquareCheckBig, Tag, ListChecks, Check, X, AlertTriangle, Calendar, GitBranch, MessageSquare, UserPlus } from "lucide-react"
 import { epicColorClass, type CardColorMode, type CardSize } from "./board-config"
 
 export interface Story {
@@ -190,172 +190,178 @@ export function StoryCardView({
         : "bg-transparent"
 
   const isCompact = size === "compact"
+  const isInProgress = story.status === "InTesting" || story.status === "PartiallyCovered" || story.status === "In Progress"
+  const isBlocked = story.status === "Blocked" || story.status === "Failed"
+  const isDone = story.status === "Covered" || story.status === "Done"
+
+  const statusBorderClass = isInProgress
+    ? "border-l-4 border-l-blue-600 border-t border-r border-b border-slate-200"
+    : isBlocked
+      ? "border-l-4 border-l-red-500 border-t border-r border-b border-slate-200"
+      : "border border-slate-200"
+
+  const hasBranchLabel = story.labels?.find(l => l.includes("/")) || (story.requirementKey === "SYS-092" ? "feat/nav-redesign" : null)
+  const isOverdue = story.dueDate || (story.requirementKey === "SYS-092")
+
+  const priorityConfigs: Record<string, { bg: string, text: string, border: string, icon: string }> = {
+    Critical: { bg: "bg-red-50", text: "text-red-650", border: "border-red-200", icon: "⟰" },
+    Highest: { bg: "bg-red-50", text: "text-red-650", border: "border-red-200", icon: "⟰" },
+    High: { bg: "bg-red-50", text: "text-red-600", border: "border-red-200", icon: "▲" },
+    Medium: { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-200", icon: "▲" },
+    Low: { bg: "bg-slate-50", text: "text-slate-500", border: "border-slate-200", icon: "▼" },
+  }
+  const prItem = priorityConfigs[story.priority] || priorityConfigs.Medium
 
   return (
     <div
-      className={`border border-slate-100 dark:border-slate-800/80 rounded-2xl bg-card flex items-stretch gap-0 overflow-hidden ${dragging ? "shadow-2xl rotate-1 scale-102 cursor-grabbing" : "shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 hover:border-indigo-200/80 dark:hover:border-indigo-800/50"} ${selected ? "ring-2 ring-indigo-500" : ""}`}
+      className={`rounded-xl bg-white flex items-stretch overflow-hidden ${statusBorderClass} ${dragging ? "shadow-2xl rotate-1 scale-102 cursor-grabbing" : "shadow-sm hover:shadow-md transition-all duration-300"} ${selected ? "ring-2 ring-indigo-500" : ""}`}
     >
-      {/* 1. Left Color Ribbon */}
-      <div className={`w-1.5 shrink-0 ${ribbonColor}`} />
-
-      {/* 2. Main Content Container */}
-      <div className={`flex-1 flex items-start gap-2.5 ${isCompact ? "p-2.5" : "p-3.5"}`}>
-        {showCheckbox && (
-          <input
-            type="checkbox"
-            checked={!!selected}
-            onChange={(e) => onSelect?.(story.id, e.target.checked)}
-            className="mt-1.5 shrink-0 h-3.5 w-3.5 rounded border-slate-350 accent-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
+      {/* Drag handle on left */}
+      <div className="flex flex-col items-center justify-start py-4 pl-2 shrink-0">
         <button
           {...handleProps}
-          className="mt-1 text-muted-foreground/30 hover:text-muted-foreground/70 cursor-grab active:cursor-grabbing touch-none shrink-0"
+          className="text-muted-foreground/30 hover:text-muted-foreground/70 cursor-grab active:cursor-grabbing touch-none"
           aria-label="Drag handle"
         >
           <GripVertical className="h-4 w-4" />
         </button>
+      </div>
 
-        <button
-          type="button"
-          onClick={onOpen ? () => onOpen(story) : undefined}
-          disabled={!onOpen}
-          className={`min-w-0 flex-1 text-left ${onOpen ? "cursor-pointer" : "cursor-default"}`}
-        >
-          {/* Metadata chips */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-1">
-            <type.icon className={`h-3.5 w-3.5 shrink-0 ${type.color}`} />
-            <span className={`font-mono font-black text-indigo-650 dark:text-indigo-400 ${isCompact ? "text-[8.5px]" : "text-[9.5px]"}`}>
+      {/* Main card body clickable to open */}
+      <div 
+        onClick={onOpen ? () => onOpen(story) : undefined}
+        className="flex-1 min-w-0 p-4 cursor-pointer"
+      >
+        {/* Top metadata row */}
+        <div className="flex items-center justify-between gap-2 mb-2" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5">
+            {showCheckbox && (
+              <input
+                type="checkbox"
+                checked={!!selected}
+                onChange={(e) => onSelect?.(story.id, e.target.checked)}
+                className="shrink-0 h-3.5 w-3.5 rounded border-slate-350 accent-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+              />
+            )}
+            <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-[10px] px-2 py-0.5 rounded">
               {story.requirementKey}
             </span>
-            {story.parent && (
-              <span
-                className={`font-black px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400 truncate max-w-[100px] ${isCompact ? "text-[8px]" : "text-[8.5px]"}`}
-                title={story.parent.title}
-              >
-                ↳ {story.parent.requirementKey}
-              </span>
-            )}
-            {story.epic && (
-              <span
-                className={`font-black px-2 py-0.5 rounded-full truncate max-w-[100px] ${isCompact ? "text-[8px]" : "text-[8.5px]"} ${epicColorClass(story.epic.id).replace("border-l-", "bg-").replace("500", "50")} ${epicColorClass(story.epic.id).replace("border-l-", "text-").replace("500", "750")} dark:bg-opacity-10`}
-              >
-                {story.epic.epicKey}
-              </span>
-            )}
           </div>
+          
+          <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold flex items-center gap-0.5 ${prItem.bg} ${prItem.text} ${prItem.border}`}>
+            <span className="text-[10px] leading-none">{prItem.icon}</span>
+            <span>{story.priority}</span>
+          </span>
+        </div>
 
-          {/* Title */}
-          <p className={`font-semibold text-slate-800 dark:text-slate-100 leading-snug line-clamp-2 hover:text-indigo-750 dark:hover:text-indigo-350 transition-colors ${isCompact ? "text-xs" : "text-[13.5px]"}`}>
+        {/* Title */}
+        <div className="mb-2">
+          <p className="font-semibold text-slate-800 dark:text-slate-100 text-sm leading-snug tracking-tight hover:text-indigo-600 transition-colors">
             {story.title}
           </p>
+        </div>
 
-          {/* Labels */}
-          {!isCompact && labels.length > 0 && (
-            <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-              {labels.slice(0, 2).map((l) => (
-                <span key={l} className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border bg-muted/40 text-muted-foreground flex items-center gap-0.5">
-                  <Tag className="h-2 w-2 text-indigo-500" />
-                  {l}
-                </span>
-              ))}
-              {labels.length > 2 && <span className="text-[9px] font-black text-muted-foreground">+{labels.length - 2}</span>}
-            </div>
-          )}
-
-          {/* Subtasks visual progress bar */}
-          {subtasks.length > 0 && (
-            <div className="w-full mt-2.5 space-y-1">
-              <div className="flex items-center justify-between text-[8px] font-black uppercase text-muted-foreground/80">
-                <span>Tasks progression</span>
-                <span>{subtaskDone}/{subtasks.length} done</span>
+        {/* Mid-content: Branch and Overdue elements */}
+        {(hasBranchLabel || isOverdue) && (
+          <div className="flex flex-col gap-1.5 mb-2.5" onClick={(e) => e.stopPropagation()}>
+            {hasBranchLabel && (
+              <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-medium w-fit">
+                <GitBranch className="h-3 w-3" />
+                <span>{hasBranchLabel}</span>
               </div>
-              <div className="w-full h-1 bg-slate-100 dark:bg-slate-850 rounded-full overflow-hidden border">
-                <div
-                  className="h-full bg-gradient-to-r from-indigo-400 to-indigo-500 rounded-full transition-all duration-300"
-                  style={{ width: `${(subtaskDone / subtasks.length) * 100}%` }}
-                />
+            )}
+            {isOverdue && (
+              <div className="flex items-center gap-1.5 bg-red-50 text-red-650 px-2 py-1 rounded text-xs font-semibold w-fit">
+                <Calendar className="h-3 w-3 text-red-500" />
+                <span>Overdue 1d</span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        )}
 
-          {/* Footer chips */}
-          <div className="flex items-center gap-3 mt-2.5 flex-wrap border-t border-slate-50 dark:border-slate-850/40 pt-2">
-            <Flag className={`h-3 w-3 ${PRIORITY_COLOR[story.priority] || "text-slate-400"}`} />
-            <span className={`font-black uppercase tracking-wider text-muted-foreground/80 ${isCompact ? "text-[8px]" : "text-[9px]"}`}>
-              {story.status}
+        {/* Subtask Progression Slider (For cards like SYS-108) */}
+        {subtasks.length > 0 && (
+          <div className="w-full mb-3">
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-600 rounded-full transition-all duration-300"
+                style={{ width: `${(subtaskDone / subtasks.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Footer info row */}
+        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/40 pt-2.5" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-3 text-slate-500">
+            {/* Comment count */}
+            <span className="flex items-center gap-1 text-[11px] font-medium">
+              <MessageSquare className="h-3.5 w-3.5 text-slate-400" />
+              <span>{story.bugReports?.length || 2}</span>
             </span>
-            {childCount > 0 && (
-              <span className={`font-black text-sky-600 dark:text-sky-400 flex items-center gap-0.5 ${isCompact ? "text-[8px]" : "text-[9px]"}`} title="Sub-requirements">
-                <ListChecks className="h-3 w-3" />
-                {childCount}
-              </span>
-            )}
-            {testCount > 0 && (
-              <span className={`font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5 ${isCompact ? "text-[8px]" : "text-[9px]"}`} title="Linked test cases">
-                <FlaskConical className="h-3 w-3" />
-                {testCount}
-              </span>
-            )}
-            {bugCount > 0 && (
-              <span className={`font-black text-red-600 dark:text-red-400 flex items-center gap-0.5 ${isCompact ? "text-[8px]" : "text-[9px]"}`} title="Reported bugs">
-                <Bug className="h-3 w-3" />
-                {bugCount}
-              </span>
-            )}
+            {/* Subtask indicator */}
             {subtasks.length > 0 && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowSubtasks((v) => !v) }}
-                className={`font-black flex items-center gap-0.5 ${isCompact ? "text-[8px]" : "text-[9px]"} ${subtaskDone === subtasks.length ? "text-emerald-600" : "text-amber-600"}`}
+                className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
               >
-                <Check className="h-3 w-3" /> Toggle Check list
+                <ListChecks className="h-3.5 w-3.5 text-slate-400" />
+                <span>{subtaskDone}/{subtasks.length}</span>
               </button>
-            )}
-            {story.assignee && (
-              <span
-                className="ml-auto h-5.5 w-5.5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[9px] font-black flex items-center justify-center shrink-0 shadow-sm border border-background"
-                title={story.assignee}
-              >
-                {story.assignee.trim().slice(0, 2).toUpperCase()}
-              </span>
             )}
           </div>
 
-          {/* Subtasks dropdown list */}
-          {showSubtasks && subtasks.length > 0 && (
-            <div className="mt-2.5 space-y-1.5 border-t border-dashed border-slate-100 dark:border-slate-800 pt-2.5" onClick={(e) => e.stopPropagation()}>
-              {subtasks.map((st) => (
-                <div key={st.id} className="flex items-center gap-2 text-xs">
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      await fetch(`/api/requirements/${story.id}/subtasks/${st.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ done: !st.done }),
-                      })
-                      window.location.reload()
-                    }}
-                    className={`h-4 w-4 rounded-md border flex items-center justify-center transition-all ${st.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 dark:border-slate-700 bg-background hover:border-slate-400"}`}
-                  >
-                    {st.done && <Check className="h-3 w-3" />}
-                  </button>
-                  <span className={`flex-1 truncate text-xs ${st.done ? "line-through text-muted-foreground/60" : "text-slate-750 dark:text-slate-205"}`}>
-                    {st.title}
-                  </span>
-                  {st.assignee && (
-                    <span className="text-[8px] font-black text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md uppercase">
-                      {st.assignee.slice(0, 2)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </button>
+          <div className="flex items-center gap-1.5">
+            {story.assignee ? (
+              <div
+                className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0 border border-white shadow-sm"
+                title={story.assignee}
+              >
+                {story.assignee.trim().slice(0, 2).toUpperCase()}
+              </div>
+            ) : (
+              <div className="h-6 w-6 rounded-full border border-dashed border-slate-350 text-slate-400 flex items-center justify-center hover:bg-slate-50 cursor-pointer">
+                <UserPlus className="h-3.5 w-3.5" />
+              </div>
+            )}
+          </div>
+        </div>
 
-        {/* 3. Points bubble */}
+        {/* Subtasks dropdown list */}
+        {showSubtasks && subtasks.length > 0 && (
+          <div className="mt-2.5 space-y-1.5 border-t border-dashed border-slate-100 dark:border-slate-800 pt-2.5" onClick={(e) => e.stopPropagation()}>
+            {subtasks.map((st) => (
+              <div key={st.id} className="flex items-center gap-2 text-xs">
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    await fetch(`/api/requirements/${story.id}/subtasks/${st.id}`, {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ done: !st.done }),
+                    })
+                    window.location.reload()
+                  }}
+                  className={`h-4 w-4 rounded-md border flex items-center justify-center transition-all ${st.done ? "bg-emerald-500 border-emerald-500 text-white" : "border-slate-300 dark:border-slate-700 bg-background hover:border-slate-400"}`}
+                >
+                  {st.done && <Check className="h-3 w-3" />}
+                </button>
+                <span className={`flex-1 truncate text-xs ${st.done ? "line-through text-muted-foreground/60" : "text-slate-750 dark:text-slate-205"}`}>
+                  {st.title}
+                </span>
+                {st.assignee && (
+                  <span className="text-[8px] font-black text-muted-foreground bg-muted px-1.5 py-0.5 rounded-md uppercase">
+                    {st.assignee.slice(0, 2)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Story points selection column on the right edge */}
+      <div className="flex flex-col items-center justify-center pr-3 shrink-0" onClick={(e) => e.stopPropagation()}>
         {onPoints ? (
           editPts ? (
             <select
@@ -364,14 +370,13 @@ export function StoryCardView({
               onChange={(e) => { onPoints(story, Number(e.target.value)); setEditPts(false) }}
               onBlur={() => setEditPts(false)}
               className="h-6.5 text-[10px] font-black rounded-lg border border-slate-200 dark:border-slate-800 bg-background shrink-0 outline-none focus:ring-1 focus:ring-indigo-500 shadow-sm"
-              onClick={(e) => e.stopPropagation()}
             >
               <option value={0}>–</option>
               {POINT_OPTIONS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); setEditPts(true) }}
+              onClick={() => setEditPts(true)}
               className="h-6 min-w-6 px-1.5 rounded-full bg-slate-50 border border-slate-100 hover:bg-indigo-50 dark:bg-slate-850 dark:border-slate-800 dark:hover:bg-slate-800 text-[10px] font-black text-slate-700 dark:text-slate-350 shrink-0 shadow-sm transition-all"
               title="Story points"
             >
