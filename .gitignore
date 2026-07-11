@@ -49,3 +49,7 @@ storage/recordings/*
 playwright-report/
 test-results/
 
+
+# runtime user uploads & local scratch
+public/uploads/avatars/
+preview-screenshot.png

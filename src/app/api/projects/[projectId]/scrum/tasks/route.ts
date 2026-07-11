@@ -4,13 +4,17 @@ import { requireProjectMember, requireProjectPermission } from "@/lib/api-guards
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { taskInclude, serializeTask, logActivity } from "@/lib/scrum/server"
+import { notify } from "@/lib/notifications"
+import { logUserActivity } from "@/lib/user-activity"
 
 const STATUSES = ["TODO", "IN_PROGRESS", "DONE", "REVIEW", "TESTING", "DEPLOYED"] as const
 const PRIORITIES = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"] as const
+const TYPES = ["STORY", "TASK", "BUG", "TEST_CASE", "SUBTASK", "EPIC"] as const
 
 const createSchema = z.object({
   title: z.string().min(1).max(300),
   description: z.string().optional().nullable(),
+  type: z.enum(TYPES).optional(),
   status: z.enum(STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),
   storyPoints: z.number().int().min(0).max(999).optional().nullable(),
@@ -103,6 +107,7 @@ export async function POST(
       projectId: params.projectId,
       title: data.title,
       description: data.description ?? null,
+      type: data.type ?? "STORY",
       status,
       priority: data.priority ?? "MEDIUM",
       storyPoints: data.storyPoints ?? null,
@@ -118,6 +123,22 @@ export async function POST(
   })
 
   await logActivity(task.id, "created", `Task created in ${status}`, auth.session.user.id)
+  logUserActivity(auth.session.user.id, "TASK_CREATED", `Created "${task.title}"`, params.projectId)
+
+  // Notify assignees added at creation time (excluding the creator).
+  const notifyIds = (data.assigneeIds ?? []).filter((id) => id !== auth.session.user.id)
+  if (notifyIds.length > 0) {
+    notify(
+      notifyIds.map((userId) => ({
+        userId,
+        type: "TASK_ASSIGNED" as const,
+        title: "New task assigned",
+        body: `You've been assigned to ${task.title}`,
+        projectId: params.projectId,
+        actionUrl: `/projects/${params.projectId}/scrum?task=${task.id}`,
+      }))
+    ).catch(() => {})
+  }
 
   return NextResponse.json({ task: serializeTask(task, project?.boardKey) }, { status: 201 })
 }

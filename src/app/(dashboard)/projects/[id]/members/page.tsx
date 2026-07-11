@@ -172,7 +172,11 @@ export default function MembersPage() {
               {members.map((m) => (
                 <tr key={m.id} className="hover:bg-slate-50">
                   <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
+                    <a
+                      href={`/users/${m.user.id}`}
+                      className="flex items-center gap-2 group/profile"
+                      title="View profile"
+                    >
                       {m.user.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.user.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
@@ -181,8 +185,10 @@ export default function MembersPage() {
                           {initials(m.user.name, m.user.email)}
                         </div>
                       )}
-                      <span className="font-medium text-slate-800">{m.user.name || "—"}</span>
-                    </div>
+                      <span className="font-medium text-slate-800 group-hover/profile:text-indigo-600 group-hover/profile:underline">
+                        {m.user.name || "—"}
+                      </span>
+                    </a>
                   </td>
                   <td className="px-4 py-2.5 text-slate-500">{m.user.email}</td>
                   <td className="px-4 py-2.5">

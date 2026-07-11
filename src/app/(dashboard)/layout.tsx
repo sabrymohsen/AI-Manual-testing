@@ -38,6 +38,17 @@ import { BackButton } from "@/components/ui/back-button"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { PermissionGate, GlobalAdminGate } from "@/components/permissions/PermissionGate"
 import { ProjectSwitcher } from "@/components/layout/ProjectSwitcher"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
+import { Toaster } from "@/components/ui/sonner"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { UserCircle2 } from "lucide-react"
 import type { ProjectPermission } from "@/lib/permissions"
 
 interface ProjectOption {
@@ -77,7 +88,7 @@ export default function DashboardLayout({
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [activeProjectId, setActiveProjectId] = useState<string>("")
   const [activeProjectStats, setActiveProjectStats] = useState<ProjectStats | null>(null)
-  const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string } | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string; avatarUrl?: string | null } | null>(null)
   const [token, setToken] = useState<string>("")
   // token is stored for the chat page to read via window.__CHAT_TOKEN__
   useEffect(() => { (window as any).__CHAT_TOKEN__ = token }, [token])
@@ -128,6 +139,11 @@ export default function DashboardLayout({
     loadProjects()
     loadUser()
 
+    // Profile page dispatches this after saving details / uploading a new
+    // avatar so the header reflects the change immediately.
+    const handleProfileUpdated = () => loadUser()
+    window.addEventListener("profile-updated", handleProfileUpdated)
+
     // Listen to Ctrl + K / Cmd + K keyboard shortcut
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -136,7 +152,10 @@ export default function DashboardLayout({
       }
     }
     window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      window.removeEventListener("profile-updated", handleProfileUpdated)
+    }
   }, [])
 
   // Fetch stats whenever activeProjectId changes
@@ -406,11 +425,55 @@ export default function DashboardLayout({
 
       {/* 2. MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {/* Top header: notifications + user menu */}
+        <header className="flex h-12 shrink-0 items-center justify-end gap-1.5 border-b bg-background px-4">
+          <NotificationBell token={token} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-accent"
+                title="Account"
+              >
+                {user?.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold uppercase text-indigo-700">
+                    {(user?.name || user?.email || "?")[0]}
+                  </span>
+                )}
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuLabel className="text-xs">
+                <p className="truncate font-bold">{user?.name || "My account"}</p>
+                <p className="truncate font-normal text-muted-foreground">{user?.email}</p>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => router.push("/profile")} className="gap-2 text-xs">
+                <UserCircle2 className="h-4 w-4" /> My Profile
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={async () => {
+                  await fetch("/api/auth/logout", { method: "POST" })
+                  window.location.href = "/login"
+                }}
+                className="gap-2 text-xs text-red-600 focus:text-red-600"
+              >
+                <LogOut className="h-4 w-4" /> Sign Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
         <div className="flex-1 overflow-y-auto p-6 md:p-8">
           <BackButton />
           {children}
         </div>
       </main>
+
+      <Toaster position="top-right" richColors />
 
 
 

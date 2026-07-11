@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react"
 import { useScrumUI } from "@/stores/scrum-ui"
 import { useCreateTask, useScrumMembers, useScrumSprints, useScrumEpics } from "@/hooks/scrum/use-scrum"
-import type { TaskPriority } from "@/types/scrum"
+import type { TaskPriority, TaskType } from "@/types/scrum"
 import { PRIORITY_META } from "@/components/scrum/shared"
+import { TYPE_META } from "@/components/scrum/task/task-detail-config"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,9 +13,10 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const PRIORITIES: TaskPriority[] = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"]
+const ISSUE_TYPES: TaskType[] = ["STORY", "TASK", "BUG", "TEST_CASE"]
 
 export function CreateTaskModal({ projectId }: { projectId: string }) {
-  const { createTaskOpen, createTaskStatus, createTaskSprintId, closeCreateTask } = useScrumUI()
+  const { createTaskOpen, createTaskStatus, createTaskSprintId, createTaskType, closeCreateTask } = useScrumUI()
   const create = useCreateTask(projectId)
   const { data: members } = useScrumMembers(projectId)
   const { data: sprints } = useScrumSprints(projectId)
@@ -22,6 +24,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
 
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
+  const [type, setType] = useState<TaskType>("STORY")
   const [priority, setPriority] = useState<TaskPriority>("MEDIUM")
   const [sprintId, setSprintId] = useState("none")
   const [epicId, setEpicId] = useState("none")
@@ -30,13 +33,16 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
   const [tags, setTags] = useState("")
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
 
-  // Preselect the sprint when opened from a Backlog sprint section.
+  // Preselect the sprint / issue type when opened from a Backlog section or the Create Issue menu.
   useEffect(() => {
-    if (createTaskOpen) setSprintId(createTaskSprintId ?? "none")
-  }, [createTaskOpen, createTaskSprintId])
+    if (createTaskOpen) {
+      setSprintId(createTaskSprintId ?? "none")
+      setType((createTaskType as TaskType) ?? "STORY")
+    }
+  }, [createTaskOpen, createTaskSprintId, createTaskType])
 
   function reset() {
-    setTitle(""); setDescription(""); setPriority("MEDIUM"); setSprintId("none")
+    setTitle(""); setDescription(""); setType("STORY"); setPriority("MEDIUM"); setSprintId("none")
     setEpicId("none"); setDueDate(""); setStoryPoints(""); setTags(""); setAssigneeIds([])
   }
 
@@ -46,6 +52,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
       {
         title: title.trim(),
         description: description || null,
+        type,
         status: createTaskStatus ?? "TODO",
         priority,
         sprintId: sprintId === "none" ? null : sprintId,
@@ -62,8 +69,30 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
   return (
     <Dialog open={createTaskOpen} onOpenChange={(o) => !o && closeCreateTask()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader><DialogTitle>Create Task</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Create {TYPE_META[type].label}</DialogTitle></DialogHeader>
         <div className="space-y-3">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-muted-foreground">Issue type</label>
+            <div className="flex flex-wrap gap-1.5">
+              {ISSUE_TYPES.map((t) => {
+                const meta = TYPE_META[t]
+                const Icon = meta.icon
+                const on = type === t
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setType(t)}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                      on ? "border-primary bg-primary/10 text-primary" : "border-input text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <Icon className={`h-3.5 w-3.5 ${meta.color}`} /> {meta.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">Title *</label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What needs doing?" autoFocus />
@@ -134,7 +163,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={closeCreateTask}>Cancel</Button>
-          <Button onClick={submit} disabled={!title.trim() || create.isPending}>Create task</Button>
+          <Button onClick={submit} disabled={!title.trim() || create.isPending}>Create {TYPE_META[type].label.toLowerCase()}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -2,7 +2,7 @@
 
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "REVIEW" | "TESTING" | "DEPLOYED"
 export type TaskPriority = "LOWEST" | "LOW" | "MEDIUM" | "HIGH" | "HIGHEST"
-export type TaskType = "STORY" | "BUG" | "TASK" | "SUBTASK" | "EPIC"
+export type TaskType = "STORY" | "BUG" | "TASK" | "SUBTASK" | "EPIC" | "TEST_CASE"
 export type TaskResolution = "DONE" | "WONT_FIX" | "DUPLICATE" | "CANNOT_REPRODUCE"
 export type ScrumSprintStatus = "PLANNED" | "ACTIVE" | "COMPLETED"
 

@@ -639,16 +639,16 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
                     {/* Message */}
                     <div className="group flex gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors">
-                      {/* Avatar */}
-                      <div className="shrink-0 mt-0.5">
+                      {/* Avatar — links to the sender's public profile */}
+                      <a href={`/users/${msg.sender.id}`} className="shrink-0 mt-0.5" title="View profile">
                         {msg.sender.avatarUrl ? (
-                          <img src={msg.sender.avatarUrl} className="h-9 w-9 rounded-full object-cover" alt="" />
+                          <img src={msg.sender.avatarUrl} className="h-9 w-9 rounded-full object-cover hover:ring-2 hover:ring-indigo-300 transition-shadow" alt="" />
                         ) : (
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold hover:ring-2 hover:ring-indigo-300 transition-shadow">
                             {(msg.sender.name || msg.sender.email || "?")[0].toUpperCase()}
                           </div>
                         )}
-                      </div>
+                      </a>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">

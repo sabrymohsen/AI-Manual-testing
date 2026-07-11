@@ -251,6 +251,53 @@ model User {
 
   // ── RBAC ──
   sentInvitations    Invitation[]     @relation("SentInvitations")
+
+  // ── Profile ──
+  bio        String? @db.Text
+  jobTitle   String?
+  department String?
+  phone      String?
+  timezone   String  @default("UTC")
+  language   String  @default("en")
+  theme      String  @default("system") // light | dark | system
+
+  notifications  Notification[]
+  userActivities UserActivity[]
+}
+
+// In-app notification center. Each notification belongs to exactly one user
+// and optionally one project.
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // MENTION | INVITATION | TASK_ASSIGNED | SPRINT_STARTED | COMMENT | SYSTEM
+  title     String
+  body      String    @db.Text
+  data      Json?
+  projectId String?
+  project   Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  actionUrl String?
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+}
+
+// Cross-project personal activity feed shown on the profile page.
+model UserActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String // TASK_CREATED | TASK_COMPLETED | SPRINT_STARTED | SPRINT_COMPLETED | PROJECT_JOINED | PROFILE_UPDATED | FILE_UPLOADED | WORK_LOGGED | PASSWORD_CHANGED
+  description String
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // Generic platform key/value settings (e.g. default trial length). Admin-editable.
@@ -343,6 +390,10 @@ model Project {
 
   // ── Chat relations ──
   chatChannels       ChatChannel[]
+
+  // ── Notifications & profile activity ──
+  notifications  Notification[]
+  userActivities UserActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2549,6 +2600,7 @@ enum TaskType {
   TASK
   SUBTASK
   EPIC
+  TEST_CASE
 }
 
 enum TaskResolution {

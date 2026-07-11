@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectMember, requireProjectPermission } from "@/lib/api-guards"
 import { normalizeRole, PROJECT_ROLES, OVERRIDE_KEYS } from "@/lib/permissions"
+import { notify } from "@/lib/notifications"
+import { logUserActivity } from "@/lib/user-activity"
 
 // GET /api/projects/[projectId]/members — list all project members.
 // Any project member can view the roster. The project creator is always
@@ -114,6 +116,18 @@ export async function POST(request: Request, { params }: { params: { projectId: 
     const member = await prisma.projectMember.create({
       data: { projectId: params.projectId, userId: user.id, role },
     })
+
+    const inviterName = auth.session.user.name || auth.session.user.email
+    notify({
+      userId: user.id,
+      type: "INVITATION",
+      title: `You've been added to ${project.name}`,
+      body: `${inviterName} added you as ${role}`,
+      projectId: params.projectId,
+      actionUrl: `/projects/${params.projectId}/scrum`,
+    }).catch(() => {})
+    logUserActivity(user.id, "PROJECT_JOINED", `Joined project "${project.name}"`, params.projectId)
+
     return NextResponse.json({ type: "added", member: { ...member, user } }, { status: 201 })
   }
 

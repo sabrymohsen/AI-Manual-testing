@@ -153,6 +153,37 @@ function assetUrl(p?: string | null): string | null {
   return `/api/files/${encodeURIComponent(p.replace(/^\/+/, ""))}`
 }
 
+/** Colored chip styles for the detail drawer triage fields. */
+const SEVERITY_STYLES: Record<string, string> = {
+  Critical: "bg-red-50 text-red-700 border-red-200",
+  High: "bg-orange-50 text-orange-700 border-orange-200",
+  Medium: "bg-blue-50 text-blue-700 border-blue-200",
+  Low: "bg-slate-50 text-slate-600 border-slate-200",
+}
+
+const BUG_STATUS_STYLES: Record<string, { chip: string; dot: string; label: string }> = {
+  Open: { chip: "bg-rose-50 text-rose-700 border-rose-200", dot: "bg-rose-500", label: "Open" },
+  InProgress: { chip: "bg-blue-50 text-blue-700 border-blue-200", dot: "bg-blue-500", label: "In Progress" },
+  ReadyForRetest: { chip: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500", label: "Ready for Retest" },
+  Reopened: { chip: "bg-orange-50 text-orange-700 border-orange-200", dot: "bg-orange-500", label: "Reopened" },
+  Resolved: { chip: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", label: "Resolved" },
+  Closed: { chip: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400", label: "Closed" },
+  Rejected: { chip: "bg-slate-100 text-slate-500 border-slate-200", dot: "bg-slate-400", label: "Rejected" },
+  Duplicate: { chip: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500", label: "Duplicate" },
+}
+
+/** Section heading used across the drawer Overview tab. */
+function DrawerSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h4 className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        <Icon className="h-3.5 w-3.5" /> {title}
+      </h4>
+      {children}
+    </section>
+  )
+}
+
 export default function ProjectBugReportsPage() {
   const params = useParams()
   const router = useRouter()
@@ -751,7 +782,7 @@ export default function ProjectBugReportsPage() {
         <div className={`fixed bottom-5 right-5 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-2 border font-bold text-white transition-all transform animate-in slide-in-from-bottom duration-300 ${
           toast.type === "success" ? "bg-emerald-600 border-emerald-500" : "bg-rose-600 border-rose-500"
         }`}>
-          {toast.type === "success" ? <CheckCircle2 className="h-4.5 w-4.5" /> : <XCircle className="h-4.5 w-4.5" />}
+          {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
           {toast.message}
         </div>
       )}
@@ -762,7 +793,7 @@ export default function ProjectBugReportsPage() {
           <div className="w-[440px] bg-background rounded-2xl border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
             <div className="space-y-1.5">
               <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                <Trash2 className="h-4.5 w-4.5 text-rose-600" /> Delete Defect
+                <Trash2 className="h-4 w-4 text-rose-600" /> Delete Defect
               </h3>
               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                 This action is irreversible.
@@ -807,7 +838,7 @@ export default function ProjectBugReportsPage() {
             <div className="w-[440px] bg-background rounded-2xl border shadow-2xl p-5 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
               <div className="space-y-1.5">
                 <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-1.5">
-                  <Trash2 className="h-4.5 w-4.5 text-rose-600" /> Delete {selectedBugIds.length} Defect{selectedBugIds.length === 1 ? "" : "s"}
+                  <Trash2 className="h-4 w-4 text-rose-600" /> Delete {selectedBugIds.length} Defect{selectedBugIds.length === 1 ? "" : "s"}
                 </h3>
                 <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                   This action is irreversible.
@@ -887,7 +918,7 @@ export default function ProjectBugReportsPage() {
           { label: "Critical Bugs", count: bugs.filter(b => b.severity === "Critical" || b.severity === "High").length, color: "text-rose-600", filter: "Critical", field: "severity" },
           { label: "Auto-Created", count: bugs.filter(b => b.testRunId !== null).length, color: "text-indigo-600", filter: "Auto", field: "source" },
           { label: "OP Synced", count: bugs.filter(b => b.openProjectSyncStatus === "Synced").length, color: "text-sky-600", filter: "Synced", field: "openproject" },
-          { label: "Duplicates", count: bugs.filter(b => b.status === "Duplicate").length, color: "text-slate-450", filter: "Duplicate", field: "status" }
+          { label: "Duplicates", count: bugs.filter(b => b.status === "Duplicate").length, color: "text-slate-400", filter: "Duplicate", field: "status" }
         ].map((c, idx) => (
           <div 
             key={idx}
@@ -1168,7 +1199,7 @@ export default function ProjectBugReportsPage() {
                                 {b.title}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-[9px] text-slate-450 font-medium">
+                            <div className="flex items-center gap-2 text-[9px] text-slate-400 font-medium">
                               <span>Env: {b.environment || "Staging"}</span>
                               <span>&bull;</span>
                               <span>Browser: {b.browser || "Chromium"}</span>
@@ -1222,7 +1253,7 @@ export default function ProjectBugReportsPage() {
                               <span className="text-[10px] text-slate-400 italic">No execution link</span>
                             )}
                           </td>
-                          <td className="p-3 text-[10px] font-medium text-slate-450">
+                          <td className="p-3 text-[10px] font-medium text-slate-400">
                             {new Date(b.createdAt).toLocaleDateString()}
                           </td>
                           <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -1243,7 +1274,7 @@ export default function ProjectBugReportsPage() {
                                 className="h-7 w-7 p-0"
                                 title="Sync with OpenProject"
                               >
-                                <RefreshCw className="h-4 w-4 text-indigo-650" />
+                                <RefreshCw className="h-4 w-4 text-indigo-600" />
                               </Button>
                               {b.testCaseId && (
                                 <Button 
@@ -1263,7 +1294,7 @@ export default function ProjectBugReportsPage() {
                                 className="h-7 w-7 p-0 hover:text-rose-600"
                                 title="Delete Bug"
                               >
-                                <Trash2 className="h-4 w-4 text-slate-450 hover:text-rose-600" />
+                                <Trash2 className="h-4 w-4 text-slate-400 hover:text-rose-600" />
                               </Button>
                             </div>
                           </td>
@@ -1340,7 +1371,7 @@ export default function ProjectBugReportsPage() {
                             <div className="flex items-center justify-between font-mono text-[9px] text-slate-400 font-extrabold">
                               <span>{bug.bugKey || "BUG"}</span>
                               <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase ${
-                                bug.severity === "Critical" ? "bg-red-50 text-red-650" : "bg-slate-100 text-slate-600"
+                                bug.severity === "Critical" ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-600"
                               }`}>
                                 {bug.severity}
                               </span>
@@ -1375,51 +1406,75 @@ export default function ProjectBugReportsPage() {
       {/* 7. Unified Right Slide-over Detail Drawer */}
       {selectedBugId && selectedBug && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-[600px] bg-background h-full shadow-2xl border-l flex flex-col animate-in slide-in-from-right duration-300 select-none text-xs font-semibold">
-            
+          <div className="w-[640px] bg-background h-full shadow-2xl border-l flex flex-col animate-in slide-in-from-right duration-300 text-sm">
+
             {/* Header info */}
-            <div className="p-5 border-b flex items-center justify-between bg-slate-500/[0.01]">
-              <div className="space-y-1">
-                <span className="font-mono text-[9px] font-extrabold bg-slate-100 text-slate-500 px-2 py-0.5 rounded">
-                  {selectedBug.bugKey || "BUG-DETAIL"}
-                </span>
-                {isEditingTitle ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <Input 
-                      value={editTitleValue}
-                      onChange={(e) => setEditTitleValue(e.target.value)}
-                      className="h-8 text-xs font-extrabold"
-                    />
-                    <Button 
-                      size="sm" 
-                      onClick={() => {
+            <div className="px-6 pt-5 pb-4 border-b">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] font-bold text-slate-600">
+                    <Bug className="h-3 w-3 text-rose-500" />
+                    {selectedBug.bugKey || "BUG-DETAIL"}
+                  </span>
+                  {(() => {
+                    const st = BUG_STATUS_STYLES[selectedBug.status] || BUG_STATUS_STYLES.Open
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.chip}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} /> {st.label}
+                      </span>
+                    )
+                  })()}
+                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLES[selectedBug.severity] || SEVERITY_STYLES.Low}`}>
+                    {selectedBug.severity} severity
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedBugId(null)}
+                  className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-slate-100 hover:text-foreground"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {isEditingTitle ? (
+                <div className="mt-3 flex items-center gap-2">
+                  <Input
+                    value={editTitleValue}
+                    onChange={(e) => setEditTitleValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
                         setIsEditingTitle(false)
                         handleInlineUpdate({ title: editTitleValue })
-                      }}
-                      className="h-8 bg-indigo-600 text-white font-bold"
-                    >
-                      Save
-                    </Button>
-                  </div>
-                ) : (
-                  <h3 
-                    onClick={() => setIsEditingTitle(true)}
-                    className="font-extrabold text-sm text-slate-800 hover:bg-slate-50 p-1 rounded cursor-pointer flex items-center gap-1.5"
+                      }
+                      if (e.key === "Escape") setIsEditingTitle(false)
+                    }}
+                    autoFocus
+                    className="h-9 text-base font-semibold"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setIsEditingTitle(false)
+                      handleInlineUpdate({ title: editTitleValue })
+                    }}
+                    className="h-9 bg-indigo-600 text-white"
                   >
-                    {selectedBug.title}
-                  </h3>
-                )}
-              </div>
-              <button 
-                onClick={() => setSelectedBugId(null)} 
-                className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-slate-100"
-              >
-                <X className="h-5 w-5" />
-              </button>
+                    Save
+                  </Button>
+                </div>
+              ) : (
+                <h3
+                  onClick={() => setIsEditingTitle(true)}
+                  title="Click to edit title"
+                  className="-mx-1 mt-2 cursor-text rounded-lg px-1 py-0.5 text-lg font-bold leading-snug text-slate-900 hover:bg-slate-50"
+                >
+                  {selectedBug.title}
+                </h3>
+              )}
             </div>
 
             {/* Tab switch row */}
-            <div className="flex border-b bg-slate-500/[0.01] px-4 gap-4">
+            <div className="flex border-b px-6 gap-5 overflow-x-auto">
               {[
                 { id: "overview", label: "Overview" },
                 { id: "evidence", label: "Evidence" },
@@ -1434,7 +1489,7 @@ export default function ProjectBugReportsPage() {
                     key={tab.id}
                     onClick={() => setActiveDetailTab(tab.id as TabType)}
                     className={`pb-2.5 pt-3 px-1 border-b-2 text-xs font-bold transition-all ${
-                      isActive ? "border-indigo-650 text-indigo-650" : "border-transparent text-muted-foreground hover:text-slate-800"
+                      isActive ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-slate-800"
                     }`}
                   >
                     {tab.label}
@@ -1444,100 +1499,147 @@ export default function ProjectBugReportsPage() {
             </div>
 
             {/* Tab contents scroll pane */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-6">
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
               
               {/* Tab 1: OVERVIEW */}
               {activeDetailTab === "overview" && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Severity</Label>
-                      <select 
-                        value={selectedBug.severity}
-                        onChange={(e) => handleInlineUpdate({ severity: e.target.value as any })}
-                        className="h-8 w-full border bg-background rounded-lg px-2"
-                      >
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                      </select>
-                    </div>
+                <div className="space-y-6">
+                  {/* Triage */}
+                  <DrawerSection icon={AlertCircle} title="Triage">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Severity</Label>
+                        <select
+                          value={selectedBug.severity}
+                          onChange={(e) => handleInlineUpdate({ severity: e.target.value as any })}
+                          className={`h-9 w-full cursor-pointer rounded-lg border px-2.5 text-sm font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200 ${SEVERITY_STYLES[selectedBug.severity] || "bg-background"}`}
+                        >
+                          <option value="Low">Low</option>
+                          <option value="Medium">Medium</option>
+                          <option value="High">High</option>
+                          <option value="Critical">Critical</option>
+                        </select>
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Priority</Label>
-                      <select 
-                        value={selectedBug.priority}
-                        onChange={(e) => handleInlineUpdate({ priority: e.target.value as any })}
-                        className="h-8 w-full border bg-background rounded-lg px-2"
-                      >
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
-                        <option value="Critical">Critical</option>
-                      </select>
-                    </div>
-                  </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Priority</Label>
+                        <select
+                          value={selectedBug.priority}
+                          onChange={(e) => handleInlineUpdate({ priority: e.target.value as any })}
+                          className={`h-9 w-full cursor-pointer rounded-lg border px-2.5 text-sm font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200 ${SEVERITY_STYLES[selectedBug.priority] || "bg-background"}`}
+                        >
+                          <option value="Low">Low</option>
+                          <option value="Medium">Medium</option>
+                          <option value="High">High</option>
+                          <option value="Critical">Critical</option>
+                        </select>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Status Phase</Label>
-                      <select 
-                        value={selectedBug.status}
-                        onChange={(e) => handleInlineUpdate({ status: e.target.value as any })}
-                        className="h-8 w-full border bg-background rounded-lg px-2 font-bold"
-                      >
-                        <option value="Open">Open</option>
-                        <option value="InProgress">In Progress</option>
-                        <option value="ReadyForRetest">Ready for Retest</option>
-                        <option value="Reopened">Reopened</option>
-                        <option value="Resolved">Resolved</option>
-                        <option value="Closed">Closed</option>
-                        <option value="Rejected">Rejected</option>
-                        <option value="Duplicate">Duplicate</option>
-                      </select>
-                    </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Status</Label>
+                        <select
+                          value={selectedBug.status}
+                          onChange={(e) => handleInlineUpdate({ status: e.target.value as any })}
+                          className={`h-9 w-full cursor-pointer rounded-lg border px-2.5 text-sm font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200 ${(BUG_STATUS_STYLES[selectedBug.status] || BUG_STATUS_STYLES.Open).chip}`}
+                        >
+                          <option value="Open">Open</option>
+                          <option value="InProgress">In Progress</option>
+                          <option value="ReadyForRetest">Ready for Retest</option>
+                          <option value="Reopened">Reopened</option>
+                          <option value="Resolved">Resolved</option>
+                          <option value="Closed">Closed</option>
+                          <option value="Rejected">Rejected</option>
+                          <option value="Duplicate">Duplicate</option>
+                        </select>
+                      </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Resolution</Label>
-                      <select
-                        value={selectedBug.resolution || ""}
-                        onChange={(e) => handleInlineUpdate({ resolution: (e.target.value || null) as BugReport["resolution"] })}
-                        className="h-8 w-full border bg-background rounded-lg px-2 font-bold"
-                      >
-                        <option value="">— Unresolved —</option>
-                        <option value="Fixed">Fixed</option>
-                        <option value="WontFix">Won&apos;t Fix</option>
-                        <option value="CannotReproduce">Cannot Reproduce</option>
-                        <option value="Duplicate">Duplicate</option>
-                        <option value="ByDesign">By Design</option>
-                      </select>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Resolution</Label>
+                        <select
+                          value={selectedBug.resolution || ""}
+                          onChange={(e) => handleInlineUpdate({ resolution: (e.target.value || null) as BugReport["resolution"] })}
+                          className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
+                        >
+                          <option value="">Unresolved</option>
+                          <option value="Fixed">Fixed</option>
+                          <option value="WontFix">Won&apos;t Fix</option>
+                          <option value="CannotReproduce">Cannot Reproduce</option>
+                          <option value="Duplicate">Duplicate</option>
+                          <option value="ByDesign">By Design</option>
+                        </select>
+                      </div>
+
                       {selectedBug.resolution && (
-                        <Input
-                          value={editResolutionNoteValue}
-                          onChange={(e) => setEditResolutionNoteValue(e.target.value)}
-                          onBlur={() => {
-                            if (editResolutionNoteValue !== (selectedBug.resolutionNote || "")) {
-                              handleInlineUpdate({ resolutionNote: editResolutionNoteValue })
-                            }
-                          }}
-                          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                          placeholder="Resolution note (optional)…"
-                          className="h-8 bg-background mt-1"
-                        />
+                        <div className="col-span-2">
+                          <Input
+                            value={editResolutionNoteValue}
+                            onChange={(e) => setEditResolutionNoteValue(e.target.value)}
+                            onBlur={() => {
+                              if (editResolutionNoteValue !== (selectedBug.resolutionNote || "")) {
+                                handleInlineUpdate({ resolutionNote: editResolutionNoteValue })
+                              }
+                            }}
+                            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                            placeholder="Resolution note (optional)…"
+                            className="h-9 bg-background"
+                          />
+                        </div>
                       )}
                     </div>
+                  </DrawerSection>
 
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Reporter</Label>
-                      <div className="h-8 flex items-center px-2 rounded-lg border bg-slate-50 text-xs font-semibold text-slate-600">
-                        {selectedBug.reporter?.name || selectedBug.reporter?.email || "—"}
+                  {/* People */}
+                  <DrawerSection icon={UserPlus} title="People">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Reporter</Label>
+                        <div className="flex h-9 items-center gap-2 rounded-lg border bg-slate-50 px-2.5 text-sm font-medium text-slate-700">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">
+                            {(selectedBug.reporter?.name || selectedBug.reporter?.email || "?")[0]}
+                          </span>
+                          <span className="truncate">{selectedBug.reporter?.name || selectedBug.reporter?.email || "Unknown"}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Assigned Developer</Label>
+                        {opMembers.length > 0 ? (
+                          <select
+                            value={selectedBug.assignedTo || ""}
+                            onChange={(e) => handleInlineUpdate({ assignedTo: e.target.value })}
+                            className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
+                          >
+                            <option value="">Unassigned</option>
+                            {selectedBug.assignedTo &&
+                              !opMembers.some(m => m.id === selectedBug.assignedTo) && (
+                                <option value={selectedBug.assignedTo}>{selectedBug.assignedTo}</option>
+                              )}
+                            {opMembers.map(m => (
+                              <option key={m.id} value={m.id}>{m.name}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <Input
+                            value={editAssigneeValue}
+                            onChange={(e) => setEditAssigneeValue(e.target.value)}
+                            onBlur={() => {
+                              if (editAssigneeValue !== (selectedBug.assignedTo || "")) {
+                                handleInlineUpdate({ assignedTo: editAssigneeValue })
+                              }
+                            }}
+                            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                            placeholder="Developer email…"
+                            className="h-9 bg-background"
+                          />
+                        )}
                       </div>
                     </div>
+                  </DrawerSection>
 
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Tags</Label>
-                      <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-lg border bg-background min-h-8">
+                  {/* Organize */}
+                  <DrawerSection icon={Layers} title="Organize">
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-500">Tags</Label>
+                      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border bg-background p-2">
                         {(selectedBug.tags || []).map((t) => (
                           <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
                             {t}
@@ -1567,53 +1669,19 @@ export default function ProjectBugReportsPage() {
                             }
                           }}
                           placeholder={(selectedBug.tags || []).length ? "Add…" : "Add tag + Enter"}
-                          className="flex-1 min-w-[70px] bg-transparent outline-none text-xs font-semibold"
+                          className="flex-1 min-w-[70px] bg-transparent text-sm font-medium outline-none"
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Assigned Developer</Label>
-                      {opMembers.length > 0 ? (
-                        <select
-                          value={selectedBug.assignedTo || ""}
-                          onChange={(e) => handleInlineUpdate({ assignedTo: e.target.value })}
-                          className="h-8 w-full rounded-md border bg-background px-2 text-xs"
-                        >
-                          <option value="">Unassigned</option>
-                          {/* Preserve any legacy free-text value that isn't a known member */}
-                          {selectedBug.assignedTo &&
-                            !opMembers.some(m => m.id === selectedBug.assignedTo) && (
-                              <option value={selectedBug.assignedTo}>{selectedBug.assignedTo}</option>
-                            )}
-                          {opMembers.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <Input
-                          value={editAssigneeValue}
-                          onChange={(e) => setEditAssigneeValue(e.target.value)}
-                          onBlur={() => {
-                            if (editAssigneeValue !== (selectedBug.assignedTo || "")) {
-                              handleInlineUpdate({ assignedTo: editAssigneeValue })
-                            }
-                          }}
-                          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                          placeholder="Developer email..."
-                          className="h-8 bg-background"
-                        />
-                      )}
-                    </div>
-
                     {/* Bug Source — options pulled from an OpenProject list field */}
                     {opSourceOptions.length > 0 && (
-                      <div className="space-y-1">
-                        <Label className="text-slate-500 text-[10px] uppercase block">Bug Source</Label>
+                      <div className="mt-3 space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Bug Source</Label>
                         <select
                           value={selectedBug.source || ""}
                           onChange={(e) => handleInlineUpdate({ source: e.target.value } as any)}
-                          className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                          className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
                         >
                           <option value="">— Select source —</option>
                           {/* Preserve any stored value not in the current option list */}
@@ -1626,96 +1694,27 @@ export default function ProjectBugReportsPage() {
                         </select>
                       </div>
                     )}
+                  </DrawerSection>
 
-                    <div className="space-y-1">
-                      <Label className="text-slate-500 text-[10px] uppercase block">Parent Task (OpenProject WP ID)</Label>
-                      <Input
-                        value={editParentValue}
-                        onChange={(e) => setEditParentValue(e.target.value)}
-                        onBlur={() => {
-                          if (editParentValue !== (selectedBug.openProjectParentId || "")) {
-                            handleInlineUpdate({ openProjectParentId: editParentValue })
-                          }
-                        }}
-                        onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                        placeholder="e.g. 1234"
-                        className="h-8 bg-background"
-                      />
-                      <p className="text-[9px] text-slate-400">Synced bug will be nested under this work package.</p>
-                    </div>
-
-                    {opBoards.length > 0 && (
-                      <div className="space-y-1">
-                        <Label className="text-slate-500 text-[10px] uppercase block">Target Board</Label>
-                        <select
-                          value={editBoardValue}
-                          onChange={(e) => {
-                            const boardId = e.target.value
-                            // Update the dropdown instantly, clear the column, load the
-                            // new board's columns, then persist in the background.
-                            setEditBoardValue(boardId)
-                            setEditColumnValue("")
-                            loadBoardColumns(boardId)
-                            handleInlineUpdate({ openProjectBoardId: boardId, openProjectBoardColumnId: "" })
-                          }}
-                          className="h-8 w-full rounded-md border bg-background px-2 text-xs"
-                        >
-                          <option value="">No board</option>
-                          {opBoards.map(b => (
-                            <option key={b.id} value={String(b.id)}>
-                              {b.name}{b.type ? ` (${b.type})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[9px] text-slate-400">Synced bug will be placed on this board.</p>
-                      </div>
-                    )}
-
-                    {/* Column selector — appears once a board is chosen (#4) */}
-                    {opBoards.length > 0 && editBoardValue && (
-                      <div className="space-y-1">
-                        <Label className="text-slate-500 text-[10px] uppercase block">Board Column</Label>
-                        <select
-                          value={editColumnValue}
-                          onChange={(e) => {
-                            setEditColumnValue(e.target.value)
-                            handleInlineUpdate({ openProjectBoardColumnId: e.target.value })
-                          }}
-                          disabled={loadingColumns}
-                          className="h-8 w-full rounded-md border bg-background px-2 text-xs disabled:opacity-60"
-                        >
-                          <option value="">
-                            {loadingColumns ? "Loading columns..." : "First column (default)"}
-                          </option>
-                          {opBoardColumns.map(c => (
-                            <option key={c.widgetId} value={String(c.widgetId)}>
-                              {c.name}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[9px] text-slate-400">Synced bug will be placed under this column.</p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="border-t pt-4 space-y-1.5">
-                    <Label className="text-slate-500 text-[10px] uppercase block">Description / Action details</Label>
+                  {/* Description */}
+                  <DrawerSection icon={FileText} title="Description / Action details">
                     {isEditingDesc ? (
                       <div className="space-y-2">
-                        <textarea 
+                        <textarea
                           value={editDescValue}
                           onChange={(e) => setEditDescValue(e.target.value)}
-                          rows={4}
-                          className="w-full border rounded-lg p-2 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                          rows={5}
+                          autoFocus
+                          className="w-full rounded-lg border bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-indigo-200"
                         />
                         <div className="flex gap-2">
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             onClick={() => {
                               setIsEditingDesc(false)
                               handleInlineUpdate({ stepsToReproduce: editDescValue })
                             }}
-                            className="bg-indigo-600 text-white font-bold"
+                            className="bg-indigo-600 text-white"
                           >
                             Save description
                           </Button>
@@ -1723,33 +1722,112 @@ export default function ProjectBugReportsPage() {
                         </div>
                       </div>
                     ) : (
-                      <p 
+                      <p
                         onClick={() => setIsEditingDesc(true)}
-                        className="bg-slate-500/[0.01] hover:bg-slate-50 border p-3 rounded-xl whitespace-pre-wrap leading-relaxed cursor-pointer font-medium"
+                        title="Click to edit"
+                        className={`cursor-text whitespace-pre-wrap rounded-xl border bg-slate-50/60 p-3.5 text-sm leading-relaxed hover:border-indigo-200 hover:bg-indigo-50/30 ${selectedBug.stepsToReproduce ? "text-slate-700" : "italic text-slate-400"}`}
                       >
                         {selectedBug.stepsToReproduce || "No description provided. Click to add details."}
                       </p>
                     )}
-                  </div>
+                  </DrawerSection>
 
-                  <div className="border-t pt-4 grid grid-cols-2 gap-y-3.5 gap-x-2 text-[11px] font-medium text-slate-600">
-                    <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Environment</span>
-                      <span>{selectedBug.environment || "Staging"}</span>
+                  {/* OpenProject sync settings */}
+                  <DrawerSection icon={Kanban} title={`${trackerName || "Tracker"} Sync`}>
+                    <div className="space-y-3 rounded-xl border bg-slate-50/60 p-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-[11px] font-semibold text-slate-500">Parent Task (Work Package ID)</Label>
+                        <Input
+                          value={editParentValue}
+                          onChange={(e) => setEditParentValue(e.target.value)}
+                          onBlur={() => {
+                            if (editParentValue !== (selectedBug.openProjectParentId || "")) {
+                              handleInlineUpdate({ openProjectParentId: editParentValue })
+                            }
+                          }}
+                          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                          placeholder="e.g. 1234"
+                          className="h-9 bg-background"
+                        />
+                        <p className="text-[11px] text-slate-400">Synced bug will be nested under this work package.</p>
+                      </div>
+
+                      {opBoards.length > 0 && (
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-[11px] font-semibold text-slate-500">Target Board</Label>
+                            <select
+                              value={editBoardValue}
+                              onChange={(e) => {
+                                const boardId = e.target.value
+                                // Update the dropdown instantly, clear the column, load the
+                                // new board's columns, then persist in the background.
+                                setEditBoardValue(boardId)
+                                setEditColumnValue("")
+                                loadBoardColumns(boardId)
+                                handleInlineUpdate({ openProjectBoardId: boardId, openProjectBoardColumnId: "" })
+                              }}
+                              className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
+                            >
+                              <option value="">No board</option>
+                              {opBoards.map(b => (
+                                <option key={b.id} value={String(b.id)}>
+                                  {b.name}{b.type ? ` (${b.type})` : ""}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[11px] text-slate-400">Synced bug will be placed on this board.</p>
+                          </div>
+
+                          {/* Column selector — appears once a board is chosen (#4) */}
+                          {editBoardValue && (
+                            <div className="space-y-1.5">
+                              <Label className="text-[11px] font-semibold text-slate-500">Board Column</Label>
+                              <select
+                                value={editColumnValue}
+                                onChange={(e) => {
+                                  setEditColumnValue(e.target.value)
+                                  handleInlineUpdate({ openProjectBoardColumnId: e.target.value })
+                                }}
+                                disabled={loadingColumns}
+                                className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60"
+                              >
+                                <option value="">
+                                  {loadingColumns ? "Loading columns..." : "First column (default)"}
+                                </option>
+                                {opBoardColumns.map(c => (
+                                  <option key={c.widgetId} value={String(c.widgetId)}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                              <p className="text-[11px] text-slate-400">Synced bug will be placed under this column.</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Browser Type</span>
-                      <span>{selectedBug.browser || "Chromium"}</span>
+                  </DrawerSection>
+
+                  {/* Environment */}
+                  <DrawerSection icon={Globe} title="Environment">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { icon: Globe, label: "Environment", value: selectedBug.environment || "Staging" },
+                        { icon: Terminal, label: "Browser", value: selectedBug.browser || "Chromium" },
+                        { icon: Eye, label: "Viewport", value: selectedBug.viewport || "Desktop (1280x800)" },
+                        { icon: Clock, label: "Created", value: new Date(selectedBug.createdAt).toLocaleString() },
+                      ].map((m) => (
+                        <div key={m.label} className="flex items-center gap-2.5 rounded-xl border bg-slate-50/60 px-3 py-2.5">
+                          <m.icon className="h-4 w-4 shrink-0 text-slate-400" />
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{m.label}</p>
+                            <p className="truncate text-sm font-medium text-slate-700">{m.value}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Viewport Scale</span>
-                      <span>{selectedBug.viewport || "Desktop (1280x800)"}</span>
-                    </div>
-                    <div>
-                      <span className="text-slate-400 block text-[9px] uppercase">Created At</span>
-                      <span>{new Date(selectedBug.createdAt).toLocaleString()}</span>
-                    </div>
-                  </div>
+                  </DrawerSection>
                 </div>
               )}
 
@@ -1759,8 +1837,8 @@ export default function ProjectBugReportsPage() {
                   {/* Screenshots preview */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-slate-550 text-[10px] uppercase">Screenshot attachment</Label>
-                      <label className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border bg-indigo-50 text-indigo-650 font-bold text-[10px] cursor-pointer hover:bg-indigo-100 transition-colors ${uploadingPhoto ? "opacity-60 pointer-events-none" : ""}`}>
+                      <Label className="text-slate-500 text-[10px] uppercase">Screenshot attachment</Label>
+                      <label className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border bg-indigo-50 text-indigo-600 font-bold text-[10px] cursor-pointer hover:bg-indigo-100 transition-colors ${uploadingPhoto ? "opacity-60 pointer-events-none" : ""}`}>
                         <Paperclip className="h-3.5 w-3.5" />
                         {uploadingPhoto ? "Uploading..." : "Upload Photo"}
                         <input
@@ -1794,7 +1872,7 @@ export default function ProjectBugReportsPage() {
 
                   {/* Video player for screen records */}
                   <div className="space-y-1 border-t pt-3">
-                    <Label className="text-slate-550 text-[10px] uppercase">Web Video Recording (Session play)</Label>
+                    <Label className="text-slate-500 text-[10px] uppercase">Web Video Recording (Session play)</Label>
                     {selectedBug.videoUrl ? (
                       <div className="border rounded-2xl overflow-hidden shadow-sm bg-black">
                         <video
@@ -1906,7 +1984,7 @@ export default function ProjectBugReportsPage() {
                       <div className="border-t pt-3 flex gap-2">
                         <Button 
                           onClick={() => handleTriggerRetest(selectedBug.id)}
-                          className="h-8 px-3 bg-indigo-650 text-white font-bold w-full flex items-center justify-center gap-1"
+                          className="h-8 px-3 bg-indigo-600 text-white font-bold w-full flex items-center justify-center gap-1"
                         >
                           <Play className="h-4 w-4" /> Trigger Retest Run
                         </Button>
@@ -1995,7 +2073,7 @@ export default function ProjectBugReportsPage() {
                       {selectedBug.activities.map((act) => (
                         <div key={act.id} className="p-2.5 border rounded-xl bg-slate-50/50 space-y-1 text-[11px] font-medium leading-relaxed">
                           <div className="flex justify-between items-center text-slate-600 font-bold">
-                            <span className="text-indigo-650">{act.action}</span>
+                            <span className="text-indigo-600">{act.action}</span>
                             <span className="text-[9px] text-slate-400 font-normal">{new Date(act.createdAt).toLocaleDateString()} {new Date(act.createdAt).toLocaleTimeString()}</span>
                           </div>
                           {act.details && <p className="text-slate-500 text-[10px]">{act.details}</p>}
@@ -2061,13 +2139,13 @@ export default function ProjectBugReportsPage() {
                       <div className="flex justify-between items-center text-[11px]">
                         <span className="text-slate-500">Sync status</span>
                         <span className={`px-2 py-0.5 rounded font-extrabold uppercase text-[8px] ${
-                          opSyncStatus.status === "Synced" ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-650"
+                          opSyncStatus.status === "Synced" ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600"
                         }`}>{opSyncStatus.status}</span>
                       </div>
 
                       {opSyncStatus.externalId && (
                         <div className="flex justify-between items-center text-[11px] font-bold">
-                          <span className="text-slate-550">Work Package ID</span>
+                          <span className="text-slate-500">Work Package ID</span>
                           <span className="font-mono text-slate-800">#{opSyncStatus.externalId}</span>
                         </div>
                       )}
@@ -2078,7 +2156,7 @@ export default function ProjectBugReportsPage() {
                             href={opSyncStatus.externalUrl} 
                             target="_blank" 
                             rel="noreferrer"
-                            className="text-xs font-bold text-indigo-650 flex items-center gap-1 hover:underline"
+                            className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline"
                           >
                             View in OpenProject <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -2113,16 +2191,17 @@ export default function ProjectBugReportsPage() {
             </div>
 
             {/* Footer deletion */}
-            <div className="p-4 border-t bg-slate-500/[0.01] flex justify-between items-center">
-              <span className="text-[10px] text-muted-foreground">Updated {new Date(selectedBug.updatedAt).toLocaleDateString()}</span>
-              <Button 
+            <div className="flex items-center justify-between border-t bg-slate-50/60 px-6 py-3">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                Updated {new Date(selectedBug.updatedAt).toLocaleDateString()}
+              </span>
+              <button
                 onClick={() => handleDeleteBug(selectedBug.id)}
-                variant="destructive" 
-                size="sm"
-                className="bg-red-600 text-white font-bold flex items-center gap-1 shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
               >
-                <Trash2 className="h-4 w-4" /> Delete Defect
-              </Button>
+                <Trash2 className="h-3.5 w-3.5" /> Delete Defect
+              </button>
             </div>
           </div>
         </div>

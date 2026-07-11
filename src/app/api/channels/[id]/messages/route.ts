@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/api-guards";
+import { notify } from "@/lib/notifications";
+import { extractMentionedUserIds, messagePreview } from "@/lib/mentions";
 
 // GET /api/channels/:id/messages?cursor=&limit=50 -> Cursor-paginated messages
 export async function GET(
@@ -155,6 +157,31 @@ export async function POST(
       return NextResponse.json({ error: "Content or attachments are required" }, { status: 400 });
     }
 
+    // Detect @mentions against the project roster (owner + members) and merge
+    // with any explicit mention ids from the client.
+    const rosterProject = await prisma.project.findUnique({
+      where: { id: channel.projectId },
+      select: {
+        user: { select: { id: true, name: true, email: true } },
+        projectMembers: { select: { user: { select: { id: true, name: true, email: true } } } },
+      },
+    });
+    let roster = [rosterProject?.user, ...(rosterProject?.projectMembers.map((m) => m.user) || [])]
+      .filter((u): u is { id: string; name: string | null; email: string } => !!u)
+      .filter((u, i, arr) => arr.findIndex((x) => x.id === u.id) === i && u.id !== userId);
+    // In private/DM channels only channel members can be mentioned.
+    if (channel.type !== "PUBLIC") {
+      const channelMembers = await prisma.channelMember.findMany({
+        where: { channelId: params.id },
+        select: { userId: true },
+      });
+      const memberIds = new Set(channelMembers.map((m) => m.userId));
+      roster = roster.filter((u) => memberIds.has(u.id));
+    }
+    const mentionIds = [
+      ...new Set([...((mentions as string[] | undefined) || []), ...extractMentionedUserIds(content || "", roster)]),
+    ].filter((id) => id !== userId);
+
     const message = await prisma.chatMessage.create({
       data: {
         content,
@@ -164,7 +191,7 @@ export async function POST(
         parentId,
         type: attachments && attachments.length > 0 ? "FILE" : "TEXT",
         mentions: {
-          create: mentions?.map((uid: string) => ({ userId: uid })) || [],
+          create: mentionIds.map((uid: string) => ({ userId: uid })),
         },
         attachments: {
           create: attachments || [],
@@ -190,7 +217,7 @@ export async function POST(
       const io = getIO();
       io.to(`channel:${params.id}`).emit("new-message", message);
 
-      mentions?.forEach((mentionedUserId: string) => {
+      mentionIds.forEach((mentionedUserId: string) => {
         io.to(`user:${mentionedUserId}`).emit("mentioned", {
           messageId: message.id,
           channelId: params.id,
@@ -200,6 +227,21 @@ export async function POST(
       });
     } catch {
       // socket.io not running or initialized yet, ignore
+    }
+
+    // Persist + push a notification per mentioned user.
+    if (mentionIds.length > 0) {
+      const senderName = auth.session!.user.name || auth.session!.user.email;
+      notify(
+        mentionIds.map((mentionedUserId: string) => ({
+          userId: mentionedUserId,
+          type: "MENTION" as const,
+          title: `${senderName} mentioned you`,
+          body: messagePreview(content || ""),
+          projectId: channel.projectId,
+          actionUrl: `/projects/${channel.projectId}/team-chat`,
+        }))
+      ).catch(() => {});
     }
 
     return NextResponse.json({ message }, { status: 201 });

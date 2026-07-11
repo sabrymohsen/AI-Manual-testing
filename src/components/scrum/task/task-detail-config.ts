@@ -10,6 +10,7 @@ import {
   Link2,
   Copy,
   GitFork,
+  FlaskConical,
   type LucideIcon,
 } from "lucide-react"
 
@@ -36,9 +37,10 @@ export const TYPE_META: Record<TaskType, { icon: LucideIcon; color: string; labe
   TASK: { icon: CheckSquare, color: "text-blue-600", label: "Task" },
   SUBTASK: { icon: GitBranch, color: "text-sky-600", label: "Subtask" },
   EPIC: { icon: Layers, color: "text-purple-600", label: "Epic" },
+  TEST_CASE: { icon: FlaskConical, color: "text-teal-600", label: "Test Case" },
 }
 
-export const TASK_TYPES: TaskType[] = ["STORY", "BUG", "TASK", "SUBTASK", "EPIC"]
+export const TASK_TYPES: TaskType[] = ["STORY", "BUG", "TASK", "SUBTASK", "EPIC", "TEST_CASE"]
 
 /** Issue-link phrasing → icon + color. */
 export const LINK_TYPE_META: Record<string, { icon: LucideIcon; color: string }> = {

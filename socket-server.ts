@@ -2,6 +2,7 @@ import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import { extractMentionedUserIds, messagePreview } from "./src/lib/mentions";
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || "your-secret-key";
@@ -9,7 +10,32 @@ const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || "you
 let io: SocketIOServer | null = null;
 
 function startSocketServer() {
-  const server = createServer();
+  // The HTTP handler doubles as an internal bridge: Next.js API routes run in
+  // a separate process, so they POST here to push real-time events (e.g.
+  // notifications) into socket rooms.
+  const server = createServer((req, res) => {
+    if (req.method === "POST" && req.url === "/internal/notify") {
+      if (req.headers["x-internal-token"] !== JWT_SECRET) {
+        res.writeHead(401).end();
+        return;
+      }
+      let raw = "";
+      req.on("data", (chunk) => { raw += chunk; });
+      req.on("end", () => {
+        try {
+          const { notifications } = JSON.parse(raw || "{}");
+          for (const n of notifications || []) {
+            if (n?.userId) io?.to(`user:${n.userId}`).emit("notification", n);
+          }
+          res.writeHead(200, { "Content-Type": "application/json" }).end('{"ok":true}');
+        } catch {
+          res.writeHead(400).end();
+        }
+      });
+      return;
+    }
+    res.writeHead(404).end();
+  });
 
   io = new SocketIOServer(server, {
     cors: {
@@ -169,6 +195,39 @@ function startSocketServer() {
           });
         }
 
+        // Detect @mentions in the message text against the project roster and
+        // merge them with any explicit mention ids sent by the client. In
+        // private/DM channels only channel members can be mentioned, so a
+        // notification never leaks a conversation to someone outside it.
+        let roster = [
+          ...(inProject.userId
+            ? await prisma.user.findMany({
+                where: { id: inProject.userId },
+                select: { id: true, name: true, email: true },
+              })
+            : []),
+          ...(
+            await prisma.projectMember.findMany({
+              where: { projectId: channel.projectId },
+              select: { user: { select: { id: true, name: true, email: true } } },
+            })
+          ).map((m) => m.user),
+        ].filter((u, i, arr) => arr.findIndex((x) => x.id === u.id) === i && u.id !== userId);
+
+        if (channel.type !== "PUBLIC") {
+          const channelMembers = await prisma.channelMember.findMany({
+            where: { channelId },
+            select: { userId: true },
+          });
+          const memberIds = new Set(channelMembers.map((m) => m.userId));
+          roster = roster.filter((u) => memberIds.has(u.id));
+        }
+
+        const parsedMentions = extractMentionedUserIds(content || "", roster);
+        const mentionIds = [...new Set([...(mentions || []), ...parsedMentions])].filter(
+          (id) => id !== userId
+        );
+
         const message = await prisma.chatMessage.create({
           data: {
             content,
@@ -178,7 +237,7 @@ function startSocketServer() {
             parentId,
             type: attachments && attachments.length > 0 ? "FILE" : "TEXT",
             mentions: {
-              create: mentions?.map((uid) => ({ userId: uid })) || [],
+              create: mentionIds.map((uid) => ({ userId: uid })),
             },
             attachments: {
               create: attachments || [],
@@ -199,14 +258,32 @@ function startSocketServer() {
 
         io?.to(`channel:${channelId}`).emit("new-message", message);
 
-        mentions?.forEach((mentionedUserId) => {
+        // Persist a notification per mentioned user and push it live.
+        const senderName = user.name || user.email;
+        for (const mentionedUserId of mentionIds) {
           io?.to(`user:${mentionedUserId}`).emit("mentioned", {
             messageId: message.id,
             channelId,
-            senderName: user.name || user.email,
+            senderName,
             preview: content.slice(0, 100),
           });
-        });
+          try {
+            const notification = await prisma.notification.create({
+              data: {
+                userId: mentionedUserId,
+                type: "MENTION",
+                title: `${senderName} mentioned you`,
+                body: messagePreview(content || ""),
+                projectId: channel.projectId,
+                actionUrl: `/projects/${channel.projectId}/team-chat`,
+              },
+              include: { project: { select: { id: true, name: true } } },
+            });
+            io?.to(`user:${mentionedUserId}`).emit("notification", notification);
+          } catch (err) {
+            console.error("mention notification error:", err);
+          }
+        }
       } catch (err) {
         console.error("send-message error:", err);
       }

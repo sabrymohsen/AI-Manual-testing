@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import type { TaskFilters, TaskStatus, TaskPriority } from "@/types/scrum"
 import { useScrumMembers } from "@/hooks/scrum/use-scrum"
@@ -17,7 +17,17 @@ import { CreateSprintModal } from "@/components/scrum/modals/create-sprint-modal
 import { SearchBar } from "@/components/scrum/filters/search-bar"
 import { FilterPanel } from "@/components/scrum/filters/filter-panel"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
-import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, Layers } from "lucide-react"
+import { usePermission } from "@/hooks/usePermission"
+import { TYPE_META } from "@/components/scrum/task/task-detail-config"
+import type { TaskType } from "@/types/scrum"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
+import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, ChevronDown, Layers } from "lucide-react"
 
 type View = "board" | "backlog" | "list" | "timeline"
 
@@ -28,7 +38,19 @@ export default function ScrumBoardPage() {
   const search = useSearchParams()
 
   const { data: members } = useScrumMembers(projectId)
-  const { openCreateTask, setCreateEpicOpen, setCreateSprintOpen } = useScrumUI()
+  const { openCreateTask, setCreateEpicOpen, setCreateSprintOpen, openTask } = useScrumUI()
+  const { can } = usePermission()
+
+  // Deep link: /projects/:id/scrum?task=<taskId> opens the task drawer
+  // (used by notification action URLs).
+  const deepLinkTask = search.get("task")
+  useEffect(() => {
+    if (deepLinkTask) openTask(deepLinkTask)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deepLinkTask])
+
+  const issueTypes: TaskType[] = ["STORY", "TASK", "BUG", "TEST_CASE"]
+  const canCreateIssues = can("canCreateStories") || can("canCreateEpics")
 
   const view = (search.get("view") as View) || "board"
 
@@ -86,20 +108,12 @@ export default function ScrumBoardPage() {
           <span className="font-semibold text-foreground">Scrum Board</span>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold tracking-tight">Scrum Board</h1>
+          <div className="flex min-w-0 items-center gap-4">
+            <h1 className="whitespace-nowrap text-xl font-bold tracking-tight">Scrum Board</h1>
             <SearchBar value={filters.search ?? ""} onChange={setSearch} />
             {members && members.length > 0 && <AvatarStack members={members} max={3} />}
           </div>
           <div className="flex items-center gap-2">
-            <PermissionGate permission="canCreateEpics">
-              <button
-                onClick={() => setCreateEpicOpen(true)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-xs font-semibold hover:bg-muted"
-              >
-                <Plus className="h-4 w-4 text-muted-foreground" /> Create Epic
-              </button>
-            </PermissionGate>
             <PermissionGate permission="canCreateSprints">
               <button
                 onClick={() => setCreateSprintOpen(true)}
@@ -133,14 +147,37 @@ export default function ScrumBoardPage() {
         </div>
         <div className="flex items-center gap-2 py-1.5">
           <FilterPanel projectId={projectId} filters={filters} onChange={setFilters} />
-          <PermissionGate permission="canCreateStories">
-            <button
-              onClick={() => openCreateTask()}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <Plus className="h-4 w-4" /> New Task
-            </button>
-          </PermissionGate>
+          {canCreateIssues && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90">
+                  <Plus className="h-4 w-4" /> Create Issue <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {can("canCreateEpics") && (
+                  <>
+                    <DropdownMenuItem onClick={() => setCreateEpicOpen(true)} className="gap-2">
+                      <Layers className={`h-4 w-4 ${TYPE_META.EPIC.color}`} />
+                      <span className="font-medium">Epic</span>
+                    </DropdownMenuItem>
+                    {can("canCreateStories") && <DropdownMenuSeparator />}
+                  </>
+                )}
+                {can("canCreateStories") &&
+                  issueTypes.map((t) => {
+                    const meta = TYPE_META[t]
+                    const Icon = meta.icon
+                    return (
+                      <DropdownMenuItem key={t} onClick={() => openCreateTask(undefined, undefined, t)} className="gap-2">
+                        <Icon className={`h-4 w-4 ${meta.color}`} />
+                        <span className="font-medium">{t === "STORY" ? "User Story" : meta.label}</span>
+                      </DropdownMenuItem>
+                    )
+                  })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
