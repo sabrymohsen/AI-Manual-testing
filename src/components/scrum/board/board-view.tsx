@@ -8,6 +8,7 @@ import { useScrumUI } from "@/stores/scrum-ui"
 import { STATUS_META } from "@/components/scrum/shared"
 import { TaskCard } from "./task-card"
 import { CreateColumnButton } from "./create-column-button"
+import { PermissionGate } from "@/components/permissions/PermissionGate"
 import { Plus, MoreHorizontal, Trash2, Zap, Layers } from "lucide-react"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -130,29 +131,33 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5">
-                  <button
-                    onClick={() => openCreateTask(col.status, activeSprint?.id)}
-                    className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
-                    title="Add task"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => {
-                          if (confirm(`Delete column "${col.name}"? Tasks in it are not deleted.`))
-                            removeColumn.mutate(col.id)
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete column
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <PermissionGate permission="canCreateStories">
+                    <button
+                      onClick={() => openCreateTask(col.status, activeSprint?.id)}
+                      className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
+                      title="Add task"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </PermissionGate>
+                  <PermissionGate permission="canEditBoard">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onClick={() => {
+                            if (confirm(`Delete column "${col.name}"? Tasks in it are not deleted.`))
+                              removeColumn.mutate(col.id)
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Delete column
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </PermissionGate>
                 </div>
               </div>
 
@@ -179,12 +184,14 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                     ))}
                     {provided.placeholder}
                     {list.length === 0 && !snapshot.isDraggingOver && (
-                      <button
-                        onClick={() => openCreateTask(col.status, activeSprint?.id)}
-                        className="w-full rounded-lg border border-dashed border-border py-6 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
-                      >
-                        + Add a task
-                      </button>
+                      <PermissionGate permission="canCreateStories">
+                        <button
+                          onClick={() => openCreateTask(col.status, activeSprint?.id)}
+                          className="w-full rounded-lg border border-dashed border-border py-6 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary"
+                        >
+                          + Add a task
+                        </button>
+                      </PermissionGate>
                     )}
                   </div>
                 )}
@@ -193,7 +200,9 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
           )
         })}
 
-        <CreateColumnButton projectId={projectId} />
+        <PermissionGate permission="canEditBoard">
+          <CreateColumnButton projectId={projectId} />
+        </PermissionGate>
         </div>
       </DragDropContext>
     </div>

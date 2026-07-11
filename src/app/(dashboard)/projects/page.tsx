@@ -123,6 +123,18 @@ export default function ProjectsPage() {
   const [isDeleting, setIsDeleting] = useState(false)
   const [deleteDetails, setDeleteDetails] = useState<any>(null)
 
+  // Project creation is gated to the user's plan limit (mirrors the server
+  // guard requireCanCreateProject); button hides when the limit is reached.
+  const [canCreateProject, setCanCreateProject] = useState(false)
+  useEffect(() => {
+    fetch("/api/my-projects")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d) setCanCreateProject(!!d.canCreateProject)
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetchProjectsList()
   }, [
@@ -373,12 +385,14 @@ export default function ProjectsPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button
-            onClick={() => router.push("/projects/new")}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-          >
-            <Plus className="h-4 w-4 mr-1" /> New Project
-          </Button>
+          {canCreateProject && (
+            <Button
+              onClick={() => router.push("/projects/new")}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+            >
+              <Plus className="h-4 w-4 mr-1" /> New Project
+            </Button>
+          )}
 
           {/* Quick Dashboard shortcut */}
           <Button

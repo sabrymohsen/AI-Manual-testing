@@ -16,6 +16,7 @@ import { CreateEpicModal } from "@/components/scrum/modals/create-epic-modal"
 import { CreateSprintModal } from "@/components/scrum/modals/create-sprint-modal"
 import { SearchBar } from "@/components/scrum/filters/search-bar"
 import { FilterPanel } from "@/components/scrum/filters/filter-panel"
+import { PermissionGate } from "@/components/permissions/PermissionGate"
 import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, Layers } from "lucide-react"
 
 type View = "board" | "backlog" | "list" | "timeline"
@@ -91,18 +92,22 @@ export default function ScrumBoardPage() {
             {members && members.length > 0 && <AvatarStack members={members} max={3} />}
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setCreateEpicOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-xs font-semibold hover:bg-muted"
-            >
-              <Plus className="h-4 w-4 text-muted-foreground" /> Create Epic
-            </button>
-            <button
-              onClick={() => setCreateSprintOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-            >
-              <Zap className="h-4 w-4" /> Create Sprint
-            </button>
+            <PermissionGate permission="canCreateEpics">
+              <button
+                onClick={() => setCreateEpicOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-xs font-semibold hover:bg-muted"
+              >
+                <Plus className="h-4 w-4 text-muted-foreground" /> Create Epic
+              </button>
+            </PermissionGate>
+            <PermissionGate permission="canCreateSprints">
+              <button
+                onClick={() => setCreateSprintOpen(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+              >
+                <Zap className="h-4 w-4" /> Create Sprint
+              </button>
+            </PermissionGate>
           </div>
         </div>
       </header>
@@ -128,12 +133,14 @@ export default function ScrumBoardPage() {
         </div>
         <div className="flex items-center gap-2 py-1.5">
           <FilterPanel projectId={projectId} filters={filters} onChange={setFilters} />
-          <button
-            onClick={() => openCreateTask()}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
-          >
-            <Plus className="h-4 w-4" /> New Task
-          </button>
+          <PermissionGate permission="canCreateStories">
+            <button
+              onClick={() => openCreateTask()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+            >
+              <Plus className="h-4 w-4" /> New Task
+            </button>
+          </PermissionGate>
         </div>
       </div>
 

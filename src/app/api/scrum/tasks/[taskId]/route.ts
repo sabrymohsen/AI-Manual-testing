@@ -45,7 +45,10 @@ export async function GET(_req: Request, { params }: { params: { taskId: string 
 
 export async function PATCH(request: Request, { params }: { params: { taskId: string } }) {
   const auth = await requireTaskOwner(params.taskId)
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.error !== null) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (!auth.permissions.canCreateStories) {
+    return NextResponse.json({ error: "Missing permission: canCreateStories" }, { status: 403 })
+  }
 
   let body: unknown
   try {
@@ -134,7 +137,10 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
 
 export async function DELETE(_req: Request, { params }: { params: { taskId: string } }) {
   const auth = await requireTaskOwner(params.taskId)
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.error !== null) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (!auth.permissions.canDeleteStories) {
+    return NextResponse.json({ error: "Missing permission: canDeleteStories" }, { status: 403 })
+  }
 
   await prisma.task.delete({ where: { id: params.taskId } })
   return NextResponse.json({ success: true })

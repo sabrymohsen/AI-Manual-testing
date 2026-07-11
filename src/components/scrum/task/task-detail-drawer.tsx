@@ -34,6 +34,7 @@ import { TaskLinkedIssues } from "./task-linked-issues"
 import { TaskDetailsSidebar } from "./task-details-sidebar"
 import { TaskActivity } from "./task-activity"
 import { STATUS_COLORS, STATUS_ORDER, TYPE_META } from "./task-detail-config"
+import { PermissionGate } from "@/components/permissions/PermissionGate"
 import { initials } from "@/components/scrum/shared"
 import {
   Copy,
@@ -212,10 +213,12 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
                 <DropdownMenuItem onClick={copyLink}>
                   <LinkIcon className="mr-2 h-4 w-4" /> Copy link
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                </DropdownMenuItem>
+                <PermissionGate permission="canDeleteStories">
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                  </DropdownMenuItem>
+                </PermissionGate>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -317,10 +320,12 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
             <DropdownMenuItem onClick={() => vote.mutate()}>
               <ThumbsUp className="mr-2 h-4 w-4" /> {voted ? "Remove vote" : "Vote"}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </DropdownMenuItem>
+            <PermissionGate permission="canDeleteStories">
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
+              </DropdownMenuItem>
+            </PermissionGate>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

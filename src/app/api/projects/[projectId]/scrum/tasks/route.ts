@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner } from "@/lib/api-guards"
+import { requireProjectMember, requireProjectPermission } from "@/lib/api-guards"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { taskInclude, serializeTask, logActivity } from "@/lib/scrum/server"
@@ -27,7 +27,7 @@ export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const url = new URL(request.url)
@@ -74,7 +74,7 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectPermission(params.projectId, "canCreateStories")
   if (auth.error !== null) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   let body: unknown

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, requireCanCreateProject, unauthorizedResponse } from "@/lib/api-guards"
 import { createProjectSchema } from "@/schemas"
 
 export async function GET(request: NextRequest) {
@@ -276,8 +276,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const auth = await requireCanCreateProject()
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const body = await request.json()
   const parsed = createProjectSchema.safeParse(body)
@@ -289,11 +289,16 @@ export async function POST(request: Request) {
     )
   }
 
+  // Create the project and register the creator as an Owner ProjectMember so
+  // the RBAC roster is complete from the start.
   const project = await prisma.project.create({
     data: {
       ...parsed.data,
       status: "Active",
       userId: auth.session!.user.id,
+      projectMembers: {
+        create: { userId: auth.session!.user.id, role: "Owner" },
+      },
     },
   })
 

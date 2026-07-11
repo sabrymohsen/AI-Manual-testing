@@ -1,17 +1,17 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { updateProjectSchema } from "@/schemas"
-import { requireProjectOwner, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireProjectMember, requireProjectRole, requireProjectPermission, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return auth.status === 404 ? notFoundResponse(auth.error) : unauthorizedResponse(auth.error)
 
   const project = await prisma.project.findFirst({
-    where: { id: params.projectId, userId: auth.session!.user.id },
+    where: { id: params.projectId },
     include: {
       credentials: {
         select: {
@@ -48,8 +48,8 @@ export async function PUT(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return auth.status === 404 ? notFoundResponse(auth.error) : unauthorizedResponse(auth.error)
+  const auth = await requireProjectRole(params.projectId, "Admin")
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const body = await request.json()
   const parsed = updateProjectSchema.safeParse(body)
@@ -70,8 +70,8 @@ export async function DELETE(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return auth.status === 404 ? notFoundResponse(auth.error) : unauthorizedResponse(auth.error)
+  const auth = await requireProjectPermission(params.projectId, "canDeleteProject")
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   await prisma.project.delete({ where: { id: params.projectId } })
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner } from "@/lib/api-guards"
+import { requireProjectMember, requireProjectPermission } from "@/lib/api-guards"
 import { z } from "zod"
 import { ensureBoardColumns } from "@/lib/scrum/server"
 
@@ -11,7 +11,7 @@ const schema = z.object({
 })
 
 export async function GET(_req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const columns = await ensureBoardColumns(params.projectId)
@@ -19,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: { projectId: stri
 }
 
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectPermission(params.projectId, "canEditBoard")
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   let body: unknown

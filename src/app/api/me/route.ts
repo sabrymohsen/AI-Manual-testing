@@ -17,5 +17,8 @@ export async function GET() {
     ? Math.max(0, Math.ceil((user.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : 0
 
-  return NextResponse.json({ user: { ...user, trialActive, trialDaysRemaining } })
+  return NextResponse.json({ 
+    user: { ...user, trialActive, trialDaysRemaining },
+    token: auth.session!.token
+  })
 }

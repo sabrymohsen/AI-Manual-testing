@@ -31,9 +31,14 @@ import {
   FolderOpen,
   Camera,
   LineChart,
-  Settings2
+  Settings2,
+  MessageSquare
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
+import { usePermissionStore } from "@/stores/permissionStore"
+import { PermissionGate, GlobalAdminGate } from "@/components/permissions/PermissionGate"
+import { ProjectSwitcher } from "@/components/layout/ProjectSwitcher"
+import type { ProjectPermission } from "@/lib/permissions"
 
 interface ProjectOption {
   id: string
@@ -73,6 +78,9 @@ export default function DashboardLayout({
   const [activeProjectId, setActiveProjectId] = useState<string>("")
   const [activeProjectStats, setActiveProjectStats] = useState<ProjectStats | null>(null)
   const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string } | null>(null)
+  const [token, setToken] = useState<string>("")
+  // token is stored for the chat page to read via window.__CHAT_TOKEN__
+  useEffect(() => { (window as any).__CHAT_TOKEN__ = token }, [token])
   
 
   // Command bar search overlay state
@@ -109,6 +117,7 @@ export default function DashboardLayout({
           const data = await res.json()
           console.log("LAYOUT LOADED USER:", data.user)
           setUser(data.user)
+          setToken(data.token)
         } else {
           console.error("Failed to load user context, status:", res.status)
         }
@@ -151,6 +160,35 @@ export default function DashboardLayout({
     loadStats()
   }, [activeProjectId])
 
+  // Hydrate the RBAC permission store for the active project.
+  useEffect(() => {
+    if (!activeProjectId) {
+      usePermissionStore.getState().reset()
+      return
+    }
+    let cancelled = false
+    async function loadPermissions() {
+      try {
+        const res = await fetch(`/api/projects/${activeProjectId}/membership`)
+        if (res.ok && !cancelled) {
+          const data = await res.json()
+          usePermissionStore.getState().setPermissions({
+            globalRole: data.globalRole,
+            projectRole: data.role,
+            projectId: activeProjectId,
+            permissions: data.permissions,
+          })
+        }
+      } catch (err) {
+        console.error("Error loading permissions:", err)
+      }
+    }
+    loadPermissions()
+    return () => {
+      cancelled = true
+    }
+  }, [activeProjectId])
+
   function handleSelectProject(projectId: string) {
     setActiveProjectId(projectId)
     localStorage.setItem("activeProjectId", projectId)
@@ -169,16 +207,18 @@ export default function DashboardLayout({
     }
   }
 
-  // Navigation Items
-  const navItems = [
+  // Navigation Items. `permission` (optional) gates the item via PermissionGate.
+  const navItems: { href: string; label: string; icon: any; permission?: ProjectPermission }[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/scrum", label: "Scrum Board", icon: Trello },
-    { href: "/reports", label: "Reports", icon: LineChart },
+    { href: "/reports", label: "Reports", icon: LineChart, permission: "canAccessReports" },
+    { href: "/members", label: "Members", icon: Users, permission: "canAccessMembers" },
   ]
 
   const workflowItems = [
     { href: "/test-cases", label: "Test Cases", icon: FileText },
     { href: "/automation-hub", label: "Automation Hub", icon: Cpu },
+    { href: "/team-chat", label: "Team Chat", icon: MessageSquare },
     { href: "/live-qa-session", label: "Live QA Session", icon: FlaskConical },
     { href: "/recorder-studio", label: "Recorder Studio", icon: Video },
     { href: "/bug-reports", label: "Bug Reports", icon: Bug },
@@ -192,6 +232,7 @@ export default function DashboardLayout({
     if (!activeProjectId) return basePath
     if (basePath === "/test-cases") return `/projects/${activeProjectId}/test-cases`
     if (basePath === "/automation-hub") return `/projects/${activeProjectId}/automation-hub`
+    if (basePath === "/team-chat") return `/projects/${activeProjectId}/team-chat`
     if (basePath === "/live-qa-session") return `/projects/${activeProjectId}/live-qa-session`
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
@@ -201,6 +242,7 @@ export default function DashboardLayout({
     }
     if (basePath === "/scrum") return `/projects/${activeProjectId}/scrum`
     if (basePath === "/requirements") return `/projects/${activeProjectId}/requirements`
+    if (basePath === "/members") return `/projects/${activeProjectId}/members`
     return basePath
   }
 
@@ -222,22 +264,9 @@ export default function DashboardLayout({
           </button>
         </div>
 
-        {/* Global Project Selection dropdown */}
+        {/* Global Project Switcher (with per-project role badges) */}
         {user?.role !== "Admin" && (
-          <div className="p-4 border-b space-y-1.5 select-none">
-            <span className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60">Selected Scope</span>
-            <select 
-              value={activeProjectId} 
-              onChange={(e) => handleSelectProject(e.target.value)}
-              className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
-            >
-              {projects.length === 0 ? (
-                <option value="">-- No project --</option>
-              ) : (
-                projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)
-              )}
-            </select>
-          </div>
+          <ProjectSwitcher activeProjectId={activeProjectId} onSelect={handleSelectProject} />
         )}
 
         <nav className="flex flex-col gap-1 p-4 flex-grow">
@@ -297,7 +326,7 @@ export default function DashboardLayout({
                   : (pathname.includes("/board") && !activeTab && item.href.endsWith("/board"))
                 
                 const isActive = isTabActive || (pathname === dest && !hasTab)
-                return (
+                const link = (
                   <Link
                     key={item.href}
                     href={dest}
@@ -308,6 +337,13 @@ export default function DashboardLayout({
                     <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
                     {item.label}
                   </Link>
+                )
+                return item.permission ? (
+                  <PermissionGate key={item.href} permission={item.permission}>
+                    {link}
+                  </PermissionGate>
+                ) : (
+                  link
                 )
               })}
 
@@ -420,6 +456,8 @@ export default function DashboardLayout({
           </div>
         </div>
       )}
+
+      {/* Team Chat is now a dedicated page at /projects/[projectId]/team-chat */}
 
     </div>
   )
