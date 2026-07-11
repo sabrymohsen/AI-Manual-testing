@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { resolveProjectRole } from "@/lib/api-guards"
+import type { ProjectPermission } from "@/lib/permissions"
 import { z } from "zod"
 
 const schema = z.object({
@@ -8,21 +10,22 @@ const schema = z.object({
   completed: z.boolean().optional(),
 })
 
-async function guard(subtaskId: string) {
+async function guard(subtaskId: string, permission: ProjectPermission) {
   const session = await getSession()
   if (!session) return { error: "Not authenticated", status: 401 as const }
   const subtask = await prisma.subtask.findUnique({
     where: { id: subtaskId },
-    select: { task: { select: { project: { select: { userId: true } } } } },
+    select: { task: { select: { projectId: true } } },
   })
   if (!subtask) return { error: "Subtask not found", status: 404 as const }
-  if (subtask.task.project.userId !== session.user.id)
-    return { error: "Access denied", status: 403 as const }
+  const resolved = await resolveProjectRole(subtask.task.projectId, session.user.id)
+  if (!resolved || resolved.role === null) return { error: "Access denied", status: 404 as const }
+  if (!resolved.permissions[permission]) return { error: `Missing permission: ${permission}`, status: 403 as const }
   return { error: null, status: 200 as const }
 }
 
 export async function PATCH(request: Request, { params }: { params: { subtaskId: string } }) {
-  const g = await guard(params.subtaskId)
+  const g = await guard(params.subtaskId, "canCreateStories")
   if (g.error) return NextResponse.json({ error: g.error }, { status: g.status })
 
   let body: unknown
@@ -42,7 +45,7 @@ export async function PATCH(request: Request, { params }: { params: { subtaskId:
 }
 
 export async function DELETE(_req: Request, { params }: { params: { subtaskId: string } }) {
-  const g = await guard(params.subtaskId)
+  const g = await guard(params.subtaskId, "canDeleteStories")
   if (g.error) return NextResponse.json({ error: g.error }, { status: g.status })
 
   await prisma.subtask.delete({ where: { id: params.subtaskId } })

@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { resolveProjectRole } from "@/lib/api-guards"
+import type { ProjectPermission } from "@/lib/permissions"
 import { Prisma, TaskStatus } from "@prisma/client"
 
 /** Column definitions used when a project has no BoardColumn rows yet. */
@@ -147,25 +149,47 @@ export function serializeTask(task: any, boardKey: string | null | undefined) {
  * Returns the task's projectId + boardKey for downstream serialization, or an
  * error tuple mirroring the api-guards convention.
  */
+/**
+ * Gate access to a task by its parent project. Any project member (Owner /
+ * Admin / Member / Viewer / Global Admin) passes; the resolved `permissions`
+ * map is returned so callers can enforce finer checks (e.g. canDeleteStories
+ * for deletes, canCreateStories for edits). The name is kept for the 13
+ * existing callers; it now means "task access", not "task ownership".
+ */
 export async function requireTaskOwner(taskId: string): Promise<
-  | { error: string; status: number; projectId: null; boardKey: null; userId: null }
-  | { error: null; status: 200; projectId: string; boardKey: string | null; userId: string }
+  | { error: string; status: number; projectId: null; boardKey: null; userId: null; permissions: null }
+  | {
+      error: null
+      status: 200
+      projectId: string
+      boardKey: string | null
+      userId: string
+      permissions: Record<ProjectPermission, boolean>
+    }
 > {
   const session = await getSession()
   if (!session) {
-    return { error: "Not authenticated", status: 401, projectId: null, boardKey: null, userId: null }
+    return { error: "Not authenticated", status: 401, projectId: null, boardKey: null, userId: null, permissions: null }
   }
   const task = await prisma.task.findUnique({
     where: { id: taskId },
-    select: { projectId: true, project: { select: { userId: true, boardKey: true } } },
+    select: { projectId: true, project: { select: { boardKey: true } } },
   })
   if (!task) {
-    return { error: "Task not found", status: 404, projectId: null, boardKey: null, userId: null }
+    return { error: "Task not found", status: 404, projectId: null, boardKey: null, userId: null, permissions: null }
   }
-  if (task.project.userId !== session.user.id) {
-    return { error: "Access denied", status: 403, projectId: null, boardKey: null, userId: null }
+  const resolved = await resolveProjectRole(task.projectId, session.user.id)
+  if (!resolved || resolved.role === null) {
+    return { error: "Access denied", status: 404, projectId: null, boardKey: null, userId: null, permissions: null }
   }
-  return { error: null, status: 200, projectId: task.projectId, boardKey: task.project.boardKey, userId: session.user.id }
+  return {
+    error: null,
+    status: 200,
+    projectId: task.projectId,
+    boardKey: task.project.boardKey,
+    userId: session.user.id,
+    permissions: resolved.permissions,
+  }
 }
 
 /** Log a task activity row (fire-and-forget style, but awaited for ordering). */

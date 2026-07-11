@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getSession } from "@/lib/auth"
+import { resolveProjectRole } from "@/lib/api-guards"
+import type { ProjectPermission } from "@/lib/permissions"
 import { z } from "zod"
 
 const schema = z.object({
@@ -9,20 +11,22 @@ const schema = z.object({
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 })
 
-async function guard(epicId: string) {
+async function guard(epicId: string, permission: ProjectPermission) {
   const session = await getSession()
   if (!session) return { error: "Not authenticated", status: 401 as const }
   const epic = await prisma.scrumEpic.findUnique({
     where: { id: epicId },
-    select: { project: { select: { userId: true } } },
+    select: { projectId: true },
   })
   if (!epic) return { error: "Epic not found", status: 404 as const }
-  if (epic.project.userId !== session.user.id) return { error: "Access denied", status: 403 as const }
+  const resolved = await resolveProjectRole(epic.projectId, session.user.id)
+  if (!resolved || resolved.role === null) return { error: "Access denied", status: 404 as const }
+  if (!resolved.permissions[permission]) return { error: `Missing permission: ${permission}`, status: 403 as const }
   return { error: null, status: 200 as const }
 }
 
 export async function PATCH(request: Request, { params }: { params: { epicId: string } }) {
-  const g = await guard(params.epicId)
+  const g = await guard(params.epicId, "canCreateEpics")
   if (g.error) return NextResponse.json({ error: g.error }, { status: g.status })
 
   let body: unknown
@@ -43,7 +47,7 @@ export async function PATCH(request: Request, { params }: { params: { epicId: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: { epicId: string } }) {
-  const g = await guard(params.epicId)
+  const g = await guard(params.epicId, "canDeleteEpics")
   if (g.error) return NextResponse.json({ error: g.error }, { status: g.status })
 
   await prisma.scrumEpic.delete({ where: { id: params.epicId } })
