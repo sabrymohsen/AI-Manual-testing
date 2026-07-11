@@ -684,6 +684,23 @@ export default function LiveQASessionPage() {
       return
     }
 
+    // Catch unreachable localhost targets before hitting the API: when this
+    // app is served from a real domain, the recording browser runs on that
+    // server and can't reach the tester's own machine.
+    try {
+      const targetHost = new URL(startUrl).hostname.toLowerCase()
+      const isLoopback = (h: string) =>
+        h === "localhost" || h === "0.0.0.0" || h === "::1" || h.endsWith(".localhost") || /^127\./.test(h)
+      if (isLoopback(targetHost) && !isLoopback(window.location.hostname.toLowerCase())) {
+        setStartError(
+          `"${startUrl}" points to localhost, which isn't reachable from this server — the recording browser runs on the deployment, not on your machine. Enter a publicly accessible URL.`
+        )
+        return
+      }
+    } catch {
+      // invalid URL — the server-side validation will report it
+    }
+
     setStartingSession(true)
     setStartError("")
 
