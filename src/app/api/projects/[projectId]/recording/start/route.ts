@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
 import { recorderWorkerRequest, RecorderWorkerError } from "@/lib/recording/worker-client"
+import { loopbackTargetError } from "@/lib/recording/target-url"
 
 const startRecordingSchema = z.object({
   title: z.string().min(1, "Test case title is required"),
@@ -31,6 +32,13 @@ export async function POST(
     const parsed = startRecordingSchema.safeParse(body)
     if (!parsed.success) {
       return badRequestResponse(parsed.error.errors.map((e) => e.message).join(", "))
+    }
+
+    // Loopback targets are only reachable when the app runs on the tester's
+    // own machine — on a hosted deployment they'd point at the container.
+    const targetError = loopbackTargetError(parsed.data.startUrl, request.headers.get("host"))
+    if (targetError) {
+      return NextResponse.json({ error: targetError, code: "UNREACHABLE_TARGET" }, { status: 400 })
     }
 
     const options = {
