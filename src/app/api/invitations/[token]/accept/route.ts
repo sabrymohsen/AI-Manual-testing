@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth } from "@/lib/api-guards"
 import { PROJECT_ROLES } from "@/lib/permissions"
+import { notify } from "@/lib/notifications"
+import { logUserActivity } from "@/lib/user-activity"
 
 // POST /api/invitations/[token]/accept — accept an invitation as the logged-in
 // user. Joins the project with the invitation's role and marks it ACCEPTED.
@@ -42,6 +44,20 @@ export async function POST(_req: Request, { params }: { params: { token: string 
     where: { id: invitation.id },
     data: { status: "ACCEPTED", acceptedAt: new Date() },
   })
+
+  const inviter = await prisma.user.findUnique({
+    where: { id: invitation.invitedById },
+    select: { name: true, email: true },
+  })
+  notify({
+    userId,
+    type: "INVITATION",
+    title: `You've been added to ${invitation.project.name}`,
+    body: `${inviter?.name || inviter?.email || "A teammate"} added you as ${role}`,
+    projectId: invitation.projectId,
+    actionUrl: `/projects/${invitation.projectId}/scrum`,
+  }).catch(() => {})
+  logUserActivity(userId, "PROJECT_JOINED", `Joined project "${invitation.project.name}"`, invitation.projectId)
 
   return NextResponse.json({
     success: true,

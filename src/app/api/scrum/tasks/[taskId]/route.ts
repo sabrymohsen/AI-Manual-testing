@@ -2,10 +2,12 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireTaskOwner, taskDetailInclude, serializeTask, logActivity } from "@/lib/scrum/server"
+import { notify } from "@/lib/notifications"
+import { logUserActivity } from "@/lib/user-activity"
 
 const STATUSES = ["TODO", "IN_PROGRESS", "DONE", "REVIEW", "TESTING", "DEPLOYED"] as const
 const PRIORITIES = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"] as const
-const TYPES = ["STORY", "BUG", "TASK", "SUBTASK", "EPIC"] as const
+const TYPES = ["STORY", "BUG", "TASK", "SUBTASK", "EPIC", "TEST_CASE"] as const
 const RESOLUTIONS = ["DONE", "WONT_FIX", "DUPLICATE", "CANNOT_REPRODUCE"] as const
 
 const patchSchema = z.object({
@@ -110,12 +112,30 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
   // so the activity feed shows who changed what and when).
   if (d.status !== undefined && d.status !== existing.status) {
     await logActivity(task.id, "moved", `${existing.status} → ${d.status}`, auth.userId)
+    if (d.status === "DONE") {
+      logUserActivity(auth.userId, "TASK_COMPLETED", `Completed "${task.title}"`, task.projectId)
+    }
   }
   if (d.assigneeIds !== undefined) {
     const before = new Set(existing.assignees.map((a) => a.id))
     const after = new Set(d.assigneeIds)
     if (before.size !== after.size || [...after].some((id) => !before.has(id))) {
       await logActivity(task.id, "assigned", `${d.assigneeIds.length} assignee(s)`, auth.userId)
+    }
+
+    // Notify newly-added assignees (not the actor, not existing assignees).
+    const newAssignees = [...after].filter((id) => !before.has(id) && id !== auth.userId)
+    if (newAssignees.length > 0) {
+      notify(
+        newAssignees.map((userId) => ({
+          userId,
+          type: "TASK_ASSIGNED" as const,
+          title: "New task assigned",
+          body: `You've been assigned to ${task.title}`,
+          projectId: task.projectId,
+          actionUrl: `/projects/${task.projectId}/scrum?task=${task.id}`,
+        }))
+      ).catch(() => {})
     }
   }
   if (d.description !== undefined && (d.description ?? "") !== (existing.description ?? "")) {

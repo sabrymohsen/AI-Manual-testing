@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireTaskOwner, taskDetailInclude, serializeTask, logActivity } from "@/lib/scrum/server"
+import { logUserActivity } from "@/lib/user-activity"
 
 const memberSelect = { id: true, name: true, email: true, avatarUrl: true } as const
 
@@ -74,6 +75,7 @@ export async function POST(request: Request, { params }: { params: { taskId: str
   })
 
   await logActivity(params.taskId, "work_logged", `Logged ${fmt(timeSpent)}`, auth.userId)
+  logUserActivity(auth.userId!, "WORK_LOGGED", `Logged ${fmt(timeSpent)} on "${task.title}"`, task.projectId)
 
   return NextResponse.json({ task: serializeTask(task, auth.boardKey) }, { status: 201 })
 }

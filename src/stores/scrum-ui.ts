@@ -12,7 +12,8 @@ interface ScrumUIState {
   createTaskOpen: boolean
   createTaskStatus: string | null // preselected column status
   createTaskSprintId: string | null // preselected sprint (backlog view)
-  openCreateTask: (status?: string, sprintId?: string | null) => void
+  createTaskType: string | null // preselected issue type (Create Issue menu)
+  openCreateTask: (status?: string, sprintId?: string | null, type?: string | null) => void
   closeCreateTask: () => void
 
   createEpicOpen: boolean
@@ -38,9 +39,16 @@ export const useScrumUI = create<ScrumUIState>((set) => ({
   createTaskOpen: false,
   createTaskStatus: null,
   createTaskSprintId: null,
-  openCreateTask: (status, sprintId) =>
-    set({ createTaskOpen: true, createTaskStatus: status ?? null, createTaskSprintId: sprintId ?? null }),
-  closeCreateTask: () => set({ createTaskOpen: false, createTaskStatus: null, createTaskSprintId: null }),
+  createTaskType: null,
+  openCreateTask: (status, sprintId, type) =>
+    set({
+      createTaskOpen: true,
+      createTaskStatus: status ?? null,
+      createTaskSprintId: sprintId ?? null,
+      createTaskType: type ?? null,
+    }),
+  closeCreateTask: () =>
+    set({ createTaskOpen: false, createTaskStatus: null, createTaskSprintId: null, createTaskType: null }),
 
   createEpicOpen: false,
   setCreateEpicOpen: (v) => set({ createEpicOpen: v }),
