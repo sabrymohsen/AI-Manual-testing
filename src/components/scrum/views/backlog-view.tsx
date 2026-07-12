@@ -3,12 +3,14 @@
 import { useMemo, useState } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import type { ScrumTask, ScrumSprint, TaskFilters } from "@/types/scrum"
-import { useScrumTasks, useScrumSprints, useMoveTask } from "@/hooks/scrum/use-scrum"
+import { useQuery } from "@tanstack/react-query"
+import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations } from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
 import { PriorityBadge, STATUS_META, AvatarStack } from "@/components/scrum/shared"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers } from "lucide-react"
+import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers, Play, CheckCircle2, Loader2 } from "lucide-react"
 import { format } from "date-fns"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 
 const BACKLOG_ID = "backlog"
@@ -28,8 +30,40 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
   const { data: tasks, isLoading } = useScrumTasks(projectId, filters)
   const { data: sprints } = useScrumSprints(projectId)
   const move = useMoveTask(projectId)
+  const { update: updateSprint } = useSprintMutations(projectId)
+  // Gate sprint controls on this project's own membership, decoupled from the
+  // sidebar's "active project" (the global permission store can lag behind the
+  // page's projectId on direct navigation). The API also enforces this on PATCH.
+  const { data: membership } = useQuery({
+    queryKey: ["project-membership", projectId],
+    queryFn: () =>
+      fetch(`/api/projects/${projectId}/membership`).then((r) => (r.ok ? r.json() : null)),
+    staleTime: 60_000,
+  })
+  const canManageSprints =
+    membership?.globalRole === "Admin" || membership?.permissions?.canCreateSprints === true
   const { openTask, openCreateTask } = useScrumUI()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  function startSprint(s: ScrumSprint) {
+    updateSprint.mutate(
+      { sprintId: s.id, body: { status: "ACTIVE" } },
+      {
+        onSuccess: () => toast.success(`${s.name} started`),
+        onError: () => toast.error("Failed to start sprint"),
+      }
+    )
+  }
+
+  function completeSprint(s: ScrumSprint) {
+    updateSprint.mutate(
+      { sprintId: s.id, body: { status: "COMPLETED" } },
+      {
+        onSuccess: () => toast.success(`${s.name} completed`),
+        onError: () => toast.error("Failed to complete sprint"),
+      }
+    )
+  }
 
   const groups = useMemo(() => {
     const bySprint = new Map<string, ScrumTask[]>()
@@ -101,6 +135,9 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
             onOpenTask={openTask}
             onCreate={() => openCreateTask(undefined, s.id)}
             emptyText="Drag stories here to plan this sprint."
+            onStart={canManageSprints && s.status === "PLANNED" ? () => startSprint(s) : undefined}
+            onComplete={canManageSprints && s.status === "ACTIVE" ? () => completeSprint(s) : undefined}
+            sprintBusy={updateSprint.isPending}
           />
         ))}
 
@@ -134,6 +171,9 @@ function Section({
   onOpenTask,
   onCreate,
   emptyText,
+  onStart,
+  onComplete,
+  sprintBusy,
 }: {
   id: string
   title: string
@@ -146,6 +186,9 @@ function Section({
   onOpenTask: (id: string) => void
   onCreate: () => void
   emptyText: string
+  onStart?: () => void
+  onComplete?: () => void
+  sprintBusy?: boolean
 }) {
   const points = tasks.reduce((a, t) => a + (t.storyPoints || 0), 0)
   return (
@@ -167,6 +210,28 @@ function Section({
           <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
             {tasks.length}
           </span>
+          {onStart && (
+            <button
+              onClick={onStart}
+              disabled={sprintBusy}
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+              title="Start this sprint"
+            >
+              {sprintBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              Start sprint
+            </button>
+          )}
+          {onComplete && (
+            <button
+              onClick={onComplete}
+              disabled={sprintBusy}
+              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+              title="Complete this sprint"
+            >
+              {sprintBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+              Complete
+            </button>
+          )}
           <button
             onClick={onCreate}
             className="rounded p-1 text-muted-foreground hover:bg-background hover:text-foreground"
