@@ -2825,11 +2825,16 @@ model BrdAnnotation {
   type       String   // highlight | comment | rect | sticky | note
   color      String?
   text       String?  @db.Text
+  quote      String?  @db.Text // the commented-on section text (soft anchor)
+  parentId   String?  // for threaded replies
+  resolved   Boolean  @default(false)
+  mentionIds String[] @default([]) // team members @mentioned in this comment
   authorId   String?
   authorName String?
   createdAt  DateTime @default(now())
 
   @@index([brdId])
+  @@index([parentId])
 }
 
 // Immutable, non-deletable audit trail for a BRD.
