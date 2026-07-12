@@ -55,6 +55,8 @@ export async function GET(
       ".pdf": "application/pdf",
       ".zip": "application/zip",
       ".md": "text/markdown",
+      ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".doc": "application/msword",
     }
 
     return new NextResponse(buffer, {

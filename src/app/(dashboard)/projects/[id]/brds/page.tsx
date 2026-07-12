@@ -1,0 +1,264 @@
+"use client"
+
+import { useCallback, useEffect, useRef, useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { toast } from "sonner"
+import {
+  FileText,
+  FileType2,
+  Upload,
+  Search,
+  Loader2,
+  Trash2,
+  Link2,
+  Clock,
+  Layers,
+} from "lucide-react"
+
+interface Brd {
+  id: string
+  name: string
+  filename: string
+  fileType: "pdf" | "docx"
+  status: string
+  uploaderName: string
+  versionCount: number
+  linkCount: number
+  updatedAt: string
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  Draft: "bg-slate-100 text-slate-600 border-slate-200",
+  Reviewed: "bg-blue-50 text-blue-700 border-blue-200",
+  Final: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  Archived: "bg-amber-50 text-amber-700 border-amber-200",
+}
+
+function FileTypeIcon({ type, className }: { type: string; className?: string }) {
+  return type === "pdf" ? (
+    <FileType2 className={className ?? "h-4 w-4 text-rose-500"} />
+  ) : (
+    <FileText className={className ?? "h-4 w-4 text-blue-500"} />
+  )
+}
+
+export default function BrdHubPage() {
+  const params = useParams<{ id: string }>()
+  const projectId = params.id
+  const router = useRouter()
+
+  const [brds, setBrds] = useState<Brd[]>([])
+  const [loading, setLoading] = useState(true)
+  const [canManage, setCanManage] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [search, setSearch] = useState("")
+  const [typeFilter, setTypeFilter] = useState("")
+  const [statusFilter, setStatusFilter] = useState("")
+  const [sort, setSort] = useState("updated")
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/membership`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCanManage(d?.globalRole === "Admin" || d?.permissions?.canManageBrds === true))
+      .catch(() => {})
+  }, [projectId])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const qs = new URLSearchParams()
+      if (search.trim()) qs.set("search", search.trim())
+      if (typeFilter) qs.set("type", typeFilter)
+      if (statusFilter) qs.set("status", statusFilter)
+      qs.set("sort", sort)
+      if (statusFilter === "Archived") qs.set("includeArchived", "true")
+      const res = await fetch(`/api/projects/${projectId}/brds?${qs}`)
+      if (res.ok) setBrds((await res.json()).brds)
+    } finally {
+      setLoading(false)
+    }
+  }, [projectId, search, typeFilter, statusFilter, sort])
+
+  useEffect(() => {
+    const t = setTimeout(load, 200)
+    return () => clearTimeout(t)
+  }, [load])
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    const okType =
+      file.type === "application/pdf" ||
+      file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    if (!okType) {
+      toast.error("Only PDF and Word documents are supported")
+      return
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Maximum file size is 25MB")
+      return
+    }
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append("file", file)
+      const res = await fetch(`/api/projects/${projectId}/brds`, { method: "POST", body: fd })
+      const data = await res.json()
+      if (res.ok) {
+        toast.success(`Uploaded ${data.brd.name}`)
+        router.push(`/projects/${projectId}/brds/${data.brd.id}`)
+      } else {
+        toast.error(data.error || "Upload failed")
+      }
+    } catch {
+      toast.error("Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleDelete(brd: Brd, e: React.MouseEvent) {
+    e.stopPropagation()
+    if (!confirm(`Delete "${brd.name}"? It will be recoverable for 30 days.`)) return
+    const res = await fetch(`/api/brds/${brd.id}`, { method: "DELETE" })
+    if (res.ok) {
+      setBrds((prev) => prev.filter((b) => b.id !== brd.id))
+      toast.success("BRD deleted")
+    } else {
+      toast.error("Failed to delete")
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">BRD Hub</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Business requirement documents for this project — upload, version, link, and review.
+          </p>
+        </div>
+        {canManage && (
+          <>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              Upload BRD
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              className="hidden"
+              onChange={handleUpload}
+            />
+          </>
+        )}
+      </header>
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search documents…"
+            className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+          />
+        </div>
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
+          <option value="">All types</option>
+          <option value="pdf">PDF</option>
+          <option value="docx">Word</option>
+        </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
+          <option value="">All statuses</option>
+          <option value="Draft">Draft</option>
+          <option value="Reviewed">Reviewed</option>
+          <option value="Final">Final</option>
+          <option value="Archived">Archived</option>
+        </select>
+        <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
+          <option value="updated">Last updated</option>
+          <option value="name">Name</option>
+          <option value="created">Upload date</option>
+        </select>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="grid grid-cols-[1fr_90px_130px_90px_90px_44px] gap-2 border-b bg-muted/30 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+          <span>Document</span>
+          <span>Type</span>
+          <span>Updated</span>
+          <span className="text-center">Versions</span>
+          <span className="text-center">Status</span>
+          <span />
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+          </div>
+        ) : brds.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-16 text-center">
+            <Layers className="h-10 w-10 text-slate-200" />
+            <p className="text-sm font-medium text-muted-foreground">No BRDs yet</p>
+            {canManage && <p className="text-xs text-muted-foreground/70">Click “Upload BRD” to add your first document.</p>}
+          </div>
+        ) : (
+          brds.map((b) => (
+            <div
+              key={b.id}
+              onClick={() => router.push(`/projects/${projectId}/brds/${b.id}`)}
+              className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-slate-50"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <FileTypeIcon type={b.fileType} className="h-5 w-5 shrink-0" />
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-slate-800">{b.name}</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {b.uploaderName}
+                    {b.linkCount > 0 && (
+                      <span className="ml-2 inline-flex items-center gap-0.5">
+                        <Link2 className="h-3 w-3" /> {b.linkCount}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold uppercase text-muted-foreground">{b.fileType}</span>
+              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                {new Date(b.updatedAt).toLocaleDateString()}
+              </span>
+              <span className="text-center text-xs font-semibold text-muted-foreground">v{b.versionCount}</span>
+              <span className="flex justify-center">
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[b.status] || STATUS_STYLES.Draft}`}>
+                  {b.status}
+                </span>
+              </span>
+              <span className="flex justify-end">
+                {canManage && (
+                  <button
+                    onClick={(e) => handleDelete(b, e)}
+                    className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}

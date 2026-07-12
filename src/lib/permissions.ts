@@ -29,6 +29,7 @@ export const PROJECT_PERMISSIONS = {
     canAccessSettings: true,
     canAccessChat: true,
     canAccessMembers: true,
+    canManageBrds: true,
   },
   Admin: {
     canCreateSprints: true,
@@ -45,6 +46,7 @@ export const PROJECT_PERMISSIONS = {
     canAccessSettings: true,
     canAccessChat: true,
     canAccessMembers: true,
+    canManageBrds: true,
   },
   Member: {
     canCreateSprints: false,
@@ -61,6 +63,7 @@ export const PROJECT_PERMISSIONS = {
     canAccessSettings: false,
     canAccessChat: true,
     canAccessMembers: true,
+    canManageBrds: false,
   },
   Viewer: {
     canCreateSprints: false,
@@ -77,6 +80,7 @@ export const PROJECT_PERMISSIONS = {
     canAccessSettings: false,
     canAccessChat: true,
     canAccessMembers: true,
+    canManageBrds: false,
   },
 } as const;
 
