@@ -37,6 +37,7 @@ next-env.d.ts
 # storage
 storage/screenshots/*
 storage/avatars/*
+storage/brds/*
 storage/figma/*
 storage/diffs/*
 storage/traces/*

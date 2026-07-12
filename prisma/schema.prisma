@@ -395,6 +395,9 @@ model Project {
   notifications  Notification[]
   userActivities UserActivity[]
 
+  // ── BA BRD document hub ──
+  brdDocuments BrdDocument[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2681,6 +2684,7 @@ model ScrumEpic {
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks       Task[]
+  brdLinks    BrdLink[]
   createdAt   DateTime @default(now())
 
   @@index([projectId])
@@ -2732,6 +2736,7 @@ model Task {
   linkedToTasks     TaskLink[]       @relation("TargetTask")
   taskAttachments   TaskAttachment[]
   workLogs          WorkLog[]
+  brdLinks          BrdLink[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -2740,6 +2745,105 @@ model Task {
   @@index([sprintId])
   @@index([epicId])
   @@index([status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Business Analyst BRD document hub
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Master BRD record. Always resolves to the latest version via currentVersionId.
+// User references are denormalized (id + name snapshot) so audit/version trails
+// stay intact even if a user is renamed or removed.
+model BrdDocument {
+  id           String   @id @default(cuid())
+  name         String   // display name
+  filename     String   // original uploaded filename
+  fileType     String   // "pdf" | "docx"
+  status       String   @default("Draft") // Draft | Reviewed | Final | Archived
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploaderId   String
+  uploaderName String
+  currentVersionId String? // points at the latest BrdVersion.id
+  versions     BrdVersion[]
+  links        BrdLink[]
+  annotations  BrdAnnotation[]
+  auditLogs    BrdAuditLog[]
+  isDeleted    Boolean  @default(false)
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId, isDeleted])
+}
+
+model BrdVersion {
+  id                String   @id @default(cuid())
+  brdId             String
+  brd               BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  versionNumber     Int
+  storagePath       String   // file on disk under STORAGE_ROOT
+  fileType          String   // "pdf" | "docx"
+  fileSize          Int
+  contentHtml       String?  @db.Text // editor-produced HTML (Word edits)
+  changeSummary     String?
+  editorId          String?
+  editorName        String?
+  previousVersionId String?
+  createdAt         DateTime @default(now())
+
+  @@index([brdId])
+}
+
+// Bidirectional link from a BRD to an Epic or a User Story (Task). `label` is a
+// snapshot so a link to a since-deleted item can still render as "Deleted item".
+model BrdLink {
+  id          String   @id @default(cuid())
+  brdId       String
+  brd         BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  linkType    String   // "epic" | "story"
+  epicId      String?
+  epic        ScrumEpic? @relation(fields: [epicId], references: [id], onDelete: SetNull)
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  label       String
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([brdId])
+  @@index([epicId])
+  @@index([taskId])
+}
+
+model BrdAnnotation {
+  id         String   @id @default(cuid())
+  brdId      String
+  brd        BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  page       Int?     // PDF page (1-based)
+  x          Float?
+  y          Float?
+  type       String   // highlight | comment | rect | sticky | note
+  color      String?
+  text       String?  @db.Text
+  authorId   String?
+  authorName String?
+  createdAt  DateTime @default(now())
+
+  @@index([brdId])
+}
+
+// Immutable, non-deletable audit trail for a BRD.
+model BrdAuditLog {
+  id        String   @id @default(cuid())
+  brdId     String
+  brd       BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  action    String
+  detail    String?
+  actorId   String?
+  actorName String?
+  createdAt DateTime @default(now())
+
+  @@index([brdId])
 }
 
 model TaskLink {

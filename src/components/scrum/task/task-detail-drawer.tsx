@@ -32,6 +32,7 @@ import { CommentList } from "./comment-list"
 import { TraceabilityLinks } from "./traceability-links"
 import { TaskLinkedIssues } from "./task-linked-issues"
 import { TaskDetailsSidebar } from "./task-details-sidebar"
+import { TaskLinkedBrds } from "./task-linked-brds"
 import { TaskActivity } from "./task-activity"
 import { STATUS_COLORS, STATUS_ORDER, TYPE_META } from "./task-detail-config"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
@@ -270,6 +271,9 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
             </div>
             <div className="border-t pt-5">
               <TraceabilityLinks projectId={projectId} taskId={task.id} testCases={task.testCases ?? []} bugs={task.bugs ?? []} />
+            </div>
+            <div className="border-t pt-5">
+              <TaskLinkedBrds projectId={projectId} taskId={task.id} />
             </div>
             <div className="border-t pt-5">
               <CommentList projectId={projectId} taskId={task.id} comments={task.comments ?? []} />

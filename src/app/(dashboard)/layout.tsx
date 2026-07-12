@@ -32,7 +32,8 @@ import {
   Camera,
   LineChart,
   Settings2,
-  MessageSquare
+  MessageSquare,
+  FileSpreadsheet
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 import { usePermissionStore } from "@/stores/permissionStore"
@@ -236,6 +237,7 @@ export default function DashboardLayout({
 
   const workflowItems = [
     { href: "/test-cases", label: "Test Cases", icon: FileText },
+    { href: "/brds", label: "BRD Hub", icon: FileSpreadsheet },
     { href: "/automation-hub", label: "Automation Hub", icon: Cpu },
     { href: "/team-chat", label: "Team Chat", icon: MessageSquare },
     { href: "/live-qa-session", label: "Live QA Session", icon: FlaskConical },
@@ -255,6 +257,7 @@ export default function DashboardLayout({
     if (basePath === "/live-qa-session") return `/projects/${activeProjectId}/live-qa-session`
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
+    if (basePath === "/brds") return `/projects/${activeProjectId}/brds`
     if (basePath.startsWith("/board")) {
       const query = basePath.includes("?") ? basePath.substring(basePath.indexOf("?")) : ""
       return `/projects/${activeProjectId}/board${query}`
