@@ -47,9 +47,13 @@ export async function GET(request: Request) {
 
   const full = new URL(request.url).searchParams.get("full")
   if (full) {
-    const [ownedProjects, memberProjects, tasksAssigned, tasksCompleted, activity] = await Promise.all([
-      prisma.project.count({ where: { userId } }),
-      prisma.projectMember.count({ where: { userId } }),
+    const [projectCount, tasksAssigned, tasksCompleted, activity] = await Promise.all([
+      // Distinct projects the user belongs to as owner OR member. Counting the
+      // two separately and adding them double-counts any project where the user
+      // is both the owner and has a ProjectMember row.
+      prisma.project.count({
+        where: { OR: [{ userId }, { projectMembers: { some: { userId } } }] },
+      }),
       prisma.task.count({ where: { assignees: { some: { id: userId } } } }),
       prisma.task.count({ where: { assignees: { some: { id: userId } }, status: "DONE" } }),
       prisma.userActivity.findMany({
@@ -60,7 +64,7 @@ export async function GET(request: Request) {
       }),
     ])
     payload.stats = {
-      projects: ownedProjects + memberProjects,
+      projects: projectCount,
       tasksAssigned,
       tasksCompleted,
     }
