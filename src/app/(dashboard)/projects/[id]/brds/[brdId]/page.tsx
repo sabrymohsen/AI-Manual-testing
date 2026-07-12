@@ -18,17 +18,8 @@ import {
   RotateCcw,
   X,
   Plus,
-  Bold,
-  Italic,
-  Underline,
-  Strikethrough,
-  List,
-  ListOrdered,
-  Highlighter,
-  Heading1,
-  Heading2,
-  Heading3,
 } from "lucide-react"
+import { BrdEditor } from "@/components/brd/brd-editor"
 
 const STATUS_STYLES: Record<string, string> = {
   Draft: "bg-slate-100 text-slate-600 border-slate-200",
@@ -212,7 +203,7 @@ export default function BrdDetailPage() {
 
       <div className="py-5">
         {tab === "preview" && <PreviewTab brd={brd} onEdit={editable ? () => setTab("edit") : undefined} />}
-        {tab === "edit" && editable && <EditorTab brd={brd} onSaved={() => { load(); setTab("versions") }} />}
+        {tab === "edit" && editable && <BrdEditor brdId={brd.id} onSaved={() => { load(); setTab("versions") }} />}
         {tab === "versions" && <VersionsTab brd={brd} canManage={canManage && !isFinal} onChanged={load} />}
         {tab === "links" && <LinksTab brd={brd} projectId={projectId} canManage={canManage} onChanged={load} />}
         {tab === "audit" && <AuditTab brd={brd} />}
@@ -264,155 +255,6 @@ function PreviewTab({ brd, onEdit }: { brd: any; onEdit?: () => void }) {
         <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>
       ) : (
         <div className="brd-doc prose prose-sm max-w-none rounded-lg border bg-white p-8" dangerouslySetInnerHTML={{ __html: wordHtml || "" }} />
-      )}
-    </div>
-  )
-}
-
-/* ─── Word editor ─── */
-const HIGHLIGHTS = ["#fef08a", "#bbf7d0", "#bfdbfe", "#fecaca", "#fbcfe8", "#fed7aa"]
-
-function EditorTab({ brd, onSaved }: { brd: any; onSaved: () => void }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [loaded, setLoaded] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [showSaveModal, setShowSaveModal] = useState(false)
-  const [summary, setSummary] = useState("")
-  const [autoSavedAt, setAutoSavedAt] = useState<string | null>(null)
-  const draftKey = `brd-draft-${brd.id}`
-
-  useEffect(() => {
-    fetch(`/api/brds/${brd.id}/preview`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        const draft = localStorage.getItem(draftKey)
-        const html = draft && confirm("Restore your unsaved draft for this document?") ? draft : d?.html || "<p></p>"
-        if (ref.current) ref.current.innerHTML = html
-        setLoaded(true)
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brd.id])
-
-  // Auto-save draft to localStorage every 30s.
-  useEffect(() => {
-    const t = setInterval(() => {
-      if (ref.current) {
-        localStorage.setItem(draftKey, ref.current.innerHTML)
-        setAutoSavedAt(new Date().toLocaleTimeString())
-      }
-    }, 30000)
-    return () => clearInterval(t)
-  }, [draftKey])
-
-  const cmd = (command: string, value?: string) => {
-    ref.current?.focus()
-    document.execCommand(command, false, value)
-  }
-
-  async function doSave() {
-    if (!summary.trim()) {
-      toast.error("Please describe your changes")
-      return
-    }
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/brds/${brd.id}/versions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contentHtml: ref.current?.innerHTML || "", changeSummary: summary.trim() }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        localStorage.removeItem(draftKey)
-        toast.success(`v${data.version.versionNumber} saved`)
-        setShowSaveModal(false)
-        setSummary("")
-        onSaved()
-      } else {
-        toast.error(data.error || "Failed to save")
-      }
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const ToolBtn = ({ onClick, title, children }: any) => (
-    <button onClick={onClick} title={title} type="button" className="rounded p-1.5 text-slate-600 hover:bg-slate-100">
-      {children}
-    </button>
-  )
-
-  return (
-    <div>
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 rounded-t-lg border border-b-0 bg-slate-50 px-2 py-1.5">
-        <ToolBtn onClick={() => cmd("bold")} title="Bold"><Bold className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("italic")} title="Italic"><Italic className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("underline")} title="Underline"><Underline className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("strikeThrough")} title="Strikethrough"><Strikethrough className="h-4 w-4" /></ToolBtn>
-        <div className="mx-1 h-5 w-px bg-slate-300" />
-        <ToolBtn onClick={() => cmd("formatBlock", "H1")} title="Heading 1"><Heading1 className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("formatBlock", "H2")} title="Heading 2"><Heading2 className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("formatBlock", "H3")} title="Heading 3"><Heading3 className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("formatBlock", "P")} title="Paragraph"><span className="text-xs font-bold">¶</span></ToolBtn>
-        <div className="mx-1 h-5 w-px bg-slate-300" />
-        <ToolBtn onClick={() => cmd("insertUnorderedList")} title="Bullet list"><List className="h-4 w-4" /></ToolBtn>
-        <ToolBtn onClick={() => cmd("insertOrderedList")} title="Numbered list"><ListOrdered className="h-4 w-4" /></ToolBtn>
-        <div className="mx-1 h-5 w-px bg-slate-300" />
-        <div className="flex items-center gap-0.5">
-          <Highlighter className="h-4 w-4 text-slate-400" />
-          {HIGHLIGHTS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              title="Highlight"
-              onClick={() => cmd("hiliteColor", c)}
-              className="h-4 w-4 rounded-full border border-slate-300"
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-          {autoSavedAt && <span className="text-[10px] text-muted-foreground">Draft auto-saved {autoSavedAt}</span>}
-          <button
-            onClick={() => setShowSaveModal(true)}
-            className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
-          >
-            Save version
-          </button>
-        </div>
-      </div>
-
-      {!loaded && <div className="flex items-center justify-center border py-16"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>}
-      <div
-        ref={ref}
-        contentEditable={loaded}
-        suppressContentEditableWarning
-        className="brd-doc prose prose-sm min-h-[60vh] max-w-none rounded-b-lg border bg-white p-8 outline-none focus:ring-2 focus:ring-indigo-200"
-        style={{ display: loaded ? "block" : "none" }}
-      />
-
-      {showSaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowSaveModal(false)}>
-          <div className="w-full max-w-md rounded-xl border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-bold">Describe your changes</h3>
-            <p className="mt-1 text-xs text-muted-foreground">This summary is stored in the version history (required).</p>
-            <textarea
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              rows={3}
-              autoFocus
-              placeholder="e.g. Added the authentication scope section"
-              className="mt-3 w-full rounded-lg border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
-            />
-            <div className="mt-4 flex justify-end gap-2">
-              <button onClick={() => setShowSaveModal(false)} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">Cancel</button>
-              <button onClick={doSave} disabled={saving || !summary.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save new version
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )
