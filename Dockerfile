@@ -23,9 +23,14 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV production
+# Where runtime uploads (avatars, etc.) are written and served from. Matches the
+# Railway persistent volume mount path; the Railway service variable of the same
+# name overrides this if set.
+ENV STORAGE_ROOT=/data
 # Prisma's engine binaries need libc6-compat + openssl on Alpine (query + schema
 # engines); openssl also lets Prisma detect the right libssl version.
-RUN apk add --no-cache libc6-compat openssl
+# su-exec lets us drop from root to the app user after fixing volume ownership.
+RUN apk add --no-cache libc6-compat openssl su-exec
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
@@ -36,15 +41,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-USER nextjs
 EXPOSE 3000
 ENV PORT 3000
-# Sync the database to schema.prisma, then start the server.
+# We deliberately do NOT `USER nextjs` here. Railway mounts the persistent volume
+# (STORAGE_ROOT, e.g. /data) owned by root, so a non-root process gets EACCES when
+# writing uploads there. Instead the container starts as root, ensures the volume
+# exists and is owned by the app user, then drops to nextjs via su-exec to run the
+# server unprivileged.
 #
-# We use `db push` (not `migrate deploy`) because schema.prisma is the source of
-# truth for this project — the migrations/ history is incomplete (many models,
-# e.g. VisualBaseline/ShaftProperty, and enum values like TestCaseSource.Recorder
-# were only ever applied via db push, never captured in a migration). db push
-# reconciles the live DB to the full schema on every deploy. --accept-data-loss
-# makes it non-interactive; note this can drop columns if the schema removes them.
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --accept-data-loss --skip-generate && node server.js"]
+# Then sync the DB to schema.prisma. We use `db push` (not `migrate deploy`)
+# because schema.prisma is the source of truth here — the migrations/ history is
+# incomplete (models like VisualBaseline/ShaftProperty and enum values were only
+# ever applied via db push). --accept-data-loss makes it non-interactive.
+CMD ["sh", "-c", "mkdir -p \"${STORAGE_ROOT:-/data}\" && chown -R nextjs:nodejs \"${STORAGE_ROOT:-/data}\" && node node_modules/prisma/build/index.js db push --accept-data-loss --skip-generate && exec su-exec nextjs:nodejs node server.js"]
