@@ -45,11 +45,27 @@ export async function POST(request: Request) {
   }
 
   const dir = path.join(STORAGE_ROOT, "avatars")
-  await mkdir(dir, { recursive: true })
-
   const filename = `${userId}-${Date.now()}.${ext}`
   const buffer = Buffer.from(await file.arrayBuffer())
-  await writeFile(path.join(dir, filename), buffer)
+
+  // Surface the real filesystem error instead of a blank 500. A non-writable
+  // volume (EACCES) or read-only fs (EROFS) needs an infra fix, not a retry.
+  try {
+    await mkdir(dir, { recursive: true })
+    await writeFile(path.join(dir, filename), buffer)
+  } catch (e: any) {
+    console.error("Avatar write failed:", { dir, code: e?.code, message: e?.message })
+    return NextResponse.json(
+      {
+        error: `Could not save the image to storage (${e?.code || e?.message}). ` +
+          `The upload directory "${dir}" is not writable — check that the persistent ` +
+          `volume is mounted there and writable by the app.`,
+        code: e?.code || "WRITE_FAILED",
+        dir,
+      },
+      { status: 500 }
+    )
+  }
 
   // Served via the authenticated streamer so it works regardless of build mode.
   const avatarUrl = `/api/files/avatars/${filename}`
