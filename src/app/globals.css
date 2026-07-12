@@ -130,3 +130,13 @@
 .brd-doc ul.brd-checklist li { display: flex; align-items: flex-start; gap: 0.4rem; }
 .brd-doc [data-find-hit] { background: #fde68a; }
 .brd-doc [data-find-current] { background: #fbbf24; outline: 1px solid #f59e0b; }
+
+/* BRD editor: extra Word-like elements */
+.brd-doc sub { vertical-align: sub; font-size: 0.75em; }
+.brd-doc sup { vertical-align: super; font-size: 0.75em; }
+.brd-doc .brd-dropcap { float: left; font-size: 3.2rem; line-height: 0.9; font-weight: 700; padding: 0.1rem 0.5rem 0 0; color: #4f46e5; }
+.brd-doc .brd-textbox { border: 1px solid #cbd5e1; border-radius: 6px; padding: 0.75rem 1rem; margin: 0.6rem 0; background: #f8fafc; }
+.brd-doc .brd-pagebreak { border-top: 2px dashed #cbd5e1; margin: 1.2rem 0; position: relative; }
+.brd-doc .brd-pagebreak::after { content: "Page break"; position: absolute; right: 0; top: -0.65rem; font-size: 9px; color: #94a3b8; background: #fff; padding: 0 4px; }
+.brd-doc[dir="rtl"], .brd-doc [dir="rtl"] { text-align: right; }
+.brd-doc.show-marks p::after, .brd-doc.show-marks h1::after, .brd-doc.show-marks h2::after, .brd-doc.show-marks h3::after, .brd-doc.show-marks h4::after { content: "¶"; color: #cbd5e1; margin-left: 2px; }

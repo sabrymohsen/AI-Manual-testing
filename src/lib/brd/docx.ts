@@ -5,6 +5,7 @@ import {
   Packer,
   Paragraph,
   TextRun,
+  PageBreak,
   HeadingLevel,
   UnderlineType,
   AlignmentType,
@@ -38,6 +39,8 @@ interface RunStyle {
   color?: string
   size?: number // half-points
   font?: string
+  subScript?: boolean
+  superScript?: boolean
 }
 
 function toHex(color: string): string | undefined {
@@ -78,6 +81,8 @@ function runProps(text: string, style: RunStyle) {
     color: style.color,
     size: style.size,
     font: style.font,
+    subScript: style.subScript,
+    superScript: style.superScript,
     highlight: style.highlight as any,
     underline: style.underline ? { type: UnderlineType.SINGLE } : undefined,
   }
@@ -98,6 +103,8 @@ function collectRuns(node: any, style: RunStyle, out: TextRun[]) {
     if (tag === "I" || tag === "EM") next.italics = true
     if (tag === "U") next.underline = true
     if (tag === "S" || tag === "STRIKE" || tag === "DEL") next.strike = true
+    if (tag === "SUB") next.subScript = true
+    if (tag === "SUP") next.superScript = true
     if (tag === "MARK") next.highlight = "yellow"
     if (tag === "A") next.color = "0563C1"
     if (tag === "FONT" && el.getAttribute("color")) next.color = toHex(el.getAttribute("color")) ?? next.color
@@ -161,6 +168,11 @@ export async function htmlToDocxBuffer(html: string): Promise<Buffer> {
     }
     if (tag === "HR") {
       blocks.push(new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: "CBD5E1" } } }))
+      return
+    }
+    // Page break (from the editor's page-break element).
+    if (tag === "DIV" && el.getAttribute("data-pagebreak")) {
+      blocks.push(new Paragraph({ children: [new PageBreak()] }))
       return
     }
     if (tag === "TABLE") {
