@@ -13,6 +13,11 @@ import {
 } from "@/lib/permissions"
 import { getProjectLimit } from "@/lib/plan-limits"
 
+/**
+ * Owner-level guard. Passes for the project creator, any ProjectMember whose
+ * role is Owner or Admin (projects support multiple co-owners; Admin is an
+ * Owner-equal role), and Global Admins.
+ */
 export async function requireProjectOwner(projectId: string): Promise<
   | { error: string; status: number; session: null }
   | { error: null; status: 200; session: NonNullable<Awaited<ReturnType<typeof getSession>>> }
@@ -22,12 +27,12 @@ export async function requireProjectOwner(projectId: string): Promise<
     return { error: "Not authenticated", status: 401, session: null }
   }
 
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, userId: session.user.id },
-    select: { id: true },
-  })
+  const resolved = await resolveProjectRole(projectId, session.user.id)
+  const isOwnerLevel =
+    !!resolved &&
+    (resolved.globalRole === "Admin" || resolved.role === "Owner" || resolved.role === "Admin")
 
-  if (!project) {
+  if (!isOwnerLevel) {
     return { error: "Project not found or access denied", status: 404, session: null }
   }
 

@@ -242,12 +242,15 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       }
     })
     await cdp.send("Page.enable")
-    // The live view runs on localhost, so frame *size* is not the bottleneck —
-    // client-side per-frame rendering is (fixed on the client). Keep quality high
-    // for a sharp image; caps sized for 2x (retina) frames up to ~1920 CSS px.
+    // Frames keep their full pixel resolution (2x retina, caps ~1920 CSS px);
+    // speed comes from JPEG compression instead. Quality 65 is ~3x fewer bytes
+    // per frame than 90 with no resolution loss — the difference between a
+    // choppy and a fluid stream when viewers are on the internet (production)
+    // rather than localhost. Tune per deployment via RECORDER_STREAM_QUALITY.
+    const streamQuality = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 65))
     await cdp.send("Page.startScreencast", {
       format: "jpeg",
-      quality: 90,
+      quality: streamQuality,
       maxWidth: 3840,
       maxHeight: 3840,
       everyNthFrame: 1,
