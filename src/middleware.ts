@@ -37,7 +37,12 @@ export async function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
-    return NextResponse.redirect(new URL("/login", request.url))
+    // Redirect against the PUBLIC origin. Behind Railway's proxy request.url
+    // can carry the internal container host, which browsers can't reach —
+    // honor x-forwarded-* when present.
+    const host = request.headers.get("x-forwarded-host") ?? request.nextUrl.host
+    const proto = request.headers.get("x-forwarded-proto") ?? request.nextUrl.protocol.replace(":", "")
+    return NextResponse.redirect(`${proto}://${host}/login`)
   }
 
   return NextResponse.next()
