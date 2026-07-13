@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react"
 import * as XLSX from "xlsx"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import { useScrumUI } from "@/stores/scrum-ui"
 import { useScrumSprints, useScrumEpics } from "@/hooks/scrum/use-scrum"
 import type { TaskType } from "@/types/scrum"
@@ -162,6 +163,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
   )
 
   async function submit() {
+    if (submitting) return
     setSubmitting(true)
     setError(null)
     try {
@@ -198,9 +200,20 @@ export function ImportModal({ projectId }: { projectId: string }) {
         return
       }
       setResult(json)
+      toast.success(
+        `Imported ${json.created} ${json.created === 1 ? "issue" : "issues"}` +
+          (json.skipped?.length ? ` (${json.skipped.length} skipped)` : "")
+      )
       qc.invalidateQueries({ queryKey: ["scrum", projectId, "tasks"] })
       qc.invalidateQueries({ queryKey: ["scrum", projectId, "import-testcases"] })
       setSelectedTcIds(new Set())
+      // Consume the parsed file so the same rows can't be imported twice —
+      // the panel returns to the dropzone with the summary banner above it.
+      setFileName(null)
+      setHeaders([])
+      setRows([])
+      setMapping({})
+      if (fileInput.current) fileInput.current.value = ""
     } catch {
       setError("Import failed — check your connection and try again.")
     } finally {
