@@ -14,6 +14,7 @@ import { TaskDrawer } from "@/components/scrum/task/task-detail-drawer"
 import { CreateTaskModal } from "@/components/scrum/modals/create-task-modal"
 import { CreateEpicModal } from "@/components/scrum/modals/create-epic-modal"
 import { CreateSprintModal } from "@/components/scrum/modals/create-sprint-modal"
+import { ImportModal } from "@/components/scrum/modals/import-modal"
 import { SearchBar } from "@/components/scrum/filters/search-bar"
 import { FilterPanel } from "@/components/scrum/filters/filter-panel"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
@@ -27,7 +28,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, ChevronDown, Layers } from "lucide-react"
+import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, ChevronDown, Layers, Upload } from "lucide-react"
 
 type View = "board" | "backlog" | "list" | "timeline"
 
@@ -38,7 +39,7 @@ export default function ScrumBoardPage() {
   const search = useSearchParams()
 
   const { data: members } = useScrumMembers(projectId)
-  const { openCreateTask, setCreateEpicOpen, setCreateSprintOpen, openTask } = useScrumUI()
+  const { openCreateTask, setCreateEpicOpen, setCreateSprintOpen, setImportOpen, openTask } = useScrumUI()
   const { can } = usePermission()
 
   // Deep link: /projects/:id/scrum?task=<taskId> opens the task drawer
@@ -148,6 +149,14 @@ export default function ScrumBoardPage() {
         <div className="flex items-center gap-2 py-1.5">
           <FilterPanel projectId={projectId} filters={filters} onChange={setFilters} />
           {canCreateIssues && (
+            <button
+              onClick={() => setImportOpen(true)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input px-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <Upload className="h-4 w-4" /> Import
+            </button>
+          )}
+          {canCreateIssues && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90">
@@ -194,6 +203,7 @@ export default function ScrumBoardPage() {
       <CreateTaskModal projectId={projectId} />
       <CreateEpicModal projectId={projectId} />
       <CreateSprintModal projectId={projectId} />
+      <ImportModal projectId={projectId} />
     </div>
   )
 }
