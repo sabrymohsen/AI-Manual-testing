@@ -55,3 +55,6 @@ test-results/
 # runtime user uploads & local scratch
 public/uploads/avatars/
 preview-screenshot.png
+
+# Local Claude Code settings
+.claude/settings.local.json
