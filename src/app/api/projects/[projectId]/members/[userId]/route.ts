@@ -48,44 +48,21 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 })
   }
 
-  // Only an Owner may modify another Owner or an Admin, or grant Owner.
+  // Only an Owner (or Global Admin) may modify another Owner or an Admin, or
+  // grant the Owner role. Granting Owner makes the target a CO-OWNER — the
+  // creator keeps Project.userId and nobody is demoted.
+  const callerIsOwnerLevel = callerRole === "Owner" || auth.resolved.globalRole === "Admin"
   const targetIsPrivileged = currentTargetRole === "Owner" || currentTargetRole === "Admin"
-  if (callerRole !== "Owner" && (targetIsPrivileged || newRole === "Owner")) {
+  if (!callerIsOwnerLevel && (targetIsPrivileged || newRole === "Owner")) {
     return NextResponse.json(
-      { error: "Only an Owner can modify Owners/Admins or transfer ownership" },
+      { error: "Only an Owner can modify Owners/Admins or grant the Owner role" },
       { status: 403 }
     )
   }
 
-  // ── Ownership transfer ──
-  if (newRole === "Owner") {
-    if (callerRole !== "Owner") {
-      return NextResponse.json({ error: "Only an Owner can transfer ownership" }, { status: 403 })
-    }
-    if (target === project.userId) {
-      return NextResponse.json({ error: "That user is already the Owner" }, { status: 409 })
-    }
-    await prisma.$transaction([
-      // New owner becomes the project's userId and an Owner member row.
-      prisma.project.update({ where: { id: params.projectId }, data: { userId: target } }),
-      prisma.projectMember.upsert({
-        where: { userId_projectId: { userId: target, projectId: params.projectId } },
-        update: { role: "Owner" },
-        create: { projectId: params.projectId, userId: target, role: "Owner" },
-      }),
-      // Previous owner (the caller) is demoted to Admin.
-      prisma.projectMember.upsert({
-        where: { userId_projectId: { userId: project.userId, projectId: params.projectId } },
-        update: { role: "Admin" },
-        create: { projectId: params.projectId, userId: project.userId, role: "Admin" },
-      }),
-    ])
-    return NextResponse.json({ success: true, transferred: true })
-  }
-
-  // Cannot change the creator's role except via transfer above.
+  // The creator is an implicit Owner; their role never changes.
   if (target === project.userId) {
-    return NextResponse.json({ error: "Cannot change the project owner's role directly" }, { status: 400 })
+    return NextResponse.json({ error: "Cannot change the project creator's role" }, { status: 400 })
   }
 
   // Build overrides update from any provided override keys.
@@ -135,9 +112,10 @@ export async function DELETE(_req: Request, { params }: Params) {
   const currentTargetRole = await targetRole(params.projectId, target)
   if (!currentTargetRole) return NextResponse.json({ error: "Member not found" }, { status: 404 })
 
-  // Only an Owner may remove an Admin.
-  if (currentTargetRole === "Admin" && callerRole !== "Owner") {
-    return NextResponse.json({ error: "Only an Owner can remove an Admin" }, { status: 403 })
+  // Only an Owner (or Global Admin) may remove an Owner or an Admin.
+  const removerIsOwnerLevel = callerRole === "Owner" || auth.resolved.globalRole === "Admin"
+  if ((currentTargetRole === "Admin" || currentTargetRole === "Owner") && !removerIsOwnerLevel) {
+    return NextResponse.json({ error: "Only an Owner can remove an Owner or Admin" }, { status: 403 })
   }
 
   await prisma.projectMember.deleteMany({
