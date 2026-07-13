@@ -22,6 +22,9 @@ interface ScrumUIState {
   createSprintOpen: boolean
   setCreateSprintOpen: (v: boolean) => void
 
+  importOpen: boolean
+  setImportOpen: (v: boolean) => void
+
   // Filter panel
   filterPanelOpen: boolean
   setFilterPanelOpen: (v: boolean) => void
@@ -55,6 +58,9 @@ export const useScrumUI = create<ScrumUIState>((set) => ({
 
   createSprintOpen: false,
   setCreateSprintOpen: (v) => set({ createSprintOpen: v }),
+
+  importOpen: false,
+  setImportOpen: (v) => set({ importOpen: v }),
 
   filterPanelOpen: false,
   setFilterPanelOpen: (v) => set({ filterPanelOpen: v }),
