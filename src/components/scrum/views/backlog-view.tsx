@@ -3,12 +3,18 @@
 import { useMemo, useState } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import type { ScrumTask, ScrumSprint, TaskFilters } from "@/types/scrum"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations } from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
 import { PriorityBadge, STATUS_META, AvatarStack } from "@/components/scrum/shared"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers, Play, CheckCircle2, Loader2 } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -42,8 +48,52 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
   })
   const canManageSprints =
     membership?.globalRole === "Admin" || membership?.permissions?.canCreateSprints === true
+  const isAdmin = membership?.globalRole === "Admin"
+  const canBulkMove = isAdmin || membership?.permissions?.canCreateStories === true
+  const canBulkDelete = isAdmin || membership?.permissions?.canDeleteStories === true
   const { openTask, openCreateTask } = useScrumUI()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const qc = useQueryClient()
+
+  const bulk = useMutation({
+    mutationFn: async (body: { action: "move" | "delete"; taskIds: string[]; sprintId?: string | null }) => {
+      const res = await fetch(`/api/projects/${projectId}/scrum/tasks/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || "Bulk action failed")
+      return json as { affected: number }
+    },
+    onSuccess: (data, vars) => {
+      qc.invalidateQueries({ queryKey: ["scrum", projectId, "tasks"] })
+      setSelected(new Set())
+      toast.success(
+        vars.action === "delete"
+          ? `Deleted ${data.affected} ${data.affected === 1 ? "issue" : "issues"}`
+          : `Moved ${data.affected} ${data.affected === 1 ? "issue" : "issues"}`
+      )
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+
+  function bulkMove(sprintId: string | null) {
+    bulk.mutate({ action: "move", taskIds: [...selected], sprintId })
+  }
+
+  function bulkDelete() {
+    if (!window.confirm(`Delete ${selected.size} ${selected.size === 1 ? "issue" : "issues"}? This can't be undone.`)) return
+    bulk.mutate({ action: "delete", taskIds: [...selected] })
+  }
 
   function startSprint(s: ScrumSprint) {
     updateSprint.mutate(
@@ -138,6 +188,8 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
             onStart={canManageSprints && s.status === "PLANNED" ? () => startSprint(s) : undefined}
             onComplete={canManageSprints && s.status === "ACTIVE" ? () => completeSprint(s) : undefined}
             sprintBusy={updateSprint.isPending}
+            selected={selected}
+            onToggleSelect={canBulkMove || canBulkDelete ? toggleSelect : undefined}
           />
         ))}
 
@@ -152,9 +204,60 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
           onOpenTask={openTask}
           onCreate={() => openCreateTask()}
           emptyText="No stories in the backlog."
+          selected={selected}
+          onToggleSelect={canBulkMove || canBulkDelete ? toggleSelect : undefined}
         />
         </div>
       </div>
+
+      {/* Floating bulk-action bar */}
+      {selected.size > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-xl border bg-card px-3 py-2 shadow-xl">
+            <span className="text-xs font-bold">{selected.size} selected</span>
+            {canBulkMove && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    disabled={bulk.isPending}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input px-2.5 text-xs font-semibold hover:bg-muted disabled:opacity-60"
+                  >
+                    {bulk.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                    Move to
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="w-48">
+                  <DropdownMenuItem onClick={() => bulkMove(null)} className="gap-2">
+                    <Inbox className="h-4 w-4 text-slate-500" /> Backlog
+                  </DropdownMenuItem>
+                  {orderedSprints
+                    .filter((s) => s.status !== "COMPLETED")
+                    .map((s) => (
+                      <DropdownMenuItem key={s.id} onClick={() => bulkMove(s.id)} className="gap-2">
+                        <Zap className="h-4 w-4 text-amber-500" /> {s.name}
+                      </DropdownMenuItem>
+                    ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {canBulkDelete && (
+              <button
+                onClick={bulkDelete}
+                disabled={bulk.isPending}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/30 px-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </button>
+            )}
+            <button
+              onClick={() => setSelected(new Set())}
+              className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+            >
+              <X className="h-3.5 w-3.5" /> Clear
+            </button>
+          </div>
+        </div>
+      )}
     </DragDropContext>
   )
 }
@@ -174,6 +277,8 @@ function Section({
   onStart,
   onComplete,
   sprintBusy,
+  selected,
+  onToggleSelect,
 }: {
   id: string
   title: string
@@ -189,14 +294,27 @@ function Section({
   onStart?: () => void
   onComplete?: () => void
   sprintBusy?: boolean
+  selected: Set<string>
+  onToggleSelect?: (id: string) => void
 }) {
   const points = tasks.reduce((a, t) => a + (t.storyPoints || 0), 0)
+  const allSelected = tasks.length > 0 && tasks.every((t) => selected.has(t.id))
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-2.5">
         <button onClick={onToggle} className="rounded p-0.5 text-muted-foreground hover:bg-muted">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            className="h-3.5 w-3.5 cursor-pointer accent-[hsl(var(--primary))]"
+            checked={allSelected}
+            disabled={tasks.length === 0}
+            onChange={() => tasks.forEach((t) => (allSelected === selected.has(t.id)) && onToggleSelect(t.id))}
+            title={allSelected ? "Deselect all in this section" : "Select all in this section"}
+          />
+        )}
         {icon}
         <span className="text-sm font-semibold">{title}</span>
         {badge && <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", badge.cls)}>{badge.label}</span>}
@@ -262,7 +380,12 @@ function Section({
                       {...(dp.dragHandleProps as any)}
                       className={cn("bg-card", ds.isDragging && "rounded-lg shadow-lg ring-1 ring-primary/30")}
                     >
-                      <BacklogRow task={task} onClick={() => onOpenTask(task.id)} />
+                      <BacklogRow
+                        task={task}
+                        onClick={() => onOpenTask(task.id)}
+                        checked={selected.has(task.id)}
+                        onToggleSelect={onToggleSelect}
+                      />
                     </div>
                   )}
                 </Draggable>
@@ -279,12 +402,31 @@ function Section({
   )
 }
 
-function BacklogRow({ task, onClick }: { task: ScrumTask; onClick: () => void }) {
+function BacklogRow({
+  task,
+  onClick,
+  checked,
+  onToggleSelect,
+}: {
+  task: ScrumTask
+  onClick: () => void
+  checked: boolean
+  onToggleSelect?: (id: string) => void
+}) {
   return (
     <div
       onClick={onClick}
-      className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50"
+      className={cn("flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50", checked && "bg-primary/5")}
     >
+      {onToggleSelect && (
+        <input
+          type="checkbox"
+          className="h-3.5 w-3.5 shrink-0 cursor-pointer accent-[hsl(var(--primary))]"
+          checked={checked}
+          onChange={() => onToggleSelect(task.id)}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
       <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_META[task.status].dot)} title={STATUS_META[task.status].label} />
       <span className="font-mono text-[11px] font-bold text-primary">{task.key}</span>
       <span className="flex-1 truncate text-sm">{task.title}</span>
