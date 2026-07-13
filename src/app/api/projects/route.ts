@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, requireCanCreateProject, unauthorizedResponse } from "@/lib/api-guards"
 import { createProjectSchema } from "@/schemas"
+import { deriveBoardKey } from "@/lib/board-key"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -295,6 +296,7 @@ export async function POST(request: Request) {
     data: {
       ...parsed.data,
       status: "Active",
+      boardKey: deriveBoardKey(parsed.data.name),
       userId: auth.session!.user.id,
       projectMembers: {
         create: { userId: auth.session!.user.id, role: "Owner" },
