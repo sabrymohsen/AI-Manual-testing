@@ -232,7 +232,30 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
           ws.send(buf)
         }
       }
-      cdp.send("Page.screencastFrameAck", { sessionId: ev.sessionId }).catch(() => {})
+      // Flow control: withhold the ack until the fastest viewer has (mostly)
+      // drained its socket, so Chrome paces capture to what the network can
+      // actually deliver instead of racing ahead — every frame that arrives is
+      // fresh. Cap the wait so a stalled viewer can't freeze the stream.
+      const deadline = Date.now() + 400
+      const ackWhenDrained = () => {
+        const cur = sessionStreams.get(sessionId)
+        // Torn down (or replaced by a newer CDP session) while waiting. cdp is
+        // still null for the first frames that land before ensureScreencast
+        // finishes assigning it — those must still be acked.
+        if (!cur || (cur.cdp && cur.cdp !== cdp)) return
+        const buffered = Math.min(
+          ...[...cur.viewers]
+            .filter((v) => v.readyState === WebSocket.OPEN)
+            .map((v) => v.bufferedAmount),
+          Infinity
+        )
+        if (buffered > buf.length && Date.now() < deadline) {
+          setTimeout(ackWhenDrained, 15)
+          return
+        }
+        cdp.send("Page.screencastFrameAck", { sessionId: ev.sessionId }).catch(() => {})
+      }
+      ackWhenDrained()
     })
     cdp.on("Page.frameNavigated", (ev: any) => {
       const current = sessionStreams.get(sessionId)
