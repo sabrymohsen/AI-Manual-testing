@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { Maximize2, Minimize2 } from "lucide-react"
 
 /**
  * Embedded live view of a recorder-worker browser session: renders the CDP
@@ -27,6 +28,7 @@ export function LiveBrowserView({
   const wsRef = useRef<WebSocket | null>(null)
   const [hasFrame, setHasFrame] = useState(false)
   const hasFrameRef = useRef(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const [mode, setMode] = useState<"connecting" | "streaming" | "polling">("connecting")
   const modeRef = useRef(mode)
   modeRef.current = mode
@@ -178,6 +180,28 @@ export function LiveBrowserView({
     []
   )
 
+  // Native fullscreen on the wrapper — input keeps working since the same
+  // element (and its handlers) fills the screen; keyboard capture actually
+  // improves because the wrapper holds focus.
+  function toggleFullscreen() {
+    const el = wrapperRef.current
+    if (!el) return
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {})
+    } else {
+      el.requestFullscreen().catch(() => {})
+    }
+  }
+  useEffect(() => {
+    const onChange = () => {
+      const fs = document.fullscreenElement === wrapperRef.current
+      setIsFullscreen(fs)
+      if (fs) wrapperRef.current?.focus()
+    }
+    document.addEventListener("fullscreenchange", onChange)
+    return () => document.removeEventListener("fullscreenchange", onChange)
+  }, [])
+
   // Map a mouse event on the scaled <img> back to remote CSS-px coordinates.
   function coords(e: { clientX: number; clientY: number }) {
     const img = imgRef.current
@@ -242,7 +266,9 @@ export function LiveBrowserView({
     <div
       ref={wrapperRef}
       tabIndex={0}
-      className={`relative flex items-center justify-center overflow-hidden bg-slate-950 outline-none ${className}`}
+      className={`group relative flex items-center justify-center overflow-hidden bg-slate-950 outline-none ${
+        isFullscreen ? "h-screen w-screen" : className
+      }`}
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (!hasFrame) return
@@ -253,6 +279,15 @@ export function LiveBrowserView({
         }
       }}
     >
+      {/* Fullscreen toggle */}
+      <button
+        type="button"
+        onClick={toggleFullscreen}
+        className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/70 text-slate-200 opacity-0 backdrop-blur transition-opacity hover:bg-slate-900 group-hover:opacity-100 focus:opacity-100"
+        title={isFullscreen ? "Exit full screen (Esc)" : "Full screen"}
+      >
+        {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+      </button>
       <img
         ref={imgRef}
         alt="Live browser view"
