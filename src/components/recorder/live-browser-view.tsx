@@ -38,6 +38,7 @@ export function LiveBrowserView({
   const lastObjectUrlRef = useRef<string | null>(null)
   const frameBusyRef = useRef(false)
   const lastMoveSentRef = useRef(0)
+  const lastPasteSentRef = useRef(0)
   const inputQueueRef = useRef<Promise<unknown>>(Promise.resolve())
 
   function paint(src: string, dsf: number) {
@@ -272,10 +273,37 @@ export function LiveBrowserView({
       onContextMenu={(e) => e.preventDefault()}
       onKeyDown={(e) => {
         if (!hasFrame) return
-        const key = mapKeyboardEvent(e)
-        if (key) {
+        // Cmd/Ctrl+V: the remote browser's clipboard is empty, so the text must
+        // come from the LOCAL clipboard. Let the native paste event fire
+        // (handled by onPaste); fall back to the async clipboard API if focus
+        // edge cases swallow it. Never forward the V combo to the remote.
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v" && !e.altKey && !e.shiftKey) {
+          setTimeout(() => {
+            if (Date.now() - lastPasteSentRef.current < 500) return
+            navigator.clipboard
+              ?.readText()
+              .then((text) => {
+                if (text) {
+                  lastPasteSentRef.current = Date.now()
+                  sendInput({ type: "type", text })
+                }
+              })
+              .catch(() => {})
+          }, 250)
+          return
+        }
+        const combo = mapKeyboardEvent(e)
+        if (combo) {
           e.preventDefault()
-          sendInput({ type: "keypress", key })
+          sendInput({ type: "key", key: combo })
+        }
+      }}
+      onPaste={(e) => {
+        e.preventDefault()
+        const text = e.clipboardData?.getData("text")
+        if (text) {
+          lastPasteSentRef.current = Date.now()
+          sendInput({ type: "type", text })
         }
       }}
     >
