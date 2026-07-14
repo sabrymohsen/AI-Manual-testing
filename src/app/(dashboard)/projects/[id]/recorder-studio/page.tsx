@@ -45,6 +45,7 @@ import {
   Clock,
 } from "lucide-react"
 import { RecorderExportModal } from "@/components/recorder/recorder-export-modal"
+import { LiveBrowserView } from "@/components/recorder/live-browser-view"
 
 interface Credential {
   id: string
@@ -144,6 +145,7 @@ export default function RecorderWorkspacePage() {
   const [viewport, setViewport] = useState("Desktop")
   const [recordingMode, setRecordingMode] = useState("Fast")
   const [isStartingSession, setIsStartingSession] = useState(false)
+  const [showLiveView, setShowLiveView] = useState(true)
   const [startError, setStartError] = useState<string | null>(null)
   const [startErrorDetails, setStartErrorDetails] = useState<string | null>(null)
   const [workerOnline, setWorkerOnline] = useState<boolean | null>(null)
@@ -1181,7 +1183,7 @@ export default function RecorderWorkspacePage() {
           <div>
             <h2 className="text-xl font-bold">Start a new recording session</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              A dedicated browser window opens and captures every interaction automatically.
+              The browser opens right here in the studio and captures every interaction automatically.
             </p>
           </div>
 
@@ -1527,6 +1529,32 @@ export default function RecorderWorkspacePage() {
             {/* STEP FEED */}
             <main className="flex-1 min-w-0 px-4 md:px-6 py-4">
 
+              {/* Embedded live browser — the only way to drive the session when
+                  the worker runs on a server (no native window there). */}
+              {sessionId && (
+                <div className="mb-4 overflow-hidden rounded-xl border bg-card">
+                  <button
+                    onClick={() => setShowLiveView((v) => !v)}
+                    className="flex w-full items-center gap-2 px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent/40"
+                  >
+                    <Video className="h-3.5 w-3.5 text-muted-foreground" />
+                    Live Browser
+                    <span className="text-[10px] font-normal text-muted-foreground">
+                      click, type, and scroll here — every interaction is recorded
+                    </span>
+                    <span className="ml-auto text-muted-foreground">{showLiveView ? "Hide" : "Show"}</span>
+                  </button>
+                  {showLiveView && (
+                    <LiveBrowserView
+                      sessionId={sessionId}
+                      browserType={browserType}
+                      active={sessionStatus === "Active"}
+                      className="max-h-[520px] min-h-[240px] border-t"
+                    />
+                  )}
+                </div>
+              )}
+
               {/* Feed header */}
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <div className="flex rounded-lg border text-xs font-semibold overflow-hidden shrink-0">
@@ -1564,7 +1592,7 @@ export default function RecorderWorkspacePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-foreground">No steps yet</h3>
-                    <p className="text-xs mt-1 max-w-xs">Interact with the page in the external browser — every click, fill, and selection appears here live.</p>
+                    <p className="text-xs mt-1 max-w-xs">Interact with the page in the Live Browser above — every click, fill, and selection appears here live.</p>
                   </div>
                 </div>
               ) : (
