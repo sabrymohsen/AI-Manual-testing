@@ -264,24 +264,29 @@ export async function startSession(
   let browser: Browser
   let page: Page
 
+  // Workstation sessions run headless: the browser is embedded in the web app
+  // through the live view (frame streaming + input forwarding), so no external
+  // window opens. Recorder Studio keeps a visible window with the injected
+  // toolbar — but only where a display exists (macOS/Windows, or Linux with an
+  // X server). In containers (Railway) there is no display, so a headed launch
+  // crashes; the Studio UI streams frames regardless.
+  const canRunHeaded = process.platform !== "linux" || !!process.env.DISPLAY
+  // Retina (2x) capture makes the streamed frame sharp when scaled up —
+  // including the Recorder Studio full-screen view. Apply it whenever the
+  // session is consumed as a stream rather than a native window: Live QA
+  // always, and Recorder Studio when it runs headless (no local display, e.g.
+  // Railway). A native headed window keeps 1x so it isn't doubled in physical
+  // size on the tester's screen. Forcing the scale factor at launch is
+  // required — context deviceScaleFactor alone doesn't resize screencast
+  // capture.
+  const streamedChromium =
+    options.browserType === "Chromium" && (sessionMode === "Workstation" || !canRunHeaded)
+
   try {
     const launcher = getPlaywrightBrowser(options.browserType)
-    // Workstation sessions run headless: the browser is embedded in the web
-    // app through the live view (frame streaming + input forwarding), so no
-    // external window opens. Recorder Studio keeps a visible window with the
-    // injected toolbar — but only where a display exists (macOS/Windows, or
-    // Linux with an X server). In containers (Railway) there is no display,
-    // so a headed launch crashes; the Studio UI streams frames regardless.
-    const canRunHeaded = process.platform !== "linux" || !!process.env.DISPLAY
     browser = await launcher.launch({
       headless: sessionMode === "Workstation" || !canRunHeaded,
-      // Live QA on Chromium: force 2x rendering so CDP screencast frames come
-      // out at retina resolution (context deviceScaleFactor alone doesn't change
-      // screencast capture size — only this flag does). Frame size is not the
-      // bottleneck on localhost; smoothness is handled client-side.
-      ...(sessionMode === "Workstation" && options.browserType === "Chromium"
-        ? { args: ["--force-device-scale-factor=2"] }
-        : {}),
+      ...(streamedChromium ? { args: ["--force-device-scale-factor=2"] } : {}),
     })
   } catch (err: any) {
     console.error("[RECORDER] Playwright browser launch failed. Actual error:", err.message, err.stack)
@@ -305,12 +310,11 @@ export async function startSession(
   // so its contexts skip recordVideo entirely.
   const context = await browser.newContext({
     viewport: { width, height },
-    // Live QA on Chromium renders at 2x (retina) so streamed frames stay crisp
-    // on HiDPI displays; the client corrects input coordinates via the "dsf"
-    // stream message. Other browsers keep 1x (REST polling path).
-    ...(sessionMode === "Workstation" && options.browserType === "Chromium"
-      ? { deviceScaleFactor: 2 }
-      : {}),
+    // Streamed Chromium renders at 2x (retina) so frames stay crisp on HiDPI
+    // displays and when the view is maximized/full-screen; the client corrects
+    // input coordinates via the "dsf" stream message. Native-window and
+    // non-Chromium sessions keep 1x.
+    ...(streamedChromium ? { deviceScaleFactor: 2 } : {}),
     bypassCSP: true,
     ...(sessionMode === "Workstation"
       ? {}
