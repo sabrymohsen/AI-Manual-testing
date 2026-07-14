@@ -269,9 +269,12 @@ export async function startSession(
     // Workstation sessions run headless: the browser is embedded in the web
     // app through the live view (frame streaming + input forwarding), so no
     // external window opens. Recorder Studio keeps a visible window with the
-    // injected toolbar.
+    // injected toolbar — but only where a display exists (macOS/Windows, or
+    // Linux with an X server). In containers (Railway) there is no display,
+    // so a headed launch crashes; the Studio UI streams frames regardless.
+    const canRunHeaded = process.platform !== "linux" || !!process.env.DISPLAY
     browser = await launcher.launch({
-      headless: sessionMode === "Workstation",
+      headless: sessionMode === "Workstation" || !canRunHeaded,
       // Live QA on Chromium: force 2x rendering so CDP screencast frames come
       // out at retina resolution (context deviceScaleFactor alone doesn't change
       // screencast capture size — only this flag does). Frame size is not the
