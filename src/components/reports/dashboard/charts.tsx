@@ -20,6 +20,9 @@ import {
   Legend,
   ResponsiveContainer,
   ReferenceLine,
+  ScatterChart,
+  Scatter,
+  Cell,
 } from "recharts"
 import { CHART_COLORS, PALETTE } from "@/lib/reports/colors"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -32,6 +35,8 @@ import type {
   DefectTrendPoint,
   ExecutionFunnelResult,
   TeamMemberPerf,
+  TaskCreatedResolvedPoint,
+  ControlChartPoint,
 } from "@/lib/reports/analytics"
 
 // ── Shared card shell ──
@@ -340,6 +345,103 @@ export const ExecutionFunnelChart = memo(function ExecutionFunnelChart({ data, l
           </div>
         ))}
       </div>
+    </ChartCard>
+  )
+})
+
+// ── G. Created vs Resolved (task-level) ──
+
+export const CreatedResolvedChart = memo(function CreatedResolvedChart({ data, loading }: { data?: TaskCreatedResolvedPoint[]; loading: boolean }) {
+  const rows = useMemo(() => (data || []).map((d) => ({ ...d, label: format(new Date(d.date), "MMM d") })), [data])
+  const empty = rows.length === 0 || rows.every((r) => r.created + r.resolved + r.cumulativeOpen === 0)
+  return (
+    <ChartCard
+      id="chart-task-created-resolved"
+      title="Created vs Resolved"
+      subtitle="Tasks created and completed over time"
+      loading={loading}
+      empty={empty}
+      ariaLabel="Task created versus resolved trend chart"
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart data={rows} margin={{ top: 8, right: 4, bottom: 4, left: -12 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.border} vertical={false} />
+          <XAxis dataKey="label" {...axis} minTickGap={24} />
+          <YAxis yAxisId="left" {...axis} allowDecimals={false} />
+          <YAxis yAxisId="right" orientation="right" {...axis} allowDecimals={false} />
+          <Tooltip {...tooltipStyle} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Bar yAxisId="left" name="Created" dataKey="created" fill={CHART_COLORS.info} radius={[4, 4, 0, 0]} maxBarSize={20} />
+          <Bar yAxisId="left" name="Resolved" dataKey="resolved" fill={CHART_COLORS.success} radius={[4, 4, 0, 0]} maxBarSize={20} />
+          <Area yAxisId="right" name="Open (cum.)" type="monotone" dataKey="cumulativeOpen" stroke={CHART_COLORS.danger} fill={CHART_COLORS.danger} fillOpacity={0.1} isAnimationActive={false} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </ChartCard>
+  )
+})
+
+// ── H. Control Chart (cycle time scatter) ──
+
+export const ControlChart = memo(function ControlChart({ data, loading }: { data?: ControlChartPoint[]; loading: boolean }) {
+  const rows = useMemo(() => data || [], [data])
+  const empty = rows.length === 0
+
+  const avgCycleTime = useMemo(() => {
+    if (rows.length === 0) return 0
+    return Math.round((rows.reduce((a, r) => a + r.cycleTimeDays, 0) / rows.length) * 10) / 10
+  }, [rows])
+
+  return (
+    <ChartCard
+      id="chart-control"
+      title="Control Chart"
+      subtitle={rows.length > 0 ? `Avg cycle time ${avgCycleTime} days · ${rows.length} completed tasks` : "Cycle time for completed tasks"}
+      loading={loading}
+      empty={empty}
+      emptyText="No completed tasks in range"
+      ariaLabel="Control chart showing cycle time scatter for completed tasks"
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 8, right: 12, bottom: 4, left: -12 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.border} />
+          <XAxis
+            type="number"
+            dataKey="cycleTimeDays"
+            name="Cycle Time (days)"
+            {...axis}
+            label={{ value: "Days", position: "insideBottom", offset: -2, fontSize: 10, fill: CHART_COLORS.neutral }}
+          />
+          <YAxis
+            type="number"
+            dataKey="storyPoints"
+            name="Story Points"
+            {...axis}
+            allowDecimals={false}
+            label={{ value: "Story Points", angle: -90, position: "insideLeft", fontSize: 10, fill: CHART_COLORS.neutral }}
+          />
+          <Tooltip
+            cursor={{ strokeDasharray: "3 3" }}
+            contentStyle={{ borderRadius: 12, border: `1px solid ${CHART_COLORS.border}`, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+            labelStyle={{ fontWeight: 600, color: "#0f172a" }}
+            formatter={(value: any, name: string, props: any) => {
+              if (name === "Story Points") return [value ?? "—", "Story Points"]
+              return [value, name]
+            }}
+            labelFormatter={(_: any, p: any) => {
+              const pt = p?.payload
+              return pt ? `${pt.taskKey}: ${pt.title}` : ""
+            }}
+          />
+          {avgCycleTime > 0 && (
+            <ReferenceLine x={avgCycleTime} stroke={CHART_COLORS.warning} strokeDasharray="6 3" label={{ value: `avg ${avgCycleTime}d`, fontSize: 10, fill: CHART_COLORS.warning, position: "top" }} />
+          )}
+          <Scatter name="Completed Tasks" data={rows} fill={CHART_COLORS.primary}>
+            {rows.map((_, i) => (
+              <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+            ))}
+          </Scatter>
+        </ScatterChart>
+      </ResponsiveContainer>
     </ChartCard>
   )
 })

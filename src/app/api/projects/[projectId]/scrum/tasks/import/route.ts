@@ -44,10 +44,17 @@ function normalizeType(raw: string): ImportType | null {
   const v = raw.trim().toUpperCase().replace(/[\s-]+/g, "_")
   if ((TYPES as readonly string[]).includes(v)) return v as ImportType
   const map: Record<string, ImportType> = {
-    USER_STORY: "STORY", STORIES: "STORY",
-    DEFECT: "BUG", ISSUE: "BUG",
-    TEST: "TEST_CASE", TESTCASE: "TEST_CASE", TC: "TEST_CASE",
-    CHORE: "TASK", TODO: "TASK",
+    // Story
+    USER_STORY: "STORY", USER_STORIES: "STORY", STORIES: "STORY", US: "STORY",
+    FEATURE: "STORY", REQUIREMENT: "STORY", EPIC_STORY: "STORY",
+    // Bug
+    DEFECT: "BUG", DEFECTS: "BUG", ISSUE: "BUG", BUGS: "BUG", FAULT: "BUG", INCIDENT: "BUG",
+    // Test case
+    TEST: "TEST_CASE", TESTCASE: "TEST_CASE", TEST_CASES: "TEST_CASE", TESTCASES: "TEST_CASE",
+    TC: "TEST_CASE", TEST_SCENARIO: "TEST_CASE", SCENARIO: "TEST_CASE", CHECK: "TEST_CASE",
+    // Task
+    CHORE: "TASK", TODO: "TASK", TASKS: "TASK", SPIKE: "TASK",
+    ENHANCEMENT: "TASK", IMPROVEMENT: "TASK", SUB_TASK: "TASK",
   }
   return map[v] ?? null
 }

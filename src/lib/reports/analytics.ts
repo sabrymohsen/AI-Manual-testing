@@ -536,3 +536,108 @@ export async function listSprintOptions(projectId: string) {
     endDate: s.endDate?.toISOString() ?? null,
   }))
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  TASK-LEVEL ANALYTICS (Scrum board Task model)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface TaskCreatedResolvedPoint {
+  date: string
+  created: number
+  resolved: number
+  cumulativeOpen: number
+}
+
+export interface ControlChartPoint {
+  taskKey: string
+  title: string
+  cycleTimeDays: number
+  storyPoints: number | null
+  completedAt: string
+}
+
+export interface AverageAgeRow {
+  status: string
+  count: number
+  averageAgeDays: number
+  oldestDays: number
+}
+
+/** Tasks created vs resolved (status=DONE) over a date range. */
+export async function getTaskCreatedResolved(projectId: string, from?: string | null, to?: string | null): Promise<TaskCreatedResolvedPoint[]> {
+  const range = resolveRange(from, to)
+  const tasks = await prisma.task.findMany({
+    where: { projectId },
+    select: { status: true, createdAt: true, updatedAt: true },
+  })
+  const days = eachDay(range.from, range.to)
+
+  return days.map((date) => {
+    const dayStart = new Date(date).getTime()
+    const dayEnd = dayStart + DAY - 1
+    const created = tasks.filter((t) => t.createdAt.getTime() >= dayStart && t.createdAt.getTime() <= dayEnd).length
+    const resolved = tasks.filter((t) => t.status === "DONE" && t.updatedAt.getTime() >= dayStart && t.updatedAt.getTime() <= dayEnd).length
+    const createdSoFar = tasks.filter((t) => t.createdAt.getTime() <= dayEnd).length
+    const resolvedSoFar = tasks.filter((t) => t.status === "DONE" && t.updatedAt.getTime() <= dayEnd).length
+    return { date, created, resolved, cumulativeOpen: Math.max(0, createdSoFar - resolvedSoFar) }
+  })
+}
+
+/** Control chart: cycle time (days from creation to DONE) for completed tasks. */
+export async function getControlChart(projectId: string, from?: string | null, to?: string | null): Promise<ControlChartPoint[]> {
+  const range = resolveRange(from, to)
+  const tasks = await prisma.task.findMany({
+    where: {
+      projectId,
+      status: "DONE",
+      updatedAt: { gte: range.from, lte: range.to },
+    },
+    select: { taskNumber: true, title: true, storyPoints: true, createdAt: true, updatedAt: true },
+    orderBy: { updatedAt: "asc" },
+  })
+
+  return tasks.map((t) => {
+    const cycleTimeMs = Math.max(0, t.updatedAt.getTime() - t.createdAt.getTime())
+    return {
+      taskKey: `TASK-${t.taskNumber}`,
+      title: t.title,
+      cycleTimeDays: Math.round((cycleTimeMs / DAY) * 10) / 10,
+      storyPoints: t.storyPoints,
+      completedAt: t.updatedAt.toISOString(),
+    }
+  })
+}
+
+/** Average age of open tasks grouped by status. */
+export async function getAverageAge(projectId: string): Promise<AverageAgeRow[]> {
+  const now = Date.now()
+  const tasks = await prisma.task.findMany({
+    where: { projectId, status: { not: "DONE" } },
+    select: { status: true, createdAt: true },
+  })
+
+  const groups = new Map<string, number[]>()
+  for (const t of tasks) {
+    const ageDays = Math.floor((now - t.createdAt.getTime()) / DAY)
+    if (!groups.has(t.status)) groups.set(t.status, [])
+    groups.get(t.status)!.push(ageDays)
+  }
+
+  const statusOrder = ["TODO", "IN_PROGRESS", "REVIEW", "TESTING", "DEPLOYED"]
+  const rows: AverageAgeRow[] = []
+  for (const [status, ages] of groups) {
+    const avg = ages.reduce((a, b) => a + b, 0) / ages.length
+    rows.push({
+      status,
+      count: ages.length,
+      averageAgeDays: Math.round(avg * 10) / 10,
+      oldestDays: Math.max(...ages),
+    })
+  }
+  rows.sort((a, b) => {
+    const ia = statusOrder.indexOf(a.status)
+    const ib = statusOrder.indexOf(b.status)
+    return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib)
+  })
+  return rows
+}

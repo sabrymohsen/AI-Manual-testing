@@ -7,6 +7,7 @@ import { executeStep } from "./step-executor"
 import { runAssertions } from "./assertion-runner"
 import { handleLogin } from "./login-handler"
 import { notifyIntegrations } from "@/lib/integrations/notifier"
+import { recalcFromTestRun } from "@/lib/test-cases/rollup"
 import { isCancelSignalSet, publishTestRunEvent } from "@/lib/queue"
 
 interface RunOptions {
@@ -157,6 +158,8 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
             },
           })
           await publishTestRunEvent(testRunId, "test_run.completed", { status: "Blocked", error: `Login failed: ${loginError.message}` })
+          // Keep TestCase.lastStatus in step with the run that just settled.
+          await recalcFromTestRun(testRunId)
           await notifyIntegrations(testRunId)
           return
         }
@@ -472,6 +475,8 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       await publishTestRunEvent(testRunId, "test_run.completed", { status: finalStatus, durationMs: totalDuration })
     }
 
+    // Keep TestCase.lastStatus in step with the run that just settled.
+    await recalcFromTestRun(testRunId)
     await notifyIntegrations(testRunId)
     if (decryptedPassword) {
       decryptedPassword = ""
@@ -493,6 +498,8 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
       data: { status: "Skipped", actualResult: `Run aborted: ${message}` },
     })
     await publishTestRunEvent(testRunId, "test_run.completed", { status: "Failed", error: message })
+    // Keep TestCase.lastStatus in step with the run that just settled.
+    await recalcFromTestRun(testRunId)
     await notifyIntegrations(testRunId)
   } finally {
     if (decryptedPassword) {

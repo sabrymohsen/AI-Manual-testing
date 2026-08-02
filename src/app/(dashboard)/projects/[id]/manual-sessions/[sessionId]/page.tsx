@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
@@ -82,8 +82,29 @@ interface ManualSession {
 export default function ManualSessionWorkspace() {
   const params = useParams()
   const router = useRouter()
+  const search = useSearchParams()
   const projectId = params.id as string
   const sessionId = params.sessionId as string
+
+  /**
+   * Where to go after finishing or cancelling this session.
+   *
+   * Both actions used to hard-code `/projects/{id}`, dumping you on the project
+   * overview no matter where you launched the run from — so completing a run
+   * started from the test library threw away your place in it.
+   *
+   * The launcher passes `?returnTo=`. It's constrained to a path inside this
+   * project so the parameter can't be used as an open redirect.
+   */
+  const returnTo = (() => {
+    const raw = search.get("returnTo")
+    const fallback = `/projects/${projectId}/test-cases`
+    if (!raw) return fallback
+    if (!raw.startsWith(`/projects/${projectId}`)) return fallback
+    // Reject protocol-relative ("//evil.com") and any absolute URL.
+    if (raw.startsWith("//")) return fallback
+    return raw
+  })()
 
   const [session, setSession] = useState<ManualSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -529,7 +550,7 @@ export default function ManualSessionWorkspace() {
     })
     if (!res.ok) throw new Error("Failed to complete session")
     setShowCompleteConfirm(false)
-    router.push(`/projects/${projectId}`)
+    router.push(returnTo)
   }
 
   const handleCancelSession = () => {
@@ -542,7 +563,7 @@ export default function ManualSessionWorkspace() {
     })
     if (!res.ok) throw new Error("Failed to cancel session")
     setShowCancelConfirm(false)
-    router.push(`/projects/${projectId}`)
+    router.push(returnTo)
   }
 
   const handleSuggestExpected = async (step: StepResult) => {

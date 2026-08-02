@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { createBugReportSchema } from "@/schemas"
+import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
 import { z } from "zod"
 
 export async function GET(
@@ -38,7 +39,12 @@ export async function GET(
     where.AND.push({ priority: priority as any })
   }
   if (status && status !== "all") {
-    where.AND.push({ status: status as any })
+    if (status.includes(",")) {
+      const statuses = status.split(",").map((s) => s.trim()).filter(Boolean)
+      where.AND.push({ status: { in: statuses as any } })
+    } else {
+      where.AND.push({ status: status as any })
+    }
   }
   if (source && source !== "all") {
     if (source === "Auto") {
@@ -248,6 +254,10 @@ export async function POST(
 
     return bug
   })
+
+  // A new bug against a case changes its open-bug count, which the test-case
+  // list reads straight off TestCase.openBugCount.
+  if (testCaseId) await recalcOpenBugCount(testCaseId)
 
   return NextResponse.json({ bugReport }, { status: 201 })
 }

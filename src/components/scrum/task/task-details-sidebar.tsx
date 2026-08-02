@@ -17,6 +17,12 @@ import { PRIORITY_META } from "@/components/scrum/shared"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -43,6 +49,7 @@ import {
   FileText,
   Download,
   AlertTriangle,
+  Check,
 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -67,43 +74,46 @@ export function TaskDetailsSidebar({
   onSave: SaveFn
 }) {
   return (
-    <div className="space-y-6">
-      <DetailsPanel
-        projectId={projectId}
-        task={task}
-        members={members}
-        sprints={sprints}
-        epics={epics}
-        onSave={onSave}
-      />
-      <Divider />
-      <DatesPanel task={task} onSave={onSave} />
-      <Divider />
-      <TimeTrackingPanel projectId={projectId} task={task} />
-      <Divider />
-      <AttachmentsPanel projectId={projectId} task={task} />
-      <Divider />
-      <WatchersPanel projectId={projectId} task={task} members={members} currentUser={currentUser} />
+    <div className="space-y-5">
+      <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
+        <DetailsPanel
+          projectId={projectId}
+          task={task}
+          members={members}
+          sprints={sprints}
+          epics={epics}
+          currentUser={currentUser}
+          onSave={onSave}
+        />
+      </div>
+      <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
+        <DatesPanel task={task} onSave={onSave} />
+      </div>
+      <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
+        <TimeTrackingPanel projectId={projectId} task={task} />
+      </div>
+      <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
+        <AttachmentsPanel projectId={projectId} task={task} />
+      </div>
+      <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
+        <WatchersPanel projectId={projectId} task={task} members={members} currentUser={currentUser} />
+      </div>
     </div>
   )
 }
 
-function Divider() {
-  return <div className="border-t border-border" />
-}
-
 function SectionTitle({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
-    <h4 className="mb-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      <Icon className="h-3.5 w-3.5" /> {children}
+    <h4 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+      <Icon className="h-4 w-4 text-indigo-500" /> {children}
     </h4>
   )
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[92px_1fr] items-center gap-2 py-1">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <div className="grid grid-cols-[92px_1fr] items-center gap-2 py-1.5 border-b border-border/40 last:border-0">
+      <span className="text-xs font-bold text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   )
@@ -117,6 +127,7 @@ function DetailsPanel({
   members,
   sprints,
   epics,
+  currentUser,
   onSave,
 }: {
   projectId: string
@@ -124,12 +135,13 @@ function DetailsPanel({
   members: ScrumMember[]
   sprints: { id: string; name: string }[]
   epics: { id: string; title: string; color: string }[]
+  currentUser: CurrentUser | undefined
   onSave: SaveFn
 }) {
   return (
-    <div>
-      <SectionTitle icon={Tag}>Details</SectionTitle>
-      <div className="rounded-lg border border-border p-3">
+    <div className="space-y-1">
+      <SectionTitle icon={Tag}>Details &amp; Metadata</SectionTitle>
+      <div>
         <Row label="Type">
           <Select value={task.type} onValueChange={(v) => onSave({ type: v })}>
             <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
@@ -151,7 +163,7 @@ function DetailsPanel({
         </Row>
 
         <Row label="Assignee">
-          <AssigneePicker task={task} members={members} onSave={onSave} />
+          <AssigneePicker task={task} members={members} currentUser={currentUser} onSave={onSave} />
         </Row>
 
         <Row label="Reporter">
@@ -272,46 +284,88 @@ function DetailsPanel({
   )
 }
 
-function AssigneePicker({ task, members, onSave }: { task: ScrumTask; members: ScrumMember[]; onSave: SaveFn }) {
-  const assigneeIds = task.assignees.map((a) => a.id)
-  const assigned = members.filter((m) => assigneeIds.includes(m.id))
+function AssigneePicker({
+  task,
+  members,
+  currentUser,
+  onSave,
+}: {
+  task: ScrumTask
+  members: ScrumMember[]
+  currentUser: CurrentUser | undefined
+  onSave: SaveFn
+}) {
+  const assigneeIds = (task.assignees ?? []).map((a) => a.id)
+  
+  // Combine project members, current task assignees, and current user
+  const memberMap = new Map<string, ScrumMember>()
+  ;(members ?? []).forEach((m) => memberMap.set(m.id, m))
+  ;(task.assignees ?? []).forEach((a) => {
+    if (!memberMap.has(a.id)) {
+      memberMap.set(a.id, a as ScrumMember)
+    }
+  })
+  if (currentUser && !memberMap.has(currentUser.id)) {
+    memberMap.set(currentUser.id, {
+      id: currentUser.id,
+      name: currentUser.name,
+      email: currentUser.email,
+      avatarUrl: (currentUser as any).avatarUrl || null,
+      role: "Member",
+    })
+  }
+
+  const allMembers = Array.from(memberMap.values())
+  const assigned = task.assignees ?? []
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button className="flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-sm hover:border-input">
-          {assigned.length ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex h-8 w-full items-center gap-2 rounded-lg border border-input/40 px-2 text-sm hover:bg-muted/50 transition-all outline-none">
+          {assigned.length > 0 ? (
             <>
-              <AvatarStack members={assigned} max={3} />
-              <span className="truncate text-xs">{assigned.length === 1 ? assigned[0].name || assigned[0].email : `${assigned.length} people`}</span>
+              <AvatarStack members={assigned as ScrumMember[]} max={3} />
+              <span className="truncate text-xs font-semibold">
+                {assigned.length === 1 ? assigned[0].name || assigned[0].email : `${assigned.length} assigned`}
+              </span>
             </>
           ) : (
-            <span className="flex items-center gap-1.5 text-muted-foreground">
-              <Users className="h-3.5 w-3.5" /> Unassigned
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+              <Users className="h-3.5 w-3.5 text-slate-400" /> Unassigned
             </span>
           )}
         </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 p-1">
-        {members.length === 0 && <p className="px-2 py-3 text-center text-xs text-muted-foreground">No members.</p>}
-        {members.map((m) => {
-          const on = assigneeIds.includes(m.id)
-          return (
-            <button
-              key={m.id}
-              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted"
-              onClick={() => {
-                const next = on ? assigneeIds.filter((id) => id !== m.id) : [...assigneeIds, m.id]
-                onSave({ assigneeIds: next })
-              }}
-            >
-              <input type="checkbox" checked={on} readOnly className="h-4 w-4 accent-primary" />
-              <span className="flex-1 text-left">{m.name || m.email}</span>
-              {m.role && <span className="text-[10px] text-muted-foreground">{m.role}</span>}
-            </button>
-          )
-        })}
-      </PopoverContent>
-    </Popover>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-64 p-1.5 shadow-xl border rounded-xl">
+        <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b mb-1">
+          Assignees ({assigned.length})
+        </div>
+        {allMembers.length === 0 ? (
+          <div className="px-2 py-3 text-center text-xs text-muted-foreground">No members found.</div>
+        ) : (
+          allMembers.map((m) => {
+            const on = assigneeIds.includes(m.id)
+            return (
+              <DropdownMenuItem
+                key={m.id}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  const next = on ? assigneeIds.filter((id) => id !== m.id) : [...assigneeIds, m.id]
+                  onSave({ assigneeIds: next })
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs cursor-pointer focus:bg-muted"
+              >
+                <div className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-all", on ? "border-indigo-600 bg-indigo-600 text-white" : "border-slate-300 dark:border-slate-700 bg-background")}>
+                  {on && <Check className="h-3 w-3 stroke-[3]" />}
+                </div>
+                <span className="flex-1 text-left font-semibold truncate">{m.name || m.email}</span>
+                {m.role && <span className="text-[10px] text-muted-foreground">{m.role}</span>}
+              </DropdownMenuItem>
+            )
+          })
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

@@ -32,10 +32,13 @@ type Mapping = Partial<Record<FieldKey, number>>
 
 const IMPORT_TYPES: TaskType[] = ["STORY", "TASK", "BUG", "TEST_CASE"]
 
+// One example per supported type so the Type column is self-documenting.
 const TEMPLATE_CSV =
   "Title,Description,Type,Priority,Status,Story Points,Tags\n" +
-  'As a user I can reset my password,"Given a registered user, when they request a reset link…",Story,High,To Do,3,"auth, email"\n' +
-  "Verify login with invalid credentials,Expect an inline error and no session cookie,Test Case,Medium,To Do,1,auth\n"
+  'As a user I can reset my password,"Given a registered user, when they request a reset link…",User Story,High,To Do,3,"auth, email"\n' +
+  "Verify login with invalid credentials,Expect an inline error and no session cookie,Test Case,Medium,To Do,1,auth\n" +
+  "Checkout fails with a saved card,Spinner never resolves after pressing Pay,Bug,Critical,To Do,,checkout\n" +
+  "Upgrade Prisma to v6,Blocked on the schema-engine change,Task,Low,To Do,2,infra\n"
 
 interface PickerTestCase {
   id: string
@@ -71,6 +74,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
   const [rows, setRows] = useState<any[][]>([])
   const [mapping, setMapping] = useState<Mapping>({})
   const [defaultType, setDefaultType] = useState<TaskType>("STORY")
+  const [dragging, setDragging] = useState(false)
 
   // ── Test-case mode state ──
   const [tcSearch, setTcSearch] = useState("")
@@ -97,7 +101,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
   function resetAll() {
     setSource("file")
     setSprintId("none"); setEpicId("none")
-    setFileName(null); setHeaders([]); setRows([]); setMapping({}); setDefaultType("STORY")
+    setFileName(null); setHeaders([]); setRows([]); setMapping({}); setDefaultType("STORY"); setDragging(false)
     setTcSearch(""); setSelectedTcIds(new Set())
     setResult(null); setError(null); setSubmitting(false)
     if (fileInput.current) fileInput.current.value = ""
@@ -246,8 +250,8 @@ export function ImportModal({ projectId }: { projectId: string }) {
         <div className="flex gap-1.5">
           {(
             [
-              { id: "file", label: "From file", icon: FileSpreadsheet, hint: "CSV / Excel" },
-              { id: "testCases", label: "From Test Cases", icon: ListChecks, hint: "this project" },
+              { id: "file", label: "From file", icon: FileSpreadsheet, hint: "stories, test cases, bugs" },
+              { id: "testCases", label: "From Test Cases", icon: ListChecks, hint: "already in this project" },
             ] as const
           ).map((t) => {
             const on = source === t.id
@@ -297,16 +301,68 @@ export function ImportModal({ projectId }: { projectId: string }) {
         {/* ── FILE MODE ── */}
         {source === "file" && (
           <div className="space-y-3">
+            {/* What are we importing? This used to be hidden until a file was
+                parsed, so on open there was no sign the importer handles user
+                stories, test cases or bugs at all. */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-muted-foreground">
+                Import rows as{" "}
+                <span className="font-normal">— overridden per row by a Type column, if your file has one</span>
+              </label>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                {IMPORT_TYPES.map((t) => {
+                  const meta = TYPE_META[t]
+                  const Icon = meta.icon
+                  const on = defaultType === t
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setDefaultType(t)}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors ${
+                        on
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                      }`}
+                    >
+                      <Icon className={`h-3.5 w-3.5 ${on ? "" : meta.color}`} />
+                      {t === "STORY" ? "User Story" : meta.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             {!fileName ? (
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-input py-8 text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  setDragging(false)
+                  const f = e.dataTransfer.files?.[0]
+                  if (f) handleFile(f)
+                }}
               >
-                <Upload className="h-6 w-6" />
-                <span className="text-sm font-semibold">Click to choose a file</span>
-                <span className="text-xs">XLSX, XLS, or CSV — first row must be headers</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => fileInput.current?.click()}
+                  className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-8 transition-colors ${
+                    dragging
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-input text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  }`}
+                >
+                  <Upload className="h-6 w-6" />
+                  <span className="text-sm font-semibold">
+                    {dragging ? "Drop to upload" : "Drop a file here, or click to choose"}
+                  </span>
+                  <span className="text-xs">
+                    XLSX, XLS, or CSV — first row must be headers
+                  </span>
+                </button>
+              </div>
             ) : (
               <div className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2 text-sm">
                 <span className="flex items-center gap-2 font-medium">
@@ -411,31 +467,6 @@ export function ImportModal({ projectId }: { projectId: string }) {
                   </div>
                 )}
 
-                {/* Default type */}
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">
-                    Default issue type <span className="font-normal">(rows without a Type column value)</span>
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {IMPORT_TYPES.map((t) => {
-                      const meta = TYPE_META[t]
-                      const Icon = meta.icon
-                      const on = defaultType === t
-                      return (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => setDefaultType(t)}
-                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                            on ? "border-primary bg-primary/10 text-primary" : "border-input text-muted-foreground hover:bg-muted"
-                          }`}
-                        >
-                          <Icon className={`h-3.5 w-3.5 ${meta.color}`} /> {t === "STORY" ? "User Story" : meta.label}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
               </>
             )}
           </div>
@@ -559,7 +590,11 @@ export function ImportModal({ projectId }: { projectId: string }) {
           <Button onClick={submit} disabled={!canSubmit}>
             {submitting && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
             {source === "file"
-              ? `Import ${validRowCount || ""} ${validRowCount === 1 ? "row" : "rows"}`
+              ? `Import ${validRowCount || ""} ${
+                  validRowCount === 1
+                    ? (defaultType === "STORY" ? "user story" : TYPE_META[defaultType].label.toLowerCase())
+                    : (defaultType === "STORY" ? "user stories" : `${TYPE_META[defaultType].label.toLowerCase()}s`)
+                }`
               : `Import ${selectedTcIds.size || ""} test ${selectedTcIds.size === 1 ? "case" : "cases"}`}
           </Button>
         </DialogFooter>

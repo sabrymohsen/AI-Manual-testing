@@ -6,6 +6,7 @@ import {
   useBugsTable,
   useRequirementsTable,
   useSprints,
+  useAverageAge,
   type TableQuery,
 } from "@/hooks/reports/use-analytics"
 import { SEVERITY_COLORS, STATUS_COLORS } from "@/lib/reports/colors"
@@ -14,11 +15,17 @@ import { ArrowUp, ArrowDown, ArrowUpDown, Search, Download, ChevronLeft, Chevron
 import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
 
+import { SprintReport } from "./sprint-report"
+import { EpicReport } from "./epic-report"
+
 const TABS = [
   { id: "tests", label: "Tests" },
   { id: "bugs", label: "Bugs" },
   { id: "requirements", label: "Requirements" },
   { id: "sprints", label: "Sprints" },
+  { id: "sprint-report", label: "Sprint Report" },
+  { id: "epic-report", label: "Epic Report" },
+  { id: "average-age", label: "Average Age" },
 ] as const
 type TabId = (typeof TABS)[number]["id"]
 
@@ -45,6 +52,9 @@ export function TabbedTables({ projectId }: { projectId: string }) {
         {tab === "bugs" && <BugsTable projectId={projectId} />}
         {tab === "requirements" && <RequirementsTable projectId={projectId} />}
         {tab === "sprints" && <SprintsTable projectId={projectId} />}
+        {tab === "sprint-report" && <SprintReport projectId={projectId} />}
+        {tab === "epic-report" && <EpicReport projectId={projectId} />}
+        {tab === "average-age" && <AverageAgeTable projectId={projectId} />}
       </div>
     </div>
   )
@@ -416,5 +426,75 @@ function SprintsTable({ projectId }: { projectId: string }) {
       setQuery={setQuery}
       csvName="sprints.csv"
     />
+  )
+}
+
+// ── Average Age ──
+function AverageAgeTable({ projectId }: { projectId: string }) {
+  const { data, isFetching } = useAverageAge(projectId)
+  const rows = data ?? []
+  const statusColor = (status: string) => {
+    const map: Record<string, string> = {
+      TODO: "bg-slate-100 text-slate-600",
+      IN_PROGRESS: "bg-blue-100 text-blue-700",
+      REVIEW: "bg-violet-100 text-violet-700",
+      TESTING: "bg-amber-100 text-amber-700",
+      DEPLOYED: "bg-emerald-100 text-emerald-700",
+    }
+    return map[status] || "bg-slate-100 text-slate-600"
+  }
+  return (
+    <div>
+      {isFetching && !data ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </div>
+      ) : rows.length === 0 ? (
+        <p className="text-sm text-slate-400 text-center py-8">All tasks are completed — nothing aging.</p>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-slate-100">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-left">Status</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-right">Open Tasks</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-right">Avg Age (days)</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-right">Oldest (days)</th>
+                <th className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500 text-left">Health</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} className="border-t border-slate-50 hover:bg-slate-50/60">
+                  <td className="px-3 py-2.5">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${statusColor(row.status)}`}>
+                      {row.status.replace("_", " ")}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">{row.count}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800">{row.averageAgeDays}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">{row.oldestDays}</td>
+                  <td className="px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className={`h-full rounded-full ${row.averageAgeDays > 14 ? "bg-rose-500" : row.averageAgeDays > 7 ? "bg-amber-500" : "bg-emerald-500"}`}
+                          style={{ width: `${Math.min(100, (row.averageAgeDays / 21) * 100)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] text-slate-400">
+                        {row.averageAgeDays > 14 ? "High" : row.averageAgeDays > 7 ? "Moderate" : "Good"}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }
