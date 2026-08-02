@@ -172,6 +172,22 @@ async function applyInput(
 // the first viewer, stops when the last one disconnects. Chromium-only; the
 // client falls back to REST frame polling for Firefox/WebKit.
 
+// Live frames are JPEG, not PNG. Frames are captured at 2x device scale (see
+// session-manager's --force-device-scale-factor), so a Live QA frame is 3024x1556
+// (~4.7 MP). Measured on that geometry:
+//
+//   encode latency  PNG ~617ms/frame  vs  JPEG q70 ~50ms   (fast laptop; worse on a shared vCPU)
+//   frame size      flat UI        168 KB -> 131 KB  (1.3x)
+//                   gradients     1798 KB -> 177 KB (10.2x)
+//                   photographic 11413 KB -> 1576 KB (7.2x)
+//
+// Encode time is the dominant cost: PNG caps the stream near 2 fps no matter how
+// much bandwidth exists, which is why the loop below asks for 30 FPS and never
+// gets close. Size only matters on gradient/photo-heavy pages, but there PNG also
+// blows past what the WAN hop to a deployed worker can carry.
+// Override with RECORDER_STREAM_QUALITY (20-100) if a run needs crisper frames.
+const STREAM_QUALITY = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 70))
+
 const streamTokens = new Map<string, { sessionId: string; expires: number }>()
 
 function mintStreamToken(sessionId: string): string {
@@ -246,7 +262,6 @@ async function ensureGenericScreencast(sessionId: string, page: Page): Promise<v
 
     let isRunning = true
     let isCapturing = false
-    const streamQuality = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 100))
 
     const timer = setInterval(async () => {
       if (!isRunning || isCapturing) return
@@ -258,7 +273,10 @@ async function ensureGenericScreencast(sessionId: string, page: Page): Promise<v
       isCapturing = true
       try {
         const buf = await page.screenshot({
-          type: "png",
+          type: "jpeg",
+          quality: STREAM_QUALITY,
+          // Keep device scale: the client maps clicks with naturalWidth / dsf,
+          // so the frame must stay at CSS px x devicePixelRatio.
           scale: "device"
         })
         for (const ws of currentStream.viewers) {
@@ -310,11 +328,14 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       const ackWhenDrained = () => {
         const cur = sessionStreams.get(sessionId)
         if (!cur || (cur.cdp && cur.cdp !== cdp)) return
-        const buffered = Math.min(
+        // Gate on the *slowest* viewer. Taking the min acked as soon as the
+        // best-connected client drained, so a slow viewer never applied any
+        // backpressure and fell further behind with every frame.
+        const buffered = Math.max(
           ...[...cur.viewers]
             .filter((v) => v.readyState === WebSocket.OPEN)
             .map((v) => v.bufferedAmount),
-          Infinity
+          0
         )
         if (buffered > buf.length && Date.now() < deadline) {
           setTimeout(ackWhenDrained, 15)
@@ -332,7 +353,12 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
     })
     await cdp.send("Page.enable")
     await cdp.send("Page.startScreencast", {
-      format: "png",
+      format: "jpeg",
+      // CDP only honours `quality` for jpeg — it is ignored for png, which is
+      // why RECORDER_STREAM_QUALITY had no effect while this was png.
+      quality: STREAM_QUALITY,
+      // Left at 3840 deliberately: the 2x capture is ~3024px wide, so nothing
+      // is downscaled and the client's naturalWidth / dsf click mapping holds.
       maxWidth: 3840,
       maxHeight: 3840,
       everyNthFrame: 1,
@@ -455,9 +481,13 @@ const server = http.createServer(async (req, res) => {
       try {
         // scale "device" keeps polling frames at device pixels so mouse-coordinate
         // mapping stays 1:1 regardless of the context's deviceScaleFactor.
-        const buffer = await activeSess.page.screenshot({ type: "png", scale: "device" })
+        const buffer = await activeSess.page.screenshot({
+          type: "jpeg",
+          quality: STREAM_QUALITY,
+          scale: "device",
+        })
         sendJson(res, 200, {
-          frame: `data:image/png;base64,${buffer.toString("base64")}`,
+          frame: `data:image/jpeg;base64,${buffer.toString("base64")}`,
           url: activeSess.page.url(),
           fileChooserOpen: !!activeSess.activeFileChooser,
         })
