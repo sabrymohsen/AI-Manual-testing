@@ -1,7 +1,7 @@
 FROM node:20-alpine AS base
+RUN apk add --no-cache libc6-compat openssl
 
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci
@@ -22,15 +22,13 @@ RUN npm run build
 
 FROM base AS runner
 WORKDIR /app
-ENV NODE_ENV production
+ENV NODE_ENV=production
 # Where runtime uploads (avatars, etc.) are written and served from. Matches the
 # Railway persistent volume mount path; the Railway service variable of the same
 # name overrides this if set.
 ENV STORAGE_ROOT=/data
-# Prisma's engine binaries need libc6-compat + openssl on Alpine (query + schema
-# engines); openssl also lets Prisma detect the right libssl version.
 # su-exec lets us drop from root to the app user after fixing volume ownership.
-RUN apk add --no-cache libc6-compat openssl su-exec
+RUN apk add --no-cache su-exec
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
@@ -42,7 +40,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_module
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 EXPOSE 3000
-ENV PORT 3000
+ENV PORT=3000
 # We deliberately do NOT `USER nextjs` here. Railway mounts the persistent volume
 # (STORAGE_ROOT, e.g. /data) owned by root, so a non-root process gets EACCES when
 # writing uploads there. Instead the container starts as root, ensures the volume
