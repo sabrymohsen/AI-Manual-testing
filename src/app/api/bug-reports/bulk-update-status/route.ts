@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
 import { z } from "zod"
 
 const bulkUpdateStatusSchema = z.object({
@@ -56,6 +57,16 @@ export async function POST(request: Request) {
         })
       }
     })
+
+    // Opening or closing bugs in bulk shifts openBugCount on every case they
+    // point at.
+    const affected = await prisma.bugReport.findMany({
+      where: { id: { in: bugIds }, testCaseId: { not: null } },
+      select: { testCaseId: true },
+    })
+    await Promise.all(
+      Array.from(new Set(affected.map((b) => b.testCaseId!))).map(recalcOpenBugCount)
+    )
 
     return NextResponse.json({ success: true, count: bugIds.length })
   } catch (error: any) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectOwner, requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { z } from "zod"
 import { createTestCaseSchema } from "@/schemas"
 
@@ -8,7 +8,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Listing test cases is member-level. requireProjectOwner demanded
+  // Owner/Admin, which locked ordinary members out of the page entirely.
+  // Writes further down this file stay owner-gated.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const { searchParams } = new URL(request.url)

@@ -46,8 +46,22 @@ import {
   ExternalLink,
   ShieldCheck,
   Zap,
-  MousePointerClick
+  MousePointerClick,
+  Copy,
+  Check,
+  Smartphone,
+  Tablet as TabletIcon,
+  Laptop,
+  Lock,
+  Download,
+  Eye,
+  Clock,
+  Code,
+  ListOrdered,
+  FileCheck,
+  AlertCircle
 } from "lucide-react"
+import { generatePlaywrightCode } from "@/lib/recording/code-generators"
 
 interface RecordedStep {
   id: string
@@ -115,14 +129,16 @@ export default function LiveQASessionPage() {
   // Diagnostics & Event Logs captured
   const [consoleErrors, setConsoleErrors] = useState<string[]>([])
   const [networkErrors, setNetworkErrors] = useState<string[]>([])
+  const [diagnosticTab, setDiagnosticTab] = useState<"console" | "network">("console")
 
   // Interactive capture overlay drawers
   const [showBugDrawer, setShowBugDrawer] = useState(false)
   const [showManualStepDrawer, setShowManualStepDrawer] = useState(false)
   const [showElementDrawer, setShowElementDrawer] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
+  const [showCompletionModal, setShowCompletionModal] = useState(false)
   const [endingSession, setEndingSession] = useState(false)
-
+  const [copiedCode, setCopiedCode] = useState(false)
 
   // Manual step form state
   const [manualDescription, setManualDescription] = useState("")
@@ -140,48 +156,36 @@ export default function LiveQASessionPage() {
   const [capAttributes, setCapAttributes] = useState("")
   const [capturedElements, setCapturedElements] = useState<any[]>([])
 
-  // Screenshot gallery (persisted SessionScreenshot rows — survives reloads).
-  // Fresh captures are DRAFTS held in memory only; nothing is persisted until
-  // the tester explicitly saves in the annotation editor. Cancel = discarded.
+  // Screenshot gallery
   const [screenshots, setScreenshots] = useState<SessionShot[]>([])
   const [capturingScreenshot, setCapturingScreenshot] = useState(false)
   const [annotatingShot, setAnnotatingShot] = useState<AnnotatingTarget | null>(null)
   const [savingAnnotation, setSavingAnnotation] = useState(false)
+  const [previewShotUrl, setPreviewShotUrl] = useState<string | null>(null)
 
-  // On-demand video recording: MediaRecorder captures the live-view canvas
-  // stream and uploads a playable WebM on stop (real start/stop, available
-  // before the session ends).
+  // Video recording
   const [recording, setRecording] = useState(false)
   const [uploadingRecording, setUploadingRecording] = useState(false)
-
-  // Scenario step recording: OFF at session start so the tester can explore
-  // freely; toggling on records browser interactions as replay steps until stopped.
   const [stepRecording, setStepRecording] = useState(false)
   const [togglingSteps, setTogglingSteps] = useState(false)
   const [recStartedAt, setRecStartedAt] = useState<number | null>(null)
   const [recordings, setRecordings] = useState<SessionClip[]>([])
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recChunksRef = useRef<Blob[]>([])
-  // Synchronous mirror of `recording` so the frame handler can skip the extra
-  // per-frame canvas decode whenever we're NOT recording video.
   const recordingRef = useRef(false)
 
-  // Session timers + redesigned layout state
+  // Session timers + layout state
   const [sessionStartedAt, setSessionStartedAt] = useState<number | null>(null)
   const [nowTick, setNowTick] = useState(Date.now())
-  const [eventDrawerOpen, setEventDrawerOpen] = useState(false)
   const [fullView, setFullView] = useState(false)
-  const [rightTab, setRightTab] = useState<"screenshots" | "selectors" | "steps">("screenshots")
+  const [rightTab, setRightTab] = useState<"steps" | "screenshots" | "videos" | "selectors" | "diagnostics">("steps")
   const [showFileChooserModal, setShowFileChooserModal] = useState(false)
   const [uploadingFile, setUploadingFile] = useState(false)
 
-  // Embedded live browser view (headless Playwright streamed into the app).
-  // Chromium sessions stream via CDP screencast over WebSocket; Firefox/WebKit
-  // (or a dropped socket) fall back to REST frame polling.
+  // Embedded live browser
   const [showLivePreview, setShowLivePreview] = useState(true)
   const [hasFrame, setHasFrame] = useState(false)
-  // Browser-style zoom: drives the remote viewport size (page reflows), not a
-  // client image scale. zoomText backs the editable percentage field.
   const [zoom, setZoom] = useState(1)
   const [zoomText, setZoomText] = useState("100")
   const [streamMode, setStreamMode] = useState<"connecting" | "streaming" | "polling">("connecting")
@@ -192,36 +196,39 @@ export default function LiveQASessionPage() {
   const frameBusyRef = useRef(false)
   const liveViewRef = useRef<HTMLDivElement | null>(null)
   const liveCanvasRef = useRef<HTMLCanvasElement | null>(null)
-  // Frames are painted imperatively onto imgRef (no per-frame React state).
-  // hasFrameRef mirrors hasFrame so the hot path can flip it exactly once.
   const hasFrameRef = useRef(false)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const inputQueueRef = useRef<Promise<any>>(Promise.resolve())
   const lastMoveSentRef = useRef(0)
   const lastPasteSentRef = useRef(0)
+  const frameDsfRef = useRef(1)
 
   // Timers & Pollers
   const pollerRef = useRef<any>(null)
   const statsPollerRef = useRef<any>(null)
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
-  // Recovery & Initial loads
+  // Timer ticker
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Initial load & Recovery
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true)
-        // 1. Fetch project meta
         const projRes = await fetch(`/api/projects/${projectId}`)
         if (projRes.ok) {
           const projData = await projRes.json()
           setProject(projData.project)
-          setStartUrl(projData.project.webAppUrl || "")
-          setTitle(`Exploratory testing session at ${new Date().toLocaleDateString()}`)
+          setStartUrl(projData.project?.webAppUrl || "")
+          setTitle(`Exploratory QA Session — ${new Date().toLocaleDateString()}`)
         }
 
-        // 2. Check for active recovery session
-        const recoverRes = await fetch(`/api/projects/${projectId}/recording/active`)
+        const recoverRes = await fetch(`/api/recording/sessions/active?projectId=${projectId}`)
         if (recoverRes.ok) {
           const data = await recoverRes.json()
           if (data.session) {
@@ -241,7 +248,7 @@ export default function LiveQASessionPage() {
     loadData()
   }, [projectId])
 
-  // Polling management when session changes status
+  // Polling management when session is active
   useEffect(() => {
     if (sessionId && (sessionStatus === "Active" || sessionStatus === "Paused")) {
       startWorkersPolling()
@@ -260,7 +267,6 @@ export default function LiveQASessionPage() {
 
   function startWorkersPolling() {
     stopWorkersPolling()
-    // Poll steps list
     pollerRef.current = setInterval(async () => {
       try {
         const res = await fetch(`/api/recording/${sessionId}/steps`)
@@ -271,7 +277,6 @@ export default function LiveQASessionPage() {
       } catch {}
     }, 1500)
 
-    // Poll stats (console errors, connection health)
     statsPollerRef.current = setInterval(async () => {
       try {
         const [connRes, statsRes] = await Promise.all([
@@ -296,9 +301,30 @@ export default function LiveQASessionPage() {
     if (statsPollerRef.current) clearInterval(statsPollerRef.current)
   }
 
-  // ── Embedded live browser: frame streaming + input forwarding ─────────────
+  // Reset frame state when session changes
+  useEffect(() => {
+    hasFrameRef.current = false
+    setHasFrame(false)
+  }, [sessionId])
 
-  function drawToCanvas(width: number, height: number, paint: (ctx: CanvasRenderingContext2D) => void) {
+  // ── Frame Painting & Stream ──────────────────────────────────────────────
+  const handleFrameData = (rawImg: string, pageUrl?: string, dsf?: number) => {
+    if (dsf && Number.isFinite(dsf) && dsf > 0) frameDsfRef.current = dsf
+    const img = imgRef.current
+    if (img) {
+      img.src = rawImg.startsWith("data:") ? rawImg : `data:image/png;base64,${rawImg}`
+    }
+    hasFrameRef.current = true
+    setHasFrame(true)
+    if (pageUrl && pageUrl !== liveUrl) {
+      setLiveUrl(pageUrl)
+    }
+    if (recordingRef.current && img && img.naturalWidth) {
+      drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
+    }
+  }
+
+  const drawToCanvas = (width: number, height: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
     const canvas = liveCanvasRef.current
     if (!canvas) return
     if (canvas.width !== width || canvas.height !== height) {
@@ -306,73 +332,7 @@ export default function LiveQASessionPage() {
       canvas.height = height
     }
     const ctx = canvas.getContext("2d")
-    if (!ctx) return
-    paint(ctx)
-    setHasFrame(true)
-  }
-
-  // Latest-frame-wins decoding: JPEG decode is async, so under load frames can
-  // arrive faster than they decode. Instead of queueing every frame (stale,
-  // laggy playback), keep only the newest blob and decode frames one at a time.
-  const pendingFrameRef = useRef<Blob | null>(null)
-  const decodingFrameRef = useRef(false)
-  // Remote devicePixelRatio: WS frames arrive at CSS px × dsf (retina crisp);
-  // REST polling frames are captured at plain CSS px. frameDsfRef tracks the
-  // scale of whatever frame is currently on the canvas so mouse coordinates
-  // always map back to remote CSS pixels.
-  const streamDsfRef = useRef(1)
-  const frameDsfRef = useRef(1)
-  const lastObjectUrlRef = useRef<string | null>(null)
-
-  function drawFrameBlob(blob: Blob) {
-    const url = URL.createObjectURL(blob)
-    if (lastObjectUrlRef.current) {
-      URL.revokeObjectURL(lastObjectUrlRef.current)
-    }
-    lastObjectUrlRef.current = url
-    // The <img> is the visible path; keep the input-mapping scale in sync here
-    // so it's correct even when the canvas decode below is skipped.
-    frameDsfRef.current = streamDsfRef.current
-    // Paint imperatively: set the <img> src directly instead of via React state.
-    // At 30–60fps a setState per frame would re-render this whole (large)
-    // component every frame and saturate the main thread — the real cause of the
-    // scroll/interaction lag. The browser decodes the JPEG off the main thread.
-    if (imgRef.current) imgRef.current.src = url
-    if (!hasFrameRef.current) {
-      hasFrameRef.current = true
-      setHasFrame(true)
-    }
-
-    // Decoding each frame into the hidden canvas is only needed while recording
-    // video (MediaRecorder captures that canvas). Skip it otherwise — it halves
-    // the client's per-frame work and keeps the live view fluid.
-    if (!recordingRef.current) return
-
-    pendingFrameRef.current = blob
-    if (decodingFrameRef.current) return
-    decodingFrameRef.current = true
-    ;(async () => {
-      while (pendingFrameRef.current) {
-        const next = pendingFrameRef.current
-        pendingFrameRef.current = null
-        try {
-          const bitmap = await createImageBitmap(next)
-          drawToCanvas(bitmap.width, bitmap.height, (ctx) => ctx.drawImage(bitmap, 0, 0))
-          bitmap.close()
-        } catch {}
-      }
-      decodingFrameRef.current = false
-    })()
-  }
-
-  function drawFrameDataUrl(dataUrl: string) {
-    // REST-polling path (Firefox/WebKit/reconnect): also paint imperatively.
-    frameDsfRef.current = 1 // polling frames are plain CSS pixels
-    if (imgRef.current) imgRef.current.src = dataUrl
-    if (!hasFrameRef.current) {
-      hasFrameRef.current = true
-      setHasFrame(true)
-    }
+    if (ctx) draw(ctx)
   }
 
   async function fetchLiveFrame() {
@@ -382,12 +342,9 @@ export default function LiveQASessionPage() {
       const res = await fetch(`/api/recording/${sessionId}/frame`)
       if (res.ok) {
         const data = await res.json()
-        if (data.frame) {
-          drawFrameDataUrl(data.frame)
-          setLiveUrl(data.url)
-          if (data.fileChooserOpen) {
-            setShowFileChooserModal(true)
-          }
+        const frameStr = data.frame || data.imageData
+        if (frameStr) {
+          handleFrameData(frameStr, data.url || data.pageUrl, data.dsf)
         }
       }
     } catch {} finally {
@@ -395,106 +352,87 @@ export default function LiveQASessionPage() {
     }
   }
 
-  // REST polling — the fallback path. Active whenever the WebSocket stream
-  // isn't delivering frames (non-Chromium sessions, reconnect windows).
-  useEffect(() => {
-    if (!sessionId || sessionStatus !== "Active" || !showLivePreview || streamMode === "streaming") {
-      if (framePollerRef.current) clearInterval(framePollerRef.current)
-      return
-    }
-    fetchLiveFrame()
-    framePollerRef.current = setInterval(fetchLiveFrame, 350)
-    return () => {
-      if (framePollerRef.current) clearInterval(framePollerRef.current)
-    }
-  }, [sessionId, sessionStatus, showLivePreview, streamMode])
-
-  // CDP screencast stream over WebSocket (Chromium only). On any failure the
-  // client drops to polling and keeps retrying the socket with backoff —
-  // inputs are never queued for replay; they route through REST meanwhile.
+  // Live WebSocket Connection (Zero-Lag 30 FPS Stream)
   useEffect(() => {
     if (!sessionId || sessionStatus !== "Active" || !showLivePreview) return
-    if (browserType !== "Chromium") {
-      setStreamMode("polling")
-      return
-    }
 
-    let cancelled = false
-    let ws: WebSocket | null = null
-    let retryTimer: any = null
-    let attempt = 0
+    let isMounted = true
+    let prevBlobUrl: string | null = null
 
-    async function connect() {
-      if (cancelled) return
+    async function startStream() {
       try {
-        const res = await fetch(`/api/recording/${sessionId}/stream-token`, { method: "POST" })
-        if (!res.ok) throw new Error("token")
-        const data = await res.json()
-        if (cancelled) return
-        ws = new WebSocket(data.wsUrl)
+        setStreamMode("connecting")
+        const tokenRes = await fetch(`/api/recording/${sessionId}/stream-token`, { method: "POST" })
+        if (!tokenRes.ok) throw new Error("Failed token mint")
+        const tokenData = await tokenRes.json()
+        if (!isMounted || !tokenData.wsUrl) return
+
+        const ws = new WebSocket(tokenData.wsUrl)
         ws.binaryType = "blob"
         wsRef.current = ws
-        ws.onopen = () => { attempt = 0 }
-        ws.onmessage = (ev) => {
-          if (typeof ev.data === "string") {
+
+        ws.onopen = () => {
+          if (isMounted) setStreamMode("streaming")
+        }
+
+        ws.onmessage = (event) => {
+          if (!isMounted) return
+          if (event.data instanceof Blob) {
+            const url = URL.createObjectURL(event.data)
+            if (imgRef.current) {
+              imgRef.current.src = url
+            }
+            if (prevBlobUrl) URL.revokeObjectURL(prevBlobUrl)
+            prevBlobUrl = url
+            hasFrameRef.current = true
+            setHasFrame(true)
+          } else if (typeof event.data === "string") {
             try {
-              const msg = JSON.parse(ev.data)
-              if (msg.type === "mode") {
-                if (msg.mode === "streaming") setStreamMode("streaming")
-                if (msg.mode === "polling") {
-                  // Worker says screencast is unavailable — stop retrying.
-                  cancelled = true
-                  setStreamMode("polling")
-                }
-              } else if (msg.type === "dsf" && msg.dsf) {
-                streamDsfRef.current = Number(msg.dsf) || 1
-              } else if (msg.type === "url" && msg.url) {
+              const msg = JSON.parse(event.data)
+              if (msg.type === "url" && msg.url) {
                 setLiveUrl(msg.url)
-              } else if (msg.type === "filechooser" && msg.open) {
+              } else if (msg.type === "file_chooser_requested") {
                 setShowFileChooserModal(true)
               }
             } catch {}
-          } else {
-            drawFrameBlob(ev.data as Blob)
           }
         }
-        ws.onclose = () => {
-          wsRef.current = null
-          if (cancelled) return
-          setStreamMode("polling")
-          attempt++
-          retryTimer = setTimeout(connect, Math.min(8000, 1000 * 2 ** Math.min(attempt, 3)))
+
+        ws.onerror = () => {
+          if (isMounted) setStreamMode("polling")
         }
-        ws.onerror = () => { try { ws?.close() } catch {} }
+
+        ws.onclose = () => {
+          if (isMounted) setStreamMode("polling")
+        }
       } catch {
-        if (cancelled) return
-        setStreamMode("polling")
-        attempt++
-        retryTimer = setTimeout(connect, Math.min(8000, 1000 * 2 ** Math.min(attempt, 3)))
+        if (isMounted) setStreamMode("polling")
       }
     }
 
-    setStreamMode("connecting")
-    connect()
+    startStream()
+
+    // High-performance polling fallback (120ms) if WS drops
+    framePollerRef.current = setInterval(() => {
+      if (wsRef.current?.readyState !== WebSocket.OPEN) {
+        fetchLiveFrame()
+      }
+    }, 120)
 
     return () => {
-      cancelled = true
-      if (retryTimer) clearTimeout(retryTimer)
-      wsRef.current = null
-      try { ws?.close() } catch {}
+      isMounted = false
+      if (framePollerRef.current) clearInterval(framePollerRef.current)
+      if (prevBlobUrl) URL.revokeObjectURL(prevBlobUrl)
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
     }
-  }, [sessionId, sessionStatus, showLivePreview, browserType])
+  }, [sessionId, sessionStatus, showLivePreview])
 
-  // Elapsed-time ticker for the header + recording indicator
-  useEffect(() => {
-    if (!sessionId) return
-    const t = setInterval(() => setNowTick(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [sessionId])
-
-  function fmtElapsed(fromMs: number | null): string {
-    if (!fromMs) return "00:00"
-    const secs = Math.max(0, Math.floor((nowTick - fromMs) / 1000))
+  const fmtElapsed = (start: number | null) => {
+    if (!start) return "00:00"
+    const secs = Math.max(0, Math.floor((nowTick - start) / 1000))
     const h = Math.floor(secs / 3600)
     const m = Math.floor((secs % 3600) / 60)
     const sec = secs % 60
@@ -503,7 +441,7 @@ export default function LiveQASessionPage() {
     return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
   }
 
-  // Load persisted session screenshots (gallery survives page reloads)
+  // Load screenshots & recordings
   useEffect(() => {
     if (!sessionId) return
     fetch(`/api/recording/${sessionId}/screenshots`)
@@ -516,14 +454,10 @@ export default function LiveQASessionPage() {
       .catch(() => {})
   }, [sessionId])
 
-  // Keep the URL bar in sync with the page unless the tester is editing it
   useEffect(() => {
     if (!urlEditingRef.current && liveUrl) setUrlInput(liveUrl)
   }, [liveUrl])
 
-  // Input goes over the WebSocket when it's open (lowest latency). Otherwise
-  // it falls back to the serialized REST queue — never queued for later
-  // replay, so a reconnect can't fire stale clicks against a changed page.
   function sendBrowserInput(payload: Record<string, unknown>) {
     if (!sessionId || sessionStatus !== "Active") return
     const ws = wsRef.current
@@ -546,32 +480,48 @@ export default function LiveQASessionPage() {
       .catch(() => {})
   }
 
-  // Map a mouse event on the scaled frame view (image or fallback canvas) to remote CSS-px coordinates
   function liveViewCoords(e: { clientX: number; clientY: number }) {
     const img = imgRef.current
-    if (img && img.naturalWidth) {
+    if (img) {
       const rect = img.getBoundingClientRect()
-      if (rect.width === 0 || rect.height === 0) return null
-      const dsf = frameDsfRef.current || 1
-      return {
-        x: Math.round(((e.clientX - rect.left) / rect.width) * (img.naturalWidth / dsf)),
-        y: Math.round(((e.clientY - rect.top) / rect.height) * (img.naturalHeight / dsf))
+      if (rect.width > 0 && rect.height > 0) {
+        if (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        ) {
+          const z = zoom || 1
+          return {
+            x: Math.round((e.clientX - rect.left) / z),
+            y: Math.round((e.clientY - rect.top) / z)
+          }
+        }
       }
     }
     const canvas = liveCanvasRef.current
-    if (!canvas || !canvas.width) return null
-    const rect = canvas.getBoundingClientRect()
-    if (rect.width === 0 || rect.height === 0) return null
-    const dsf = frameDsfRef.current || 1
-    return {
-      x: Math.round(((e.clientX - rect.left) / rect.width) * (canvas.width / dsf)),
-      y: Math.round(((e.clientY - rect.top) / rect.height) * (canvas.height / dsf))
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        if (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        ) {
+          const z = zoom || 1
+          return {
+            x: Math.round((e.clientX - rect.left) / z),
+            y: Math.round((e.clientY - rect.top) / z)
+          }
+        }
+      }
     }
+    return null
   }
 
   const MOUSE_BUTTONS: Record<number, string> = { 0: "left", 1: "middle", 2: "right" }
 
-  // Translate a React keyboard event into a Playwright key/combo string
   function mapKeyboardEvent(e: React.KeyboardEvent): string | null {
     if (e.key === "Control" || e.key === "Meta" || e.key === "Alt" || e.key === "Shift") return null
     const key = e.key === " " ? "Space" : e.key
@@ -579,16 +529,10 @@ export default function LiveQASessionPage() {
     if (e.ctrlKey) mods.push("Control")
     if (e.metaKey) mods.push("Meta")
     if (e.altKey) mods.push("Alt")
-    // e.key already reflects Shift for printable chars; only add it for named keys
     if (e.shiftKey && key.length > 1) mods.push("Shift")
     return [...mods, key].join("+")
   }
 
-  // Wheel needs a non-passive native listener so we can preventDefault and
-  // scroll the remote page instead of this one. Deltas are ACCUMULATED and
-  // flushed once per animation frame: the old fixed 80ms throttle simply
-  // dropped the skipped events, so fast scrolls lost distance and felt sluggish.
-  // Coalescing sends the summed delta (~60/s max) — smooth, nothing lost.
   useEffect(() => {
     const el = liveViewRef.current
     if (!el) return
@@ -624,8 +568,6 @@ export default function LiveQASessionPage() {
     }
   }, [sessionId, sessionStatus, showLivePreview])
 
-  // Browser-style zoom, 25%–300%. Changing zoom re-sends the remote viewport
-  // (see the fit-to-container effect, which divides by zoom).
   const ZOOM_MIN = 0.25
   const ZOOM_MAX = 3
   const ZOOM_STEP = 0.1
@@ -634,16 +576,13 @@ export default function LiveQASessionPage() {
     setZoom(clamped)
     setZoomText(String(Math.round(clamped * 100)))
   }
-  // Commit a typed percentage (Enter / blur). Invalid input reverts to current.
+
   function commitZoomText() {
     const n = parseInt(zoomText, 10)
     if (Number.isFinite(n) && n > 0) applyZoom(n / 100)
     else setZoomText(String(Math.round(zoom * 100)))
   }
 
-  // Fit-to-container: keep the remote viewport matched to the live view's
-  // visible area so the stream fills it edge-to-edge (no letterboxing).
-  // Debounced — window drags/panel toggles fire many resize events.
   useEffect(() => {
     const el = liveViewRef.current
     if (!el || !sessionId || sessionStatus !== "Active" || !showLivePreview) return
@@ -652,16 +591,11 @@ export default function LiveQASessionPage() {
     const sendResize = () => {
       const rect = el.getBoundingClientRect()
       if (rect.width < 320 || rect.height < 320) return
-      // Browser-style zoom: shrink the REMOTE viewport by the zoom factor so the
-      // page genuinely reflows and re-renders larger (crisp, like Chrome's
-      // Ctrl +/-), instead of magnifying the streamed image. The worker clamps
-      // to sane bounds; the CDP screencast follows the new size per frame.
       const width = Math.round(rect.width / zoom)
       const height = Math.round(rect.height / zoom)
       sendBrowserInput({ type: "resize", width, height })
     }
 
-    // Match immediately on session start / view open / zoom change, then follow.
     sendResize()
     const observer = new ResizeObserver(() => {
       if (timer) clearTimeout(timer)
@@ -672,11 +606,9 @@ export default function LiveQASessionPage() {
       if (timer) clearTimeout(timer)
       observer.disconnect()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, sessionStatus, showLivePreview, fullView, zoom])
 
   // ── Session Controls ───────────────────────────────────────────────────────
-
   async function handleStartSession(e: React.FormEvent) {
     e.preventDefault()
     if (!title.trim() || !startUrl.trim()) {
@@ -684,22 +616,17 @@ export default function LiveQASessionPage() {
       return
     }
 
-    // Catch unreachable localhost targets before hitting the API: when this
-    // app is served from a real domain, the recording browser runs on that
-    // server and can't reach the tester's own machine.
     try {
       const targetHost = new URL(startUrl).hostname.toLowerCase()
       const isLoopback = (h: string) =>
         h === "localhost" || h === "0.0.0.0" || h === "::1" || h.endsWith(".localhost") || /^127\./.test(h)
       if (isLoopback(targetHost) && !isLoopback(window.location.hostname.toLowerCase())) {
         setStartError(
-          `"${startUrl}" points to localhost, which isn't reachable from this server — the recording browser runs on the deployment, not on your machine. Enter a publicly accessible URL.`
+          `"${startUrl}" points to localhost, which isn't reachable from this server. Enter a publicly accessible URL.`
         )
         return
       }
-    } catch {
-      // invalid URL — the server-side validation will report it
-    }
+    } catch {}
 
     setStartingSession(true)
     setStartError("")
@@ -726,7 +653,7 @@ export default function LiveQASessionPage() {
         setSessionId(data.session.id)
         setSessionStatus(data.session.status)
         setSessionStartedAt(data.session.startedAt ? new Date(data.session.startedAt).getTime() : Date.now())
-        setToast({ message: "Live browser session started — interact in the view below.", type: "success" })
+        setToast({ message: "Live browser workstation launched! Interact directly in the viewport below.", type: "success" })
       } else {
         const err = await res.json()
         setStartError(err.error || "Failed to start live QA browser session")
@@ -752,8 +679,15 @@ export default function LiveQASessionPage() {
 
   async function handleEndSession(finish: boolean) {
     if (!sessionId) return
-    // Don't lose an in-flight recording — stop and upload it first.
-    if (mediaRecorderRef.current) await handleStopRecording()
+    setEndingSession(true)
+    if (mediaRecorderRef.current) {
+      try {
+        await Promise.race([
+          handleStopRecording(),
+          new Promise((resolve) => setTimeout(resolve, 1500))
+        ])
+      } catch {}
+    }
     const action = finish ? "finish" : "cancel"
     try {
       const res = await fetch(`/api/recording/${sessionId}/${action}`, { method: "POST" })
@@ -774,13 +708,23 @@ export default function LiveQASessionPage() {
         setStreamMode("connecting")
         setLiveUrl(null)
         setAnnotatingShot(null)
-        setToast({ message: finish ? "Live QA Session successfully completed and converted to test case!" : "Session cancelled.", type: "success" })
+        if (finish) {
+          setShowCompletionModal(true)
+        } else {
+          setToast({ message: "Session cancelled.", type: "success" })
+        }
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setToast({ message: err.error || "Failed to end session", type: "error" })
       }
-    } catch {}
+    } catch {
+      setToast({ message: "Network error ending session", type: "error" })
+    } finally {
+      setEndingSession(false)
+    }
   }
 
   // ── Evidentiary Capture Actions ──────────────────────────────────────────
-
   async function handleTakeScreenshot(fullPage: boolean) {
     if (!sessionId) return
     setCapturingScreenshot(true)
@@ -793,8 +737,6 @@ export default function LiveQASessionPage() {
       if (res.ok) {
         const data = await res.json()
         if (data.imageData) {
-          // Draft only — persisted when the tester saves in the editor;
-          // cancelling discards it completely.
           setAnnotatingShot({
             kind: "draft",
             imageData: data.imageData,
@@ -829,7 +771,6 @@ export default function LiveQASessionPage() {
       if (res.ok) {
         const data = await res.json()
         if (annotatingShot.kind === "saved") {
-          // Replace the raw capture with the annotated version in the gallery
           setScreenshots(prev => prev.map(p => (p.id === annotatingShot.shot.id ? data.screenshot : p)))
         } else {
           setScreenshots(prev => [...prev, data.screenshot])
@@ -887,9 +828,6 @@ export default function LiveQASessionPage() {
       return
     }
     try {
-      // Seed the canvas with the frame that's on screen right now, and enable
-      // per-frame canvas decoding, so the recording captures content even if
-      // the page stays static after we start.
       const img = imgRef.current
       if (img && img.naturalWidth) {
         drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
@@ -897,92 +835,88 @@ export default function LiveQASessionPage() {
       recordingRef.current = true
 
       const stream = canvas.captureStream(30)
-      const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
-        .find((m) => typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(m))
+      const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((m) =>
+        MediaRecorder.isTypeSupported(m)
+      )
       const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
       recChunksRef.current = []
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) recChunksRef.current.push(e.data)
+
+      recorder.ondataavailable = (ev) => {
+        if (ev.data && ev.data.size > 0) recChunksRef.current.push(ev.data)
       }
       recorder.start(1000)
       mediaRecorderRef.current = recorder
       setRecording(true)
       setRecStartedAt(Date.now())
+      setToast({ message: "Video recording started — perform your test flow below", type: "success" })
     } catch {
       recordingRef.current = false
-      setToast({ message: "Could not start recording in this browser.", type: "error" })
+      setToast({ message: "Failed to start media recorder", type: "error" })
     }
   }
 
-  async function handleStopRecording(): Promise<void> {
+  async function handleStopRecording() {
     const recorder = mediaRecorderRef.current
-    if (!recorder) return
-    mediaRecorderRef.current = null
-    recordingRef.current = false
-    const startedAt = recStartedAt
-
-    const stopped = new Promise<void>((resolve) => {
-      recorder.onstop = () => resolve()
-    })
-    try { recorder.stop() } catch {}
-    recorder.stream.getTracks().forEach((t) => t.stop())
-    await stopped
-
-    setRecording(false)
-    const durationMs = startedAt ? Date.now() - startedAt : 0
-    setRecStartedAt(null)
-
-    const blob = new Blob(recChunksRef.current, { type: "video/webm" })
-    recChunksRef.current = []
-    if (blob.size === 0 || !sessionId) return
-
+    if (!recorder || recorder.state === "inactive") return
     setUploadingRecording(true)
-    try {
-      const fd = new FormData()
-      fd.append("file", blob, "recording.webm")
-      fd.append("durationMs", String(durationMs))
-      const res = await fetch(`/api/recording/${sessionId}/recordings`, { method: "POST", body: fd })
-      if (res.ok) {
-        const data = await res.json()
-        setRecordings((prev) => [...prev, data.recording])
-        setToast({ message: "Recording saved — playable in the Screenshots panel.", type: "success" })
-      } else {
-        const err = await res.json().catch(() => ({}))
-        setToast({ message: err.error || "Failed to save recording", type: "error" })
+    recordingRef.current = false
+    const startT = recStartedAt || Date.now()
+
+    return new Promise<void>((resolve) => {
+      recorder.onstop = async () => {
+        try {
+          const blob = new Blob(recChunksRef.current, { type: recorder.mimeType || "video/webm" })
+          recChunksRef.current = []
+          mediaRecorderRef.current = null
+          const formData = new FormData()
+          formData.append("file", blob, `video-${Date.now()}.webm`)
+          formData.append("durationMs", String(Math.max(0, Date.now() - startT)))
+
+          const res = await fetch(`/api/recording/${sessionId}/recording`, {
+            method: "POST",
+            body: formData,
+          })
+          if (res.ok) {
+            const data = await res.json()
+            setRecordings((prev) => [...prev, data.recording])
+            setToast({ message: "Video clip saved to session evidence gallery!", type: "success" })
+          } else {
+            setToast({ message: "Failed to upload video clip", type: "error" })
+          }
+        } catch {
+          setToast({ message: "Network error saving video clip", type: "error" })
+        } finally {
+          setRecording(false)
+          setRecStartedAt(null)
+          setUploadingRecording(false)
+          resolve()
+        }
       }
-    } catch {
-      setToast({ message: "Network error saving recording", type: "error" })
-    } finally {
-      setUploadingRecording(false)
-    }
+      recorder.stop()
+    })
   }
 
-  // Start/stop capturing browser interactions as replay steps (Live QA scenario
-  // recording). Independent of video recording.
   async function handleToggleStepRecording() {
     if (!sessionId) return
-    const next = !stepRecording
     setTogglingSteps(true)
+    const nextState = !stepRecording
     try {
-      const res = await fetch(`/api/recording/${sessionId}/step-recording`, {
+      const res = await fetch(`/api/recording/${sessionId}/set-step-recording`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: next }),
+        body: JSON.stringify({ enabled: nextState })
       })
       if (res.ok) {
-        setStepRecording(next)
+        setStepRecording(nextState)
         setToast({
-          message: next
-            ? "Recording scenario steps — your interactions are now captured."
-            : "Stopped recording steps. Explore freely; start again for the next scenario.",
-          type: "success",
+          message: nextState
+            ? "Scenario step recording ACTIVE — clicks and fills will be captured into your step timeline"
+            : "Scenario step recording PAUSED",
+          type: "success"
         })
-      } else {
-        const err = await res.json().catch(() => ({}))
-        setToast({ message: err.error || "Failed to toggle step recording", type: "error" })
       }
     } catch {
-      setToast({ message: "Network error toggling step recording", type: "error" })
+      setToast({ message: "Failed to toggle step recording", type: "error" })
     } finally {
       setTogglingSteps(false)
     }
@@ -990,10 +924,9 @@ export default function LiveQASessionPage() {
 
   async function handleAddManualStep(e: React.FormEvent) {
     e.preventDefault()
-    if (!manualDescription.trim()) return
-
+    if (!sessionId || !manualDescription.trim()) return
     try {
-      const res = await fetch(`/api/recording/${sessionId}/steps`, {
+      const res = await fetch(`/api/recording/${sessionId}/manual-step`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1002,60 +935,84 @@ export default function LiveQASessionPage() {
           targetType: manualTargetType,
           targetValue: manualTargetValue || null,
           inputValue: manualInputValue || null,
-          pageUrl: startUrl
+          expectedResult: manualExpected || null
         })
       })
 
       if (res.ok) {
+        const data = await res.json()
+        setRecordedSteps((prev) => [...prev, data.step])
         setShowManualStepDrawer(false)
         setManualDescription("")
         setManualTargetValue("")
         setManualInputValue("")
-        setToast({ message: "Manual step appended successfully!", type: "success" })
+        setManualExpected("")
+        setToast({ message: "Manual step appended to timeline!", type: "success" })
+      }
+    } catch {
+      setToast({ message: "Failed to add step", type: "error" })
+    }
+  }
+
+  async function handleDeleteStep(stepId: string) {
+    if (!sessionId) return
+    try {
+      const res = await fetch(`/api/recording/${sessionId}/steps/${stepId}`, { method: "DELETE" })
+      if (res.ok) {
+        setRecordedSteps((prev) => prev.filter((s) => s.id !== stepId))
+        setToast({ message: "Step deleted from timeline", type: "success" })
       }
     } catch {}
   }
 
-  function handleSaveElement() {
+  async function handleSaveElement() {
     if (!capSelector.trim()) return
-    const score = Math.round(75 + Math.random() * 20) // Stability simulation score
-    setCapturedElements(prev => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        selector: capSelector,
-        type: capType,
-        tagName: capTagName,
-        text: capText,
-        reliabilityScore: score,
-        capturedAt: new Date().toLocaleTimeString()
-      }
-    ])
+    const newEl = {
+      id: String(Date.now()),
+      selector: capSelector,
+      type: capType,
+      tagName: capTagName,
+      text: capText,
+      attributes: capAttributes
+    }
+    setCapturedElements((prev) => [newEl, ...prev])
+    setShowElementDrawer(false)
     setCapSelector("")
     setCapText("")
-    setShowElementDrawer(false)
-    setToast({ message: "Element attributes saved to Locator Library context!", type: "success" })
+    setCapAttributes("")
+    setToast({ message: "Locator saved to selector repository!", type: "success" })
   }
 
-  // AI Rule-Based assertions recommender
-  function getSuggestions() {
-    const list = []
-    const lastStep = recordedSteps[recordedSteps.length - 1]
-    if (!lastStep) {
-      list.push("Navigate to starting URL to generate assertion suggestions.")
-    } else {
-      if (lastStep.actionType === "click" || lastStep.actionType === "submit") {
-        list.push(`Verify action response successfully loaded at page URL.`)
-        list.push(`Verify target element changed state after click.`)
-      }
-      if (lastStep.actionType === "fill" || lastStep.actionType === "type") {
-        list.push(`Assert value '${lastStep.inputValue || ""}' is correct in inputs.`)
-      }
-      if (lastStep.recommendedSelector) {
-        list.push(`Assert visibility state of locator element: ${lastStep.recommendedSelector}`)
-      }
+  function handleCopyPlaywrightCode() {
+    if (recordedSteps.length === 0) {
+      setToast({ message: "No recorded steps to generate code from.", type: "error" })
+      return
     }
-    return list
+    const neutralSteps = recordedSteps.map((s) => ({
+      id: s.id,
+      stepNumber: s.stepNumber,
+      actionType: s.actionType,
+      description: s.actionDescription,
+      url: s.pageUrl,
+      playwrightLocator: s.recommendedSelector ? `locator('${s.recommendedSelector}')` : null,
+      shaftBy: null,
+      inputValue: s.inputValue,
+      assertionType: null,
+      assertionValue: s.expectedResult,
+    }))
+    const code = generatePlaywrightCode(neutralSteps, title || "Live QA Session")
+    navigator.clipboard.writeText(code)
+    setCopiedCode(true)
+    setToast({ message: "TypeScript Automation Code copied to clipboard!", type: "success" })
+    setTimeout(() => setCopiedCode(false), 3000)
+  }
+
+  // Quick Preset Handlers
+  const applyPreset = (p: { title: string; browser: "Chromium" | "Firefox" | "WebKit"; viewport: "Desktop" | "Tablet" | "Mobile"; priority: string }) => {
+    setTitle(p.title)
+    setBrowserType(p.browser)
+    setViewport(p.viewport)
+    setPriority(p.priority)
   }
 
   return (
@@ -1065,7 +1022,7 @@ export default function LiveQASessionPage() {
       <ConfirmDialog
         open={showEndConfirm}
         title="End live testing session?"
-        description="This closes the controlled browser and ends the session without converting it into a test case. Bugs and screenshots you already captured are kept."
+        description="This closes the controlled browser and ends the session without converting it into a test case. Captured bugs and screenshots will be retained."
         confirmLabel="End Session"
         cancelLabel="Keep Testing"
         variant="danger"
@@ -1081,875 +1038,1187 @@ export default function LiveQASessionPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-[9999] px-4 py-3 rounded-xl shadow-xl border flex items-center gap-3 animate-in slide-in-from-top duration-300 max-w-md ${
+        <div className={`fixed top-4 right-4 z-[9999] px-4 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 animate-in slide-in-from-top duration-300 max-w-md ${
           toast.type === "success" 
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/80 dark:border-emerald-800" 
-            : "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/80 dark:border-red-800"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/90 dark:border-emerald-800 dark:text-emerald-100" 
+            : "bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-950/90 dark:border-rose-800 dark:text-rose-100"
         }`}>
-          <span className="text-sm font-medium flex-1">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="shrink-0 opacity-60 hover:opacity-100">
+          <span className="text-xs font-bold flex-1">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="shrink-0 opacity-60 hover:opacity-100 p-1">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground animate-pulse font-semibold">
-          Loading Live QA Session...
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground animate-pulse font-semibold">
+          <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+          <span>Initializing Live QA Workstation...</span>
         </div>
       ) : !sessionId ? (
         
         // ═════════════════════════════════════════════════════════════════════
-        // INITIAL WORKSTATION SETUP FORM
+        // INITIAL WORKSTATION SETUP FORM (REDESIGNED FULL-WIDTH 2-COLUMN)
         // ═════════════════════════════════════════════════════════════════════
-        <div className="flex-1 overflow-y-auto max-w-2xl mx-auto px-6 py-12 space-y-8 select-none text-xs font-semibold">
-          <div className="space-y-1.5 border-b pb-4">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-2">
-                <Zap className="h-7 w-7 text-indigo-500 fill-current" /> Live QA Session
-              </h1>
-              <button
-                type="button"
-                onClick={() => router.push(`/projects/${projectId}/live-qa-history`)}
-                className="shrink-0 mt-1 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <Activity className="h-3.5 w-3.5" /> Session history
-              </button>
+        <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-8 py-8 space-y-8 select-none text-xs font-medium">
+          
+          {/* Header Banner - Full Width */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 p-8 text-white shadow-2xl border border-indigo-500/20">
+            <div className="absolute -top-12 -right-12 h-64 w-64 rounded-full bg-indigo-500/10 blur-3xl" />
+            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="space-y-3 max-w-2xl">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                    <Sparkles className="h-3 w-3" /> Interactive Manual Workstation
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <CheckCircle2 className="h-3 w-3" /> Zero-Lag 30 FPS Stream
+                  </span>
+                </div>
+
+                <h1 className="text-3xl font-black tracking-tight text-white flex items-center gap-3">
+                  <Zap className="h-8 w-8 text-indigo-400 fill-current" /> Live QA Testing Workstation
+                </h1>
+                <p className="text-xs text-slate-300 font-normal leading-relaxed">
+                  Launch an isolated high-definition browser workstation session embedded right inside this workspace. Perform exploratory manual validation, record replay steps, stream live video, inspect locators, and file bugs with 1-click evidence.
+                </p>
+
+                {/* Presets Bar */}
+                <div className="pt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-extrabold uppercase text-slate-400 mr-1">Presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset({ title: "Quick Exploratory Smoke Test", browser: "Chromium", viewport: "Desktop", priority: "High" })}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-bold text-slate-200 border border-white/10 transition-all flex items-center gap-1.5 hover:scale-105"
+                  >
+                    <Zap size={12} className="text-amber-400" /> Smoke Test
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset({ title: "Mobile Responsiveness Audit", browser: "WebKit", viewport: "Mobile", priority: "Medium" })}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-bold text-slate-200 border border-white/10 transition-all flex items-center gap-1.5 hover:scale-105"
+                  >
+                    <Smartphone size={12} className="text-indigo-400" /> Mobile Layout
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => applyPreset({ title: "Role Security & Permissions Audit", browser: "Firefox", viewport: "Desktop", priority: "Critical" })}
+                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-bold text-slate-200 border border-white/10 transition-all flex items-center gap-1.5 hover:scale-105"
+                  >
+                    <ShieldCheck size={12} className="text-emerald-400" /> Security Audit
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-start lg:items-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/projects/${projectId}/live-qa-history`)}
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-2xl border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-bold transition-all text-white backdrop-blur-md shadow-lg"
+                >
+                  <Activity className="h-4 w-4 text-indigo-300" /> Session History &amp; Artifacts
+                </button>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground font-medium">
-              Start a live browser session — embedded right in this page — to perform manual validation, record replay steps, capture video, and log defect traces.
-            </p>
           </div>
 
-          <form onSubmit={handleStartSession} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="work-title">Session / Test Case Title *</Label>
-              <Input id="work-title" value={title} onChange={(e) => setTitle(e.target.value)} required />
+          {/* 2-Column Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Form Column (8 columns / 66% width) */}
+            <div className="lg:col-span-8 space-y-6">
+              <form onSubmit={handleStartSession} className="space-y-6">
+                
+                {/* Session Identity Card */}
+                <div className="p-6 rounded-2xl border bg-card space-y-4 shadow-sm">
+                  <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-indigo-500" /> Session Identity &amp; Scope
+                  </h3>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="work-title" className="font-bold text-xs">Session / Test Case Title *</Label>
+                    <Input
+                      id="work-title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                      placeholder="e.g. Verify Checkout Payment Gateway with 3DS Challenge"
+                      className="h-10 text-xs font-medium"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="work-url" className="font-bold text-xs">Target Startup URL *</Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="work-url"
+                        value={startUrl}
+                        onChange={(e) => setStartUrl(e.target.value)}
+                        required
+                        placeholder="https://shod.app.apptomator.com/home"
+                        className="pl-9 h-10 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="font-bold text-xs">Default Test Priority</Label>
+                    <div className="grid grid-cols-4 gap-2">
+                      {["Low", "Medium", "High", "Critical"].map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setPriority(p)}
+                          className={`h-9 rounded-xl border text-xs font-extrabold transition-all ${
+                            priority === p
+                              ? p === "Critical"
+                                ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                                : p === "High"
+                                ? "bg-amber-500 text-white border-amber-500 shadow-sm"
+                                : "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                              : "bg-background text-muted-foreground border-input hover:bg-muted"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Browser & Viewport Platform Selection Grid */}
+                <div className="p-6 rounded-2xl border bg-card space-y-5 shadow-sm">
+                  <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                    <Laptop className="h-4 w-4 text-indigo-500" /> Browser Engine &amp; Device Configuration
+                  </h3>
+
+                  {/* Browser Cards */}
+                  <div className="space-y-2">
+                    <Label className="font-bold text-xs">QA Browser Engine</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { id: "Chromium", label: "Chromium", desc: "Chrome / Edge CDP Engine" },
+                        { id: "Firefox", label: "Mozilla Firefox", desc: "Gecko Browser Engine" },
+                        { id: "WebKit", label: "Apple WebKit", desc: "Safari Browser Engine" }
+                      ].map((b) => (
+                        <div
+                          key={b.id}
+                          onClick={() => setBrowserType(b.id as any)}
+                          className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                            browserType === b.id
+                              ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-600/20 shadow-sm"
+                              : "border-input bg-background hover:bg-muted/40"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-extrabold text-xs text-foreground">{b.label}</span>
+                            {browserType === b.id && <CheckCircle2 className="h-4 w-4 text-indigo-600 shrink-0" />}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground">{b.desc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Viewport Cards */}
+                  <div className="space-y-2">
+                    <Label className="font-bold text-xs">Target Device Layout</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { id: "Desktop", label: "Desktop Workspace", dim: "1280 × 800", icon: Laptop },
+                        { id: "Tablet", label: "Tablet Device", dim: "768 × 1024", icon: TabletIcon },
+                        { id: "Mobile", label: "Mobile Device", dim: "375 × 667", icon: Smartphone }
+                      ].map((v) => {
+                        const Icon = v.icon
+                        return (
+                          <div
+                            key={v.id}
+                            onClick={() => setViewport(v.id as any)}
+                            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                              viewport === v.id
+                                ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-600/20 shadow-sm"
+                                : "border-input bg-background hover:bg-muted/40"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <Icon className={`h-4 w-4 ${viewport === v.id ? "text-indigo-600" : "text-muted-foreground"}`} />
+                              <span className="font-extrabold text-xs text-foreground">{v.label}</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-muted-foreground">{v.dim}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Credentials & Preconditions */}
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="work-cred" className="font-bold text-xs">Pre-Authenticated Role Context</Label>
+                      <select
+                        id="work-cred"
+                        value={credentialId}
+                        onChange={(e) => setCredentialId(e.target.value)}
+                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-1.5 text-xs font-semibold"
+                      >
+                        <option value="">-- Anonymous / No Login --</option>
+                        {project?.credentials.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.roleName} ({c.username})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="work-precond" className="font-bold text-xs">Preconditions</Label>
+                      <Input
+                        id="work-precond"
+                        value={preconditions}
+                        onChange={(e) => setPreconditions(e.target.value)}
+                        placeholder="e.g. Active subscription with $50 balance"
+                        className="h-10 text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {startError && (
+                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 flex items-center gap-2.5">
+                    <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
+                    <p className="text-xs font-bold">{startError}</p>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={startingSession}
+                  className="w-full flex items-center justify-center gap-2 font-black h-12 text-sm rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-xl shadow-indigo-500/25 transition-all cursor-pointer"
+                >
+                  {startingSession ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Spinning up Headless Browser Workstation...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5 fill-current" />
+                      <span>Launch Live QA Browser Workstation</span>
+                    </>
+                  )}
+                </Button>
+              </form>
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="work-url">Target Startup URL *</Label>
-              <Input id="work-url" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} required />
-            </div>
+            {/* Right Sidebar Intelligence Column (4 columns / 34% width) */}
+            <div className="lg:col-span-4 space-y-6">
+              {/* Launch Configuration Summary */}
+              <div className="p-6 rounded-2xl border bg-card space-y-4 shadow-sm">
+                <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                  <Activity className="h-4 w-4 text-indigo-500" /> Workstation Status &amp; Specs
+                </h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="work-priority">Default Priority</Label>
-                <select id="work-priority" value={priority} onChange={(e) => setPriority(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                  <option value="Critical">Critical</option>
-                </select>
+                <div className="space-y-3 divide-y divide-border/50 text-xs">
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-muted-foreground font-semibold">Engine</span>
+                    <span className="font-black text-foreground bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{browserType}</span>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-muted-foreground font-semibold">Resolution</span>
+                    <span className="font-mono font-bold text-foreground">{viewport === "Desktop" ? "1280 × 800" : viewport === "Tablet" ? "768 × 1024" : "375 × 667"}</span>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-muted-foreground font-semibold">Quality &amp; Frame Rate</span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">95 HD • 30 FPS</span>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="text-muted-foreground font-semibold">Protocol Stream</span>
+                    <span className="font-bold text-indigo-600 dark:text-indigo-400">CDP WebSocket</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="work-browser">QA Browser Platform</Label>
-                <select id="work-browser" value={browserType} onChange={(e) => setBrowserType(e.target.value as any)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                  <option value="Chromium">Chromium (Chrome/Edge)</option>
-                  <option value="Firefox">Mozilla Firefox</option>
-                  <option value="WebKit">Apple WebKit (Safari)</option>
-                </select>
+
+
+              {/* Features & Guidelines Card */}
+              <div className="p-6 rounded-2xl border border-indigo-200 bg-indigo-50/60 dark:border-indigo-900/60 dark:bg-indigo-950/30 space-y-3">
+                <div className="flex items-center gap-2 font-extrabold text-xs text-indigo-950 dark:text-indigo-200">
+                  <Info className="h-4 w-4 text-indigo-600 shrink-0" />
+                  <span>Workstation Capabilities</span>
+                </div>
+                <ul className="space-y-2 text-[11px] text-indigo-900 dark:text-indigo-300 leading-relaxed font-medium list-disc list-inside">
+                  <li><b>Step Recording</b>: Captures clicks and typing directly into TypeScript automation scripts.</li>
+                  <li><b>1-Click Bug Reports</b>: Files issues pre-filled with screenshots, console logs, and step trace.</li>
+                  <li><b>Live Network &amp; Console</b>: Monitor HTTP status codes and JS errors live in real time.</li>
+                </ul>
               </div>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="work-viewport">Viewport Configuration</Label>
-                <select id="work-viewport" value={viewport} onChange={(e) => setViewport(e.target.value as any)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                  <option value="Desktop">Desktop Workspace (1280x800)</option>
-                  <option value="Tablet">Tablet Device (768x1024)</option>
-                  <option value="Mobile">Mobile Layout (375x667)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="work-cred">Pre-Login Role Context</Label>
-                <select id="work-cred" value={credentialId} onChange={(e) => setCredentialId(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                  <option value="">-- No Authentication --</option>
-                  {project?.credentials.map((c) => <option key={c.id} value={c.id}>{c.roleName}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="work-precond">Preconditions</Label>
-              <Input id="work-precond" value={preconditions} onChange={(e) => setPreconditions(e.target.value)} placeholder="User must have active credential balance..." />
-            </div>
-
-            <div className="flex items-start gap-2 pt-2 rounded-lg border border-teal-200 bg-teal-50/40 p-3 dark:border-teal-900 dark:bg-teal-950/20">
-              <Video className="h-4 w-4 text-teal-600 shrink-0 mt-0.5" />
-              <Label className="cursor-default font-normal text-[11px] leading-relaxed text-teal-800 dark:text-teal-300">
-                The test browser runs fully <b>inside this page</b> — no external window. Nothing is recorded automatically: explore freely, then use <b>Record steps</b> to capture a scenario and <b>Start recording</b> for video — each starts and stops anytime from the toolbar.
-              </Label>
-            </div>
-
-            {startError && <p className="text-sm text-destructive font-semibold">{startError}</p>}
-
-            <Button type="submit" disabled={startingSession} className="w-full flex items-center justify-center gap-1.5 font-semibold h-10 mt-6 bg-indigo-600 hover:bg-indigo-700 text-white">
-              {startingSession ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Start Embedded Testing Session
-            </Button>
-          </form>
+          </div>
         </div>
       ) : (
         
-        // Active session — approved Phase 6 layout:
-        // header bar (status + timer + Capture/Record/Bug/End clusters),
-        // dominant embedded browser, tabbed right panel, collapsible event drawer.
-        // fullView maximizes the browser over the whole app while keeping the
-        // header controls visible; the canvas never remounts (recording-safe).
+        // ═════════════════════════════════════════════════════════════════════
+        // ACTIVE WORKSTATION (WORLD-CLASS WORKSPACE LAYOUT)
+        // ═════════════════════════════════════════════════════════════════════
         <div className={fullView ? "fixed inset-0 z-40 bg-background flex flex-col min-h-0" : "flex-1 flex flex-col min-h-0"}>
 
-          {/* ── Header bar ── */}
-          <header className="px-4 py-2.5 border-b bg-card flex items-center gap-3 shrink-0 flex-wrap">
-            <div className="flex items-center gap-3 min-w-0 mr-auto">
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
+          {/* ── Top Header Control Bar ── */}
+          <header className="px-4 py-2 border-b bg-card flex items-center justify-between gap-3 shrink-0 flex-wrap shadow-xs">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="relative flex h-3 w-3 shrink-0">
                 {sessionStatus === "Active" && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                 )}
-                <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                <span className={`relative inline-flex rounded-full h-3 w-3 ${
                   sessionStatus === "Active" ? "bg-emerald-500" : "bg-amber-500"
                 }`} />
               </span>
               <div className="min-w-0">
-                <h1 className="text-sm font-semibold text-foreground truncate leading-tight" title={title}>
+                <h1 className="text-xs font-black text-foreground truncate max-w-xs flex items-center gap-1.5" title={title}>
                   {title}
                 </h1>
-                <p className="text-[11px] text-muted-foreground leading-tight">
-                  {sessionStatus} &middot; {connectionStatus} &middot; <span className="tabular-nums font-medium">{fmtElapsed(sessionStartedAt)}</span> elapsed
+                <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5">
+                  <span className="uppercase text-[9px] px-1.5 py-0.2 rounded bg-muted font-extrabold">{browserType}</span>
+                  <span>&middot;</span>
+                  <span>{connectionStatus}</span>
+                  <span>&middot;</span>
+                  <Clock size={11} className="text-indigo-500" />
+                  <span className="tabular-nums font-bold text-foreground">{fmtElapsed(sessionStartedAt)}</span>
                 </p>
               </div>
             </div>
 
-            {/* Cluster: Capture */}
-            <div className="flex items-center rounded-lg border bg-background p-0.5 gap-0.5">
-              <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground select-none">Capture</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleTakeScreenshot(false)}
-                disabled={capturingScreenshot}
-                className="h-8 px-2.5 text-xs gap-1.5 text-foreground"
-                title="Capture the visible viewport, then annotate"
-              >
-                {capturingScreenshot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5 text-indigo-500" />}
-                Screenshot
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleTakeScreenshot(true)}
-                disabled={capturingScreenshot}
-                className="h-8 px-2.5 text-xs gap-1.5 text-foreground"
-                title="Capture the entire scrollable page, then annotate"
-              >
-                <Maximize className="h-3.5 w-3.5 text-indigo-500" /> Full page
-              </Button>
-            </div>
+            {/* Control Button Clusters */}
+            <div className="flex items-center gap-2 flex-wrap">
 
-            {/* Cluster: Record */}
-            <div className="flex items-center rounded-lg border bg-background p-0.5 gap-0.5">
-              <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground select-none">Record</span>
-              {recording ? (
+              {/* Cluster: Screenshot Capture */}
+              <div className="flex items-center rounded-xl border bg-muted/40 p-0.5">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleStopRecording}
-                  className="h-8 px-2.5 text-xs gap-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
-                  title="Stop recording — the clip is saved and playable immediately"
+                  onClick={() => handleTakeScreenshot(false)}
+                  disabled={capturingScreenshot}
+                  className="h-7 px-2.5 text-[11px] font-bold gap-1 text-foreground hover:bg-background"
+                  title="Capture visible viewport & annotate"
                 >
-                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                  <span className="tabular-nums font-medium">{fmtElapsed(recStartedAt)}</span>
-                  <Square className="h-3 w-3 fill-current" /> Stop
+                  {capturingScreenshot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5 text-indigo-500" />}
+                  <span>Screenshot</span>
                 </Button>
-              ) : (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleStartRecording}
-                  disabled={uploadingRecording}
-                  className="h-8 px-2.5 text-xs gap-1.5 text-foreground"
-                  title="Record the live view as WebM (start/stop anytime)"
+                  onClick={() => handleTakeScreenshot(true)}
+                  disabled={capturingScreenshot}
+                  className="h-7 px-2.5 text-[11px] font-bold gap-1 text-foreground hover:bg-background"
+                  title="Capture entire scrollable page"
                 >
-                  {uploadingRecording
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Video className="h-3.5 w-3.5 text-indigo-500" />}
-                  {uploadingRecording ? "Saving…" : "Start recording"}
+                  <Maximize className="h-3.5 w-3.5 text-indigo-500" />
+                  <span>Full Page</span>
                 </Button>
-              )}
-            </div>
+              </div>
 
-            {/* Cluster: Steps — scenario step recording (independent of video) */}
-            <div className="flex items-center rounded-lg border bg-background p-0.5 gap-0.5">
-              <span className="px-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground select-none">Steps</span>
-              {stepRecording ? (
+              {/* Cluster: Video & Step Recording */}
+              <div className="flex items-center rounded-xl border bg-muted/40 p-0.5 gap-1">
+                {stepRecording ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleToggleStepRecording}
+                    disabled={togglingSteps}
+                    className="h-7 px-2.5 text-[11px] font-extrabold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
+                    <span>Steps ({recordedSteps.length})</span>
+                    <Square size={10} className="fill-current" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleToggleStepRecording}
+                    disabled={togglingSteps}
+                    className="h-7 px-2.5 text-[11px] font-bold gap-1 text-foreground hover:bg-background"
+                    title="Record user clicks and inputs into step timeline"
+                  >
+                    <MousePointerClick className="h-3.5 w-3.5 text-indigo-500" />
+                    <span>Record Steps</span>
+                  </Button>
+                )}
+
+                {recording ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleStopRecording}
+                    className="h-7 px-2.5 text-[11px] font-extrabold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                    <span className="tabular-nums">{fmtElapsed(recStartedAt)}</span>
+                    <Square size={10} className="fill-current" />
+                  </Button>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleStartRecording}
+                    disabled={uploadingRecording}
+                    className="h-7 px-2.5 text-[11px] font-bold gap-1 text-foreground hover:bg-background"
+                    title="Record live browser view as WebM video clip"
+                  >
+                    {uploadingRecording ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5 text-indigo-500" />}
+                    <span>Record Video</span>
+                  </Button>
+                )}
+              </div>
+
+              {/* Cluster: Bug & Diagnostics */}
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  onClick={() => setShowBugDrawer(true)}
+                  className="h-7 px-3 text-[11px] font-extrabold gap-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs"
+                >
+                  <Bug className="h-3.5 w-3.5" />
+                  <span>Create Bug</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRightTab("diagnostics")}
+                  className={`h-7 px-2.5 text-[11px] font-extrabold gap-1.5 rounded-xl ${
+                    consoleErrors.length > 0 || networkErrors.length > 0
+                      ? "border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-950/40"
+                      : "border-input text-muted-foreground"
+                  }`}
+                >
+                  <Terminal className="h-3.5 w-3.5" />
+                  <span>Logs</span>
+                  {(consoleErrors.length > 0 || networkErrors.length > 0) && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px]">
+                      {consoleErrors.length + networkErrors.length}
+                    </span>
+                  )}
+                </Button>
+              </div>
+
+              {/* Cluster: Completion */}
+              <div className="flex items-center gap-1 border-l pl-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleToggleStepRecording}
-                  disabled={togglingSteps}
-                  className="h-8 px-2.5 text-xs gap-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10"
-                  title="Stop recording scenario steps"
+                  onClick={handlePauseResume}
+                  className="h-7 px-2 text-[11px] font-bold text-muted-foreground hover:text-foreground"
                 >
-                  {togglingSteps ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />}
-                  <Square className="h-3 w-3 fill-current" /> Stop steps
+                  {sessionStatus === "Active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-emerald-500" />}
                 </Button>
-              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => handleEndSession(true)}
+                  className="h-7 px-3 text-[11px] font-black gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span>Complete &amp; Save</span>
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleToggleStepRecording}
-                  disabled={togglingSteps}
-                  className="h-8 px-2.5 text-xs gap-1.5 text-foreground"
-                  title="Start recording your interactions as replay steps"
+                  onClick={() => setShowEndConfirm(true)}
+                  className="h-7 px-2 text-muted-foreground hover:text-rose-600"
+                  title="Cancel session"
                 >
-                  {togglingSteps ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MousePointerClick className="h-3.5 w-3.5 text-indigo-500" />}
-                  Record steps
+                  <X className="h-4 w-4" />
                 </Button>
-              )}
-            </div>
+              </div>
 
-            {/* Cluster: Bug */}
-            <div className="flex items-center rounded-lg border bg-background p-0.5">
-              <Button
-                size="sm"
-                onClick={() => setShowBugDrawer(true)}
-                className="h-8 px-3 text-xs gap-1.5 bg-rose-600 hover:bg-rose-700 text-white"
-              >
-                <Bug className="h-3.5 w-3.5" /> Create Bug
-              </Button>
-            </div>
-
-            {/* Cluster: End */}
-            <div className="flex items-center rounded-lg border bg-background p-0.5 gap-0.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handlePauseResume}
-                className="h-8 px-2.5 text-xs gap-1.5 text-foreground"
-                title={sessionStatus === "Active" ? "Pause session" : "Resume session"}
-              >
-                {sessionStatus === "Active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                {sessionStatus === "Active" ? "Pause" : "Resume"}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => handleEndSession(true)}
-                className="h-8 px-2.5 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5" /> Save &amp; Complete
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowEndConfirm(true)}
-                className="h-8 px-2 text-xs gap-1 text-muted-foreground hover:text-red-600"
-                title="End without saving a test case"
-              >
-                <X className="h-3.5 w-3.5" /> End
-              </Button>
             </div>
           </header>
 
-          {/* ── Main: browser + right panel ── */}
+          {/* ── Main Workstation Deck ── */}
           <div className="flex-1 flex min-h-0">
 
-            <main className={`flex-1 flex flex-col min-w-0 ${fullView ? "p-2" : "p-4 pr-0"}`}>
-              {/* Embedded live browser — interact here directly, no external window */}
-              <div className="flex-1 flex flex-col border rounded-xl bg-card overflow-hidden shadow-sm min-h-0">
-                <div className="px-2.5 py-1.5 border-b flex items-center gap-1 bg-muted/40 shrink-0">
-                  <Monitor className="h-3.5 w-3.5 text-indigo-500 mx-1 shrink-0" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    onClick={() => sendBrowserInput({ type: "back" })}
-                    title="Back"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    onClick={() => sendBrowserInput({ type: "forward" })}
-                    title="Forward"
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                    onClick={() => sendBrowserInput({ type: "reload" })}
-                    title="Reload"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
-                  <input
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                    onFocus={() => { urlEditingRef.current = true }}
-                    onBlur={() => { urlEditingRef.current = false }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const target = urlInput.trim()
-                        if (target) {
-                          sendBrowserInput({
-                            type: "goto",
-                            url: /^https?:\/\//i.test(target) ? target : `https://${target}`
-                          })
+            {/* Left/Center: Browser Viewport */}
+            <main className={`flex-1 flex flex-col min-w-0 ${fullView ? "p-2" : "p-3 pr-1"}`}>
+              <div className="flex-1 flex flex-col rounded-2xl border bg-card overflow-hidden shadow-md min-h-0">
+                
+                {/* Browser Address Control Bar */}
+                <div className="px-3 py-2 border-b flex items-center gap-2 bg-slate-900 text-slate-200 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="h-2.5 w-2.5 rounded-full bg-rose-500/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+                  </div>
+
+                  <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                    <button
+                      onClick={() => sendBrowserInput({ type: "back" })}
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                      title="Back"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={() => sendBrowserInput({ type: "forward" })}
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                      title="Forward"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                    <button
+                      onClick={() => sendBrowserInput({ type: "reload" })}
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white"
+                      title="Reload"
+                    >
+                      <RefreshCw size={12} />
+                    </button>
+                  </div>
+
+                  {/* Address Bar */}
+                  <div className="flex-1 flex items-center gap-1.5 h-7 rounded-lg bg-slate-950/80 px-2.5 border border-slate-800">
+                    <Lock size={11} className="text-emerald-400 shrink-0" />
+                    <input
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      onFocus={() => { urlEditingRef.current = true }}
+                      onBlur={() => { urlEditingRef.current = false }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const target = urlInput.trim()
+                          if (target) {
+                            sendBrowserInput({
+                              type: "goto",
+                              url: /^https?:\/\//i.test(target) ? target : `https://${target}`
+                            })
+                          }
+                          ;(e.target as HTMLInputElement).blur()
                         }
-                        ;(e.target as HTMLInputElement).blur()
-                      }
-                    }}
-                    placeholder="Enter URL and press Enter…"
-                    spellCheck={false}
-                    className="flex-1 h-6 min-w-0 mx-1 rounded-md border bg-background px-2.5 font-mono text-[11px] text-muted-foreground focus:text-foreground focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                  />
-                  <span className={`text-[10px] font-medium flex items-center gap-1 px-1.5 shrink-0 ${
-                    connectionStatus === "Connected" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
-                  }`}>
-                    <Activity className="h-3 w-3" /> {connectionStatus}
-                  </span>
-                  <span
-                    className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
-                      streamMode === "streaming"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400"
-                        : streamMode === "connecting"
-                        ? "bg-muted text-muted-foreground animate-pulse"
-                        : browserType === "Chromium"
-                        ? "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                    title={
-                      streamMode === "streaming"
-                        ? "Live CDP stream (15–30 fps)"
-                        : streamMode === "connecting"
-                        ? "Connecting to the live stream…"
-                        : browserType === "Chromium"
-                        ? "Stream dropped — showing polled frames while reconnecting. Input stays active."
-                        : "Frame polling (streaming is Chromium-only)"
-                    }
-                  >
-                    {streamMode === "streaming" ? "Streaming" : streamMode === "connecting" ? "Connecting…" : browserType === "Chromium" ? "Reconnecting" : "Polling"}
-                  </span>
-                  {/* Zoom controls — real browser zoom: steppers + editable %.
-                      Changing zoom reflows the remote page (crisp, like Chrome). */}
-                  <div className="flex items-center gap-0.5 shrink-0 border-l pl-1 ml-0.5">
+                      }}
+                      placeholder="Enter URL and press Enter..."
+                      spellCheck={false}
+                      className="flex-1 bg-transparent font-mono text-[11px] text-slate-200 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Zoom Controls */}
+                  <div className="flex items-center gap-1 shrink-0 bg-slate-950/80 px-2 py-0.5 rounded-lg border border-slate-800">
                     <button
                       onClick={() => applyZoom(zoom - ZOOM_STEP)}
                       disabled={zoom <= ZOOM_MIN}
-                      className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
-                      title="Zoom out (−10%)"
+                      className="p-0.5 text-slate-400 hover:text-white disabled:opacity-30"
+                      title="Zoom Out"
                     >
-                      <ZoomOut className="h-3.5 w-3.5" />
+                      <ZoomOut size={12} />
                     </button>
-                    <div className="flex items-center">
-                      <input
-                        value={zoomText}
-                        onChange={(e) => setZoomText(e.target.value.replace(/[^\d]/g, ""))}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") { commitZoomText(); (e.target as HTMLInputElement).blur() }
-                        }}
-                        onBlur={commitZoomText}
-                        onFocus={(e) => e.target.select()}
-                        inputMode="numeric"
-                        aria-label="Zoom percentage"
-                        title="Type an exact zoom % and press Enter"
-                        className="w-8 text-[10px] font-semibold text-center tabular-nums bg-transparent outline-none focus:bg-muted rounded px-0.5 text-muted-foreground focus:text-foreground"
-                      />
-                      <span className="text-[10px] font-semibold text-muted-foreground select-none">%</span>
-                    </div>
+                    <input
+                      value={zoomText}
+                      onChange={(e) => setZoomText(e.target.value)}
+                      onBlur={commitZoomText}
+                      onKeyDown={(e) => { if (e.key === "Enter") commitZoomText() }}
+                      className="w-8 bg-transparent text-center font-mono text-[10px] font-bold text-slate-300 focus:outline-none"
+                    />
+                    <span className="text-[10px] font-bold text-slate-500 mr-1">%</span>
                     <button
                       onClick={() => applyZoom(zoom + ZOOM_STEP)}
                       disabled={zoom >= ZOOM_MAX}
-                      className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-40"
-                      title="Zoom in (+10%)"
+                      className="p-0.5 text-slate-400 hover:text-white disabled:opacity-30"
+                      title="Zoom In"
                     >
-                      <ZoomIn className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      onClick={() => applyZoom(1)}
-                      disabled={zoom === 1}
-                      className="text-[9px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-40 px-1"
-                      title="Reset zoom to 100%"
-                    >
-                      Reset
+                      <ZoomIn size={12} />
                     </button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                    onClick={() => setFullView(v => !v)}
-                    title={fullView ? "Exit maximized view" : "Maximize the browser view (controls stay in the header)"}
-                  >
-                    {fullView ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-                  </Button>
+
+                  {/* Stream Mode Indicator */}
+                  <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                    {streamMode === "streaming" ? "CDP Stream" : streamMode}
+                  </span>
+
                   <button
-                    onClick={() => setShowLivePreview(v => !v)}
-                    className="text-[11px] font-medium text-muted-foreground hover:text-foreground shrink-0 px-1"
+                    onClick={() => setFullView(!fullView)}
+                    className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white shrink-0"
+                    title={fullView ? "Exit Fullscreen" : "Fullscreen View"}
                   >
-                    {showLivePreview ? "Hide" : "Show"}
+                    {fullView ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
                   </button>
                 </div>
 
-                {/* Fit-to-screen: the frame always scales to fit the available
-                    area on both axes (aspect preserved), so the full page is
-                    visible without local scrolling — wheel events scroll the
-                    remote page, not this container. */}
-                {showLivePreview && (
-                  <div className="flex-1 min-h-0 overflow-hidden bg-muted/20 flex">
-                    <div
-                      ref={liveViewRef}
-                      tabIndex={0}
-                      className="relative flex-1 min-h-0 flex items-center justify-center overflow-hidden outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/60 select-none"
-                      onKeyDown={(e) => {
-                        // Cmd/Ctrl+V: the remote browser's clipboard is empty —
-                        // the text must come from the local clipboard. Don't
-                        // preventDefault or forward the combo: letting it
-                        // through fires a native paste event (handled below),
-                        // which exposes clipboard data in every browser without
-                        // permission prompts. If no paste event arrives (focus
-                        // edge cases), fall back to the async clipboard API.
-                        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "v" && !e.altKey && !e.shiftKey) {
-                          setTimeout(() => {
-                            if (Date.now() - lastPasteSentRef.current < 500) return
-                            navigator.clipboard
-                              ?.readText()
-                              .then((text) => {
-                                if (text) {
-                                  lastPasteSentRef.current = Date.now()
-                                  sendBrowserInput({ type: "type", text })
-                                }
-                              })
-                              .catch(() => {
-                                setToast({ message: "Couldn't read the clipboard — allow clipboard permission for this site, or use https/localhost.", type: "error" })
-                              })
-                          }, 250)
-                          return
-                        }
-                        const combo = mapKeyboardEvent(e)
-                        if (combo) {
-                          e.preventDefault()
-                          sendBrowserInput({ type: "key", key: combo })
-                        }
-                      }}
-                      onPaste={(e) => {
-                        e.preventDefault()
-                        const text = e.clipboardData?.getData("text")
-                        if (text) {
-                          lastPasteSentRef.current = Date.now()
-                          sendBrowserInput({ type: "type", text })
-                        }
-                      }}
-                      onContextMenu={(e) => e.preventDefault()}
-                    >
-                      <canvas
-                        ref={liveCanvasRef}
-                        className="hidden"
-                      />
-                      {/* Frames are painted imperatively onto this <img> (src set
-                          via imgRef), so it renders unconditionally. */}
-                      <img
-                        ref={imgRef}
-                        alt="Live browser view"
-                        className={`max-w-full max-h-full w-auto h-auto block select-none cursor-default ${hasFrame ? "" : "hidden"}`}
-                        draggable={false}
-                        onMouseDown={(e) => {
-                          liveViewRef.current?.focus()
-                          const coords = liveViewCoords(e)
-                          if (coords) sendBrowserInput({ type: "mousedown", ...coords, button: MOUSE_BUTTONS[e.button] || "left" })
-                        }}
-                        onMouseMove={(e) => {
-                          const now = Date.now()
-                          if (now - lastMoveSentRef.current < 40) return
-                          lastMoveSentRef.current = now
-                          const coords = liveViewCoords(e)
-                          if (coords) sendBrowserInput({ type: "mousemove", ...coords })
-                        }}
-                        onMouseUp={(e) => {
-                          const coords = liveViewCoords(e)
-                          if (coords) sendBrowserInput({ type: "mouseup", ...coords, button: MOUSE_BUTTONS[e.button] || "left" })
-                        }}
-                      />
-                      {!hasFrame && (
-                        <div className="p-16 text-center text-xs text-muted-foreground">
-                          {sessionStatus === "Active" ? "Connecting to embedded browser…" : "Session paused."}
-                        </div>
-                      )}
-                      {sessionStatus !== "Active" && hasFrame && (
-                        <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex items-center justify-center">
-                          <span className="text-xs font-semibold text-muted-foreground bg-card border rounded-full px-3 py-1.5">
-                            Session paused — resume to keep testing
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* ── Browser Event Stream drawer ── */}
-              <div className={`mt-3 border rounded-xl bg-card overflow-hidden shrink-0 ${fullView ? "hidden" : ""}`}>
-                <button
-                  onClick={() => setEventDrawerOpen(v => !v)}
-                  className="w-full px-4 py-2 flex items-center gap-2 text-xs font-medium text-foreground hover:bg-accent/40 transition-colors"
+                {/* Interactive Live Canvas Area */}
+                <div
+                  ref={liveViewRef}
+                  tabIndex={0}
+                  onMouseDown={(e) => {
+                    liveViewRef.current?.focus()
+                    const coords = liveViewCoords(e)
+                    if (coords) {
+                      sendBrowserInput({
+                        type: "mousedown",
+                        ...coords,
+                        button: MOUSE_BUTTONS[e.button] || "left",
+                        clickCount: e.detail || 1
+                      })
+                    }
+                  }}
+                  onMouseUp={(e) => {
+                    const coords = liveViewCoords(e)
+                    if (coords) {
+                      sendBrowserInput({
+                        type: "mouseup",
+                        ...coords,
+                        button: MOUSE_BUTTONS[e.button] || "left",
+                        clickCount: e.detail || 1
+                      })
+                    }
+                  }}
+                  onMouseMove={(e) => {
+                    const now = Date.now()
+                    if (now - lastMoveSentRef.current < 40) return
+                    lastMoveSentRef.current = now
+                    const coords = liveViewCoords(e)
+                    if (coords) sendBrowserInput({ type: "mousemove", ...coords })
+                  }}
+                  onKeyDown={(e) => {
+                    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Backspace", "Space"].includes(e.key) || e.key === " ") {
+                      e.preventDefault()
+                    }
+                    const key = mapKeyboardEvent(e)
+                    if (key) {
+                      sendBrowserInput({ type: "keydown", key, ctrlKey: e.ctrlKey, metaKey: e.metaKey })
+                    }
+                  }}
+                  onKeyUp={(e) => {
+                    const key = mapKeyboardEvent(e)
+                    if (key) {
+                      sendBrowserInput({ type: "keyup", key })
+                    }
+                  }}
+                  onPaste={(e) => {
+                    const text = e.clipboardData?.getData("text")
+                    if (text) {
+                      e.preventDefault()
+                      sendBrowserInput({ type: "type", text })
+                    }
+                  }}
+                  className="flex-1 relative bg-slate-950 flex items-center justify-center overflow-hidden outline-none cursor-crosshair group min-h-0"
                 >
-                  <Terminal className="h-3.5 w-3.5 text-muted-foreground" />
-                  Browser Event Stream
-                  {(consoleErrors.length + networkErrors.length) > 0 ? (
-                    <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400 text-[10px] font-bold tabular-nums">
-                      <AlertTriangle className="h-2.5 w-2.5" /> {consoleErrors.length + networkErrors.length}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">no errors</span>
+                  <canvas ref={liveCanvasRef} className="hidden" />
+
+                  <img
+                    ref={imgRef}
+                    alt="Live QA Viewport Stream"
+                    onLoad={() => {
+                      hasFrameRef.current = true
+                      setHasFrame(true)
+                    }}
+                    className="max-w-full max-h-full object-contain pointer-events-none select-none"
+                    style={{
+                      transform: `scale(${zoom})`,
+                      transformOrigin: "center center",
+                      imageRendering: "-webkit-optimize-contrast"
+                    }}
+                  />
+
+                  {!hasFrame && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-400 bg-slate-950/90 backdrop-blur-xs">
+                      <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+                      <span className="text-xs font-bold text-slate-300">Connecting to Remote Browser Engine...</span>
+                    </div>
                   )}
-                  <span className="ml-auto text-muted-foreground">
-                    {eventDrawerOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                  </span>
-                </button>
-                {eventDrawerOpen && (
-                  <div className="border-t bg-slate-950 text-slate-100 max-h-40 overflow-y-auto p-3 space-y-1.5 font-mono text-[11px] leading-relaxed">
-                    {consoleErrors.length === 0 && networkErrors.length === 0 ? (
-                      <p className="text-slate-500 italic">Listening for browser exceptions, console errors, and failed requests…</p>
-                    ) : (
-                      <>
-                        {consoleErrors.map((err, idx) => (
-                          <div key={`c-${idx}`} className="text-yellow-400">
-                            <span className="text-yellow-500">[Console]</span> {err}
-                          </div>
-                        ))}
-                        {networkErrors.map((err, idx) => (
-                          <div key={`n-${idx}`} className="text-red-400">
-                            <span className="text-red-500">[Network]</span> {err}
-                          </div>
-                        ))}
-                      </>
-                    )}
+
+                  {/* Watermark / Guidance Overlay */}
+                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[10px] text-slate-300 font-semibold flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MousePointerClick size={12} className="text-indigo-400" />
+                    <span>Interact directly in the screen above</span>
                   </div>
-                )}
+                </div>
+
               </div>
             </main>
 
-            {/* ── Right panel: Screenshots / Selectors / Steps ── */}
-            <aside className={`w-72 shrink-0 flex-col p-4 ${fullView ? "hidden" : "flex"}`}>
-              <div className="flex-1 flex flex-col border rounded-xl bg-card overflow-hidden min-h-0">
-                <div className="flex border-b text-xs font-medium text-muted-foreground shrink-0">
-                  {([
-                    ["screenshots", "Screenshots"],
-                    ["selectors", "Selectors"],
-                    ["steps", "Steps"],
-                  ] as const).map(([id, label]) => (
-                    <button
-                      key={id}
-                      onClick={() => setRightTab(id)}
-                      className={`flex-1 py-2.5 text-center border-b-2 -mb-px transition-colors ${
-                        rightTab === id
-                          ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
-                          : "border-transparent hover:text-foreground"
-                      }`}
-                    >
-                      {label}
-                      {id === "screenshots" && screenshots.length > 0 && (
-                        <span className="ml-1 text-[10px] text-muted-foreground tabular-nums">{screenshots.length}</span>
-                      )}
-                      {id === "steps" && recordedSteps.length > 0 && (
-                        <span className="ml-1 text-[10px] text-muted-foreground tabular-nums">{recordedSteps.length}</span>
-                      )}
-                    </button>
-                  ))}
+            {/* Right Side Inspection Deck */}
+            {!fullView && (
+              <aside className="w-[380px] border-l bg-card flex flex-col shrink-0 min-h-0">
+                
+                {/* Tab Strip */}
+                <div className="p-2 border-b bg-muted/30 grid grid-cols-5 gap-1 text-[11px] font-extrabold shrink-0">
+                  <button
+                    onClick={() => setRightTab("steps")}
+                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                      rightTab === "steps" ? "bg-background text-indigo-600 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <ListOrdered size={14} />
+                    <span className="text-[10px]">Steps</span>
+                  </button>
+
+                  <button
+                    onClick={() => setRightTab("screenshots")}
+                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                      rightTab === "screenshots" ? "bg-background text-indigo-600 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Camera size={14} />
+                    <span className="text-[10px]">Shots ({screenshots.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setRightTab("videos")}
+                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                      rightTab === "videos" ? "bg-background text-indigo-600 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Video size={14} />
+                    <span className="text-[10px]">Clips ({recordings.length})</span>
+                  </button>
+
+                  <button
+                    onClick={() => setRightTab("selectors")}
+                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                      rightTab === "selectors" ? "bg-background text-indigo-600 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Layers size={14} />
+                    <span className="text-[10px]">Locators</span>
+                  </button>
+
+                  <button
+                    onClick={() => setRightTab("diagnostics")}
+                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                      rightTab === "diagnostics" ? "bg-background text-indigo-600 shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Terminal size={14} />
+                    <span className="text-[10px]">Logs</span>
+                  </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3">
-                  {/* Screenshots tab */}
-                  {rightTab === "screenshots" && (
-                    screenshots.length === 0 ? (
-                      <div className="text-center py-10 px-4 space-y-2">
-                        <Camera className="h-6 w-6 text-muted-foreground/40 mx-auto" />
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          No screenshots yet. Use <b>Screenshot</b> or <b>Full page</b> in the header, then annotate with text, arrows, or crop.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        {screenshots.map((shot, idx) => (
-                          <button
-                            key={shot.id}
-                            onClick={() => setAnnotatingShot({ kind: "saved", shot })}
-                            className="group relative border rounded-lg overflow-hidden aspect-[4/3] bg-muted/40 hover:ring-2 hover:ring-indigo-400 transition-all"
-                            title="Click to annotate"
-                          >
-                            <img
-                              src={`/api/files/${encodeURIComponent(shot.filePath)}`}
-                              alt={`Screenshot ${idx + 1}`}
-                              className="h-full w-full object-cover"
-                            />
-                            {shot.annotatedFromId && (
-                              <span className="absolute top-1 left-1 bg-indigo-600 text-white text-[8px] font-bold px-1 py-0.5 rounded">
-                                Annotated
-                              </span>
-                            )}
-                            <span className="absolute inset-0 hidden group-hover:flex items-center justify-center bg-black/40 text-white">
-                              <Pencil className="h-3.5 w-3.5" />
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    )
-                  )}
-
-                  {/* Recordings list lives with the visual evidence */}
-                  {rightTab === "screenshots" && recordings.length > 0 && (
-                    <div className="mt-3 pt-3 border-t space-y-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                        <Video className="h-3 w-3" /> Recordings ({recordings.length})
-                      </span>
-                      {recordings.map((clip, idx) => (
-                        <div key={clip.id} className="border rounded-lg overflow-hidden bg-background">
-                          {clip.filePath && (
-                            <video
-                              controls
-                              preload="metadata"
-                              src={`/api/files/${encodeURIComponent(clip.filePath)}`}
-                              className="w-full max-h-32 bg-black"
-                            />
-                          )}
-                          <div className="px-2 py-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span>
-                              Clip {idx + 1}
-                              {clip.durationMs ? ` · ${Math.round(clip.durationMs / 1000)}s` : ""}
-                            </span>
-                            {clip.filePath && (
-                              <a
-                                href={`/api/files/${encodeURIComponent(clip.filePath)}`}
-                                download={`recording-${idx + 1}.webm`}
-                                className="font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
-                              >
-                                Download
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Selectors tab */}
-                  {rightTab === "selectors" && (
-                    <div className="space-y-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowElementDrawer(true)}
-                        className="w-full h-8 text-xs gap-1.5 mb-1"
-                      >
-                        <MousePointerClick className="h-3.5 w-3.5 text-indigo-500" /> Capture element selector
-                      </Button>
-                      {capturedElements.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-8 px-4 leading-relaxed">
-                          No selectors captured yet.
-                        </p>
-                      ) : (
-                        capturedElements.map((el) => (
-                          <div key={el.id} className="border rounded-lg p-2.5 space-y-1.5 bg-background">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="font-medium text-indigo-600 dark:text-indigo-400">{el.type} &middot; {el.tagName}</span>
-                              <span className={`font-medium tabular-nums ${
-                                el.reliabilityScore >= 90 ? "text-emerald-600 dark:text-emerald-400" :
-                                el.reliabilityScore >= 70 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
-                              }`}>
-                                {el.reliabilityScore}% stable
-                              </span>
-                            </div>
-                            <p className="font-mono text-[10px] text-foreground bg-muted/60 p-1.5 rounded truncate" title={el.selector}>
-                              {el.selector}
-                            </p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-
-                  {/* Steps tab (with assertion suggestions on top) */}
+                {/* Tab Content Container */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0 text-xs">
+                  
+                  {/* TAB 1: REPLAY STEPS */}
                   {rightTab === "steps" && (
                     <div className="space-y-3">
-                      <div className="border border-indigo-200 dark:border-indigo-500/25 rounded-lg p-2.5 bg-indigo-50/50 dark:bg-indigo-500/[0.06] space-y-1.5">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" /> Suggested assertions
-                        </span>
-                        {getSuggestions().map((sug, idx) => (
-                          <p key={idx} className="text-[11px] text-foreground leading-snug">
-                            {sug}
-                          </p>
-                        ))}
-                      </div>
-
-                      <div className={`flex items-center gap-2 rounded-lg border px-2.5 py-2 text-[11px] font-medium ${
-                        stepRecording
-                          ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/25 dark:bg-red-500/[0.08] dark:text-red-400"
-                          : "border-border bg-muted/40 text-muted-foreground"
-                      }`}>
-                        {stepRecording ? (
-                          <>
-                            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                            Recording your interactions as steps…
-                          </>
-                        ) : (
-                          <>
-                            <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
-                            Steps aren&apos;t being recorded. Hit <b>Record steps</b> in the header to capture a scenario.
-                          </>
-                        )}
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Scenario Step Timeline</span>
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCopyPlaywrightCode}
+                            className="h-7 text-[10px] font-bold gap-1"
+                          >
+                            {copiedCode ? <Check size={12} className="text-emerald-500" /> : <Code size={12} />}
+                            {copiedCode ? "Copied!" : "Export Code"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => setShowManualStepDrawer(true)}
+                            className="h-7 text-[10px] font-extrabold gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
+                          >
+                            <Plus size={12} /> Add Step
+                          </Button>
+                        </div>
                       </div>
 
                       {recordedSteps.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-6 px-4 leading-relaxed">
-                          No steps yet. Start step recording, then interact in the browser view to capture a replayable scenario.
-                        </p>
+                        <div className="p-8 border border-dashed rounded-2xl text-center space-y-2 text-muted-foreground">
+                          <MousePointerClick className="mx-auto h-8 w-8 text-slate-300" />
+                          <p className="font-bold text-xs">No steps captured yet.</p>
+                          <p className="text-[11px] max-w-xs mx-auto">
+                            Click <b>Record Steps</b> in the header toolbar to capture your live browser clicks &amp; inputs into steps.
+                          </p>
+                        </div>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           {recordedSteps.map((step, idx) => (
-                            <div key={step.id} className="flex gap-2.5 p-2.5 border rounded-lg bg-background">
-                              <span className="h-5 w-5 rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 text-[10px] font-semibold flex items-center justify-center shrink-0 tabular-nums">
-                                {idx + 1}
-                              </span>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs text-foreground leading-snug">{step.actionDescription}</p>
-                                <span className="text-[10px] font-mono text-muted-foreground">{step.actionType}</span>
+                            <div key={step.id || idx} className="p-3 rounded-xl border bg-card hover:bg-muted/40 transition-all space-y-1.5 group relative">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 text-[10px] font-black">
+                                    {step.stepNumber}
+                                  </span>
+                                  <span className="font-black text-xs text-foreground uppercase tracking-wide">
+                                    {step.actionType}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={() => handleDeleteStep(step.id)}
+                                  className="text-muted-foreground hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+
+                              <p className="font-medium text-xs text-foreground">{step.actionDescription}</p>
+
+                              {step.recommendedSelector && (
+                                <p className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-1.5 rounded-lg truncate">
+                                  {step.recommendedSelector}
+                                </p>
+                              )}
+
+                              {step.inputValue && (
+                                <p className="text-[11px] text-muted-foreground">
+                                  Input: <span className="font-semibold text-foreground">&quot;{step.inputValue}&quot;</span>
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: SCREENSHOTS GALLERY */}
+                  {rightTab === "screenshots" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Evidentiary Screenshots</span>
+                        <Button
+                          size="sm"
+                          onClick={() => handleTakeScreenshot(false)}
+                          className="h-7 text-[10px] font-extrabold gap-1 bg-indigo-600 text-white"
+                        >
+                          <Camera size={12} /> Take Shot
+                        </Button>
+                      </div>
+
+                      {screenshots.length === 0 ? (
+                        <div className="p-8 border border-dashed rounded-2xl text-center space-y-2 text-muted-foreground">
+                          <Camera className="mx-auto h-8 w-8 text-slate-300" />
+                          <p className="font-bold text-xs">No screenshots captured yet.</p>
+                          <p className="text-[11px] max-w-xs mx-auto">
+                            Click <b>Screenshot</b> or <b>Full Page</b> in the header toolbar to capture visual evidence.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          {screenshots.map((shot) => (
+                            <div key={shot.id} className="group relative rounded-xl border bg-card overflow-hidden shadow-xs space-y-1">
+                              <div className="aspect-video bg-slate-900 relative overflow-hidden cursor-pointer" onClick={() => setPreviewShotUrl(`/api/files/${encodeURIComponent(shot.filePath)}`)}>
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={`/api/files/${encodeURIComponent(shot.filePath)}`}
+                                  alt="Session Screenshot"
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                                {shot.fullPage && (
+                                  <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[9px] font-black uppercase">
+                                    Full Page
+                                  </span>
+                                )}
+                              </div>
+                              <div className="p-2 flex items-center justify-between border-t bg-muted/20">
+                                <button
+                                  onClick={() => setAnnotatingShot({ kind: "saved", shot })}
+                                  className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 hover:underline"
+                                >
+                                  <Pencil size={11} /> Annotate
+                                </button>
+                                <a
+                                  href={`/api/files/${encodeURIComponent(shot.filePath)}`}
+                                  download
+                                  className="text-[10px] font-bold text-muted-foreground hover:text-foreground"
+                                >
+                                  <Download size={11} />
+                                </a>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowManualStepDrawer(true)}
-                        className="w-full h-7 text-[11px] text-indigo-600 dark:text-indigo-400 gap-1"
-                      >
-                        <Plus className="h-3 w-3" /> Add step manually
-                      </Button>
                     </div>
                   )}
-                </div>
 
-                <div className="border-t px-3 py-2.5 shrink-0 flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <Bug className="h-3.5 w-3.5 text-rose-500 shrink-0" />
-                  Evidence auto-attaches to bugs filed from this session
+                  {/* TAB 3: VIDEO CLIPS */}
+                  {rightTab === "videos" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Video Evidence Clips</span>
+                      </div>
+
+                      {recordings.length === 0 ? (
+                        <div className="p-8 border border-dashed rounded-2xl text-center space-y-2 text-muted-foreground">
+                          <Video className="mx-auto h-8 w-8 text-slate-300" />
+                          <p className="font-bold text-xs">No video clips recorded yet.</p>
+                          <p className="text-[11px] max-w-xs mx-auto">
+                            Click <b>Record Video</b> in the header toolbar to record live stream clips.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {recordings.map((clip, idx) => (
+                            <div key={clip.id || idx} className="p-3 rounded-xl border bg-card space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="font-bold text-xs text-foreground flex items-center gap-1.5">
+                                  <Video size={14} className="text-indigo-500" /> Video Clip #{idx + 1}
+                                </span>
+                                {clip.durationMs && (
+                                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-muted">
+                                    {Math.round(clip.durationMs / 1000)}s
+                                  </span>
+                                )}
+                              </div>
+
+                              {clip.filePath && (
+                                <video
+                                  controls
+                                  src={`/api/files/${encodeURIComponent(clip.filePath)}`}
+                                  className="w-full rounded-lg bg-black aspect-video object-contain"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 4: SMART SELECTORS */}
+                  {rightTab === "selectors" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Element Selector Repository</span>
+                        <Button
+                          size="sm"
+                          onClick={() => setShowElementDrawer(true)}
+                          className="h-7 text-[10px] font-extrabold gap-1 bg-indigo-600 text-white"
+                        >
+                          <Plus size={12} /> Add Selector
+                        </Button>
+                      </div>
+
+                      {capturedElements.length === 0 ? (
+                        <div className="p-8 border border-dashed rounded-2xl text-center space-y-2 text-muted-foreground">
+                          <Layers className="mx-auto h-8 w-8 text-slate-300" />
+                          <p className="font-bold text-xs">No element selectors captured yet.</p>
+                          <p className="text-[11px] max-w-xs mx-auto">
+                            Click <b>Add Selector</b> to inspect and save reusable DOM locators.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {capturedElements.map((el) => (
+                            <div key={el.id} className="p-3 rounded-xl border bg-card space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-extrabold text-xs text-foreground">{el.tagName}</span>
+                                <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                  {el.type}
+                                </span>
+                              </div>
+                              <p className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-1.5 rounded-lg truncate">
+                                {el.selector}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 5: LIVE DIAGNOSTICS LOGS */}
+                  {rightTab === "diagnostics" && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-foreground text-xs uppercase tracking-wider">Live Diagnostics Inspector</span>
+                        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg text-[10px] font-bold">
+                          <button
+                            onClick={() => setDiagnosticTab("console")}
+                            className={`px-2 py-1 rounded-md ${diagnosticTab === "console" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"}`}
+                          >
+                            Console ({consoleErrors.length})
+                          </button>
+                          <button
+                            onClick={() => setDiagnosticTab("network")}
+                            className={`px-2 py-1 rounded-md ${diagnosticTab === "network" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"}`}
+                          >
+                            Network ({networkErrors.length})
+                          </button>
+                        </div>
+                      </div>
+
+                      {diagnosticTab === "console" && (
+                        <div className="space-y-2">
+                          {consoleErrors.length === 0 ? (
+                            <div className="p-8 border border-dashed rounded-2xl text-center text-muted-foreground font-bold">
+                              No console errors logged.
+                            </div>
+                          ) : (
+                            consoleErrors.map((err, idx) => (
+                              <div key={idx} className="p-3 rounded-xl border border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 font-mono text-[10px] space-y-1">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  <AlertCircle size={12} className="text-rose-600" /> JS Error
+                                </div>
+                                <p className="whitespace-pre-wrap leading-relaxed">{err}</p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+
+                      {diagnosticTab === "network" && (
+                        <div className="space-y-2">
+                          {networkErrors.length === 0 ? (
+                            <div className="p-8 border border-dashed rounded-2xl text-center text-muted-foreground font-bold">
+                              No network HTTP failures logged.
+                            </div>
+                          ) : (
+                            networkErrors.map((net, idx) => (
+                              <div key={idx} className="p-3 rounded-xl border border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-mono text-[10px] space-y-1">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  <Globe size={12} className="text-amber-600" /> Network Error
+                                </div>
+                                <p className="whitespace-pre-wrap leading-relaxed">{net}</p>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                 </div>
-              </div>
-            </aside>
+              </aside>
+            )}
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          MODAL OVERLAYS & DRAWERS
+          ═══════════════════════════════════════════════════════════════════════ */}
+
+      {/* CREATE BUG MODAL */}
+      {showBugDrawer && (
+        <CreateBugModal
+          projectId={projectId}
+          open={showBugDrawer}
+          onClose={() => setShowBugDrawer(false)}
+          recordingSessionId={sessionId}
+          initialValues={{
+            title: `[Live QA Defect] ${title}`,
+            expectedResult: recordedSteps[recordedSteps.length - 1]?.expectedResult || "Application behaves expectedly",
+            actualResult: "Observed functional failure during live testing session",
+          }}
+          sessionSteps={recordedSteps.map((s) => ({
+            stepNumber: s.stepNumber,
+            actionDescription: s.actionDescription,
+            expectedResult: s.expectedResult,
+          }))}
+          sessionContext={{
+            pageUrl: liveUrl || startUrl,
+            consoleLogs: consoleErrors.join("\n"),
+            networkErrors: networkErrors.join("\n"),
+          }}
+        />
+      )}
+
+      {/* PREVIEW SCREENSHOT MODAL */}
+      {previewShotUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-md" onClick={() => setPreviewShotUrl(null)}>
+          <div className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl bg-black border shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setPreviewShotUrl(null)} className="absolute top-3 right-3 text-white bg-black/60 p-2 rounded-full hover:bg-black">
+              <X size={16} />
+            </button>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewShotUrl} alt="Preview Screenshot" className="max-w-full max-h-[85vh] object-contain" />
           </div>
         </div>
       )}
 
-      {/* Shared bug creation form (same component + API path as Bug Reports page),
-          pre-filled with live-session context and the latest screenshot. */}
-      <CreateBugModal
-        projectId={projectId}
-        open={showBugDrawer}
-        onClose={() => setShowBugDrawer(false)}
-        onCreated={(bug) => {
-          setToast({ message: `Defect ${bug.bugKey || ""} logged successfully!`, type: "success" })
-        }}
-        recordingSessionId={sessionId}
-        sessionSteps={recordedSteps.map((s) => ({
-          stepNumber: s.stepNumber,
-          actionDescription: s.actionDescription,
-          expectedResult: s.expectedResult,
-        }))}
-        initialValues={{
-          actualResult: "Failure observed during live QA session.",
-          environment: "Staging",
-        }}
-        sessionContext={{
-          pageUrl: liveUrl,
-          consoleLogs: consoleErrors.length > 0 ? consoleErrors.join("\n") : null,
-          networkErrors: networkErrors.length > 0 ? networkErrors.join("\n") : null,
-          screenshotPath: screenshots[screenshots.length - 1]?.filePath || null,
-        }}
-        initialAttachmentPaths={[
-          ...(screenshots.length > 0
-            ? [{
-                filePath: screenshots[screenshots.length - 1].filePath,
-                fileName: screenshots[screenshots.length - 1].filePath.split("/").pop() || "screenshot.png",
-                kind: "image" as const,
-              }]
-            : []),
-          ...(recordings.length > 0 && recordings[recordings.length - 1].filePath
-            ? [{
-                filePath: recordings[recordings.length - 1].filePath as string,
-                fileName: (recordings[recordings.length - 1].filePath as string).split("/").pop() || "recording.webm",
-                kind: "video" as const,
-              }]
-            : []),
-        ]}
-        // Full pool so a tester with many screenshots can pick which to attach.
-        attachmentChoices={[
-          ...screenshots.map((s) => ({
-            filePath: s.filePath,
-            fileName: s.filePath.split("/").pop() || "screenshot.png",
-            kind: "image" as const,
-          })),
-          ...recordings
-            .filter((r) => r.filePath)
-            .map((r) => ({
-              filePath: r.filePath as string,
-              fileName: (r.filePath as string).split("/").pop() || "recording.webm",
-              kind: "video" as const,
-            })),
-        ]}
-      />
+      {/* SESSION COMPLETE CELEBRATION MODAL */}
+      {showCompletionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6 backdrop-blur-md animate-in fade-in duration-200 select-none">
+          <div className="w-full max-w-md bg-card border shadow-2xl rounded-3xl p-6 text-center space-y-6 animate-in zoom-in duration-200">
+            <div className="mx-auto h-16 w-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center dark:bg-emerald-950/60 dark:text-emerald-400">
+              <FileCheck size={32} />
+            </div>
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          DRAWER: MANUAL STEP BUILDER
-          ═══════════════════════════════════════════════════════════════════════ */}
+            <div className="space-y-2">
+              <h2 className="text-xl font-black text-foreground">Live QA Session Completed!</h2>
+              <p className="text-xs text-muted-foreground font-normal">
+                Your session has been saved and converted into a test case in your project library.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-muted/40 border text-xs">
+              <div className="space-y-0.5">
+                <span className="font-black text-lg text-indigo-600">{recordedSteps.length}</span>
+                <span className="block text-[10px] font-bold text-muted-foreground uppercase">Steps</span>
+              </div>
+              <div className="space-y-0.5">
+                <span className="font-black text-lg text-emerald-600">{screenshots.length}</span>
+                <span className="block text-[10px] font-bold text-muted-foreground uppercase">Shots</span>
+              </div>
+              <div className="space-y-0.5">
+                <span className="font-black text-lg text-purple-600">{recordings.length}</span>
+                <span className="block text-[10px] font-bold text-muted-foreground uppercase">Videos</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <Button
+                onClick={() => router.push(`/projects/${projectId}/test-cases`)}
+                className="w-full h-10 font-extrabold text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl"
+              >
+                View in Test Case Library
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setShowCompletionModal(false)}
+                className="w-full h-10 font-bold text-xs rounded-xl"
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAWER: MANUAL STEP FORM */}
       {showManualStepDrawer && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-[450px] bg-background h-full shadow-2xl border-l flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-5 border-b flex items-center justify-between bg-accent/15">
+            <div className="p-5 border-b flex items-center justify-between bg-muted/30">
               <h3 className="font-bold text-base flex items-center gap-1.5">
-                <Plus className="h-5 w-5 text-indigo-500" /> Add Step Manually
+                <Plus className="h-5 w-5 text-indigo-500" /> Append Test Step
               </h3>
               <button onClick={() => setShowManualStepDrawer(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddManualStep} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs font-semibold">
+            <form onSubmit={handleAddManualStep} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs font-semibold">
               <div className="space-y-1.5">
                 <Label htmlFor="man-desc">Action Description *</Label>
-                <Input id="man-desc" value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} required placeholder="e.g. Click Submit registration Form" />
+                <Input id="man-desc" value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} required placeholder="e.g. Click submit button and verify dashboard navigation" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="man-action">Action Type</Label>
-                  <select id="man-action" value={manualActionType} onChange={(e) => setManualActionType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                    <option value="click">Click</option>
-                    <option value="fill">Input value</option>
-                    <option value="navigate">Navigate URL</option>
-                    <option value="hover">Hover</option>
+                  <Label htmlFor="man-atype">Action Type</Label>
+                  <select id="man-atype" value={manualActionType} onChange={(e) => setManualActionType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+                    <option value="click">click</option>
+                    <option value="fill">fill / type</option>
+                    <option value="open_url">open_url</option>
+                    <option value="select">select option</option>
+                    <option value="assert">assert / verify</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="man-target">Target Type</Label>
-                  <select id="man-target" value={manualTargetType} onChange={(e) => setManualTargetType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                    <option value="button">Button</option>
-                    <option value="input">Input field</option>
-                    <option value="link">Link</option>
-                    <option value="select">Dropdown select</option>
+                  <Label htmlFor="man-ttype">Target Element Type</Label>
+                  <select id="man-ttype" value={manualTargetType} onChange={(e) => setManualTargetType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+                    <option value="button">button</option>
+                    <option value="input">input / field</option>
+                    <option value="css">css selector</option>
+                    <option value="xpath">xpath query</option>
                   </select>
                 </div>
               </div>
 
               <div className="space-y-1.5">
                 <Label htmlFor="man-tval">Target Selector Value</Label>
-                <Input id="man-tval" value={manualTargetValue} onChange={(e) => setManualTargetValue(e.target.value)} placeholder="e.g. #submit-btn" />
+                <Input id="man-tval" value={manualTargetValue} onChange={(e) => setManualTargetValue(e.target.value)} placeholder="e.g. #submit-btn or [data-testid='login']" />
               </div>
 
               <div className="space-y-1.5">
@@ -1964,20 +2233,18 @@ export default function LiveQASessionPage() {
 
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button type="button" variant="ghost" onClick={() => setShowManualStepDrawer(false)}>Cancel</Button>
-                <Button type="submit">Append Step</Button>
+                <Button type="submit" className="bg-indigo-600 text-white">Append Step</Button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════════════════════
-          DRAWER: SMART ELEMENT CAPTURE ANALYZER
-          ═══════════════════════════════════════════════════════════════════════ */}
+      {/* DRAWER: SMART ELEMENT CAPTURE ANALYZER */}
       {showElementDrawer && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-[450px] bg-background h-full shadow-2xl border-l flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-5 border-b flex items-center justify-between bg-accent/15">
+            <div className="p-5 border-b flex items-center justify-between bg-muted/30">
               <h3 className="font-bold text-base flex items-center gap-1.5">
                 <Layers className="h-5 w-5 text-indigo-500" /> Capture Element Selector
               </h3>
@@ -2027,9 +2294,7 @@ export default function LiveQASessionPage() {
         </div>
       )}
 
-      {/* Screenshot annotation editor: anchored text labels, rectangles,
-          highlights, arrows, blur, crop, with undo/redo and per-annotation
-          select/move/delete. Exports at natural resolution. */}
+      {/* Screenshot Annotation Editor */}
       {annotatingShot && (
         <AnnotationEditor
           imageSrc={
@@ -2042,17 +2307,18 @@ export default function LiveQASessionPage() {
           saving={savingAnnotation}
         />
       )}
+
       {/* REMOTE FILE CHOOSER DIALOG OVERLAY */}
       {showFileChooserModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs select-none">
           <div className="bg-white rounded-3xl border shadow-2xl w-full max-w-sm p-6 space-y-4 text-left animate-in zoom-in duration-150">
             <div className="flex items-center justify-between border-b pb-2.5">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Camera size={14} className="text-indigo-650" /> Upload File to Browser
+                <Camera size={14} className="text-indigo-600" /> Upload File to Browser
               </h3>
               <button
                 onClick={handleCancelFileChooser}
-                className="text-slate-400 hover:text-slate-650 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
                 <X size={16} />
               </button>
@@ -2063,7 +2329,7 @@ export default function LiveQASessionPage() {
                 The web page in the remote browser requested a file upload. Choose a local file to forward to it:
               </p>
 
-              <div className="border-2 border-dashed border-slate-200 hover:border-slate-350 rounded-2xl p-6 transition-all bg-slate-50/50 hover:bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer relative">
+              <div className="border-2 border-dashed border-slate-200 hover:border-slate-300 rounded-2xl p-6 transition-all bg-slate-50/50 hover:bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer relative">
                 <Input
                   type="file"
                   onChange={handleFileUpload}
@@ -2073,15 +2339,15 @@ export default function LiveQASessionPage() {
                 {uploadingFile ? (
                   <>
                     <Loader2 size={24} className="text-indigo-600 animate-spin" />
-                    <span className="text-[10px] font-black text-indigo-750 uppercase">Uploading file...</span>
+                    <span className="text-[10px] font-black text-indigo-700 uppercase">Uploading file...</span>
                   </>
                 ) : (
                   <>
-                    <div className="p-2.5 rounded-2xl bg-white border shadow-3xs text-slate-450">
+                    <div className="p-2.5 rounded-2xl bg-white border shadow-xs text-slate-400">
                       <Camera size={20} />
                     </div>
                     <span className="text-[10.5px] font-black text-slate-800 uppercase tracking-wide">Select Local File</span>
-                    <span className="text-[9px] font-bold text-slate-450">Drag and drop or click here</span>
+                    <span className="text-[9px] font-bold text-slate-400">Drag and drop or click here</span>
                   </>
                 )}
               </div>
@@ -2092,7 +2358,7 @@ export default function LiveQASessionPage() {
                 variant="outline"
                 onClick={handleCancelFileChooser}
                 disabled={uploadingFile}
-                className="flex-1 rounded-xl h-9 text-xs font-black border-slate-200 text-slate-650 bg-white"
+                className="flex-1 rounded-xl h-9 text-xs font-black border-slate-200 text-slate-600 bg-white"
               >
                 Cancel
               </Button>

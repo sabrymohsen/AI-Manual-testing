@@ -17,13 +17,21 @@ const createSchema = z.object({
   type: z.enum(TYPES).optional(),
   status: z.enum(STATUSES).optional(),
   priority: z.enum(PRIORITIES).optional(),
-  storyPoints: z.number().int().min(0).max(999).optional().nullable(),
+  // Task.storyPoints is a Float and the estimation scale offers 0.5, so this
+  // must NOT be .int() — that rejected every half-point estimate with a 400.
+  storyPoints: z.number().min(0).max(999).optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
   branchName: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   epicId: z.string().optional().nullable(),
   assigneeIds: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
+  // Jira-style columns that already exist on Task but were never accepted at
+  // create time — the type-specific create forms populate these.
+  environment: z.string().optional().nullable(),
+  components: z.array(z.string()).optional(),
+  labels: z.array(z.string()).optional(),
+  affectedVersions: z.array(z.string()).optional(),
 })
 
 // GET /api/projects/:projectId/scrum/tasks?status=&priority=&assignee=&sprint=&epic=&search=&sort=
@@ -116,6 +124,10 @@ export async function POST(
       sprintId: data.sprintId ?? null,
       epicId: data.epicId ?? null,
       tags: data.tags ?? [],
+      environment: data.environment ?? null,
+      components: data.components ?? [],
+      labels: data.labels ?? [],
+      affectedVersions: data.affectedVersions ?? [],
       boardRank: (last._max.boardRank ?? -1) + 1,
       assignees: data.assigneeIds?.length ? { connect: data.assigneeIds.map((id) => ({ id })) } : undefined,
     },

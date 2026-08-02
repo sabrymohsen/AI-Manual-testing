@@ -15,7 +15,7 @@ import {
   useTaskDetailMutations,
 } from "@/hooks/scrum/use-scrum"
 import type { ScrumTask, ScrumMember, TaskStatus } from "@/types/scrum"
-import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import {
@@ -93,10 +93,10 @@ export function TaskDrawer({ projectId }: { projectId: string }) {
   }, [openTaskId])
 
   return (
-    <Sheet open={!!openTaskId} onOpenChange={(o) => !o && closeTask()}>
-      <SheetContent className="flex w-full flex-col gap-0 p-0 sm:max-w-[900px] xl:max-w-[1040px]">
-        <SheetTitle className="sr-only">{task?.key ?? "Task"} details</SheetTitle>
-        <SheetDescription className="sr-only">Task detail view</SheetDescription>
+    <Dialog open={!!openTaskId} onOpenChange={(o) => !o && closeTask()}>
+      <DialogContent className="sm:max-w-[1100px] w-[95vw] max-h-[90vh] h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl border shadow-2xl bg-background border-border">
+        <DialogTitle className="sr-only">{task?.key ?? "Task"} details</DialogTitle>
+        <DialogDescription className="sr-only">Task detail view</DialogDescription>
         {isLoading || !task ? (
           <div className="space-y-4 p-6">
             <Skeleton className="h-6 w-40" />
@@ -107,8 +107,8 @@ export function TaskDrawer({ projectId }: { projectId: string }) {
         ) : (
           <DrawerBody key={task.id} task={task} projectId={projectId} onClose={closeTask} />
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -154,8 +154,11 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
   const assignedToMe = !!currentUser && task.assignees.some((a) => a.id === currentUser.id)
 
   const assignToMe = () => {
-    if (!currentUser || assignedToMe) return
-    save({ assigneeIds: [...task.assignees.map((a) => a.id), currentUser.id] })
+    if (!currentUser) return
+    const currentIds = (task.assignees ?? []).map((a) => a.id)
+    const isAssigned = currentIds.includes(currentUser.id)
+    const next = isAssigned ? currentIds.filter((id) => id !== currentUser.id) : [...currentIds, currentUser.id]
+    save({ assigneeIds: next })
   }
 
   const doDelete = () => {
@@ -175,166 +178,176 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
 
   return (
     <TooltipProvider delayDuration={200}>
-      {/* ── Header (sticky) ── */}
-      <div className="sticky top-0 z-10 space-y-3 border-b bg-background px-6 pb-4 pt-5 pr-12">
-        <div className="flex items-center gap-2">
+      {/* ── Top Bar Header (Theme Unified) ── */}
+      <div className="flex items-center justify-between border-b border-border px-6 py-3.5 bg-card/60 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-2.5">
           <TypeGlyph task={task} />
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button onClick={copyKey} className="flex items-center gap-1 font-mono text-sm font-semibold text-muted-foreground hover:text-foreground">
-                {task.key}
-                <Copy className="h-3 w-3" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Copy issue key</TooltipContent>
-          </Tooltip>
+          
+          <button
+            onClick={copyKey}
+            className="flex items-center gap-1 font-mono text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/50 transition-all"
+          >
+            <span>{task.key}</span>
+            <Copy className="h-3 w-3" />
+          </button>
 
           <StatusPill status={task.status} onChange={(s) => save({ status: s })} />
-
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted" title="Actions">
-                  <MoreHorizontal className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={() => setEditingTitle(true)}>
-                  <Pencil className="mr-2 h-4 w-4" /> Edit title
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => clone.mutate()}>
-                  <CopyPlus className="mr-2 h-4 w-4" /> Clone
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => watch.mutate()}>
-                  <Eye className="mr-2 h-4 w-4" /> {watching ? "Unwatch" : "Watch"}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => vote.mutate()}>
-                  <ThumbsUp className="mr-2 h-4 w-4" /> {voted ? "Remove vote" : "Vote"} ({task.votes})
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={copyLink}>
-                  <LinkIcon className="mr-2 h-4 w-4" /> Copy link
-                </DropdownMenuItem>
-                <PermissionGate permission="canDeleteStories">
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
-                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                  </DropdownMenuItem>
-                </PermissionGate>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
 
-        {/* Title */}
-        {editingTitle ? (
-          <TitleEditor
-            initial={task.title}
-            onCancel={() => setEditingTitle(false)}
-            onSave={(v) => {
-              if (v.trim() && v !== task.title) save({ title: v.trim() })
-              setEditingTitle(false)
-            }}
-          />
-        ) : (
-          <h2
-            onClick={() => setEditingTitle(true)}
-            className="cursor-text rounded px-1 text-xl font-semibold leading-snug text-foreground hover:bg-muted/60"
-          >
-            {task.title}
-          </h2>
-        )}
-
-        {/* Meta */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <MiniAvatar member={task.reporter} />
-          <span>
-            {task.reporter ? (
-              <>Reported by <span className="font-medium text-foreground">{task.reporter.name || task.reporter.email}</span> · </>
-            ) : null}
-            created {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })} · updated{" "}
-            {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
-          </span>
-        </div>
-      </div>
-
-      {/* ── Body (scrolls) ── */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_340px]">
-          {/* Left column */}
-          <div className="min-w-0 space-y-6">
-            <DescriptionBlock task={task} onSave={save} />
-            <div className="border-t pt-5">
-              <SubtaskList projectId={projectId} taskId={task.id} subtasks={task.subtasks} />
-            </div>
-            <div className="border-t pt-5">
-              <TaskLinkedIssues projectId={projectId} task={task} />
-            </div>
-            <div className="border-t pt-5">
-              <TraceabilityLinks projectId={projectId} taskId={task.id} testCases={task.testCases ?? []} bugs={task.bugs ?? []} />
-            </div>
-            <div className="border-t pt-5">
-              <TaskLinkedBrds projectId={projectId} taskId={task.id} />
-            </div>
-            <div className="border-t pt-5">
-              <CommentList projectId={projectId} taskId={task.id} comments={task.comments ?? []} />
-            </div>
-            <div className="border-t pt-5">
-              <TaskActivity activities={task.activities ?? []} />
-            </div>
-          </div>
-
-          {/* Right column */}
-          <div className="min-w-0">
-            <TaskDetailsSidebar
-              projectId={projectId}
-              task={task}
-              members={(members as ScrumMember[]) ?? []}
-              sprints={sprints ?? []}
-              epics={epics ?? []}
-              currentUser={currentUser}
-              onSave={save}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Footer action bar (sticky) ── */}
-      <div className="sticky bottom-0 z-10 flex items-center gap-2 border-t bg-background px-6 py-3">
-        {transition && (
-          <Button size="sm" onClick={() => save({ status: transition.next })}>
-            {transition.label}
-          </Button>
-        )}
-        <Button size="sm" variant="outline" onClick={assignToMe} disabled={assignedToMe}>
-          <UserPlus className="mr-1.5 h-4 w-4" /> {assignedToMe ? "Assigned to you" : "Assign to me"}
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline">
-              More <ChevronDown className="ml-1 h-4 w-4" />
+        <div className="flex items-center gap-2 pr-8">
+          {transition && (
+            <Button size="sm" onClick={() => save({ status: transition.next })} className="h-8 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3">
+              {transition.label}
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="top" className="w-44">
-            <DropdownMenuItem onClick={() => clone.mutate()}>
-              <CopyPlus className="mr-2 h-4 w-4" /> Clone
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => watch.mutate()}>
-              <Eye className="mr-2 h-4 w-4" /> {watching ? "Unwatch" : "Watch"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => vote.mutate()}>
-              <ThumbsUp className="mr-2 h-4 w-4" /> {voted ? "Remove vote" : "Vote"}
-            </DropdownMenuItem>
-            <PermissionGate permission="canDeleteStories">
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
+          )}
+
+          <Button size="sm" variant="outline" onClick={assignToMe} disabled={assignedToMe} className="h-8 text-xs rounded-lg font-semibold px-2.5">
+            <UserPlus className="mr-1.5 h-3.5 w-3.5" /> {assignedToMe ? "Assigned" : "Assign me"}
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground transition-all" title="More Actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => setEditingTitle(true)}>
+                <Pencil className="mr-2 h-4 w-4" /> Edit title
               </DropdownMenuItem>
-            </PermissionGate>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <DropdownMenuItem onClick={() => clone.mutate()}>
+                <CopyPlus className="mr-2 h-4 w-4" /> Clone
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => watch.mutate()}>
+                <Eye className="mr-2 h-4 w-4" /> {watching ? "Unwatch" : "Watch"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => vote.mutate()}>
+                <ThumbsUp className="mr-2 h-4 w-4" /> {voted ? "Remove vote" : "Vote"} ({task.votes})
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={copyLink}>
+                <LinkIcon className="mr-2 h-4 w-4" /> Copy link
+              </DropdownMenuItem>
+              <PermissionGate permission="canDeleteStories">
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={doDelete} className="text-red-600 focus:text-red-600">
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </DropdownMenuItem>
+              </PermissionGate>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* ── Main Content & Property Sidebar (Split View) ── */}
+      <div className="flex-1 grid grid-cols-[1fr_330px] divide-x divide-border min-h-0 overflow-hidden bg-background">
+        {/* Left Scrollable Content */}
+        <div className="overflow-y-auto p-6 space-y-6 min-w-0">
+          {/* Issue Title */}
+          <div>
+            {editingTitle ? (
+              <TitleEditor
+                initial={task.title}
+                onCancel={() => setEditingTitle(false)}
+                onSave={(v) => {
+                  if (v.trim() && v !== task.title) save({ title: v.trim() })
+                  setEditingTitle(false)
+                }}
+              />
+            ) : (
+              <h2
+                onClick={() => setEditingTitle(true)}
+                className="cursor-pointer rounded-lg p-1 text-2xl font-bold tracking-tight text-foreground hover:bg-muted/50 transition-all leading-snug flex items-start justify-between group"
+              >
+                <span>{task.title}</span>
+                <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground shrink-0 ml-2 mt-1" />
+              </h2>
+            )}
+
+            {/* Reporter Meta */}
+            <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+              <MiniAvatar member={task.reporter} />
+              <span>
+                {task.reporter ? (
+                  <>Reported by <span className="font-semibold text-foreground">{task.reporter.name || task.reporter.email}</span> • </>
+                ) : null}
+                created {formatDistanceToNow(new Date(task.createdAt), { addSuffix: true })} • updated{" "}
+                {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
+              </span>
+            </div>
+          </div>
+
+          <DescriptionBlock task={task} onSave={save} />
+          
+          <div className="border-t border-border/60 pt-5">
+            <SubtaskList projectId={projectId} taskId={task.id} subtasks={task.subtasks} />
+          </div>
+
+          <div className="border-t border-border/60 pt-5">
+            <TaskLinkedIssues projectId={projectId} task={task} />
+          </div>
+
+          <div className="border-t border-border/60 pt-5">
+            <TraceabilityLinks projectId={projectId} taskId={task.id} testCases={task.testCases ?? []} bugs={task.bugs ?? []} />
+          </div>
+
+          <div className="border-t border-border/60 pt-5">
+            <TaskLinkedBrds projectId={projectId} taskId={task.id} />
+          </div>
+
+          <div className="border-t border-border/60 pt-5">
+            <CommentList projectId={projectId} taskId={task.id} comments={task.comments ?? []} />
+          </div>
+
+          <div className="border-t border-border/60 pt-5">
+            <TaskActivity activities={task.activities ?? []} />
+          </div>
+        </div>
+
+        {/* Right Property Sidebar */}
+        <div className="overflow-y-auto p-5 bg-muted/15 space-y-6 min-w-0">
+          <TaskDetailsSidebar
+            projectId={projectId}
+            task={task}
+            members={(members as ScrumMember[]) ?? []}
+            sprints={sprints ?? []}
+            epics={epics ?? []}
+            currentUser={currentUser}
+            onSave={save}
+          />
+        </div>
       </div>
     </TooltipProvider>
   )
+}
+
+function formatDescriptionHtml(text: string): string {
+  if (!text) return ""
+
+  let html = text
+
+  // 1. Unpack <p> tags wrapping markdown headers
+  html = html.replace(/<p>\s*(#{1,3}\s+.*?)\s*<\/p>/gi, "$1")
+
+  // 2. Convert markdown headers to styled HTML with accent badges
+  html = html.replace(/(?:^|<p>)\s*###\s+(.*?)\s*(?:<\/p>|$)/gim, '<h3 class="text-sm font-extrabold tracking-tight text-foreground mt-5 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>$1</h3>')
+  html = html.replace(/(?:^|<p>)\s*##\s+(.*?)\s*(?:<\/p>|$)/gim, '<h2 class="text-base font-extrabold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span>$1</h2>')
+  html = html.replace(/(?:^|<p>)\s*#\s+(.*?)\s*(?:<\/p>|$)/gim, '<h1 class="text-lg font-black tracking-tight text-foreground mt-6 mb-3 pb-1 border-b border-border flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-indigo-600"></span>$1</h1>')
+
+  // 3. Convert inline markdown bold, italic, code
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-foreground">$1</strong>')
+  html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+  html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px] text-indigo-500 dark:text-indigo-400 font-bold">$1</code>')
+
+  // 4. Convert bullet lists
+  html = html.replace(/-\s+\[ \]\s+(.*$)/gim, '<div class="flex items-center gap-2 text-xs py-1"><input type="checkbox" disabled class="rounded" /> <span>$1</span></div>')
+  html = html.replace(/-\s+\[x\]\s+(.*$)/gim, '<div class="flex items-center gap-2 text-xs py-1 text-emerald-600"><input type="checkbox" checked disabled class="rounded text-emerald-600" /> <span class="line-through">$1</span></div>')
+
+  // 5. Convert newlines for plain text
+  if (!/<[a-z][\s\S]*>/i.test(text)) {
+    html = html.replace(/\n/g, '<br />')
+  }
+
+  return html
 }
 
 // ── Small pieces ─────────────────────────────────────────────────────────────
@@ -361,13 +374,13 @@ function StatusPill({ status, onChange }: { status: TaskStatus; onChange: (s: Ta
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors",
+            "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-extrabold transition-all hover:scale-105 shadow-2xs",
             sc.bg,
             sc.text,
             sc.border
           )}
         >
-          <span className={cn("h-1.5 w-1.5 rounded-full", sc.dot)} />
+          <span className={cn("h-2 w-2 rounded-full animate-pulse", sc.dot)} />
           {sc.label}
           <ChevronDown className="h-3 w-3 opacity-60" />
         </button>
@@ -419,7 +432,7 @@ function TitleEditor({ initial, onSave, onCancel }: { initial: string; onSave: (
           onCancel()
         }
       }}
-      className="w-full resize-none rounded-md border border-input px-2 py-1 text-xl font-semibold leading-snug focus:outline-none focus:ring-2 focus:ring-ring"
+      className="w-full resize-none rounded-xl border border-input px-3 py-2 text-xl font-extrabold leading-snug focus:outline-none focus:ring-2 focus:ring-ring"
     />
   )
 }
@@ -433,7 +446,7 @@ function DescriptionBlock({
 }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [draft, setDraft] = useState(task.description ?? "")
+  const [draft, setDraft] = useState("")
 
   const saveDescription = () => {
     setSaving(true)
@@ -451,7 +464,7 @@ function DescriptionBlock({
 
   useEffect(() => {
     const onEdit = () => {
-      setDraft(task.description ?? "")
+      setDraft(formatDescriptionHtml(task.description ?? ""))
       setEditing(true)
     }
     window.addEventListener("scrum:edit-description", onEdit)
@@ -459,35 +472,48 @@ function DescriptionBlock({
   }, [task.description])
 
   return (
-    <div className="space-y-2">
-      <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        <FileText className="h-3.5 w-3.5" /> Description
-      </h4>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+          <FileText className="h-4 w-4 text-indigo-500" /> Description
+        </h4>
+        {!editing && (
+          <button
+            type="button"
+            onClick={() => { setDraft(formatDescriptionHtml(task.description ?? "")); setEditing(true) }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+          >
+            <Pencil className="h-3 w-3" /> Edit
+          </button>
+        )}
+      </div>
+
       {editing ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <RichTextEditor value={draft} onChange={setDraft} />
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={saveDescription} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+            <Button size="sm" onClick={saveDescription} disabled={saving} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
+              {saving ? "Saving…" : "Save Description"}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={saving}>
+            <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={saving} className="rounded-xl font-semibold">
               Cancel
             </Button>
-            <span className="text-[11px] text-muted-foreground">Tip: use the toolbar for size, lists, links &amp; more.</span>
+            <span className="text-[11px] text-muted-foreground">Tip: Toolbar formats bold, lists, headers &amp; code.</span>
           </div>
         </div>
       ) : task.description && task.description.replace(/<[^>]*>/g, "").trim() ? (
         <div
-          onClick={() => { setDraft(task.description ?? ""); setEditing(true) }}
-          className="rte-content max-w-none cursor-text rounded-md border border-transparent px-2 py-1.5 hover:border-input"
-          dangerouslySetInnerHTML={{ __html: task.description }}
+          onClick={() => { setDraft(formatDescriptionHtml(task.description ?? "")); setEditing(true) }}
+          className="rte-content max-w-none cursor-text rounded-xl border border-transparent p-3 hover:border-input/50 transition-all text-xs font-medium leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: formatDescriptionHtml(task.description) }}
         />
       ) : (
         <button
           onClick={() => { setDraft(""); setEditing(true) }}
-          className="w-full rounded-md border border-dashed border-input px-3 py-3 text-left text-sm text-muted-foreground hover:bg-muted/50"
+          className="w-full rounded-2xl border border-dashed border-input p-4 text-left text-xs text-muted-foreground hover:bg-muted/50 transition-all font-medium flex items-center justify-between group"
         >
-          Add a description…
+          <span>Add a detailed issue description, acceptance criteria, or context...</span>
+          <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500" />
         </button>
       )}
     </div>

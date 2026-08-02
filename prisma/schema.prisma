@@ -102,6 +102,21 @@ enum ExecutionType {
   Automated
 }
 
+/// Denormalised latest execution outcome for a TestCase.
+///
+/// Unifies TestRunStatus (automated) and StepStatus (manual) into the subset
+/// that is meaningful as a *case-level* verdict. Queued/Running/Pending are
+/// deliberately absent: an in-flight run never overwrites the last settled
+/// result, so the list never flickers to "unknown" mid-run.
+enum TestCaseStatus {
+  NotExecuted
+  Passed
+  Failed
+  Blocked
+  Warning
+  Skipped
+}
+
 enum TestCaseSource {
   Manual
   AIGenerated
@@ -351,6 +366,7 @@ model Project {
   figmaConfig        FigmaConfig?
   integrationConfig  IntegrationConfig?
   testCases          TestCase[]
+  testSuites         TestSuite[]
   testRuns           TestRun[]
   auditLogs          AuditLog[]
   elementLocators    ElementLocator[]
@@ -468,6 +484,27 @@ model TestCase {
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
+  // ── Filing ────────────────────────────────────────────────────────────────
+  // Where the case LIVES. Exactly one suite (or none = "Unfiled"), so suite
+  // counts sum to the project total. This is deliberately separate from
+  // `requirements` below, which is many-to-many and answers a different
+  // question — what the case COVERS. Conflating the two is what made the old
+  // tree double-count cases linked to stories under two different epics.
+  suiteId String?
+  suite   TestSuite? @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+
+  // ── Execution rollup ──────────────────────────────────────────────────────
+  // Denormalised so the list can filter, sort and paginate in the database.
+  // Previously "last status" existed nowhere in Postgres and was recomputed in
+  // the browser by scanning every TestRun and ManualSessionCase in the project,
+  // which is what forced the page to download the entire history to render 30
+  // rows. Maintained at the write points in src/lib/test-cases/rollup.ts.
+  lastStatus    TestCaseStatus @default(NotExecuted)
+  lastRunAt     DateTime?
+  lastRunId     String?
+  lastRunSource ExecutionType?
+  openBugCount  Int            @default(0)
+
   steps              TestStep[]
   testRuns           TestRun[]
   manualSessionCases ManualSessionCase[]
@@ -482,6 +519,41 @@ model TestCase {
   @@index([priority])
   @@index([source])
   @@index([executionType])
+  @@index([suiteId])
+  // Composite indexes for the two list queries that matter: filter-by-status
+  // within a project, and browse-a-suite.
+  @@index([projectId, lastStatus])
+  @@index([projectId, suiteId])
+}
+
+/// A folder in the test library. Project-scoped, self-referencing tree.
+///
+/// This is the ownership hierarchy the page was missing: previously the left
+/// tree was projected from Requirement, so there was nowhere to actually put a
+/// case, and cases with no story link were unreachable in the tree entirely.
+model TestSuite {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Deleting a parent removes its subtree; TestCase.suiteId is SetNull, so
+  // cases survive a suite deletion and fall back to "Unfiled".
+  parentId String?
+  parent   TestSuite?  @relation("SuiteTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children TestSuite[] @relation("SuiteTree")
+
+  name        String
+  description String?
+  orderIndex  Int     @default(0)
+
+  testCases TestCase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([parentId])
+  @@index([projectId, parentId, orderIndex])
 }
 
 model TestStep {

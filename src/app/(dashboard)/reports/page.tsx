@@ -19,6 +19,8 @@ import {
   useDefectTrend,
   useExecutionFunnel,
   useTeamPerformance,
+  useTaskCreatedResolved,
+  useControlChart,
   type DashboardFilters,
 } from "@/hooks/reports/use-analytics"
 import { DashboardHeader, useNow, type DashboardRole, type DatePreset } from "@/components/reports/dashboard/header"
@@ -30,6 +32,8 @@ import {
   DefectTrendChart,
   TeamPerformanceChart,
   ExecutionFunnelChart,
+  CreatedResolvedChart,
+  ControlChart,
 } from "@/components/reports/dashboard/charts"
 import { TabbedTables } from "@/components/reports/dashboard/tables"
 import { ExportMenu } from "@/components/reports/dashboard/export-menu"
@@ -47,12 +51,12 @@ function presetRange(p: DatePreset): { from: string; to: string } {
 }
 
 // Which charts each role sees (spec §8). Order matters.
-type ChartKey = "burndown" | "velocity" | "cfd" | "defectTrend" | "team" | "funnel"
+type ChartKey = "burndown" | "velocity" | "cfd" | "defectTrend" | "team" | "funnel" | "taskCreatedResolved" | "controlChart"
 const ROLE_CHARTS: Record<DashboardRole, ChartKey[]> = {
-  PM: ["burndown", "velocity", "defectTrend", "cfd", "funnel"], // hides team
-  "QA Manager": ["burndown", "cfd", "defectTrend", "team", "funnel"], // hides velocity
-  "Test Lead": ["burndown", "velocity", "defectTrend", "team", "funnel"], // hides cfd
-  Developer: ["defectTrend", "burndown", "velocity", "cfd", "team"], // hides funnel
+  PM: ["burndown", "velocity", "defectTrend", "cfd", "funnel", "taskCreatedResolved"], // hides team, controlChart
+  "QA Manager": ["burndown", "cfd", "defectTrend", "team", "funnel", "controlChart"], // hides velocity, taskCreatedResolved
+  "Test Lead": ["burndown", "velocity", "defectTrend", "team", "funnel", "taskCreatedResolved", "controlChart"], // hides cfd
+  Developer: ["defectTrend", "burndown", "velocity", "cfd", "team", "controlChart"], // hides funnel, taskCreatedResolved
 }
 
 export default function ReportsPage() {
@@ -86,6 +90,8 @@ export default function ReportsPage() {
   const defect = useDefectTrend(filters)
   const funnel = useExecutionFunnel(filters)
   const team = useTeamPerformance(filters)
+  const taskCreatedResolved = useTaskCreatedResolved(filters)
+  const controlChart = useControlChart(filters)
 
   const anyFetching =
     report.isFetching ||
@@ -94,7 +100,9 @@ export default function ReportsPage() {
     cfd.isFetching ||
     defect.isFetching ||
     funnel.isFetching ||
-    team.isFetching
+    team.isFetching ||
+    taskCreatedResolved.isFetching ||
+    controlChart.isFetching
 
   // Track last successful update.
   useEffect(() => {
@@ -227,6 +235,10 @@ export default function ReportsPage() {
         return <TeamPerformanceChart key="team" data={team.data} loading={team.isLoading} />
       case "funnel":
         return <ExecutionFunnelChart key="funnel" data={funnel.data} loading={funnel.isLoading} />
+      case "taskCreatedResolved":
+        return <CreatedResolvedChart key="taskCreatedResolved" data={taskCreatedResolved.data} loading={taskCreatedResolved.isLoading} />
+      case "controlChart":
+        return <ControlChart key="controlChart" data={controlChart.data} loading={controlChart.isLoading} />
     }
   }
 

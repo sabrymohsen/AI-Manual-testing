@@ -34,6 +34,19 @@ export function useBoardColumns(projectId: string) {
   return useQuery({ queryKey: scrumKeys.columns(projectId), queryFn: () => scrumApi.listColumns(projectId) })
 }
 
+/** Project name/boardKey for the board header breadcrumb. */
+export function useScrumProject(projectId: string) {
+  return useQuery({
+    queryKey: ["scrum", "project", projectId],
+    queryFn: async () => {
+      const { data } = await http.get(`/projects/${projectId}`)
+      return data.project as { id: string; name: string; boardKey: string | null }
+    },
+    enabled: !!projectId,
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 export function useScrumMembers(projectId: string) {
   return useQuery({ queryKey: scrumKeys.members(projectId), queryFn: () => scrumApi.listMembers(projectId) })
 }
@@ -69,6 +82,21 @@ export function useCurrentUser() {
   })
 }
 
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+/** Invalidate every task list for a project (all filter permutations). */
+function invalidateTaskLists(qc: ReturnType<typeof useQueryClient>, projectId: string) {
+  qc.invalidateQueries({ queryKey: ["scrum", projectId, "tasks"], refetchType: "all" })
+  qc.invalidateQueries({ queryKey: scrumKeys.activities(projectId), refetchType: "all" })
+}
+
+/** Invalidate project-wide scrum data (tasks + sprints + columns + epics). */
+function invalidateProject(qc: ReturnType<typeof useQueryClient>, projectId: string) {
+  qc.invalidateQueries({ queryKey: ["scrum", projectId], refetchType: "all" })
+}
+
+// ── Mutations ──────────────────────────────────────────────────────────────
+
 /**
  * Jira-detail actions grouped for a single task: clone, watch/vote toggles,
  * work-log, attachment upload/delete, and issue-link create/delete. Every
@@ -76,7 +104,7 @@ export function useCurrentUser() {
  */
 export function useTaskDetailMutations(projectId: string, taskId: string) {
   const qc = useQueryClient()
-  const refreshTask = () => qc.invalidateQueries({ queryKey: scrumKeys.task(taskId) })
+  const refreshTask = () => qc.invalidateQueries({ queryKey: scrumKeys.task(taskId), refetchType: "all" })
   const refreshAll = () => {
     refreshTask()
     invalidateTaskLists(qc, projectId)
@@ -156,8 +184,8 @@ export function useTaskDetailMutations(projectId: string, taskId: string) {
 export function useTraceabilityMutations(projectId: string, taskId: string) {
   const qc = useQueryClient()
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: scrumKeys.task(taskId) })
-    qc.invalidateQueries({ queryKey: ["scrum", projectId, "tasks"] })
+    qc.invalidateQueries({ queryKey: scrumKeys.task(taskId), refetchType: "all" })
+    invalidateTaskLists(qc, projectId)
   }
   const setTestCases = useMutation({
     mutationFn: (ids: string[]) => scrumApi.setTaskTestCases(taskId, ids),
@@ -171,16 +199,6 @@ export function useTraceabilityMutations(projectId: string, taskId: string) {
   })
   return { setTestCases, setBugs }
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────────
-
-/** Invalidate every task list for a project (all filter permutations). */
-function invalidateTaskLists(qc: ReturnType<typeof useQueryClient>, projectId: string) {
-  qc.invalidateQueries({ queryKey: ["scrum", projectId, "tasks"] })
-  qc.invalidateQueries({ queryKey: scrumKeys.activities(projectId) })
-}
-
-// ── Mutations ──────────────────────────────────────────────────────────────
 
 export function useCreateTask(projectId: string) {
   const qc = useQueryClient()
@@ -201,7 +219,7 @@ export function useUpdateTask(projectId: string) {
       scrumApi.updateTask(taskId, body),
     onSuccess: (task) => {
       invalidateTaskLists(qc, projectId)
-      qc.invalidateQueries({ queryKey: scrumKeys.task(task.id) })
+      qc.invalidateQueries({ queryKey: scrumKeys.task(task.id), refetchType: "all" })
     },
     onError: () => toast.error("Failed to update task"),
   })
@@ -261,7 +279,7 @@ export function useDeleteTask(projectId: string) {
 export function useSubtaskMutations(projectId: string, taskId: string) {
   const qc = useQueryClient()
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: scrumKeys.task(taskId) })
+    qc.invalidateQueries({ queryKey: scrumKeys.task(taskId), refetchType: "all" })
     invalidateTaskLists(qc, projectId)
   }
   const add = useMutation({
@@ -290,7 +308,7 @@ export function useSubtaskMutations(projectId: string, taskId: string) {
 export function useCommentMutations(projectId: string, taskId: string) {
   const qc = useQueryClient()
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: scrumKeys.task(taskId) })
+    qc.invalidateQueries({ queryKey: scrumKeys.task(taskId), refetchType: "all" })
     invalidateTaskLists(qc, projectId)
   }
   const add = useMutation({
@@ -313,7 +331,7 @@ export function useCommentMutations(projectId: string, taskId: string) {
 // Sprints
 export function useSprintMutations(projectId: string) {
   const qc = useQueryClient()
-  const invalidate = () => qc.invalidateQueries({ queryKey: scrumKeys.sprints(projectId) })
+  const invalidate = () => qc.invalidateQueries({ queryKey: scrumKeys.sprints(projectId), refetchType: "all" })
   const create = useMutation({
     mutationFn: (body: Record<string, unknown>) => scrumApi.createSprint(projectId, body),
     onSuccess: () => {
@@ -341,7 +359,7 @@ export function useSprintMutations(projectId: string) {
 export function useEpicMutations(projectId: string) {
   const qc = useQueryClient()
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: scrumKeys.epics(projectId) })
+    qc.invalidateQueries({ queryKey: scrumKeys.epics(projectId), refetchType: "all" })
     invalidateTaskLists(qc, projectId)
   }
   const create = useMutation({
@@ -367,7 +385,7 @@ export function useEpicMutations(projectId: string) {
 // Board columns
 export function useColumnMutations(projectId: string) {
   const qc = useQueryClient()
-  const invalidate = () => qc.invalidateQueries({ queryKey: scrumKeys.columns(projectId) })
+  const invalidate = () => qc.invalidateQueries({ queryKey: scrumKeys.columns(projectId), refetchType: "all" })
   const create = useMutation({
     mutationFn: (body: Record<string, unknown>) => scrumApi.createColumn(projectId, body),
     onSuccess: () => {

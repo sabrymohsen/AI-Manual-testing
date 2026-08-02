@@ -310,11 +310,8 @@ export async function startSession(
   // so its contexts skip recordVideo entirely.
   const context = await browser.newContext({
     viewport: { width, height },
-    // Streamed Chromium renders at 2x (retina) so frames stay crisp on HiDPI
-    // displays and when the view is maximized/full-screen; the client corrects
-    // input coordinates via the "dsf" stream message. Native-window and
-    // non-Chromium sessions keep 1x.
-    ...(streamedChromium ? { deviceScaleFactor: 2 } : {}),
+    // Render at 2x (retina) so frames stay ultra crisp and high-definition
+    deviceScaleFactor: 2,
     bypassCSP: true,
     ...(sessionMode === "Workstation"
       ? {}

@@ -9,6 +9,9 @@ import type {
   ExecutionFunnelResult,
   TeamMemberPerf,
   Paginated,
+  TaskCreatedResolvedPoint,
+  ControlChartPoint,
+  AverageAgeRow,
 } from "@/lib/reports/analytics"
 import type { ProjectReport } from "@/lib/reports/types"
 
@@ -169,3 +172,31 @@ function useTable<T>(kind: string, q: TableQuery) {
 export const useTestsTable = (q: TableQuery) => useTable<any>("tests", q)
 export const useBugsTable = (q: TableQuery) => useTable<any>("bugs", q)
 export const useRequirementsTable = (q: TableQuery) => useTable<any>("requirements", q)
+
+// ── Task-level Scrum analytics ──
+export function useTaskCreatedResolved(f: DashboardFilters) {
+  return useQuery({
+    queryKey: ["reports", "task-created-resolved", f.projectId, f.from, f.to],
+    queryFn: () => getJSON<{ trend: TaskCreatedResolvedPoint[] }>(`/api/reports/task-created-resolved?${rangeQS(f)}`).then((d) => d.trend),
+    enabled: !!f.projectId,
+    ...AUTO,
+  })
+}
+
+export function useControlChart(f: DashboardFilters) {
+  return useQuery({
+    queryKey: ["reports", "control-chart", f.projectId, f.from, f.to],
+    queryFn: () => getJSON<{ points: ControlChartPoint[] }>(`/api/reports/control-chart?${rangeQS(f)}`).then((d) => d.points),
+    enabled: !!f.projectId,
+    ...AUTO,
+  })
+}
+
+export function useAverageAge(projectId: string) {
+  return useQuery({
+    queryKey: ["reports", "average-age", projectId],
+    queryFn: () => getJSON<{ rows: AverageAgeRow[] }>(`/api/reports/average-age?projectId=${projectId}`).then((d) => d.rows),
+    enabled: !!projectId,
+    staleTime: 60_000,
+  })
+}

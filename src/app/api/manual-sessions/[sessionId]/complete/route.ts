@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { recalcMany } from "@/lib/test-cases/rollup"
 
 export async function POST(
   request: Request,
@@ -69,6 +70,11 @@ export async function POST(
         }
       })
     })
+
+    // Refresh TestCase.lastStatus for every case in the session. Done after the
+    // transaction commits so the rollup reads the settled rows, and awaited so
+    // the client's next list fetch already reflects the new verdicts.
+    await recalcMany(existing.sessionCases.map((c) => c.testCaseId))
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
