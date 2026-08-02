@@ -23,7 +23,12 @@ export async function GET() {
 
   // Check Redis
   try {
-    const redis = new Redis(redisConnection)
+    const redis = new Redis({
+      ...redisConnection,
+      connectTimeout: 2000,
+      maxRetriesPerRequest: 1,
+    })
+    redis.on("error", () => {})
     await redis.ping()
     redis.disconnect()
     checks.redis = true

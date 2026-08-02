@@ -45,17 +45,26 @@ export const redisClient = new Redis({
   password: conn.password,
   family: IP_FAMILY,
   maxRetriesPerRequest: null,
+  enableOfflineQueue: false,
+  retryStrategy: (times) => (times > 5 ? null : Math.min(times * 200, 2000)),
+})
+redisClient.on("error", () => {
+  // Silence connection errors when Redis is offline (e.g. during build / static export)
 })
 
 // Factory to create subscription connections
 export function createRedisClient(): Redis {
-  return new Redis({
+  const client = new Redis({
     host: conn.host,
     port: conn.port,
     password: conn.password,
     family: IP_FAMILY,
     maxRetriesPerRequest: null,
+    enableOfflineQueue: false,
+    retryStrategy: (times) => (times > 5 ? null : Math.min(times * 200, 2000)),
   })
+  client.on("error", () => {})
+  return client
 }
 
 // 1. Queues
@@ -76,6 +85,9 @@ export const testExecutionQueue = new Queue("test-execution-queue", {
 export const testRunQueue = testExecutionQueue
 
 export const queueEvents = new QueueEvents("test-execution-queue", { connection: conn })
+queueEvents.on("error", () => {
+  // Silence connection errors when Redis is offline (e.g. during build)
+})
 
 export const visualCheckQueue = new Queue("visual-check-queue", {
   connection: conn,
