@@ -17,6 +17,9 @@ function defaultConnection() {
     port: REDIS_PORT,
     password: REDIS_PASSWORD,
     family: IP_FAMILY,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: null,
+    retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 200, 1000)),
   }
 }
 
@@ -28,6 +31,9 @@ function connectionOptions() {
       port: Number(url.port) || REDIS_PORT,
       password: url.password || REDIS_PASSWORD,
       family: IP_FAMILY,
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: null,
+      retryStrategy: (times: number) => (times > 3 ? null : Math.min(times * 200, 1000)),
     }
   } catch {
     return defaultConnection()
