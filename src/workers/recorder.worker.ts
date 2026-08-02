@@ -93,6 +93,12 @@ async function applyInput(
         await page.mouse.move(body.x || 0, body.y || 0)
         await page.mouse.up({ button: body.button || "left" })
         break
+      case "click":
+        await page.mouse.click(body.x || 0, body.y || 0, {
+          button: (body.button as any) || "left",
+          clickCount: body.clickCount || 1,
+        })
+        break
       case "mousemove":
         await page.mouse.move(body.x || 0, body.y || 0)
         break
@@ -100,17 +106,24 @@ async function applyInput(
         await page.mouse.move(body.x || 0, body.y || 0)
         await page.mouse.wheel(body.deltaX || 0, body.deltaY || 0)
         break
-      case "key": {
+      case "key":
+      case "keydown": {
         const key = String(body.key || "")
-        if (key.length === 1) {
-          await page.keyboard.insertText(key)
-        } else {
-          await page.keyboard.press(key)
+        if (key) {
+          if (key.length === 1 && !body.ctrlKey && !body.metaKey) {
+            await page.keyboard.insertText(key).catch(() => null)
+          } else {
+            await page.keyboard.press(key).catch(() => null)
+          }
         }
         break
       }
+      case "keyup":
+        break
       case "type":
-        await page.keyboard.insertText(body.text || "")
+        if (body.text) {
+          await page.keyboard.insertText(String(body.text)).catch(() => null)
+        }
         break
       case "resize": {
         // Live view fit-to-container + browser-style zoom: the client sends its
@@ -180,6 +193,7 @@ function consumeStreamToken(token: string, sessionId: string): boolean {
 
 interface SessionStream {
   cdp: CDPSession | null
+  timer?: any
   viewers: Set<WebSocket>
   starting: Promise<void> | null
   // Remote devicePixelRatio — frames arrive at CSS px × dsf; the client needs
@@ -200,6 +214,10 @@ function teardownStream(sessionId: string) {
   const stream = sessionStreams.get(sessionId)
   if (!stream) return
   sessionStreams.delete(sessionId)
+  if (stream.timer) {
+    clearInterval(stream.timer)
+    stream.timer = null
+  }
   const cdp = stream.cdp
   stream.cdp = null
   if (cdp) {
@@ -210,6 +228,65 @@ function teardownStream(sessionId: string) {
     try { ws.close() } catch {}
   }
   stream.viewers.clear()
+}
+
+async function ensureGenericScreencast(sessionId: string, page: Page): Promise<void> {
+  let stream = sessionStreams.get(sessionId)
+  if (!stream) {
+    stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1 }
+    sessionStreams.set(sessionId, stream)
+  }
+  if (stream.cdp || stream.timer || stream.starting) {
+    if (stream.starting) await stream.starting
+    return
+  }
+
+  stream.starting = (async () => {
+    stream!.dsf = await page.evaluate(() => window.devicePixelRatio).catch(() => 1)
+
+    let isRunning = true
+    let isCapturing = false
+    const streamQuality = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 100))
+
+    const timer = setInterval(async () => {
+      if (!isRunning || isCapturing) return
+      const currentStream = sessionStreams.get(sessionId)
+      if (!currentStream || currentStream.viewers.size === 0) {
+        clearInterval(timer)
+        return
+      }
+      isCapturing = true
+      try {
+        const buf = await page.screenshot({
+          type: "png",
+          scale: "device"
+        })
+        for (const ws of currentStream.viewers) {
+          if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
+            ws.send(buf)
+          }
+        }
+      } catch {
+        // page closed or navigating
+      } finally {
+        isCapturing = false
+      }
+    }, 33) // ~30 FPS loop
+
+    stream!.timer = timer
+
+    page.once("close", () => {
+      isRunning = false
+      clearInterval(timer)
+      teardownStream(sessionId)
+    })
+  })()
+
+  try {
+    await stream.starting
+  } finally {
+    stream.starting = null
+  }
 }
 
 async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
@@ -225,23 +302,13 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       if (!current) return
       const buf = Buffer.from(ev.data, "base64")
       for (const ws of current.viewers) {
-        // Latest-frame-wins: frames are self-contained JPEGs, so when a viewer
-        // can't keep up (send buffer still holds ~2 frames), drop this frame
-        // for that viewer instead of queueing lag behind the socket.
         if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
           ws.send(buf)
         }
       }
-      // Flow control: withhold the ack until the fastest viewer has (mostly)
-      // drained its socket, so Chrome paces capture to what the network can
-      // actually deliver instead of racing ahead — every frame that arrives is
-      // fresh. Cap the wait so a stalled viewer can't freeze the stream.
       const deadline = Date.now() + 400
       const ackWhenDrained = () => {
         const cur = sessionStreams.get(sessionId)
-        // Torn down (or replaced by a newer CDP session) while waiting. cdp is
-        // still null for the first frames that land before ensureScreencast
-        // finishes assigning it — those must still be acked.
         if (!cur || (cur.cdp && cur.cdp !== cdp)) return
         const buffered = Math.min(
           ...[...cur.viewers]
@@ -259,28 +326,19 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
     })
     cdp.on("Page.frameNavigated", (ev: any) => {
       const current = sessionStreams.get(sessionId)
-      // Only top-level navigations update the URL bar
       if (current && !ev.frame.parentId) {
         broadcastJson(current, { type: "url", url: ev.frame.url })
       }
     })
     await cdp.send("Page.enable")
-    // Frames keep their full pixel resolution (2x retina, caps ~1920 CSS px);
-    // speed comes from JPEG compression instead. Quality 65 is ~3x fewer bytes
-    // per frame than 90 with no resolution loss — the difference between a
-    // choppy and a fluid stream when viewers are on the internet (production)
-    // rather than localhost. Tune per deployment via RECORDER_STREAM_QUALITY.
-    const streamQuality = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 65))
     await cdp.send("Page.startScreencast", {
-      format: "jpeg",
-      quality: streamQuality,
+      format: "png",
       maxWidth: 3840,
       maxHeight: 3840,
       everyNthFrame: 1,
     })
     stream.dsf = await page.evaluate(() => window.devicePixelRatio).catch(() => 1)
     stream.cdp = cdp
-    // End the stream cleanly when the session's page goes away
     page.once("close", () => teardownStream(sessionId))
   })()
 
@@ -298,13 +356,6 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
     return
   }
 
-  // CDP screencast is Chromium-only — tell the client to keep polling.
-  if (activeSess.browserType !== "Chromium") {
-    ws.send(JSON.stringify({ type: "mode", mode: "polling" }))
-    ws.close()
-    return
-  }
-
   let stream = sessionStreams.get(sessionId)
   if (!stream) {
     stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1 }
@@ -313,7 +364,11 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   stream.viewers.add(ws)
 
   try {
-    await ensureScreencast(sessionId, activeSess.page)
+    if (activeSess.browserType === "Chromium") {
+      await ensureScreencast(sessionId, activeSess.page)
+    } else {
+      await ensureGenericScreencast(sessionId, activeSess.page)
+    }
   } catch (err) {
     console.error("[RECORDER WORKER] Screencast failed, falling back to polling:", err)
     ws.send(JSON.stringify({ type: "mode", mode: "polling" }))
@@ -327,7 +382,6 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   ws.send(JSON.stringify({ type: "dsf", dsf: stream.dsf || 1 }))
   ws.send(JSON.stringify({ type: "url", url: activeSess.page.url() }))
 
-  // Inputs arrive as JSON messages on the same socket (lower latency than REST)
   ws.on("message", async (data, isBinary) => {
     if (isBinary) return
     try {
@@ -389,7 +443,7 @@ const server = http.createServer(async (req, res) => {
       return
     }
 
-    // Live preview frame: JPEG snapshot of the controlled browser, base64,
+    // Live preview frame: PNG snapshot of the controlled browser, base64,
     // never persisted to disk (polled by the workstation page).
     if (req.method === "GET" && path.match(/^\/sessions\/[^/]+\/frame$/)) {
       const sessionId = path.split("/")[2]
@@ -399,11 +453,11 @@ const server = http.createServer(async (req, res) => {
         return
       }
       try {
-        // scale "css" keeps polling frames at CSS pixels so mouse-coordinate
+        // scale "device" keeps polling frames at device pixels so mouse-coordinate
         // mapping stays 1:1 regardless of the context's deviceScaleFactor.
-        const buffer = await activeSess.page.screenshot({ type: "jpeg", quality: 95, scale: "css" })
+        const buffer = await activeSess.page.screenshot({ type: "png", scale: "device" })
         sendJson(res, 200, {
-          frame: `data:image/jpeg;base64,${buffer.toString("base64")}`,
+          frame: `data:image/png;base64,${buffer.toString("base64")}`,
           url: activeSess.page.url(),
           fileChooserOpen: !!activeSess.activeFileChooser,
         })

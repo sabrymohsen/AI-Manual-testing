@@ -32,17 +32,17 @@ export function CreateColumnButton({ projectId }: { projectId: string }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex h-10 w-72 shrink-0 items-center justify-center gap-1 rounded-xl border border-dashed border-border text-sm font-medium text-muted-foreground hover:border-primary/40 hover:text-primary">
+        <button className="flex h-10 w-72 shrink-0 items-center justify-center gap-1 rounded-lg border border-dashed border-[#DFE1E6] text-sm font-medium text-[#6B778C] hover:border-[#0052CC]/40 hover:text-[#0052CC] transition-colors">
           <Plus className="h-4 w-4" /> Add column
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 space-y-3">
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground">Column name</label>
+          <label className="text-xs font-semibold text-[#6B778C]">Column name</label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. QA Review" autoFocus />
         </div>
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-muted-foreground">Maps to status</label>
+          <label className="text-xs font-semibold text-[#6B778C]">Maps to status</label>
           <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
             <SelectTrigger>
               <SelectValue />
@@ -56,7 +56,7 @@ export function CreateColumnButton({ projectId }: { projectId: string }) {
             </SelectContent>
           </Select>
         </div>
-        <Button size="sm" className="w-full" onClick={submit} disabled={create.isPending}>
+        <Button size="sm" className="w-full bg-[#0052CC] hover:bg-[#0747A6]" onClick={submit} disabled={create.isPending}>
           Add column
         </Button>
       </PopoverContent>

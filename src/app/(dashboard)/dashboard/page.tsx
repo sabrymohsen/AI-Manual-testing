@@ -14,6 +14,12 @@ import {
   Activity,
   FolderOpen
 } from "lucide-react"
+import { AssignedToMeWidget } from "@/components/dashboard/assigned-to-me-widget"
+import { ActivityStream } from "@/components/dashboard/activity-stream"
+import { SprintHealthCard } from "@/components/dashboard/sprint-health-card"
+import { TeamWorkloadWidget } from "@/components/dashboard/team-workload-widget"
+import { BugsBySeverityPie } from "@/components/dashboard/bugs-by-severity-pie"
+import { TestsByStatusPie } from "@/components/dashboard/tests-by-status-pie"
 
 interface ProjectItem {
   id: string
@@ -131,7 +137,7 @@ export default function DashboardPage() {
 
       <ActiveProjectContextBar projectId={activeProjectId} />
 
-      {/* Monitoring Grid */}
+      {/* Monitoring Grid — 4 original KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Pass rate card */}
         <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
@@ -203,36 +209,51 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent activity */}
-      <div>
-        {/* Recent Bugs Triage */}
-        <div className="p-5 border border-slate-100 shadow-sm space-y-4 rounded-2xl bg-card">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>
-          {recentBugs.length === 0 ? (
-            <p className="text-muted-foreground italic text-center py-8">No defects recorded in this workspace scope yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {recentBugs.map((bug) => (
-                <div 
-                  key={bug.id} 
-                  onClick={() => router.push(`/projects/${activeProjectId}/bug-reports`)}
-                  className="p-2 border rounded-lg border-slate-100 hover:bg-slate-50/50 cursor-pointer flex items-center justify-between transition-colors"
-                >
-                  <div className="space-y-0.5 min-w-0">
-                    <span className="font-bold text-slate-700 block truncate">{bug.title}</span>
-                    <span className="text-[10px] text-slate-400 block">{bug.bugKey || "Not synced"} • Severity: {bug.severity}</span>
-                  </div>
-                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shrink-0 ${
-                    bug.status === "Open" ? "bg-red-50 text-rose-600 border border-red-100" :
-                    bug.status === "Fixed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-100 text-slate-500"
-                  }`}>
-                    {bug.status}
-                  </span>
+      {/* NEW: Sprint Health + Team Workload */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SprintHealthCard projectId={activeProjectId} />
+        <TeamWorkloadWidget projectId={activeProjectId} />
+      </div>
+
+      {/* NEW: Pie Chart Gadgets */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <BugsBySeverityPie projectId={activeProjectId} />
+        <TestsByStatusPie projectId={activeProjectId} />
+      </div>
+
+      {/* NEW: Assigned to Me + Activity Stream */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <AssignedToMeWidget projectId={activeProjectId} />
+        <ActivityStream projectId={activeProjectId} />
+      </div>
+
+      {/* Recent Defects */}
+      <div className="p-5 border border-slate-100 shadow-sm space-y-4 rounded-2xl bg-card">
+        <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>
+        {recentBugs.length === 0 ? (
+          <p className="text-muted-foreground italic text-center py-8">No defects recorded in this workspace scope yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {recentBugs.map((bug) => (
+              <div 
+                key={bug.id} 
+                onClick={() => router.push(`/projects/${activeProjectId}/bug-reports`)}
+                className="p-2 border rounded-lg border-slate-100 hover:bg-slate-50/50 cursor-pointer flex items-center justify-between transition-colors"
+              >
+                <div className="space-y-0.5 min-w-0">
+                  <span className="font-bold text-slate-700 block truncate">{bug.title}</span>
+                  <span className="text-[10px] text-slate-400 block">{bug.bugKey || "Not synced"} • Severity: {bug.severity}</span>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+                <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shrink-0 ${
+                  bug.status === "Open" ? "bg-red-50 text-rose-600 border border-red-100" :
+                  bug.status === "Fixed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-100 text-slate-500"
+                }`}>
+                  {bug.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

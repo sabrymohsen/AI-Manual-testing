@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectOwner, requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { updateTestCaseSchema } from "@/schemas"
 import { createAuditLog } from "@/lib/auth/audit"
 
@@ -8,16 +8,20 @@ export async function GET(
   _request: Request,
   { params }: { params: { projectId: string; tcId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Reading a test case is member-level. This was requireProjectOwner, which
+  // demands Owner/Admin — so ordinary project members (testers) got a 404 on
+  // their own project's test cases. Writes below remain owner-gated.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const testCase = await prisma.testCase.findFirst({
     where: { id: params.tcId, projectId: params.projectId },
-        include: {
+    include: {
       steps: { orderBy: { stepNumber: "asc" } },
       requiredCredential: {
         select: { id: true, roleName: true },
       },
+      suite: { select: { id: true, name: true } },
       requirements: {
         include: {
           requirement: true

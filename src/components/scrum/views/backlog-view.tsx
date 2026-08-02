@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import type { ScrumTask, ScrumSprint, TaskFilters } from "@/types/scrum"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations } from "@/hooks/scrum/use-scrum"
+import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations, useScrumEpics } from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
 import { PriorityBadge, STATUS_META, AvatarStack } from "@/components/scrum/shared"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -14,7 +14,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
-import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X } from "lucide-react"
+import { CompleteSprintModal } from "@/components/scrum/modals/complete-sprint-modal"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useRouter, useSearchParams } from "next/navigation"
+import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X, FolderKanban, Filter } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -27,19 +30,12 @@ const SPRINT_STATUS: Record<string, { label: string; cls: string }> = {
   COMPLETED: { label: "Completed", cls: "bg-blue-100 text-blue-700" },
 }
 
-/**
- * Jira-style Backlog: every sprint (with its stories) plus the unscheduled
- * Backlog. Drag a story between the backlog and any sprint to plan it — the
- * move optimistically updates and persists the task's sprintId.
- */
 export function BacklogView({ projectId, filters }: { projectId: string; filters: TaskFilters }) {
   const { data: tasks, isLoading } = useScrumTasks(projectId, filters)
   const { data: sprints } = useScrumSprints(projectId)
+  const { data: epics } = useScrumEpics(projectId)
   const move = useMoveTask(projectId)
   const { update: updateSprint } = useSprintMutations(projectId)
-  // Gate sprint controls on this project's own membership, decoupled from the
-  // sidebar's "active project" (the global permission store can lag behind the
-  // page's projectId on direct navigation). The API also enforces this on PATCH.
   const { data: membership } = useQuery({
     queryKey: ["project-membership", projectId],
     queryFn: () =>
@@ -54,7 +50,45 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
   const { openTask, openCreateTask } = useScrumUI()
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [completeModalOpen, setCompleteModalOpen] = useState(false)
+  const [sprintToComplete, setSprintToComplete] = useState<ScrumSprint | null>(null)
+  const [epicsCollapsed, setEpicsCollapsed] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const qc = useQueryClient()
+
+  // Filters live in the URL (the page derives its `filters` prop from them), so
+  // the backlog reads and writes them directly rather than threading a setter
+  // through every view.
+  const router = useRouter()
+  const search = useSearchParams()
+  const epicFilter = filters.epic ?? null
+
+  const setParams = (mutate: (p: URLSearchParams) => void) => {
+    const p = new URLSearchParams(search.toString())
+    mutate(p)
+    router.replace(`?${p.toString()}`, { scroll: false })
+  }
+
+  const clearFilter = (key: string) => setParams((p) => p.delete(key))
+  const clearAllFilters = () =>
+    setParams((p) => ["q", "status", "priority", "assignee", "sprint", "epic"].forEach((k) => p.delete(k)))
+  const toggleEpicFilter = (id: string) =>
+    setParams((p) => (epicFilter === id ? p.delete("epic") : p.set("epic", id)))
+
+  /** Human-readable chips for whatever is currently narrowing the list. */
+  const activeFilters = useMemo(() => {
+    const out: { key: string; label: string; value: string }[] = []
+    if (filters.search) out.push({ key: "q", label: "Search", value: filters.search })
+    if (filters.epic) {
+      const e = epics?.find((x) => x.id === filters.epic)
+      out.push({ key: "epic", label: "Epic", value: e?.title ?? "Unknown" })
+    }
+    if (filters.status?.length) out.push({ key: "status", label: "Status", value: filters.status.join(", ") })
+    if (filters.priority?.length) out.push({ key: "priority", label: "Priority", value: filters.priority.join(", ") })
+    if (filters.assignee?.length)
+      out.push({ key: "assignee", label: "Assignee", value: `${filters.assignee.length} selected` })
+    return out
+  }, [filters, epics])
 
   const bulk = useMutation({
     mutationFn: async (body: { action: "move" | "delete"; taskIds: string[]; sprintId?: string | null }) => {
@@ -91,8 +125,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
   }
 
   function bulkDelete() {
-    if (!window.confirm(`Delete ${selected.size} ${selected.size === 1 ? "issue" : "issues"}? This can't be undone.`)) return
-    bulk.mutate({ action: "delete", taskIds: [...selected] })
+    setConfirmDeleteOpen(true)
   }
 
   function startSprint(s: ScrumSprint) {
@@ -105,14 +138,9 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
     )
   }
 
-  function completeSprint(s: ScrumSprint) {
-    updateSprint.mutate(
-      { sprintId: s.id, body: { status: "COMPLETED" } },
-      {
-        onSuccess: () => toast.success(`${s.name} completed`),
-        onError: () => toast.error("Failed to complete sprint"),
-      }
-    )
+  function openCompleteModal(s: ScrumSprint) {
+    setSprintToComplete(s)
+    setCompleteModalOpen(true)
   }
 
   const groups = useMemo(() => {
@@ -163,102 +191,262 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
   })
   const backlogList = groups.get(BACKLOG_ID) ?? []
 
+  // Build sprint summary data for the modal
+  const sprintSummaryData = sprintToComplete
+    ? {
+        id: sprintToComplete.id,
+        name: sprintToComplete.name,
+        goal: sprintToComplete.goal,
+        startDate: sprintToComplete.startDate,
+        endDate: sprintToComplete.endDate,
+        tasks: (groups.get(sprintToComplete.id) ?? []).map((t) => ({
+          id: t.id,
+          key: t.key,
+          title: t.title,
+          status: t.status,
+          storyPoints: t.storyPoints,
+          type: t.type,
+          assignees: t.assignees.map((a) => ({ name: a.name, email: a.email })),
+        })),
+      }
+    : null
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="h-full overflow-y-auto">
-        <div className="w-full space-y-4 pb-6">
-        {orderedSprints.map((s) => (
+    <>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="h-full overflow-y-auto">
+          <div className="w-full space-y-4 pb-6">
+          {/* Active filters — without this the sections below just render
+              empty with no explanation of why. */}
+          {activeFilters.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-3 py-2">
+              <Filter className="h-3.5 w-3.5 shrink-0 text-primary" />
+              <span className="text-xs font-semibold text-primary">Filtered</span>
+              {activeFilters.map((f) => (
+                <span
+                  key={f.key}
+                  className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium"
+                >
+                  <span className="text-muted-foreground">{f.label}:</span>
+                  {f.value}
+                  <button
+                    onClick={() => clearFilter(f.key)}
+                    className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    aria-label={`Clear ${f.label} filter`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+              <button
+                onClick={clearAllFilters}
+                className="ml-auto text-[11px] font-semibold text-primary underline-offset-2 hover:underline"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
+
+          {/* Epics — a compact chip strip that doubles as the epic filter.
+              This used to be one full-height row per epic, which pushed the
+              sprints and backlog below the fold on any project with a handful
+              of epics. */}
+          {epics && epics.length > 0 && (
+            <div className="overflow-hidden rounded-xl border bg-card">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button
+                  onClick={() => setEpicsCollapsed((v) => !v)}
+                  className="rounded p-0.5 text-muted-foreground transition-colors hover:bg-muted"
+                  aria-expanded={!epicsCollapsed}
+                  aria-label={epicsCollapsed ? "Expand epics" : "Collapse epics"}
+                >
+                  {epicsCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                <FolderKanban className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold">Epics</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+                  {epics.length}
+                </span>
+                {epicFilter && (
+                  <button
+                    onClick={() => clearFilter("epic")}
+                    className="ml-auto text-[11px] font-semibold text-primary underline-offset-2 hover:underline"
+                  >
+                    Show all
+                  </button>
+                )}
+              </div>
+
+              {!epicsCollapsed && (
+                <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto border-t bg-muted/20 px-3 py-2.5">
+                  {epics.map((epic) => {
+                    const epicTasks = (tasks ?? []).filter((t) => t.epicId === epic.id)
+                    const epicPoints = epicTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0)
+                    const on = epicFilter === epic.id
+                    return (
+                      <button
+                        key={epic.id}
+                        onClick={() => toggleEpicFilter(epic.id)}
+                        aria-pressed={on}
+                        title={`${epic.title} — ${epicTasks.length} issue(s)${epicPoints ? `, ${epicPoints} pts` : ""}`}
+                        className={cn(
+                          "inline-flex max-w-[15rem] items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                          on
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-input bg-background text-foreground hover:bg-accent"
+                        )}
+                      >
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: epic.color }}
+                        />
+                        <span className="truncate">{epic.title}</span>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-1.5 text-[10px] font-bold",
+                            epicTasks.length === 0
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-primary/15 text-primary"
+                          )}
+                        >
+                          {epicTasks.length}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+          {orderedSprints.map((s) => (
+            <Section
+              key={s.id}
+              id={s.id}
+              title={s.name}
+              icon={<Zap className="h-4 w-4 text-amber-500" />}
+              subtitle={
+                s.startDate && s.endDate
+                  ? `${format(new Date(s.startDate), "MMM d")} – ${format(new Date(s.endDate), "MMM d")}`
+                  : s.goal || undefined
+              }
+              badge={SPRINT_STATUS[s.status]}
+              tasks={groups.get(s.id) ?? []}
+              collapsed={collapsed.has(s.id)}
+              onToggle={() => toggle(s.id)}
+              onOpenTask={openTask}
+              onCreate={() => openCreateTask(undefined, s.id)}
+              emptyText={
+                activeFilters.length > 0
+                  ? "No issues in this sprint match the current filters."
+                  : "Drag stories here to plan this sprint."
+              }
+              onStart={canManageSprints && s.status === "PLANNED" ? () => startSprint(s) : undefined}
+              onComplete={canManageSprints && s.status === "ACTIVE" ? () => openCompleteModal(s) : undefined}
+              sprintBusy={updateSprint.isPending}
+              selected={selected}
+              onToggleSelect={canBulkMove || canBulkDelete ? toggleSelect : undefined}
+            />
+          ))}
+
           <Section
-            key={s.id}
-            id={s.id}
-            title={s.name}
-            icon={<Zap className="h-4 w-4 text-amber-500" />}
-            subtitle={
-              s.startDate && s.endDate
-                ? `${format(new Date(s.startDate), "MMM d")} – ${format(new Date(s.endDate), "MMM d")}`
-                : s.goal || undefined
-            }
-            badge={SPRINT_STATUS[s.status]}
-            tasks={groups.get(s.id) ?? []}
-            collapsed={collapsed.has(s.id)}
-            onToggle={() => toggle(s.id)}
+            id={BACKLOG_ID}
+            title="Backlog"
+            icon={<Inbox className="h-4 w-4 text-slate-500" />}
+            subtitle="Unscheduled user stories"
+            tasks={backlogList}
+            collapsed={collapsed.has(BACKLOG_ID)}
+            onToggle={() => toggle(BACKLOG_ID)}
             onOpenTask={openTask}
-            onCreate={() => openCreateTask(undefined, s.id)}
-            emptyText="Drag stories here to plan this sprint."
-            onStart={canManageSprints && s.status === "PLANNED" ? () => startSprint(s) : undefined}
-            onComplete={canManageSprints && s.status === "ACTIVE" ? () => completeSprint(s) : undefined}
-            sprintBusy={updateSprint.isPending}
+            onCreate={() => openCreateTask()}
+            emptyText={
+              activeFilters.length > 0
+                ? "No backlog issues match the current filters."
+                : "No stories in the backlog."
+            }
             selected={selected}
             onToggleSelect={canBulkMove || canBulkDelete ? toggleSelect : undefined}
           />
-        ))}
-
-        <Section
-          id={BACKLOG_ID}
-          title="Backlog"
-          icon={<Inbox className="h-4 w-4 text-slate-500" />}
-          subtitle="Unscheduled user stories"
-          tasks={backlogList}
-          collapsed={collapsed.has(BACKLOG_ID)}
-          onToggle={() => toggle(BACKLOG_ID)}
-          onOpenTask={openTask}
-          onCreate={() => openCreateTask()}
-          emptyText="No stories in the backlog."
-          selected={selected}
-          onToggleSelect={canBulkMove || canBulkDelete ? toggleSelect : undefined}
-        />
-        </div>
-      </div>
-
-      {/* Floating bulk-action bar */}
-      {selected.size > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-xl border bg-card px-3 py-2 shadow-xl">
-            <span className="text-xs font-bold">{selected.size} selected</span>
-            {canBulkMove && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    disabled={bulk.isPending}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input px-2.5 text-xs font-semibold hover:bg-muted disabled:opacity-60"
-                  >
-                    {bulk.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                    Move to
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" className="w-48">
-                  <DropdownMenuItem onClick={() => bulkMove(null)} className="gap-2">
-                    <Inbox className="h-4 w-4 text-slate-500" /> Backlog
-                  </DropdownMenuItem>
-                  {orderedSprints
-                    .filter((s) => s.status !== "COMPLETED")
-                    .map((s) => (
-                      <DropdownMenuItem key={s.id} onClick={() => bulkMove(s.id)} className="gap-2">
-                        <Zap className="h-4 w-4 text-amber-500" /> {s.name}
-                      </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {canBulkDelete && (
-              <button
-                onClick={bulkDelete}
-                disabled={bulk.isPending}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/30 px-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
-              >
-                <Trash2 className="h-3.5 w-3.5" /> Delete
-              </button>
-            )}
-            <button
-              onClick={() => setSelected(new Set())}
-              className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
-            >
-              <X className="h-3.5 w-3.5" /> Clear
-            </button>
           </div>
         </div>
-      )}
-    </DragDropContext>
+
+        {/* Floating bulk-action bar */}
+        {selected.size > 0 && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-xl border bg-card px-3 py-2 shadow-xl">
+              <span className="text-xs font-bold">{selected.size} selected</span>
+              {canBulkMove && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      disabled={bulk.isPending}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input px-2.5 text-xs font-semibold hover:bg-muted disabled:opacity-60"
+                    >
+                      {bulk.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                      Move to
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="w-48">
+                    <DropdownMenuItem onClick={() => bulkMove(null)} className="gap-2">
+                      <Inbox className="h-4 w-4 text-slate-500" /> Backlog
+                    </DropdownMenuItem>
+                    {orderedSprints
+                      .filter((s) => s.status !== "COMPLETED")
+                      .map((s) => (
+                        <DropdownMenuItem key={s.id} onClick={() => bulkMove(s.id)} className="gap-2">
+                          <Zap className="h-4 w-4 text-amber-500" /> {s.name}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+              {canBulkDelete && (
+                <button
+                  onClick={bulkDelete}
+                  disabled={bulk.isPending}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/30 px-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </button>
+              )}
+              <button
+                onClick={() => setSelected(new Set())}
+                className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-3.5 w-3.5" /> Clear
+              </button>
+            </div>
+          </div>
+        )}
+      </DragDropContext>
+
+      {/* Complete Sprint Modal */}
+      <CompleteSprintModal
+        projectId={projectId}
+        sprint={sprintSummaryData}
+        open={completeModalOpen}
+        onOpenChange={setCompleteModalOpen}
+        onCompleted={() => {
+          qc.invalidateQueries({ queryKey: ["scrum", projectId] })
+          setSprintToComplete(null)
+        }}
+        sprints={orderedSprints.map((s) => ({ id: s.id, name: s.name, status: s.status }))}
+      />
+
+      {/* Bulk-delete confirmation (replaces the native window.confirm) */}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        variant="danger"
+        title={`Delete ${selected.size} ${selected.size === 1 ? "issue" : "issues"}?`}
+        description="This permanently removes the selected issues along with their comments, subtasks and links. It cannot be undone."
+        confirmLabel={`Delete ${selected.size}`}
+        isLoading={bulk.isPending}
+        onConfirm={async () => {
+          await bulk.mutateAsync({ action: "delete", taskIds: [...selected] })
+          setConfirmDeleteOpen(false)
+        }}
+        onCancel={() => setConfirmDeleteOpen(false)}
+      />
+    </>
   )
 }
 
@@ -432,7 +620,7 @@ function BacklogRow({
       <span className="flex-1 truncate text-sm">{task.title}</span>
       {task.epic && (
         <span
-          className="hidden items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold md:inline-flex"
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
           style={{ backgroundColor: `${task.epic.color}1a`, color: task.epic.color }}
           title={task.epic.title}
         >

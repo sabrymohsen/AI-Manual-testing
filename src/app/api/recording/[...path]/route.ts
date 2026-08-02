@@ -9,10 +9,26 @@ import { saveFile } from "@/lib/storage"
 async function verifyRecordingSession(sessionId: string, userId: string) {
   const rec = await prisma.recordingSession.findUnique({
     where: { id: sessionId },
-    include: { project: { select: { userId: true } } }
+    include: {
+      project: {
+        select: {
+          id: true,
+          userId: true,
+          projectMembers: { select: { userId: true } }
+        }
+      }
+    }
   })
   if (!rec) return notFoundResponse("Recording session not found")
-  if (rec.project.userId !== userId) return unauthorizedResponse("Access denied")
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } })
+  const isGlobalAdmin = user?.role === "Admin"
+  const isOwner = rec.project.userId === userId
+  const isMember = rec.project.projectMembers.some((m) => m.userId === userId)
+
+  if (!isGlobalAdmin && !isOwner && !isMember) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 })
+  }
   return null
 }
 
@@ -132,11 +148,23 @@ export async function GET(
     const projectId = searchParams.get("projectId")
     if (!projectId) return badRequestResponse("projectId is required")
 
-    // Verify owner
+    // Verify project membership
+    const user = await prisma.user.findUnique({ where: { id: auth.session!.user.id }, select: { role: true } })
+    const isGlobalAdmin = user?.role === "Admin"
     const project = await prisma.project.findFirst({
-      where: { id: projectId, userId: auth.session!.user.id }
+      where: {
+        id: projectId,
+        ...(isGlobalAdmin
+          ? {}
+          : {
+              OR: [
+                { userId: auth.session!.user.id },
+                { projectMembers: { some: { userId: auth.session!.user.id } } }
+              ]
+            })
+      }
     })
-    if (!project) return unauthorizedResponse("Access denied")
+    if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 })
 
     const session = await prisma.recordingSession.findFirst({
       where: {
@@ -563,7 +591,25 @@ export async function POST(
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       try {
-        await recorderWorkerRequest(`/sessions/${sessionId}/finish`, { method: "POST", body: "{}" })
+        try {
+          await recorderWorkerRequest(`/sessions/${sessionId}/finish`, { method: "POST", body: "{}" })
+        } catch {}
+
+        // Mark session finished in DB
+        await prisma.recordingSession.updateMany({
+          where: { id: sessionId },
+          data: { status: "Finished", finishedAt: new Date(), connectionStatus: "BrowserClosed" },
+        })
+
+        // Auto-convert recorded session cases into permanent TestCase library records
+        const recCases = await prisma.recordedTestCase.findMany({
+          where: { sessionId },
+          select: { id: true }
+        })
+        for (const c of recCases) {
+          await saveRecordedCaseAsTestCase(c.id).catch(() => {})
+        }
+
         return NextResponse.json({ success: true })
       } catch (err) {
         return workerErrorResponse(err)

@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
-  serverExternalPackages: ['playwright'],
   experimental: {
-    serverComponentsExternalPackages: ['playwright'],
+    serverComponentsExternalPackages: ["playwright"],
   },
   images: {
     unoptimized: true,
