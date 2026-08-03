@@ -106,9 +106,20 @@ interface BugReport {
   testCase?: { id: string; title: string } | null
   testRun?: { id: string; status: string; browserType: string; createdAt: string } | null
   manualTestSession?: { id: string; name: string } | null
-  comments: BugComment[]
-  activities: BugActivity[]
-  occurrences: BugOccurrence[]
+  // Present on the single-bug detail response. The LIST endpoint deliberately
+  // returns counts instead — it used to ship every comment, activity and
+  // occurrence for every bug to render rows that showed none of them.
+  comments?: BugComment[]
+  activities?: BugActivity[]
+  occurrences?: BugOccurrence[]
+  commentCount?: number
+  activityCount?: number
+  /** Times this defect has recurred across test runs. */
+  occurrenceCount?: number
+  /** Times this bug has been reopened after being settled. */
+  reopenCount?: number
+  /** Whole days since the bug was filed, computed server-side. */
+  ageDays?: number
   openProjectSyncStatus?: string
   assignedTo?: string | null
   openProjectParentId?: string | null
@@ -207,6 +218,9 @@ export default function ProjectBugReportsPage() {
   const [filterPriority, setFilterPriority] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterSource, setFilterSource] = useState("all")
+  // Triage filters — the two questions a triage session actually opens with.
+  const [filterUnassigned, setFilterUnassigned] = useState(false)
+  const [filterReopened, setFilterReopened] = useState(false)
 
   // Detail Drawer States
   const [selectedBugId, setSelectedBugId] = useState<string | null>(null)
@@ -270,6 +284,10 @@ export default function ProjectBugReportsPage() {
   // Toast feedback
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null)
 
+  // Set when the server rejects a status change for want of a resolution, so we
+  // can ask why the bug is being closed instead of just failing.
+  const [resolutionPrompt, setResolutionPrompt] = useState<{ bugId: string; targetStatus: string } | null>(null)
+
   // OpenProject project members (assignable users)
   const [opMembers, setOpMembers] = useState<Array<{ id: string; name: string }>>([])
   // OpenProject boards the bug can be placed on
@@ -332,6 +350,11 @@ export default function ProjectBugReportsPage() {
       .catch(() => setOpSourceOptions([]))
   }, [projectId])
 
+  // Declared above loadBugsList, which reads it. Safe either way here since
+  // loadBugsList is only invoked from an effect, but keeping declarations ahead
+  // of their use avoids the temporal-dead-zone trap.
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery)
+
   // Load bugs list with queries
   const loadBugsList = async () => {
     setLoading(true)
@@ -341,7 +364,9 @@ export default function ProjectBugReportsPage() {
       if (filterPriority !== "all") qParams.push(`priority=${filterPriority}`)
       if (filterStatus !== "all") qParams.push(`status=${filterStatus}`)
       if (filterSource !== "all") qParams.push(`source=${filterSource}`)
-      if (searchQuery) qParams.push(`search=${encodeURIComponent(searchQuery)}`)
+      if (debouncedSearch) qParams.push(`search=${encodeURIComponent(debouncedSearch)}`)
+      if (filterUnassigned) qParams.push("assignee=unassigned")
+      if (filterReopened) qParams.push("reopened=true")
 
       const queryStr = qParams.length > 0 ? `?${qParams.join("&")}` : ""
       const res = await fetch(`/api/projects/${projectId}/bug-reports${queryStr}`)
@@ -356,9 +381,20 @@ export default function ProjectBugReportsPage() {
     }
   }
 
+  // `searchQuery` used to sit directly in this dependency array with no
+  // debounce, so typing "checkout" fired eight full list requests — each one
+  // returning every bug in the project — and slower responses could land after
+  // faster ones and settle the list on the wrong result. Dropdown filters still
+  // apply immediately; only the typed query waits.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 300)
+    return () => clearTimeout(t)
+  }, [searchQuery])
+
   useEffect(() => {
     loadBugsList()
-  }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, searchQuery])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, debouncedSearch, filterUnassigned, filterReopened])
 
   // Read query params on load to automatically open detail drawer
   useEffect(() => {
@@ -484,7 +520,7 @@ export default function ProjectBugReportsPage() {
 
   // Change a bug's status by id (used by board drag-and-drop). Optimistic update
   // with revert-on-failure.
-  const handleChangeBugStatus = async (bugId: string, newStatus: string) => {
+  const handleChangeBugStatus = async (bugId: string, newStatus: string, resolution?: string) => {
     const target = bugs.find(b => b.id === bugId)
     if (!target || target.status === newStatus) return
 
@@ -497,14 +533,27 @@ export default function ProjectBugReportsPage() {
       const res = await fetch(`/api/bug-reports/${bugId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, ...(resolution ? { resolution } : {}) })
       })
       if (res.ok) {
         showToastMsg(`Moved to ${newStatus}`)
-      } else {
-        showToastMsg("Failed to update status", "error")
-        loadBugsList() // revert to server truth
+        return
       }
+
+      const err = await res.json().catch(() => ({}))
+
+      // The server now enforces the workflow. Closing a bug needs a reason, so
+      // ask for one and retry rather than reporting a dead-end failure.
+      if (err.code === "RESOLUTION_REQUIRED") {
+        loadBugsList() // undo the optimistic move until a reason is chosen
+        setResolutionPrompt({ bugId, targetStatus: newStatus })
+        return
+      }
+
+      // Illegal move (e.g. Closed straight back to InProgress) — the server
+      // message names what IS allowed, so show it rather than a generic error.
+      showToastMsg(err.error || "Failed to update status", "error")
+      loadBugsList() // revert to server truth
     } catch {
       showToastMsg("Network error updating status", "error")
       loadBugsList()
@@ -960,8 +1009,34 @@ export default function ProjectBugReportsPage() {
             <option value="Critical">Critical</option>
           </select>
 
-          <select 
-            value={filterPriority} 
+          {/* Triage toggles. Both are applied server-side. */}
+          <button
+            onClick={() => setFilterUnassigned(v => !v)}
+            aria-pressed={filterUnassigned}
+            title="Bugs with nobody assigned"
+            className={`h-9 rounded-lg border px-3 text-xs font-semibold transition-colors ${
+              filterUnassigned
+                ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            Unassigned
+          </button>
+          <button
+            onClick={() => setFilterReopened(v => !v)}
+            aria-pressed={filterReopened}
+            title="Bugs that have been reopened at least once"
+            className={`h-9 rounded-lg border px-3 text-xs font-semibold transition-colors ${
+              filterReopened
+                ? "border-rose-300 bg-rose-50 text-rose-700"
+                : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
+          >
+            Reopened
+          </button>
+
+          <select
+            value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value)}
             className="h-9 px-3 rounded-lg border text-xs bg-background outline-none min-w-[110px]"
           >
@@ -1252,9 +1327,52 @@ export default function ProjectBugReportsPage() {
                             {!b.testCase && !b.testRun && (
                               <span className="text-[10px] text-slate-400 italic">No execution link</span>
                             )}
+                            {/* Recurrence. BugOccurrence rows have been written
+                                by on-test-run-completed.ts all along and were
+                                never shown anywhere — this is the signal that
+                                separates a one-off from a live regression. */}
+                            {(b.occurrenceCount ?? 0) > 1 && (
+                              <div
+                                className="flex items-center gap-1 text-[10px] font-bold text-amber-700"
+                                title={`This defect has reproduced ${b.occurrenceCount} times across test runs`}
+                              >
+                                <RefreshCw className="h-3 w-3 shrink-0" />
+                                <span>Recurred ×{b.occurrenceCount}</span>
+                              </div>
+                            )}
+                            {/* A bug reopened more than once has failed
+                                verification repeatedly — a different problem
+                                from one that simply bounced back after a fix. */}
+                            {(b.reopenCount ?? 0) > 0 && (
+                              <div
+                                className="flex items-center gap-1 text-[10px] font-bold text-rose-700"
+                                title={`Reopened ${b.reopenCount} time(s) after being settled`}
+                              >
+                                <AlertCircle className="h-3 w-3 shrink-0" />
+                                <span>Reopened ×{b.reopenCount}</span>
+                              </div>
+                            )}
                           </td>
                           <td className="p-3 text-[10px] font-medium text-slate-400">
-                            {new Date(b.createdAt).toLocaleDateString()}
+                            <div>{new Date(b.createdAt).toLocaleDateString()}</div>
+                            {/* Age, so a defect quietly sitting for months is
+                                visible without doing date arithmetic by eye.
+                                Only emphasised while the bug is still live. */}
+                            {b.ageDays !== undefined &&
+                              !["Closed", "Rejected", "Duplicate"].includes(b.status) && (
+                                <div
+                                  className={
+                                    b.ageDays >= 30
+                                      ? "font-bold text-rose-600"
+                                      : b.ageDays >= 14
+                                        ? "font-bold text-amber-600"
+                                        : "text-slate-400"
+                                  }
+                                  title={`Open for ${b.ageDays} day(s)`}
+                                >
+                                  {b.ageDays === 0 ? "today" : `${b.ageDays}d open`}
+                                </div>
+                              )}
                           </td>
                           <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
@@ -2065,12 +2183,12 @@ export default function ProjectBugReportsPage() {
                     </div>
                   )}
 
-                  <span className="text-[10px] text-slate-500 uppercase block select-none">Audit log activities ({selectedBug.activities.length})</span>
-                  {selectedBug.activities.length === 0 ? (
+                  <span className="text-[10px] text-slate-500 uppercase block select-none">Audit log activities ({selectedBug.activities?.length ?? 0})</span>
+                  {(selectedBug.activities?.length ?? 0) === 0 ? (
                     <p className="text-[10px] italic text-slate-400">No activity logged.</p>
                   ) : (
                     <div className="space-y-2.5">
-                      {selectedBug.activities.map((act) => (
+                      {(selectedBug.activities ?? []).map((act) => (
                         <div key={act.id} className="p-2.5 border rounded-xl bg-slate-50/50 space-y-1 text-[11px] font-medium leading-relaxed">
                           <div className="flex justify-between items-center text-slate-600 font-bold">
                             <span className="text-indigo-600">{act.action}</span>
@@ -2219,6 +2337,56 @@ export default function ProjectBugReportsPage() {
           loadBugsList()
         }}
       />
+
+      {/* 9. Resolution prompt — shown when the workflow requires a reason for
+             moving a bug to Resolved / Closed / Rejected. Without this the
+             status change would just fail with no way forward. */}
+      {resolutionPrompt && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+          onClick={() => setResolutionPrompt(null)}
+        >
+          <div
+            className="w-full max-w-sm space-y-4 rounded-2xl border bg-background p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1.5">
+              <h3 className="text-base font-semibold">
+                Why is this moving to {resolutionPrompt.targetStatus}?
+              </h3>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Recording a reason is what makes fix-rate and reopen reporting possible later.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              {(["Fixed", "WontFix", "CannotReproduce", "Duplicate", "ByDesign"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => {
+                    const { bugId, targetStatus } = resolutionPrompt
+                    setResolutionPrompt(null)
+                    handleChangeBugStatus(bugId, targetStatus, r)
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:border-primary/40 hover:bg-accent"
+                >
+                  <span className="font-medium">
+                    {r === "WontFix" ? "Won't fix" : r === "CannotReproduce" ? "Cannot reproduce" : r === "ByDesign" ? "By design" : r}
+                  </span>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setResolutionPrompt(null)}
+              className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   )

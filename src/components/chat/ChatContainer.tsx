@@ -9,6 +9,7 @@ import { ChatInput } from "./ChatInput";
 import { ThreadPanel } from "./ThreadPanel";
 import { MessageCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PRESENCE_HEARTBEAT_MS } from "@/lib/presence";
 
 interface ChatContainerProps {
   projectId: string;
@@ -95,18 +96,28 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
     loadProjectData();
   }, [projectId]);
 
-  // Periodically send presence heartbeat (every 25 seconds)
+  // Heartbeat so we stay online, and re-read everyone else's presence on the
+  // same tick. Without the re-read a member who simply stopped heartbeating
+  // (closed the tab, lost the network) would keep a green dot here until the
+  // page was reloaded, because nothing pushes a "went offline" event.
   useEffect(() => {
+    if (!projectId) return;
     const interval = setInterval(async () => {
       try {
         await fetch("/api/presence/heartbeat", { method: "POST" });
       } catch (err) {
         console.error("Heartbeat error:", err);
       }
-    }, 25000);
+      try {
+        const res = await fetch(`/api/presence?projectId=${projectId}`);
+        if (res.ok) setPresences((await res.json()).presences || []);
+      } catch {
+        // Transient network failure — the next tick will pick it up.
+      }
+    }, PRESENCE_HEARTBEAT_MS);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [projectId, setPresences]);
 
   // Fetch messages when active channel changes
   useEffect(() => {

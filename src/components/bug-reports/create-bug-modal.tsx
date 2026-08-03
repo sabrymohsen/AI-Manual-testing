@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check } from "lucide-react"
+import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check, AlertTriangle } from "lucide-react"
 
 /**
  * Shared bug-creation modal — extracted from the Bug Reports page so the same
@@ -94,6 +94,11 @@ export function CreateBugModal({
   const [steps, setSteps] = useState<CreateBugStep[]>([])
   const [syncOP, setSyncOP] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  // Possible duplicates for the title being typed.
+  const [duplicateMatches, setDuplicateMatches] = useState<
+    { id: string; bugKey: string | null; title: string; status: string; score: number }[]
+  >([])
   const [error, setError] = useState("")
   const [aiGenerating, setAiGenerating] = useState(false)
 
@@ -108,10 +113,45 @@ export function CreateBugModal({
 
   const [opMembers, setOpMembers] = useState<Array<{ id: string; name: string }>>([])
 
+  /**
+   * Look for existing bugs matching the title being typed.
+   *
+   * Debounced, and aborts the in-flight request on each keystroke so a slow
+   * early response can't overwrite the results for a longer, later title.
+   */
+  useEffect(() => {
+    if (!open || title.trim().length < 6) {
+      setDuplicateMatches([])
+      return
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(async () => {
+      try {
+        const p = new URLSearchParams({ title: title.trim() })
+        const res = await fetch(
+          `/api/projects/${projectId}/bug-reports/similar?${p.toString()}`,
+          { signal: controller.signal }
+        )
+        if (!res.ok) return
+        const data = await res.json()
+        setDuplicateMatches(Array.isArray(data.matches) ? data.matches : [])
+      } catch {
+        // Aborted or offline — a missing hint isn't worth an error message.
+      }
+    }, 400)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [open, title, projectId])
+
   // Reset + apply prefills every time the modal opens
   useEffect(() => {
     if (!open) return
     setTitle(initialValues?.title || "")
+    setDuplicateMatches([])
     setDesc(initialValues?.description || "")
     setSeverity("Medium")
     setPriority("Medium")
@@ -409,6 +449,46 @@ export function CreateBugModal({
               className="h-9 bg-background"
               required
             />
+
+            {/* Possible duplicates, checked as the title is typed. The app could
+                already merge duplicates after the fact via mark-duplicate, but
+                that only helps once two people have each written the same defect
+                up — catching it here is what prevents the duplicate. */}
+            {duplicateMatches.length > 0 && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-500/40 dark:bg-amber-500/10">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                  {duplicateMatches.length === 1
+                    ? "A similar defect already exists"
+                    : `${duplicateMatches.length} similar defects already exist`}
+                </p>
+                <div className="mt-1.5 space-y-1">
+                  {duplicateMatches.map((m) => (
+                    <a
+                      key={m.id}
+                      href={`/projects/${projectId}/bug-reports?bugId=${m.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 rounded-md bg-background/70 px-2 py-1.5 text-[11px] transition-colors hover:bg-background"
+                    >
+                      <span className="shrink-0 font-mono font-bold text-amber-700 dark:text-amber-400">
+                        {m.bugKey || "BUG"}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate" title={m.title}>{m.title}</span>
+                      <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
+                        {m.status}
+                      </span>
+                      <span className="shrink-0 text-[10px] font-bold text-amber-700 dark:text-amber-400">
+                        {m.score}%
+                      </span>
+                    </a>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[10px] text-amber-700/80 dark:text-amber-400/80">
+                  Still different? Carry on filing — this is a hint, not a block.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

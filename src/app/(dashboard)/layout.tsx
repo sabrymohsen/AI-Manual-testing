@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import {
@@ -56,7 +56,11 @@ interface ProjectOption {
   id: string
   name: string
   environment?: string
+  role: string
 }
+
+/** Key for the "last project the user was working in" hint. */
+const ACTIVE_PROJECT_KEY = "activeProjectId"
 
 interface ProjectStats {
   id: string
@@ -87,6 +91,8 @@ export default function DashboardLayout({
 
   // Project selector state
   const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [projectsLoaded, setProjectsLoaded] = useState(false)
+  const [canCreateProject, setCanCreateProject] = useState(false)
   const [activeProjectId, setActiveProjectId] = useState<string>("")
   const [activeProjectStats, setActiveProjectStats] = useState<ProjectStats | null>(null)
   const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string; avatarUrl?: string | null } | null>(null)
@@ -99,29 +105,35 @@ export default function DashboardLayout({
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
+  // The project id in the URL, when we're on a project-scoped route. `/projects`
+  // and `/projects/new` are not project ids.
+  const urlProjectId = useMemo(() => {
+    const match = pathname.match(/^\/projects\/([^/]+)/)
+    const id = match?.[1]
+    return id && id !== "new" ? id : null
+  }, [pathname])
+
+  // Every project the user can actually open (owned *and* member-of). This has
+  // to be the same list the switcher shows, otherwise the selected project and
+  // the switcher disagree — /api/projects only returns projects the user
+  // created, so a member-only user would resolve to no project at all.
+  const loadProjects = useCallback(async () => {
+    try {
+      const res = await fetch("/api/my-projects")
+      if (res.ok) {
+        const data = await res.json()
+        setProjects(data.projects || [])
+        setCanCreateProject(!!data.canCreateProject)
+      }
+    } catch (err) {
+      console.error("Error loading project list:", err)
+    } finally {
+      setProjectsLoaded(true)
+    }
+  }, [])
+
   // Fetch project list & setup active context
   useEffect(() => {
-    async function loadProjects() {
-      try {
-        const res = await fetch("/api/projects")
-        if (res.ok) {
-          const data = await res.json()
-          const list = data.items || data.projects || []
-          setProjects(list)
-
-          // Load active project from localStorage
-          const savedId = localStorage.getItem("activeProjectId")
-          if (savedId && list.some((p: any) => p.id === savedId)) {
-            setActiveProjectId(savedId)
-          } else if (list.length > 0) {
-            setActiveProjectId(list[0].id)
-            localStorage.setItem("activeProjectId", list[0].id)
-          }
-        }
-      } catch (err) {
-        console.error("Error loading project list:", err)
-      }
-    }
     async function loadUser() {
       try {
         const res = await fetch("/api/me")
@@ -145,6 +157,11 @@ export default function DashboardLayout({
     const handleProfileUpdated = () => loadUser()
     window.addEventListener("profile-updated", handleProfileUpdated)
 
+    // Pages that create / delete / leave a project dispatch this so the
+    // switcher list stays in sync without a reload.
+    const handleProjectsUpdated = () => loadProjects()
+    window.addEventListener("projects-updated", handleProjectsUpdated)
+
     // Listen to Ctrl + K / Cmd + K keyboard shortcut
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === "k") {
@@ -156,8 +173,55 @@ export default function DashboardLayout({
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("profile-updated", handleProfileUpdated)
+      window.removeEventListener("projects-updated", handleProjectsUpdated)
     }
-  }, [])
+  }, [loadProjects])
+
+  // Resolve which project is selected, in priority order:
+  //   1. the project in the URL — that's where the user actually is
+  //   2. the last project they selected (persisted in localStorage)
+  //   3. their only project, when they have exactly one
+  //   4. the first project in the list
+  // The chosen id is written back to localStorage so it survives a reload and
+  // a sign-out/sign-in on the same browser.
+  const refetchedFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!projectsLoaded) return
+
+    if (projects.length === 0) {
+      // A project the user just created won't be in the cached list yet.
+      if (urlProjectId && refetchedFor.current !== urlProjectId) {
+        refetchedFor.current = urlProjectId
+        loadProjects()
+      } else if (activeProjectId) {
+        setActiveProjectId("")
+      }
+      return
+    }
+
+    const has = (id: string | null) => !!id && projects.some((p) => p.id === id)
+
+    if (urlProjectId && has(urlProjectId)) {
+      if (urlProjectId !== activeProjectId) {
+        setActiveProjectId(urlProjectId)
+        localStorage.setItem(ACTIVE_PROJECT_KEY, urlProjectId)
+      }
+      return
+    }
+    // On a project URL we can't see — refetch once in case it's brand new.
+    if (urlProjectId && refetchedFor.current !== urlProjectId) {
+      refetchedFor.current = urlProjectId
+      loadProjects()
+      return
+    }
+    // Keep the current selection as long as it is still a project we can open.
+    if (has(activeProjectId)) return
+
+    const saved = localStorage.getItem(ACTIVE_PROJECT_KEY)
+    const next = has(saved) ? (saved as string) : projects[0].id
+    setActiveProjectId(next)
+    localStorage.setItem(ACTIVE_PROJECT_KEY, next)
+  }, [projectsLoaded, projects, urlProjectId, activeProjectId, loadProjects])
 
   // Fetch stats whenever activeProjectId changes
   useEffect(() => {
@@ -211,7 +275,7 @@ export default function DashboardLayout({
 
   function handleSelectProject(projectId: string) {
     setActiveProjectId(projectId)
-    localStorage.setItem("activeProjectId", projectId)
+    localStorage.setItem(ACTIVE_PROJECT_KEY, projectId)
     // Dispatch event to wake up page listeners
     window.dispatchEvent(new Event("projectChanged"))
 
@@ -288,7 +352,13 @@ export default function DashboardLayout({
 
         {/* Global Project Switcher (with per-project role badges) */}
         {user?.role !== "Admin" && (
-          <ProjectSwitcher activeProjectId={activeProjectId} onSelect={handleSelectProject} />
+          <ProjectSwitcher
+            projects={projects}
+            canCreateProject={canCreateProject}
+            loading={!projectsLoaded}
+            activeProjectId={activeProjectId}
+            onSelect={handleSelectProject}
+          />
         )}
 
         <nav className="flex flex-col gap-1 p-4 flex-grow">
