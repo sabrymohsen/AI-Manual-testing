@@ -2,6 +2,7 @@ import { Server as NetServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { prisma } from "@/lib/db";
 import { verifyToken } from "@/lib/auth";
+import { stalePresenceWhere } from "@/lib/presence";
 
 let io: SocketIOServer | null = null;
 
@@ -12,6 +13,17 @@ export function initSocket(server: NetServer) {
     path: "/api/socket",
     cors: { origin: "*", methods: ["GET", "POST"] },
   });
+
+  // A redeploy kills every socket without the disconnect handler necessarily
+  // running, leaving rows stuck at `isOnline: true`. Clear the ones that have
+  // stopped heartbeating. Deliberately stale-only, so a second replica's live
+  // users aren't knocked offline.
+  prisma.presence
+    .updateMany({ where: stalePresenceWhere(), data: { isOnline: false } })
+    .then(({ count }) => {
+      if (count) console.log(`> Cleared ${count} stale presence row(s) on startup`);
+    })
+    .catch((err) => console.error("Presence startup sweep failed:", err));
 
   io.use(async (socket, next) => {
     try {

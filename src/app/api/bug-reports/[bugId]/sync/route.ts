@@ -7,13 +7,16 @@
  * same provider-agnostic engine (syncBugReport).
  */
 import { NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 import { syncBugReport } from "@/lib/integrations/core/sync-bug-report"
+import { authorizeBugWrite } from "@/lib/bug-reports/guards"
 import { prisma } from "@/lib/db"
 
 export async function POST(request: Request, { params }: { params: { bugId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // This route is addressed by bug id with no project in the path. It used to
+  // check only requireAuth(), so any authenticated user could write placement
+  // fields onto any bug in any project and push it to that project's tracker.
+  const auth = await authorizeBugWrite(params.bugId)
+  if (!auth.ok) return auth.response
 
   try {
     // Persist any parent/board/column/custom-field selections first so the sync

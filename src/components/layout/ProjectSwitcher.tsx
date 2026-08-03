@@ -18,30 +18,24 @@ const ROLE_BADGE: Record<string, string> = {
   Viewer: "bg-slate-50 text-slate-500",
 }
 
+// The project list is owned by the dashboard layout so that the selected
+// project and the list shown here can never disagree.
 export function ProjectSwitcher({
+  projects,
+  canCreateProject,
+  loading,
   activeProjectId,
   onSelect,
 }: {
+  projects: SwitcherProject[]
+  canCreateProject: boolean
+  loading: boolean
   activeProjectId: string
   onSelect: (projectId: string) => void
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [projects, setProjects] = useState<SwitcherProject[]>([])
-  const [canCreate, setCanCreate] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    fetch("/api/my-projects")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d) {
-          setProjects(d.projects || [])
-          setCanCreate(!!d.canCreateProject)
-        }
-      })
-      .catch(() => {})
-  }, [activeProjectId])
 
   // Close on outside click.
   useEffect(() => {
@@ -64,7 +58,9 @@ export function ProjectSwitcher({
         >
           <span className="flex items-center gap-2 truncate">
             <FolderKanban className="h-4 w-4 shrink-0 text-indigo-600" />
-            <span className="truncate font-semibold">{active?.name || "Select project"}</span>
+            <span className="truncate font-semibold">
+              {active?.name || (loading ? "Loading…" : projects.length === 0 ? "No projects" : "Select project")}
+            </span>
           </span>
           <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />
         </button>
@@ -112,7 +108,7 @@ export function ProjectSwitcher({
             >
               <FolderOpen className="h-3.5 w-3.5" /> Manage Projects
             </button>
-            {canCreate && (
+            {canCreateProject && (
               <button
                 onClick={() => {
                   router.push("/projects/new")

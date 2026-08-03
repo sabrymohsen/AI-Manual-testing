@@ -73,10 +73,34 @@ export default function ReportsPage() {
   const canvasRef = useRef<HTMLDivElement>(null)
   useNow() // keep "updated X ago" fresh
 
-  // Default to the first project once loaded.
+  // Default to whichever project is selected app-wide, falling back to the
+  // first one. This previously always defaulted to projects[0], so the page
+  // showed a different project's analytics from the one chosen in the sidebar —
+  // and silently, since the header picker just displayed that other project.
+  //
+  // `projectChanged` is the event ProjectSelectionGateway fires when the scope
+  // is switched; without listening for it the reports page would keep showing
+  // the old project until a full reload.
   useEffect(() => {
-    if (!projectId && projects.length) setProjectId(projects[0].id)
+    if (projectId || projects.length === 0) return
+
+    const stored = typeof window !== "undefined" ? localStorage.getItem("activeProjectId") : null
+    // Only honour it if it's a project this user can actually see.
+    const valid = stored && projects.some((p: { id: string }) => p.id === stored)
+    setProjectId(valid ? stored! : projects[0].id)
   }, [projects, projectId])
+
+  useEffect(() => {
+    const onProjectChanged = () => {
+      const next = localStorage.getItem("activeProjectId")
+      if (next) {
+        setProjectId(next)
+        setSprintId(undefined) // sprints belong to the old project
+      }
+    }
+    window.addEventListener("projectChanged", onProjectChanged)
+    return () => window.removeEventListener("projectChanged", onProjectChanged)
+  }, [])
 
   const range = preset === "Custom" ? custom : presetRange(preset)
   const filters: DashboardFilters = { projectId, sprintId, from: range.from, to: range.to }

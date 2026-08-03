@@ -86,6 +86,53 @@ export function useProjectSummary(projectId: string | null) {
 /**
  * Shared hook to load test case list metrics
  */
+export interface ScrumMetrics {
+  stories: {
+    total: number
+    open: number
+    done: number
+    byStatus: Record<string, number>
+    completionPct: number
+    totalPoints: number
+  }
+  byType: Record<string, number>
+  activeSprint: { id: string; name: string; startDate: string | null; endDate: string | null } | null
+}
+
+/**
+ * User-story counts per board column for the dashboard.
+ *
+ * Unlike the other hooks in this file, this doesn't download the full list to
+ * count it — the endpoint aggregates in SQL and returns the numbers.
+ */
+export function useScrumMetrics(projectId: string | null) {
+  const [metrics, setMetrics] = useState<ScrumMetrics | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!projectId) {
+      setMetrics(null)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    fetch(`/api/projects/${projectId}/scrum/metrics`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data) setMetrics(data)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [projectId])
+
+  return { metrics, loading }
+}
+
 export function useTestCaseMetrics(projectId: string | null) {
   const [metrics, setMetrics] = useState<{ total: number; manual: number; automated: number; untested: number }>({
     total: 0,

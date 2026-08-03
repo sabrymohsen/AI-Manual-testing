@@ -4,16 +4,18 @@
  * Sync/retry a bug report to OpenProject as a work package.
  */
 import { NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 import { syncBugReportToOpenProject } from "@/lib/integrations/openproject/sync-bug-report"
+import { authorizeBugWrite } from "@/lib/bug-reports/guards"
 import { prisma } from "@/lib/db"
 
 export async function POST(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Back-compat alias for the provider-neutral route — same authorisation gap,
+  // same fix: resolve the bug's project and require ownership.
+  const auth = await authorizeBugWrite(params.bugId)
+  if (!auth.ok) return auth.response
 
   try {
     // Persist the current parent/board/column selections FIRST (when supplied) so

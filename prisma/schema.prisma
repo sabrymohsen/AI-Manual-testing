@@ -797,6 +797,13 @@ model BugReport {
   resolution     BugResolution?
   resolutionNote String?
 
+  // How many times this bug has been reopened after being resolved or closed.
+  // `Reopened` already existed as a *status*, but a status only says where the
+  // bug is now — it can't distinguish a defect reopened once from one that has
+  // failed verification three times, which is a materially different problem.
+  // Incremented by the workflow in src/lib/bug-reports/workflow.ts.
+  reopenCount Int @default(0)
+
   // Free-form triage labels e.g. ["regression", "ui", "security"].
   tags String[] @default([])
 
@@ -870,6 +877,8 @@ model BugReport {
   @@index([autonomousAgentRunId])
   @@index([agentBrainRunId])
   @@index([createdAt])
+  // Finding repeat offenders is the point of tracking reopens.
+  @@index([projectId, reopenCount])
 }
 
 model Attachment {
