@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectMember, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string; bugId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Reading a bug is member-level. requireProjectOwner demanded Owner/Admin,
+  // which 404'd the testers who file most of them.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const bugExists = await prisma.bugReport.findFirst({

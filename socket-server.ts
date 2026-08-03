@@ -3,6 +3,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { extractMentionedUserIds, messagePreview } from "./src/lib/mentions";
+import { PRESENCE_TTL_MS } from "./src/lib/presence";
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || "your-secret-key";
@@ -452,6 +453,19 @@ function startSocketServer() {
       }
     });
   });
+
+  // Restarting drops every socket without the disconnect handler necessarily
+  // running, leaving rows stuck at `isOnline: true`. Clear the ones that have
+  // stopped heartbeating (stale-only, so live users elsewhere are unaffected).
+  prisma.presence
+    .updateMany({
+      where: { isOnline: true, lastSeen: { lt: new Date(Date.now() - PRESENCE_TTL_MS) } },
+      data: { isOnline: false },
+    })
+    .then(({ count }: { count: number }) => {
+      if (count) console.log(`> Cleared ${count} stale presence row(s) on startup`);
+    })
+    .catch((err: unknown) => console.error("Presence startup sweep failed:", err));
 
   const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || "3001");
   server.listen(SOCKET_PORT, () => {

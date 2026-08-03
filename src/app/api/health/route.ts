@@ -2,12 +2,14 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { redisConnection } from "@/lib/queue"
 import { Redis } from "ioredis"
+import { checkStorageHealth } from "@/lib/storage-health"
 
 export async function GET() {
   const checks = {
     database: false,
     redis: false,
     storage: false,
+    storagePersistent: false,
   }
 
   let status = 200
@@ -37,19 +39,13 @@ export async function GET() {
     status = 503
   }
 
-  // Check Storage (basic write check)
-  try {
-    const fs = await import("node:fs/promises")
-    const path = await import("node:path")
-    const storageRoot = process.env.STORAGE_ROOT || "./storage"
-    const testFile = path.join(storageRoot, ".health-check")
-    await fs.writeFile(testFile, "ok")
-    await fs.unlink(testFile)
-    checks.storage = true
-  } catch (err) {
-    checks.storage = false
-    status = 503
-  }
+  // Check Storage: writable *and* persistent. Writability alone is not enough —
+  // an ephemeral container filesystem is perfectly writable and still loses
+  // every upload on the next deploy.
+  const storage = await checkStorageHealth()
+  checks.storage = storage.writable
+  checks.storagePersistent = storage.writable && !storage.looksEphemeral
+  if (!storage.writable) status = 503
 
   const allHealthy = Object.values(checks).every(Boolean)
 
@@ -57,6 +53,13 @@ export async function GET() {
     {
       status: allHealthy ? "healthy" : "unhealthy",
       checks,
+      storage: {
+        // Absolute path deliberately omitted — this endpoint is unauthenticated.
+        persistedSince: storage.markerCreatedAt,
+        looksEphemeral: storage.looksEphemeral,
+        referencedFiles: storage.referencedFiles,
+        error: storage.error,
+      },
       timestamp: new Date().toISOString(),
     },
     { status }

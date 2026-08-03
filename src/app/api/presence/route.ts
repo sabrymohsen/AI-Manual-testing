@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireProjectMember } from "@/lib/api-guards";
+import { isPresenceFresh } from "@/lib/presence";
 
 // GET /api/presence?projectId= -> Get presence status of project members
 export async function GET(request: Request) {
@@ -44,7 +45,13 @@ export async function GET(request: Request) {
       },
     });
 
-    return NextResponse.json({ presences });
+    // Never report the raw sticky flag — a row left `isOnline: true` by a lost
+    // disconnect (redeploy, closed laptop, dropped network) would otherwise
+    // show that member as online forever.
+    const now = Date.now();
+    return NextResponse.json({
+      presences: presences.map((p) => ({ ...p, isOnline: isPresenceFresh(p, now) })),
+    });
   } catch (error: any) {
     console.error("GET /api/presence error:", error);
     return NextResponse.json({ error: "Failed to load presence statuses" }, { status: 500 });
