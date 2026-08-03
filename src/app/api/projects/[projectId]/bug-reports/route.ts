@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectOwner, requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { createBugReportSchema } from "@/schemas"
 import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
 import { z } from "zod"
@@ -9,7 +9,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Listing bugs is member-level. requireProjectOwner demanded Owner/Admin, so
+  // ordinary members — the testers who file most bugs — got a 404 here. POST
+  // below remains owner-gated.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const { searchParams } = new URL(request.url)
@@ -18,6 +21,14 @@ export async function GET(
   const status = searchParams.get("status")
   const source = searchParams.get("source")
   const search = searchParams.get("search") || ""
+
+  // Pagination is opt-in: pass `limit` to page, omit it to get the full list.
+  // Defaulting to a page size would silently hide bugs from the current UI,
+  // which has no "load more" yet — so the default stays unbounded and the
+  // ceiling is available to callers that can consume it.
+  const limitParam = Number(searchParams.get("limit"))
+  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 200) : null
+  const cursor = searchParams.get("cursor") || null
 
   // Build prisma query constraints matching user project scope
   const where: any = {
@@ -63,6 +74,29 @@ export async function GET(
     }
   }
 
+  // Triage filters. "Who has nothing assigned?" and "what's been reopened?" are
+  // the two questions a triage session actually starts with, and neither was
+  // expressible before.
+  const assignee = searchParams.get("assignee")
+  if (assignee === "unassigned") {
+    where.AND.push({ OR: [{ assignedTo: null }, { assignedTo: "" }] })
+  } else if (assignee && assignee !== "all") {
+    where.AND.push({ assignedTo: assignee })
+  }
+
+  if (searchParams.get("reopened") === "true") {
+    where.AND.push({ reopenCount: { gt: 0 } })
+  }
+
+  // Bugs older than N days that aren't settled — the neglected pile.
+  const staleDays = Number(searchParams.get("staleDays"))
+  if (Number.isFinite(staleDays) && staleDays > 0) {
+    where.AND.push({
+      createdAt: { lt: new Date(Date.now() - staleDays * 86_400_000) },
+      status: { notIn: ["Closed", "Rejected", "Duplicate"] as any },
+    })
+  }
+
   if (search) {
     where.AND.push({
       OR: [
@@ -75,7 +109,7 @@ export async function GET(
     })
   }
 
-  const bugReports = await prisma.bugReport.findMany({
+  const rows = await prisma.bugReport.findMany({
     where,
     include: {
       testCase: {
@@ -87,37 +121,57 @@ export async function GET(
       manualTestSession: {
         select: { id: true, name: true, browserType: true }
       },
-      comments: {
-        orderBy: { createdAt: "desc" }
-      },
-      activities: {
-        orderBy: { createdAt: "desc" }
-      },
-      occurrences: {
-        orderBy: { occurredAt: "desc" }
+      // Counts, not the rows themselves. This previously pulled EVERY comment,
+      // activity and occurrence for EVERY bug — on a project with 500 bugs and
+      // 20 comments each that's 10k rows shipped to render a list that displays
+      // none of them. The detail drawer refetches the full bug from
+      // /api/bug-reports/[bugId], so nothing needed them here.
+      _count: {
+        select: { comments: true, activities: true, occurrences: true }
       }
     },
-    orderBy: { createdAt: "desc" }
+    orderBy: { createdAt: "desc" },
+    // `id` is a stable tiebreak so cursor paging can't repeat or drop rows when
+    // several bugs share a createdAt.
+    ...(limit ? { take: limit + 1 } : {}),
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {})
   })
 
+  const hasMore = limit !== null && rows.length > limit
+  const bugReports = hasMore ? rows.slice(0, limit!) : rows
+
+  // Scope the sync lookup to the rows actually being returned.
   const syncMappings = await prisma.externalSyncMapping.findMany({
     where: {
       projectId: params.projectId,
-      localEntityType: "BugReport"
+      localEntityType: "BugReport",
+      ...(bugReports.length ? { localEntityId: { in: bugReports.map(b => b.id) } } : {})
     }
   })
+  const syncById = new Map(syncMappings.map(m => [m.localEntityId, m]))
 
-  const bugReportsWithSync = bugReports.map(bug => {
-    const mapping = syncMappings.find(m => m.localEntityId === bug.id)
+  const bugReportsWithSync = bugReports.map(({ _count, ...bug }) => {
+    const mapping = syncById.get(bug.id)
     return {
       ...bug,
+      commentCount: _count.comments,
+      activityCount: _count.activities,
+      // Whole days since the bug was filed. Derived here so every consumer
+      // agrees on the number rather than each recomputing it from createdAt.
+      ageDays: Math.floor((Date.now() - new Date(bug.createdAt).getTime()) / 86_400_000),
+      // How many times this defect has recurred across test runs. Already
+      // recorded by on-test-run-completed.ts; never previously surfaced.
+      occurrenceCount: _count.occurrences,
       openProjectSyncStatus: mapping ? (mapping.lastSyncStatus === "success" ? "Synced" : "Failed") : "Not Synced",
       openProjectWorkPackageId: mapping?.externalId || null,
       openProjectWorkPackageUrl: mapping?.externalUrl || null
     }
   })
 
-  return NextResponse.json({ bugReports: bugReportsWithSync })
+  return NextResponse.json({
+    bugReports: bugReportsWithSync,
+    nextCursor: hasMore ? bugReports[bugReports.length - 1].id : null
+  })
 }
 
 export async function POST(

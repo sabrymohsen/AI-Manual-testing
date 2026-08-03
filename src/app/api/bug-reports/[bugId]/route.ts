@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
+import { checkTransition } from "@/lib/bug-reports/workflow"
 import { decryptSecret } from "@/lib/crypto"
 import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
 
@@ -99,10 +100,35 @@ export async function PUT(
     const auth = await requireProjectOwner(existingBug.projectId!)
     if (auth.error) return unauthorizedResponse(auth.error)
 
+    // Enforce the status workflow. This route previously wrote `status as any`
+    // with no checks, so Closed could jump straight back to InProgress and a bug
+    // could reach Closed with no recorded resolution.
+    //
+    // `effectiveResolution` is what actually gets persisted: the transition may
+    // imply one (Duplicate), carry the existing one forward, or clear a stale one
+    // when a bug is reopened.
+    let effectiveResolution: string | null | undefined = resolution
+    let isReopenTransition = false
+    if (status !== undefined) {
+      const check = checkTransition(existingBug.status, status, resolution, existingBug.resolution)
+      if (!check.ok) {
+        return NextResponse.json(
+          { error: check.error, code: check.code, currentStatus: existingBug.status },
+          { status: 400 }
+        )
+      }
+      effectiveResolution = check.resolution
+      isReopenTransition = check.isReopen
+    }
+
     // Capture log messages for changes
     const changes: string[] = []
     if (status && status !== existingBug.status) {
-      changes.push(`Status changed from ${existingBug.status} to ${status}`)
+      changes.push(
+        `Status changed from ${existingBug.status} to ${status}` +
+          (effectiveResolution ? ` (resolution: ${effectiveResolution})` : "") +
+          (isReopenTransition ? ` — reopen #${existingBug.reopenCount + 1}` : "")
+      )
     }
     if (assignedTo !== undefined && assignedTo !== existingBug.assignedTo) {
       changes.push(`Assigned developer updated to ${assignedTo || "Unassigned"}`)
@@ -113,8 +139,8 @@ export async function PUT(
     if (severity && severity !== existingBug.severity) {
       changes.push(`Severity changed from ${existingBug.severity} to ${severity}`)
     }
-    if (resolution !== undefined && resolution !== existingBug.resolution) {
-      changes.push(`Resolution set to ${resolution || "None"}`)
+    if (effectiveResolution !== undefined && effectiveResolution !== existingBug.resolution && !status) {
+      changes.push(`Resolution set to ${effectiveResolution || "None"}`)
     }
     if (tags !== undefined && JSON.stringify(tags) !== JSON.stringify(existingBug.tags)) {
       changes.push(`Tags updated to ${(tags && tags.length) ? tags.join(", ") : "None"}`)
@@ -140,7 +166,12 @@ export async function PUT(
           severity: severity !== undefined ? severity as any : undefined,
           priority: priority !== undefined ? priority as any : undefined,
           status: status !== undefined ? status as any : undefined,
-          resolution: resolution !== undefined ? (resolution || null) as any : undefined,
+          // The workflow-derived value, not the raw body field — so a Duplicate
+          // gets its implied resolution and a Reopened bug loses the stale one.
+          resolution: effectiveResolution !== undefined ? ((effectiveResolution || null) as any) : undefined,
+          // Atomic increment rather than read-modify-write, so two concurrent
+          // reopens can't both write the same number.
+          ...(isReopenTransition ? { reopenCount: { increment: 1 } } : {}),
           resolutionNote: resolutionNote !== undefined ? (resolutionNote || null) : undefined,
           tags: tags !== undefined ? tags : undefined,
           assignedTo: assignedTo !== undefined ? assignedTo : undefined,

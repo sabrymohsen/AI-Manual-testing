@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useActiveProject, useProjectSummary, useTestCaseMetrics, useBugMetrics, useRunMetrics } from "@/hooks/use-metrics"
+import { useActiveProject, useProjectSummary, useTestCaseMetrics, useBugMetrics, useRunMetrics, useScrumMetrics } from "@/hooks/use-metrics"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,8 @@ import {
   Bug,
   TrendingUp,
   Activity,
-  FolderOpen
+  FolderOpen,
+  Layers
 } from "lucide-react"
 import { AssignedToMeWidget } from "@/components/dashboard/assigned-to-me-widget"
 import { ActivityStream } from "@/components/dashboard/activity-stream"
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const caseMetrics = useTestCaseMetrics(activeProjectId)
   const bugMetrics = useBugMetrics(activeProjectId)
   const runMetrics = useRunMetrics(activeProjectId)
+  const scrum = useScrumMetrics(activeProjectId)
 
   const [projectsList, setProjectsList] = useState<ProjectItem[]>([])
   const [recentBugs, setRecentBugs] = useState<any[]>([])
@@ -155,6 +157,72 @@ export default function DashboardPage() {
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground font-medium">Based on latest test execution outputs.</p>
+        </div>
+
+        {/* User stories by board column. The dashboard previously reported test
+            cases, bugs and runs but said nothing about the work itself — how
+            much is still to do, and how much is sitting in Testing. */}
+        <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">User Stories</span>
+            <Layers className="h-4 w-4 text-violet-500" />
+          </div>
+          <div className="space-y-1">
+            <span className="text-2xl font-extrabold text-slate-800">
+              {scrum.metrics?.stories.total ?? 0} total
+            </span>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+              <span className="text-slate-600 font-bold">
+                {scrum.metrics?.stories.byStatus.TODO ?? 0} to do
+              </span>
+              <span>•</span>
+              <span className="text-amber-600 font-bold">
+                {scrum.metrics?.stories.byStatus.TESTING ?? 0} testing
+              </span>
+              <span>•</span>
+              <span className="text-emerald-600 font-bold">
+                {scrum.metrics?.stories.done ?? 0} done
+              </span>
+            </div>
+          </div>
+
+          {/* Full column breakdown, so nothing is hidden behind the headline. */}
+          {(scrum.metrics?.stories.total ?? 0) > 0 && (
+            <div className="space-y-1.5 pt-0.5">
+              <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100">
+                {([
+                  ["TODO", "bg-slate-400"],
+                  ["IN_PROGRESS", "bg-blue-500"],
+                  ["REVIEW", "bg-violet-500"],
+                  ["TESTING", "bg-amber-500"],
+                  ["DEPLOYED", "bg-cyan-500"],
+                  ["DONE", "bg-emerald-500"],
+                ] as const).map(([key, colour]) => {
+                  const n = scrum.metrics!.stories.byStatus[key] ?? 0
+                  if (n === 0) return null
+                  return (
+                    <div
+                      key={key}
+                      className={colour}
+                      style={{ width: `${(n / scrum.metrics!.stories.total) * 100}%` }}
+                      title={`${n} ${key.replace("_", " ").toLowerCase()}`}
+                    />
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground font-medium">
+                {scrum.metrics!.stories.completionPct}% complete
+                {scrum.metrics!.stories.totalPoints > 0 && ` · ${scrum.metrics!.stories.totalPoints} pts`}
+                {scrum.metrics!.activeSprint && ` · ${scrum.metrics!.activeSprint.name}`}
+              </p>
+            </div>
+          )}
+
+          {(scrum.metrics?.stories.total ?? 0) === 0 && (
+            <p className="text-[10px] text-muted-foreground font-medium">
+              No stories on the board yet.
+            </p>
+          )}
         </div>
 
         {/* Test Case Breakdown */}

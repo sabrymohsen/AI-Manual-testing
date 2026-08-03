@@ -7,6 +7,7 @@ import { useSocket } from "@/hooks/useSocket"
 import { EmojiPicker } from "@/components/chat/EmojiPicker"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { replaceEmojiShortcodes, QUICK_REACTIONS } from "@/lib/emoji-shortcodes"
+import { PRESENCE_HEARTBEAT_MS } from "@/lib/presence"
 
 interface TeamChatPageProps {
   projectId: string
@@ -152,13 +153,22 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
     threadEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [threadMessages])
 
-  // Heartbeat
+  // Heartbeat, plus a re-read of everyone else's presence on the same tick.
+  // Nothing pushes a "went offline" event when a member simply stops
+  // heartbeating, so without this their dot would stay green until reload.
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (!projectId) return
+    const interval = setInterval(async () => {
       fetch("/api/presence/heartbeat", { method: "POST" }).catch(() => {})
-    }, 25000)
+      try {
+        const res = await fetch(`/api/presence?projectId=${projectId}`)
+        if (res.ok) setPresences((await res.json()).presences || [])
+      } catch {
+        // Transient network failure — the next tick will pick it up.
+      }
+    }, PRESENCE_HEARTBEAT_MS)
     return () => clearInterval(interval)
-  }, [])
+  }, [projectId, setPresences])
 
   // Send message
   const handleSendMessage = useCallback(async () => {
