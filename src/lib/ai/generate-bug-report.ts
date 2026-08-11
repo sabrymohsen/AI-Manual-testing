@@ -6,14 +6,17 @@ import {
 } from "@/lib/ai/provider-chat"
 
 /**
- * Free, self-hostable bug-report drafter.
+ * Bug-report drafter: a tester's note (and optional screenshot) in, a structured
+ * draft out — title, description, severity, priority, steps, expected/actual.
  *
- * Mirrors the test-case generator's provider strategy so it costs nothing:
- *   Primary : Ollama (local, free) — uses a vision model for the screenshot when one
- *             is installed (llava / llama3.2-vision / bakllava / moondream).
- *   Fallback: Hugging Face Inference API (free tier, text-only).
- *   Last     : a deterministic rule-based draft, so the feature always returns
- *             something even with no AI provider available.
+ * Provider order:
+ *   1. Whatever the workspace configured in the AI hub (Kimi, OpenAI, …),
+ *      including the screenshot when the model accepts images.
+ *   2. Ollama (local, free) — vision model for the screenshot when installed
+ *      (llava / llama3.2-vision / bakllava / moondream).
+ *   3. Hugging Face Inference API (free tier, text-only).
+ *   4. A deterministic rule-based draft, so the feature always returns something
+ *      even with no AI provider available.
  *
  * It only DRAFTS a bug — the caller (UI) lets the user edit everything before saving.
  */
@@ -33,6 +36,8 @@ export interface BugDraftStep {
 
 export interface BugDraft {
   title: string
+  /** Written summary of the defect — impact and context, not a copy of the note. */
+  description: string
   severity: "Low" | "Medium" | "High" | "Critical"
   priority: "Low" | "Medium" | "High" | "Critical"
   steps: BugDraftStep[]
@@ -60,6 +65,7 @@ ${(input.description || "").substring(0, 6000)}
 Return ONLY valid JSON (no markdown, no extra text) matching exactly:
 {
   "title": "concise, specific title including the affected area and the problem",
+  "description": "2-4 sentences: what is broken, where, and the impact on the user. Do not restate the title.",
   "severity": "Low | Medium | High | Critical",
   "priority": "Low | Medium | High | Critical",
   "steps": [
@@ -172,6 +178,7 @@ function normalize(raw: any, provider: BugDraft["provider"]): BugDraft {
 
   return {
     title: String(raw?.title || "Untitled defect").substring(0, 200),
+    description: String(raw?.description || raw?.summary || "").substring(0, 4000),
     severity: level(raw?.severity),
     priority: level(raw?.priority),
     steps,
@@ -215,6 +222,7 @@ function ruleBasedDraft(input: BugDraftInput): BugDraft {
 
   return {
     title,
+    description: desc.substring(0, 4000),
     severity,
     priority: severity,
     steps,

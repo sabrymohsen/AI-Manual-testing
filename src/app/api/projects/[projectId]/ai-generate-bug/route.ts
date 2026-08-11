@@ -1,13 +1,14 @@
 /**
  * POST /api/projects/[projectId]/ai-generate-bug
  *
- * Drafts a structured bug report from a tester's description (+ optional
- * screenshot) using the FREE AI layer (Ollama -> Hugging Face -> rule-based).
+ * Drafts a structured bug report from a tester's prompt (+ optional screenshot)
+ * using the configured AI provider, falling back to Ollama -> Hugging Face ->
+ * a rule-based draft.
  * Returns the draft only — it does NOT create the bug; the UI lets the user
  * edit everything before saving.
  */
 import { NextRequest, NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireProjectMember, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { generateBugReportDraft } from "@/lib/ai/generate-bug-report"
 
@@ -15,7 +16,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Member-level: drafting a bug is part of filing one. Owner-only meant an
+  // ordinary tester got a 404 from the AI button.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
