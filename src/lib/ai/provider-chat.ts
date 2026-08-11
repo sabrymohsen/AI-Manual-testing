@@ -20,6 +20,7 @@ import {
   openAiCompatBaseUrl,
   type AiProvider,
 } from "@/lib/hub-ai-providers"
+import { getProjectAiCredentials } from "@/lib/ai/project-ai-config"
 
 export interface ResolvedProvider {
   provider: AiProvider
@@ -39,15 +40,25 @@ export interface ChatOptions {
   /** Label recorded on the usage event, e.g. "generate-test-cases". */
   command?: string
   timeoutMs?: number
+  /** Prefer this project's own provider config when it has one. */
+  projectId?: string
 }
 
 /**
- * The provider a call should use: whichever row is default+enabled, else any
- * enabled row, else a provider whose key env var is set. The env fallback means
- * a deployment can supply the key (e.g. KIMI_API_KEY) without writing it into
- * AiProviderConfig.apiKey, which is a plaintext column.
+ * The provider a call should use, most specific first:
+ *   1. the project's own config (its AI Provider tab),
+ *   2. the workspace-wide AiProviderConfig — default+enabled, else any enabled,
+ *   3. any provider whose key env var is set.
+ *
+ * The env fallback means a deployment can supply the key (e.g. KIMI_API_KEY)
+ * without writing it into AiProviderConfig.apiKey, a plaintext column.
  */
-export async function resolveProvider(): Promise<ResolvedProvider | null> {
+export async function resolveProvider(projectId?: string): Promise<ResolvedProvider | null> {
+  if (projectId) {
+    const own = await getProjectAiCredentials(projectId).catch(() => null)
+    if (own) return own
+  }
+
   const rows = await prisma.aiProviderConfig
     .findMany({ where: { enabled: true }, orderBy: { isDefault: "desc" } })
     .catch(() => [])
@@ -78,8 +89,8 @@ export async function resolveProvider(): Promise<ResolvedProvider | null> {
 }
 
 /** True when a real model is reachable, i.e. generators can skip the templates. */
-export async function hasConfiguredProvider(): Promise<boolean> {
-  return (await resolveProvider()) !== null
+export async function hasConfiguredProvider(projectId?: string): Promise<boolean> {
+  return (await resolveProvider(projectId)) !== null
 }
 
 async function recordUsage(
@@ -209,7 +220,7 @@ async function callOpenAiCompatible(
  * offline path rather than surfacing an error to the tester.
  */
 export async function chatWithConfiguredProvider(opts: ChatOptions): Promise<string> {
-  const resolved = await resolveProvider()
+  const resolved = await resolveProvider(opts.projectId)
   if (!resolved) throw new Error("No AI provider is configured")
 
   return resolved.provider === "Anthropic"

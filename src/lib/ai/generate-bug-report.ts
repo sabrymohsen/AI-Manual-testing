@@ -23,6 +23,8 @@ import {
 
 export interface BugDraftInput {
   description: string
+  /** Use this project's own AI provider config when it has one. */
+  projectId?: string | null
   imageBase64?: string | null   // raw base64 (no data: prefix)
   imageMimeType?: string | null
   appUrl?: string | null
@@ -240,11 +242,12 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   // only ever tried a local Ollama and a HuggingFace token, so a deployed box
   // always landed on the rule-based template no matter what the hub said.
   try {
-    if (await hasConfiguredProvider()) {
+    if (await hasConfiguredProvider(input.projectId || undefined)) {
       const out = await chatWithConfiguredProvider({
         prompt: buildPrompt(input, hasImage),
         imageBase64: input.imageBase64 || undefined,
         command: "generate-bug-report",
+        projectId: input.projectId || undefined,
       })
       const parsed = parseJson(out)
       if (parsed) return normalize(parsed, "provider")

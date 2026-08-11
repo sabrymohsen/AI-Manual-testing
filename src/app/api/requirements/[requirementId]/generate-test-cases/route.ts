@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { chatWithConfiguredProvider } from "@/lib/ai/provider-chat"
 
 export async function POST(
   request: Request,
@@ -9,21 +10,11 @@ export async function POST(
   const auth = await requireAuth()
   if (auth.error) return unauthorizedResponse(auth.error)
 
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "AI provider not configured. Set OPENAI_COMPATIBLE_API_KEY in settings." },
-      { status: 500 }
-    )
-  }
-
   try {
     const requirement = await prisma.requirement.findUnique({
       where: { id: params.requirementId },
       include: {
-        project: { select: { userId: true } },
+        project: { select: { id: true, userId: true } },
         epic: { select: { epicKey: true, title: true } },
         feature: { select: { featureKey: true, name: true } }
       }
@@ -68,37 +59,39 @@ Priority: ${requirement.priority}
 Epic: ${requirement.epic ? `${requirement.epic.epicKey} ${requirement.epic.title}` : "N/A"}
 Feature: ${requirement.feature ? `${requirement.feature.featureKey} ${requirement.feature.name}` : "N/A"}`
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage }
-        ],
+    // Goes through the shared provider layer: the requirement's own project
+    // config first, then the workspace provider, then a key from the
+    // environment. This route used to read OPENAI_COMPATIBLE_API_KEY directly
+    // and hardcode gpt-4o, so it ignored whatever the hub had configured.
+    let content: string
+    try {
+      content = await chatWithConfiguredProvider({
+        system: systemPrompt,
+        prompt: userMessage,
         temperature: 0.5,
-        response_format: { type: "json_object" }
+        command: "generate-test-cases-from-requirement",
+        projectId: requirement.project.id,
       })
-    })
-
-    if (!response.ok) {
+    } catch (err: any) {
       return NextResponse.json(
-        { error: `AI API returned status ${response.status}: ${response.statusText}` },
+        {
+          error:
+            err?.message === "No AI provider is configured"
+              ? "No AI provider is configured. Add one in the project's AI Provider tab."
+              : err?.message || "AI request failed",
+        },
         { status: 500 }
       )
     }
 
-    const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
     if (!content) {
       return NextResponse.json({ error: "AI returned empty response" }, { status: 500 })
     }
 
-    const parsedResult = JSON.parse(content)
+    // Models wrap JSON in prose or a code fence often enough to be worth handling.
+    const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+    const jsonText = (fenced ? fenced[1] : content).match(/\{[\s\S]*\}/)?.[0] || content
+    const parsedResult = JSON.parse(jsonText)
     return NextResponse.json(parsedResult)
   } catch (error: any) {
     return NextResponse.json(

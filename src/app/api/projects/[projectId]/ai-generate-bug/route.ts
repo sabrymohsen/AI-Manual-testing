@@ -40,6 +40,7 @@ export async function POST(
     })
 
     const draft = await generateBugReportDraft({
+      projectId: params.projectId,
       description: description || "",
       imageBase64: imageBase64 || null,
       imageMimeType: imageMimeType || null,

@@ -391,6 +391,7 @@ model Project {
   qaAgentRuns             QAAgentRun[]
   openProjectIntegration  OpenProjectIntegration?
   projectIntegration      ProjectIntegration?
+  aiConfig                ProjectAiConfig?
   sprints                 Sprint[]
   teamVelocities          TeamVelocity[]
 
@@ -2580,6 +2581,32 @@ model EnvironmentVariable {
 
   @@unique([name, scope, projectId])
   @@index([projectId])
+}
+
+// Per-project AI provider. Set from the project's AI Provider tab so each team
+// can bring its own key, model and spend, exactly like the tracker integration.
+// Resolution order for any AI call is: this row -> the workspace-wide
+// AiProviderConfig -> the provider's key env var.
+//
+// The key is AES-256-GCM encrypted (src/lib/crypto), matching how tracker tokens
+// are stored — AiProviderConfig.apiKey is a plaintext column and is not a
+// pattern worth repeating for a credential entered through the UI.
+model ProjectAiConfig {
+  id        String  @id @default(uuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  provider String // "Kimi" | "OpenAI" | "Anthropic" | "Gemini" | "Ollama"
+  enabled  Boolean @default(true)
+  model    String  @default("")
+
+  apiKeyEncrypted  String @default("")
+  apiKeyIv         String @default("")
+  apiKeyAuthTag    String @default("")
+  apiKeyKeyVersion String @default("v1")
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 // Section 11 (enhanced): AI Provider Management. One row per provider so each

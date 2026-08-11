@@ -24,6 +24,8 @@ export interface AIGeneratedStep {
 }
 
 export interface GenerateOptions {
+  /** Use this project's own AI provider config when it has one. */
+  projectId?: string;
   provider?: "ollama" | "huggingface";
   model?: string;
   temperature?: number;
@@ -68,12 +70,13 @@ export async function generateTestCasesFromRequirements(
   // a deployed box it always ended up on the offline path regardless of what
   // was configured in the hub.
   try {
-    if (await hasConfiguredProvider()) {
+    if (await hasConfiguredProvider(opts.projectId)) {
       const out = await chatWithConfiguredProvider({
         prompt,
         maxTokens: opts.maxTokens,
         temperature: opts.temperature,
         command: "generate-test-cases",
+        projectId: opts.projectId,
       });
       if (out) return parseTestCasesFromResponse(out, opts);
     }
