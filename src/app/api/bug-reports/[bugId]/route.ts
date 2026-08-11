@@ -2,8 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
 import { checkTransition } from "@/lib/bug-reports/workflow"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function GET(
   request: Request,
@@ -249,24 +248,12 @@ export async function DELETE(
           }
         }
       })
-      const integration = await prisma.openProjectIntegration.findUnique({
-        where: { projectId: bug.projectId }
-      })
+      // Whichever row owns the config (unified ProjectIntegration or legacy).
+      const resolved = await resolveOpenProject(bug.projectId)
 
-      if (mapping && integration?.apiTokenEncrypted) {
+      if (mapping && resolved.ok) {
         try {
-          const token = decryptSecret({
-            encrypted: integration.apiTokenEncrypted,
-            iv: integration.apiTokenIv,
-            authTag: integration.apiTokenAuthTag,
-            keyVersion: integration.apiTokenKeyVersion
-          })
-          const client = new OpenProjectClient(
-            integration.baseUrl,
-            integration.openProjectProjectIdentifier,
-            token
-          )
-          await client.deleteWorkPackage(mapping.externalId)
+          await resolved.client.deleteWorkPackage(mapping.externalId)
           remoteDeleted = true
         } catch (err: any) {
           // Surface the failure but still allow the local delete to proceed.

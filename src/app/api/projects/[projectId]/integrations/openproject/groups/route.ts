@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
 import { getAllGroupsWithStatus } from "@/lib/integrations/openproject/openproject-group-sync"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { prisma } from "@/lib/db"
 
 export async function GET(
@@ -16,19 +17,11 @@ export async function GET(
     const auth = await requireProjectOwner(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
-    // Project-level integration
-    const integration = await prisma.openProjectIntegration.findUnique({
-      where: { projectId: params.projectId },
-      select: {
-        baseUrl: true,
-        apiTokenEncrypted: true,
-        testCaseTypeId: true,
-        passedStatusId: true,
-        failedStatusId: true,
-        defaultStatusId: true,
-        openProjectProjectIdentifier: true,
-      },
-    })
+    // Project-level integration — from whichever row owns it (unified or legacy)
+    const resolved = await resolveOpenProject(params.projectId)
+    const integration = resolved.ok
+      ? { ...resolved.integration, apiTokenEncrypted: true as const }
+      : null
 
     const projConfigured = !!integration?.apiTokenEncrypted
     const projComplete = !!(

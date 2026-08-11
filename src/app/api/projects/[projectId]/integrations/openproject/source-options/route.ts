@@ -9,44 +9,24 @@
  * exists, so the UI degrades gracefully.
  */
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Member-level: the Bug Source dropdown belongs to the bug form.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
-  const integration = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: params.projectId },
-  })
-  if (!integration?.apiTokenEncrypted) {
+  const resolved = await resolveOpenProject(params.projectId)
+  if (!resolved.ok) {
     return NextResponse.json({ field: null, options: [] })
   }
-
-  let token: string
-  try {
-    token = decryptSecret({
-      encrypted: integration.apiTokenEncrypted,
-      iv: integration.apiTokenIv,
-      authTag: integration.apiTokenAuthTag,
-      keyVersion: integration.apiTokenKeyVersion,
-    })
-  } catch {
-    return NextResponse.json({ field: null, options: [] })
-  }
+  const { client, integration } = resolved
 
   try {
-    const client = new OpenProjectClient(
-      integration.baseUrl,
-      integration.openProjectProjectIdentifier,
-      token
-    )
-
     let bugTypeId = integration.bugTypeId
     if (!bugTypeId) {
       const types = await client.getTypes()

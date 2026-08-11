@@ -48,6 +48,10 @@ export interface LoadedIntegration {
   provider: ProviderId
   enabled: boolean
   row: IntegrationRow
+  /** Connection/sync bookkeeping of the owning row (same columns on both models). */
+  lastConnectionStatus: string | null
+  lastConnectionCheckedAt: Date | null
+  lastSyncAt: Date | null
   typeMapping: TypeMapping
   statusMapping: StatusMapping
   boardConfig: BoardConfig
@@ -87,6 +91,9 @@ export async function loadIntegration(projectId: string): Promise<LoadedIntegrat
       provider: unified.provider as ProviderId,
       enabled: unified.enabled,
       row,
+      lastConnectionStatus: unified.lastConnectionStatus,
+      lastConnectionCheckedAt: unified.lastConnectionCheckedAt,
+      lastSyncAt: unified.lastSyncAt,
       typeMapping: asObject(unified.typeMapping) as TypeMapping,
       statusMapping: asObject(unified.statusMapping) as StatusMapping,
       boardConfig: asObject(unified.boardConfig) as BoardConfig,
@@ -123,6 +130,9 @@ export async function loadIntegration(projectId: string): Promise<LoadedIntegrat
     provider: "OpenProject",
     enabled: true,
     row,
+    lastConnectionStatus: op.lastConnectionStatus,
+    lastConnectionCheckedAt: op.lastConnectionCheckedAt,
+    lastSyncAt: op.lastSyncAt,
     typeMapping: {
       testCase: op.testCaseTypeId,
       bug: op.bugTypeId,

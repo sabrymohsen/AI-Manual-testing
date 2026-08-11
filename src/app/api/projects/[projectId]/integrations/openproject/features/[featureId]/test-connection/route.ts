@@ -11,6 +11,7 @@ import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
 import { decryptSecret } from "@/lib/crypto"
 import { encryptSecret } from "@/lib/crypto"
 import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 type Params = { params: { projectId: string; featureId: string } }
 
@@ -29,10 +30,9 @@ export async function POST(req: Request, { params }: Params) {
     where: { projectId_featureId: { projectId: params.projectId, featureId: params.featureId } },
   })
 
-  // Load project-level config as fallback
-  const projCfg = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: params.projectId },
-  })
+  // Load project-level config as fallback — from whichever row owns it
+  const resolvedProj = await resolveOpenProject(params.projectId)
+  const projCfg = resolvedProj.ok ? resolvedProj.integration : null
 
   // Resolve effective values (in-progress → module → project)
   let baseUrl = inProgressBaseUrl || modCfg?.baseUrl || projCfg?.baseUrl
@@ -48,13 +48,8 @@ export async function POST(req: Request, { params }: Params) {
       authTag: modCfg.apiTokenAuthTag!,
       keyVersion: modCfg.apiTokenKeyVersion,
     })
-  } else if (projCfg?.apiTokenEncrypted) {
-    token = decryptSecret({
-      encrypted: projCfg.apiTokenEncrypted,
-      iv: projCfg.apiTokenIv,
-      authTag: projCfg.apiTokenAuthTag,
-      keyVersion: projCfg.apiTokenKeyVersion,
-    })
+  } else if (resolvedProj.ok) {
+    token = resolvedProj.apiToken
   }
 
   if (!baseUrl || !identifier || !token) {

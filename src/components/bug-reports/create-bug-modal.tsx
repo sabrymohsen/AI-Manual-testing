@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -82,6 +83,9 @@ export function CreateBugModal({
   sourceOptions,
   recordingSessionId,
 }: CreateBugModalProps) {
+  // Label with whichever tracker this project is connected to (Jira / Azure /
+  // OpenProject / …) rather than hardcoding one vendor.
+  const { name: trackerName } = useProjectIntegration(projectId)
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
   const [severity, setSeverity] = useState("Medium")
@@ -112,6 +116,13 @@ export function CreateBugModal({
   const [sessionAttachments, setSessionAttachments] = useState<SessionAttachment[]>([])
 
   const [opMembers, setOpMembers] = useState<Array<{ id: string; name: string }>>([])
+
+  // Parent-task candidates pulled from the tracker, so testers can pick a real
+  // task instead of having to know its work-package number.
+  const [parentOptions, setParentOptions] = useState<
+    Array<{ id: string; subject: string; type: string | null }>
+  >([])
+  const [parentLoading, setParentLoading] = useState(false)
 
   /**
    * Look for existing bugs matching the title being typed.
@@ -168,18 +179,67 @@ export function CreateBugModal({
     setVideoUrl("")
     setAssignee("")
     setParent("")
+    setParentOptions([])
     setSessionAttachments(initialAttachmentPaths || [])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Assignable OpenProject members (no-op if integration isn't configured)
+  // Assignable developers — the project's team pool, which is synced from
+  // whichever tracker is connected (Jira / Azure / OpenProject) plus any manual
+  // members. This used to hit the OpenProject-only members endpoint, so the
+  // dropdown stayed empty for every other provider. The option value is the
+  // tracker's own user id (externalId), which is what bug sync sends as the
+  // assignee; manual members without one fall back to their pool id.
   useEffect(() => {
     if (!open) return
-    fetch(`/api/projects/${projectId}/integrations/openproject/members`)
+    fetch(`/api/projects/${projectId}/team`)
       .then((res) => (res.ok ? res.json() : { members: [] }))
-      .then((data) => setOpMembers(Array.isArray(data.members) ? data.members : []))
+      .then((data) =>
+        setOpMembers(
+          Array.isArray(data.members)
+            ? data.members
+                .filter((m: any) => m.active)
+                .map((m: any) => ({ id: m.externalId || m.id, name: m.name }))
+            : []
+        )
+      )
       .catch(() => setOpMembers([]))
   }, [projectId, open])
+
+  /**
+   * Parent-task candidates: open tasks on open, then whatever the tester types
+   * (matched against title *or* number by the tracker). Debounced, and aborts
+   * the in-flight request per keystroke so a slow early response can't replace
+   * the results for a later query.
+   */
+  useEffect(() => {
+    if (!open) return
+
+    const controller = new AbortController()
+    const query = parent.trim()
+    const timer = setTimeout(async () => {
+      setParentLoading(true)
+      try {
+        const qs = query ? `?search=${encodeURIComponent(query)}` : ""
+        const res = await fetch(
+          `/api/projects/${projectId}/integrations/openproject/work-packages${qs}`,
+          { signal: controller.signal }
+        )
+        if (!res.ok) return
+        const data = await res.json()
+        setParentOptions(Array.isArray(data.workPackages) ? data.workPackages : [])
+      } catch {
+        // Aborted or offline — the field still takes a hand-typed id.
+      } finally {
+        if (!controller.signal.aborted) setParentLoading(false)
+      }
+    }, query ? 350 : 0)
+
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+  }, [open, parent, projectId])
 
   // Read a File as raw base64 (no data: prefix)
   const fileToBase64 = (file: File): Promise<string> =>
@@ -550,7 +610,7 @@ export function CreateBugModal({
             </div>
           </div>
 
-          {/* Bug Source — options pulled from an OpenProject list field */}
+          {/* Bug Source — options pulled from the tracker's list field */}
           {sourceOptions && sourceOptions.length > 0 && (
             <div className="space-y-1.5">
               <Label className="text-muted-foreground font-bold">Bug Source</Label>
@@ -677,13 +737,29 @@ export function CreateBugModal({
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Parent Task (OpenProject WP ID)</Label>
+              <Label className="text-muted-foreground font-bold">Parent Task ({trackerName} WP ID)</Label>
+              {/* Type to search the tracker's tasks by title or number and pick
+                  one; the field still accepts a raw id typed by hand. */}
               <Input
                 value={parent}
                 onChange={(e) => setParent(e.target.value)}
-                placeholder="e.g. 1234"
+                list="create-bug-parent-options"
+                placeholder={
+                  parentOptions.length > 0 ? "Search a task, or type an ID…" : "e.g. 1234"
+                }
                 className="h-9 bg-background"
               />
+              <datalist id="create-bug-parent-options">
+                {parentOptions.map((wp) => (
+                  <option key={wp.id} value={wp.id}>
+                    #{wp.id} — {wp.subject}
+                    {wp.type ? ` (${wp.type})` : ""}
+                  </option>
+                ))}
+              </datalist>
+              {parentLoading && (
+                <span className="text-[10px] text-muted-foreground">Searching tasks…</span>
+              )}
             </div>
           </div>
 
@@ -830,7 +906,7 @@ export function CreateBugModal({
               className="h-4 w-4 rounded border-input text-indigo-600 focus:ring-indigo-500"
             />
             <label htmlFor="createSyncOP" className="text-[10px] font-bold text-muted-foreground cursor-pointer">
-              Sync this bug to OpenProject immediately after creation
+              Sync this bug to {trackerName} immediately after creation
             </label>
           </div>
 

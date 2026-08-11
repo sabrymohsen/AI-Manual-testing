@@ -4,16 +4,15 @@
  * Returns the columns of a specific OpenProject board by reading its grid widgets.
  */
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Member-level: picking a placement column is part of filing a bug.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const { searchParams } = new URL(request.url)
@@ -23,34 +22,13 @@ export async function GET(
     return NextResponse.json({ error: "boardId query param is required" }, { status: 400 })
   }
 
-  const integration = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: params.projectId },
-  })
-
-  if (!integration?.apiTokenEncrypted) {
-    return NextResponse.json({ error: "OpenProject integration is not configured" }, { status: 400 })
+  const resolved = await resolveOpenProject(params.projectId)
+  if (!resolved.ok) {
+    return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
 
-  let token: string
   try {
-    token = decryptSecret({
-      encrypted: integration.apiTokenEncrypted,
-      iv: integration.apiTokenIv,
-      authTag: integration.apiTokenAuthTag,
-      keyVersion: integration.apiTokenKeyVersion,
-    })
-  } catch {
-    return NextResponse.json({ error: "Failed to decrypt API token" }, { status: 500 })
-  }
-
-  const client = new OpenProjectClient(
-    integration.baseUrl,
-    integration.openProjectProjectIdentifier,
-    token
-  )
-
-  try {
-    const columns = await client.getBoardColumns(Number(boardId))
+    const columns = await resolved.client.getBoardColumns(Number(boardId))
     return NextResponse.json({ columns })
   } catch (err: any) {
     return NextResponse.json({ columns: [], error: err?.message || String(err) }, { status: 200 })

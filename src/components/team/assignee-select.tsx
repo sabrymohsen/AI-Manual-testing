@@ -4,7 +4,9 @@ import { useProjectTeam } from "@/hooks/use-project-team"
 
 /**
  * Assignee dropdown backed by the project's team pool (ProjectTeamMember).
- * `value` is a member id (stored on BugReport.assignedTo / TestCase.assignee).
+ * `value` is a pool member id (stored on TestCase.assignee, which stays local).
+ * The bug forms deliberately store the tracker's own user id instead, since
+ * BugReport.assignedTo is sent to the tracker as the work item's assignee.
  * Shows active members; if the current value isn't in the pool it's still shown
  * so existing assignments never silently disappear.
  */
