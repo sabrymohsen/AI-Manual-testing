@@ -1,4 +1,8 @@
 import axios from "axios";
+import {
+  chatWithConfiguredProvider,
+  hasConfiguredProvider,
+} from "@/lib/ai/provider-chat";
 
 export interface AIGeneratedTestCase {
   title: string;
@@ -58,6 +62,27 @@ export async function generateTestCasesFromRequirements(
   const prompt = buildPrompt(requirements, projectUrl, opts);
 
   let response: string;
+
+  // The workspace's configured provider (Section 11) comes first. Without this
+  // the generator only ever tried a local Ollama and a HuggingFace token, so on
+  // a deployed box it always ended up on the offline path regardless of what
+  // was configured in the hub.
+  try {
+    if (await hasConfiguredProvider()) {
+      const out = await chatWithConfiguredProvider({
+        prompt,
+        maxTokens: opts.maxTokens,
+        temperature: opts.temperature,
+        command: "generate-test-cases",
+      });
+      if (out) return parseTestCasesFromResponse(out, opts);
+    }
+  } catch (error) {
+    console.warn(
+      "[test-case-generator] configured provider failed, falling back:",
+      (error as any)?.message
+    );
+  }
 
   try {
     if (opts.provider === "ollama") {

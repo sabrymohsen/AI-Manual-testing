@@ -1,5 +1,9 @@
 import axios from "axios"
 import { getOllamaModels } from "@/lib/ai/test-case-generator"
+import {
+  chatWithConfiguredProvider,
+  hasConfiguredProvider,
+} from "@/lib/ai/provider-chat"
 
 /**
  * Free, self-hostable bug-report drafter.
@@ -35,7 +39,7 @@ export interface BugDraft {
   stepsToReproduce: string
   expectedResult: string
   actualResult: string
-  provider: "ollama" | "huggingface" | "rule-based"
+  provider: "provider" | "ollama" | "huggingface" | "rule-based"
 }
 
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
@@ -224,7 +228,27 @@ function ruleBasedDraft(input: BugDraftInput): BugDraft {
 export async function generateBugReportDraft(input: BugDraftInput): Promise<BugDraft> {
   const hasImage = !!input.imageBase64
 
-  // 1. Ollama (local, free)
+  // 1. The workspace's configured provider (Section 11). Without this the draft
+  // only ever tried a local Ollama and a HuggingFace token, so a deployed box
+  // always landed on the rule-based template no matter what the hub said.
+  try {
+    if (await hasConfiguredProvider()) {
+      const out = await chatWithConfiguredProvider({
+        prompt: buildPrompt(input, hasImage),
+        imageBase64: input.imageBase64 || undefined,
+        command: "generate-bug-report",
+      })
+      const parsed = parseJson(out)
+      if (parsed) return normalize(parsed, "provider")
+    }
+  } catch (err) {
+    console.warn(
+      "[generate-bug-report] configured provider failed, trying Ollama:",
+      (err as any)?.message
+    )
+  }
+
+  // 2. Ollama (local, free)
   try {
     const out = await callOllama(input, hasImage)
     const parsed = parseJson(out)
@@ -233,7 +257,7 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
     console.warn("[generate-bug-report] Ollama unavailable, trying Hugging Face:", (err as any)?.message)
   }
 
-  // 2. Hugging Face (free tier, text only)
+  // 3. Hugging Face (free tier, text only)
   try {
     const out = await callHuggingFace(input)
     const parsed = parseJson(out)
@@ -242,6 +266,6 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
     console.warn("[generate-bug-report] Hugging Face unavailable, using rule-based draft:", (err as any)?.message)
   }
 
-  // 3. Deterministic fallback — always succeeds.
+  // 4. Deterministic fallback — always succeeds.
   return ruleBasedDraft(input)
 }

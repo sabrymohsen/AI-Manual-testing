@@ -12,9 +12,12 @@ import { startScriptRun } from "@/lib/hub-runner"
 import { buildTemplateCode, HubScriptType } from "@/lib/hub-templates"
 import {
   AiPolicyData,
+  AiProvider,
+  PROVIDER_CATALOG,
   getAiPolicy,
   monthlySpend,
   estimateCost,
+  openAiCompatBaseUrl,
   redactSensitive
 } from "@/lib/hub-ai-providers"
 
@@ -34,6 +37,7 @@ export interface AgentSettingsData {
 }
 
 export const DEFAULT_MODELS: Record<string, string[]> = {
+  Kimi: ["kimi-k2-0711-preview", "moonshot-v1-32k", "moonshot-v1-8k"],
   Anthropic: ["claude-opus-4-8", "claude-sonnet-5", "claude-haiku-4-5"],
   OpenAI: ["gpt-4o", "gpt-4o-mini"],
   Gemini: ["gemini-2.0-flash", "gemini-1.5-pro"],
@@ -54,13 +58,33 @@ export async function getAgentSettings(): Promise<AgentSettingsData> {
   // Falls back to the legacy single-row AgentSettings above when none is set.
   const def = await prisma.aiProviderConfig.findFirst({ where: { isDefault: true, enabled: true } })
   if (def) {
+    // Env key as a fallback: a deployment can supply the credential without
+    // writing it into AiProviderConfig.apiKey, which is a plaintext column.
+    const meta = PROVIDER_CATALOG[def.provider as AiProvider]
+    const envKey = meta?.keyEnv ? process.env[meta.keyEnv] || "" : ""
     return {
       provider: def.provider,
-      apiKey: def.apiKey || "",
-      model: def.model || base.model,
+      apiKey: def.apiKey || envKey,
+      model: def.model || meta?.models[0] || base.model,
       permission: base.permission
     }
   }
+
+  // Nothing configured in the hub — adopt whichever provider has a key in the
+  // environment, so setting KIMI_API_KEY alone makes the agent work.
+  for (const meta of Object.values(PROVIDER_CATALOG)) {
+    if (meta.local || !meta.keyEnv) continue
+    const envKey = process.env[meta.keyEnv]
+    if (envKey) {
+      return {
+        provider: meta.provider,
+        apiKey: envKey,
+        model: meta.models[0],
+        permission: base.permission
+      }
+    }
+  }
+
   return base
 }
 
@@ -535,11 +559,8 @@ async function runAnthropicAgent(
 }
 
 // OpenAI-compatible loop — used for OpenAI, Gemini (OpenAI-compat endpoint), and Ollama
-const OPENAI_BASE_URLS: Record<string, string> = {
-  OpenAI: "https://api.openai.com/v1",
-  Gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
-  Ollama: "http://localhost:11434/v1"
-}
+// Base URLs come from the provider catalog so the agent and the generators
+// can't drift apart on where a provider lives.
 
 async function runOpenAICompatAgent(
   history: HistoryMessage[],
@@ -549,7 +570,7 @@ async function runOpenAICompatAgent(
   usage: UsageAcc,
   policy?: AiPolicyData
 ): Promise<string> {
-  const baseUrl = OPENAI_BASE_URLS[settings.provider] || OPENAI_BASE_URLS.OpenAI
+  const baseUrl = openAiCompatBaseUrl(settings.provider as AiProvider)
   const openaiTools = TOOLS.map((t) => ({
     type: "function",
     function: { name: t.name, description: t.description, parameters: t.input_schema }

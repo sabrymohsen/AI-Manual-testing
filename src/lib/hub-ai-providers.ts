@@ -4,8 +4,13 @@
 // source of truth for provider metadata.
 import { prisma } from "@/lib/db"
 
-export const AI_PROVIDERS = ["OpenAI", "Anthropic", "Gemini", "Ollama"] as const
+export const AI_PROVIDERS = ["Kimi", "OpenAI", "Anthropic", "Gemini", "Ollama"] as const
 export type AiProvider = (typeof AI_PROVIDERS)[number]
+
+// Kimi (Moonshot) is OpenAI-compatible. The .ai and .cn consoles issue separate,
+// non-interchangeable keys, so the host is overridable for a key minted on the
+// China console.
+export const KIMI_BASE_URL = process.env.KIMI_BASE_URL || "https://api.moonshot.ai/v1"
 
 export interface ProviderMeta {
   provider: AiProvider
@@ -19,6 +24,16 @@ export interface ProviderMeta {
 // Model lists per the spec. Ollama's list is a fallback; the real installed
 // models are auto-detected from the local daemon when reachable.
 export const PROVIDER_CATALOG: Record<AiProvider, ProviderMeta> = {
+  Kimi: {
+    provider: "Kimi",
+    label: "Kimi (Moonshot)",
+    local: false,
+    // Fallback only — the real list is read from the account's /models endpoint
+    // when the key is tested, so a renamed or newly released model still shows up.
+    models: ["kimi-k2-0711-preview", "moonshot-v1-32k", "moonshot-v1-8k"],
+    keyEnv: "KIMI_API_KEY",
+    docsHint: "OpenAI-compatible endpoint. Set KIMI_API_KEY (KIMI_BASE_URL for the .cn console)."
+  },
   OpenAI: {
     provider: "OpenAI",
     label: "OpenAI",
@@ -61,6 +76,24 @@ export const MODEL_PRICING: Record<string, { in: number; out: number }> = {
   "claude-3-haiku-20240307": { in: 0.25, out: 1.25 },
   "gemini-1.5-pro": { in: 1.25, out: 5 },
   "gemini-1.5-flash": { in: 0.075, out: 0.3 }
+  // Kimi/Moonshot models are deliberately absent: their list price is published
+  // in CNY and varies by model tier, and a wrong number here would show up as a
+  // confident-looking dollar figure in the Usage tab. Unpriced models record
+  // real token counts with costUsd 0 — add entries here to enable cost estimates.
+}
+
+/** Base URL for the providers that speak the OpenAI chat-completions shape. */
+export function openAiCompatBaseUrl(provider: AiProvider): string {
+  switch (provider) {
+    case "Kimi":
+      return KIMI_BASE_URL
+    case "Gemini":
+      return "https://generativelanguage.googleapis.com/v1beta/openai"
+    case "Ollama":
+      return `${process.env.OLLAMA_URL || "http://localhost:11434"}/v1`
+    default:
+      return "https://api.openai.com/v1"
+  }
 }
 
 /** Estimated USD cost for a call given token counts. Unknown/local models = 0. */
@@ -147,12 +180,27 @@ export async function testProviderConnection(provider: AiProvider, apiKey: strin
       return { ok: false, detail: `Anthropic responded ${res.status} (${res.status === 401 ? "invalid key" : "error"})` }
     }
 
-    const base = provider === "Gemini" ? "https://generativelanguage.googleapis.com/v1beta/openai" : "https://api.openai.com/v1"
+    const base = openAiCompatBaseUrl(provider)
     const res = await fetch(`${base}/models`, {
       headers: { Authorization: `Bearer ${key}` },
       signal: AbortSignal.timeout(6000)
     })
-    if (res.ok) return { ok: true, detail: `${provider} key valid`, latencyMs: Date.now() - started }
+    if (res.ok) {
+      // Report the account's real model list so the picker never offers a model
+      // the key can't call (Kimi renames these more often than the others).
+      const data = await res.json().catch(() => null)
+      const models = Array.isArray(data?.data)
+        ? data.data.map((m: any) => String(m.id)).filter(Boolean)
+        : undefined
+      return {
+        ok: true,
+        detail: models?.length
+          ? `${provider} key valid · ${models.length} model(s) available`
+          : `${provider} key valid`,
+        latencyMs: Date.now() - started,
+        models
+      }
+    }
     return { ok: false, detail: `${provider} responded ${res.status} (${res.status === 401 ? "invalid key" : "error"})` }
   } catch (err: any) {
     return { ok: false, detail: err.name === "TimeoutError" ? "Connection timed out" : err.message }
