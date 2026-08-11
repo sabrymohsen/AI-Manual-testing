@@ -419,7 +419,7 @@ function Row({
           {row.sync && (
             <span
               className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400"
-              title="Synced to OpenProject"
+              title="Synced to tracker"
             >
               <CloudUpload className="h-3 w-3" />
             </span>

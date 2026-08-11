@@ -1,4 +1,5 @@
 import React from "react"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { useProjectSummary } from "@/hooks/use-metrics"
 import { Globe, ClipboardList, Bug, ShieldAlert, ArrowRight } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -10,6 +11,7 @@ interface ActiveProjectContextBarProps {
 export function ActiveProjectContextBar({ projectId }: ActiveProjectContextBarProps) {
   const router = useRouter()
   const { summary, loading } = useProjectSummary(projectId)
+  const { name: trackerName } = useProjectIntegration(projectId)
 
   if (loading || !summary) {
     return (
@@ -41,7 +43,7 @@ export function ActiveProjectContextBar({ projectId }: ActiveProjectContextBarPr
         )}
 
         <div className="space-y-0.5">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">OpenProject</span>
+          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">{trackerName}</span>
           <span className={`flex items-center gap-1.5 font-bold ${summary.opConnected ? "text-emerald-600" : "text-amber-500"}`}>
             <Globe className="h-3.5 w-3.5" />
             {summary.opConnected ? "Connected" : "Setup Required"}

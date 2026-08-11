@@ -914,6 +914,25 @@ export async function resumeSession(sessionId: string) {
 // Toggle whether browser interactions are captured as RecordedSteps (Live QA
 // scenario recording start/stop). In-memory only — the flag lives on the active
 // session in the worker process; returns the resulting state.
+/**
+ * Live console / network errors for an in-flight session.
+ *
+ * The collectors have always existed, but only their *counts* were ever
+ * exposed, so the Logs panel had nothing to show. Returns empty arrays once the
+ * session ends and its in-memory state is gone — the text is persisted onto the
+ * bug/test case at that point.
+ */
+export function getSessionLogs(sessionId: string): {
+  consoleErrors: string[]
+  networkErrors: string[]
+} {
+  const sess = activeSessions.get(sessionId)
+  return {
+    consoleErrors: sess?.consoleErrors ?? [],
+    networkErrors: sess?.networkErrors ?? [],
+  }
+}
+
 export function setStepRecording(sessionId: string, enabled: boolean): { stepRecording: boolean } {
   const activeSess = activeSessions.get(sessionId)
   if (!activeSess) throw new Error("Active session not found")

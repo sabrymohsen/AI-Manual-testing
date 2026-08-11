@@ -22,6 +22,24 @@ interface Member {
   avatarUrl: string | null;
 }
 
+/** A project entity referenceable from chat with `#`. */
+interface LinkableEntity {
+  id: string;
+  type: string;
+  key: string;
+  label: string;
+  url: string;
+  meta?: string | null;
+}
+
+const ENTITY_CHIP: Record<string, string> = {
+  TASK: "bg-blue-50 text-blue-700 border-blue-200",
+  SUBTASK: "bg-sky-50 text-sky-700 border-sky-200",
+  BUG_REPORT: "bg-red-50 text-red-700 border-red-200",
+  TEST_CASE: "bg-violet-50 text-violet-700 border-violet-200",
+  BRD_DOCUMENT: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
 export function ChatInput({
   projectId,
   channelId,
@@ -40,6 +58,14 @@ export function ChatInput({
   const [members, setMembers] = useState<Member[]>([]);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState("");
+  // `#` entity mentions (tasks, bugs, test cases, BRDs) run alongside `@` users.
+  const [showEntities, setShowEntities] = useState(false);
+  const [entityQuery, setEntityQuery] = useState("");
+  const [entityResults, setEntityResults] = useState<LinkableEntity[]>([]);
+  const [entityLoading, setEntityLoading] = useState(false);
+  // Entities actually chosen from the picker, sent with the message so the
+  // reference survives even if someone edits the text afterwards.
+  const [pickedEntities, setPickedEntities] = useState<LinkableEntity[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -54,7 +80,8 @@ export function ChatInput({
     content: "",
     editorProps: {
       attributes: {
-        class: "min-h-[24px] max-h-[120px] overflow-y-auto outline-none py-1 pr-12 text-sm prose dark:prose-invert max-w-none text-slate-800 dark:text-slate-200",
+        // `prose` is a no-op here (no @tailwindcss/typography); composer-body carries the real styles.
+        class: "composer-body min-h-[24px] max-h-[120px] overflow-y-auto outline-none py-1 pr-12 text-sm text-slate-800 dark:text-slate-200",
       },
       handleKeyDown: (view, event) => {
         // Send on Enter (unless Shift is pressed)
@@ -76,12 +103,45 @@ export function ChatInput({
       if (lastWord.startsWith("@")) {
         setMentionQuery(lastWord.slice(1));
         setShowMentions(true);
+        setShowEntities(false);
+      } else if (lastWord.startsWith("#")) {
+        setEntityQuery(lastWord.slice(1));
+        setShowEntities(true);
+        setShowMentions(false);
       } else {
         setShowMentions(false);
+        setShowEntities(false);
       }
     },
     immediatelyRender: false,
   });
+
+  // Debounced entity search while the `#` picker is open.
+  useEffect(() => {
+    if (!showEntities || !projectId) return;
+    let cancelled = false;
+    setEntityLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/linkables?q=${encodeURIComponent(entityQuery)}` +
+            `&types=TASK,SUBTASK,BUG_REPORT,TEST_CASE,BRD_DOCUMENT&limit=12`
+        );
+        if (res.ok && !cancelled) {
+          const d = await res.json();
+          setEntityResults(d.results || []);
+        }
+      } catch {
+        if (!cancelled) setEntityResults([]);
+      } finally {
+        if (!cancelled) setEntityLoading(false);
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [showEntities, entityQuery, projectId]);
 
   // Fetch project members for mentions
   useEffect(() => {
@@ -178,6 +238,19 @@ export function ChatInput({
     setShowMentions(false);
   };
 
+  const insertEntity = (entity: LinkableEntity) => {
+    if (!editor) return;
+    const words = editor.getText().split(/\s+/);
+    words.pop(); // drop the partial "#..." token
+    const baseText = words.join(" ");
+    editor.commands.setContent((baseText ? baseText + " " : "") + `#${entity.key} `);
+    editor.commands.focus();
+    setShowEntities(false);
+    setPickedEntities((prev) =>
+      prev.some((e) => e.id === entity.id && e.type === entity.type) ? prev : [...prev, entity]
+    );
+  };
+
   const handleSubmit = async () => {
     if (!editor) return;
     const content = editor.getText().trim();
@@ -194,12 +267,16 @@ export function ChatInput({
       }
     });
 
+    // Only keep picked entities whose chip is still in the text.
+    const entityMentions = pickedEntities.filter((e) => content.includes(`#${e.key}`));
+
     const payload = {
       channelId,
       content,
       htmlContent,
       parentId,
       mentions,
+      entityMentions,
       attachments,
     };
 
@@ -220,6 +297,7 @@ export function ChatInput({
 
     editor.commands.clearContent();
     setAttachments([]);
+    setPickedEntities([]);
   };
 
   // Filter members based on mention text query
@@ -230,6 +308,39 @@ export function ChatInput({
 
   return (
     <div className="relative border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+      {/* Entity (#) picker — tasks, bugs, test cases, BRDs */}
+      {showEntities && (
+        <div className="absolute bottom-full left-3 z-50 mb-1 max-h-56 w-80 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-1 shadow-lg">
+          <p className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+            Reference an item
+          </p>
+          {entityLoading && (
+            <p className="px-3 py-2 text-xs text-slate-500">Searching…</p>
+          )}
+          {!entityLoading && entityResults.length === 0 && (
+            <p className="px-3 py-2 text-xs text-slate-500">No matching items.</p>
+          )}
+          {!entityLoading &&
+            entityResults.map((e) => (
+              <button
+                key={`${e.type}:${e.id}`}
+                onClick={() => insertEntity(e)}
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+              >
+                <span
+                  className={cn(
+                    "shrink-0 rounded border px-1 py-0.5 text-[9px] font-bold",
+                    ENTITY_CHIP[e.type] || "bg-slate-100 text-slate-600 border-slate-200"
+                  )}
+                >
+                  {e.key}
+                </span>
+                <span className="truncate">{e.label}</span>
+              </button>
+            ))}
+        </div>
+      )}
+
       {/* Mentions dropdown overlay */}
       {showMentions && filteredMembers.length > 0 && (
         <div className="absolute bottom-full left-3 z-50 mb-1 max-h-48 w-56 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-1 shadow-lg">

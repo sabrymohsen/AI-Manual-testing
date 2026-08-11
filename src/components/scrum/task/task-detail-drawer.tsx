@@ -33,6 +33,7 @@ import { TraceabilityLinks } from "./traceability-links"
 import { TaskLinkedIssues } from "./task-linked-issues"
 import { TaskDetailsSidebar } from "./task-details-sidebar"
 import { TaskLinkedBrds } from "./task-linked-brds"
+import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import { TaskActivity } from "./task-activity"
 import { STATUS_COLORS, STATUS_ORDER, TYPE_META } from "./task-detail-config"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
@@ -292,6 +293,11 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
 
           <div className="border-t border-border/60 pt-5">
             <TaskLinkedBrds projectId={projectId} taskId={task.id} />
+          </div>
+
+          {/* Generic links: anything the purpose-built sections above don't cover. */}
+          <div className="border-t border-border/60 pt-5">
+            <LinkedEntities projectId={projectId} entityId={task.id} entityType="TASK" />
           </div>
 
           <div className="border-t border-border/60 pt-5">

@@ -140,3 +140,59 @@
 .brd-doc .brd-pagebreak::after { content: "Page break"; position: absolute; right: 0; top: -0.65rem; font-size: 9px; color: #94a3b8; background: #fff; padding: 0 4px; }
 .brd-doc[dir="rtl"], .brd-doc [dir="rtl"] { text-align: right; }
 .brd-doc.show-marks p::after, .brd-doc.show-marks h1::after, .brd-doc.show-marks h2::after, .brd-doc.show-marks h3::after, .brd-doc.show-marks h4::after { content: "¶"; color: #cbd5e1; margin-left: 2px; }
+
+/* Scrum board horizontal scroller.
+   No tailwind-scrollbar plugin is installed, so `scrollbar-thin` and friends
+   would silently do nothing — this is the real implementation. The track stays
+   visible so it is obvious the board scrolls sideways when columns overflow. */
+.board-scroll {
+  scrollbar-width: thin;                        /* Firefox */
+  scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+}
+.board-scroll::-webkit-scrollbar { height: 10px; }
+.board-scroll::-webkit-scrollbar-track { background: transparent; }
+.board-scroll::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.board-scroll:hover::-webkit-scrollbar-thumb { background-color: hsl(var(--muted-foreground) / 0.4); }
+
+/* Chat composer placeholder. @tiptap/extension-placeholder isn't installed, so
+   the empty-editor hint is done in CSS against the wrapper's data attribute. */
+/* ProseMirror renders an empty doc as a single <p> holding only a trailing
+   <br>. The Placeholder extension isn't installed, so that signature is what we
+   match on — `is-editor-empty` would never be added. */
+.composer-editor:has(.ProseMirror > p:only-child > br.ProseMirror-trailingBreak)::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  padding: 0.75rem 1rem;
+  color: hsl(var(--muted-foreground));
+  pointer-events: none;
+  font-size: 0.875rem;
+}
+.composer-editor { position: relative; }
+
+/* Chat composer content styling.
+   Tailwind's preflight strips list markers (ul/ol -> list-style:none, no
+   padding) and @tailwindcss/typography is not installed, so `prose` classes do
+   nothing here. Without this, bullets and numbers are invisible while typing
+   and only appear once the message is rendered. */
+.composer-body ul,
+.composer-body ol { margin: 0.35rem 0; padding-left: 1.35rem; }
+.composer-body ul { list-style: disc outside; }
+.composer-body ol { list-style: decimal outside; }
+.composer-body li { margin: 0.1rem 0; }
+.composer-body li > p { margin: 0; }
+.composer-body p { margin: 0; }
+.composer-body strong { font-weight: 650; }
+.composer-body em { font-style: italic; }
+.composer-body s { opacity: 0.7; }
+.composer-body code {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+}

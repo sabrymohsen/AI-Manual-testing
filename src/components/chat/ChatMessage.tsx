@@ -7,7 +7,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import NextLink from "next/link";
+
 import { EmojiPicker } from "./EmojiPicker";
+
+const ENTITY_CHIP: Record<string, string> = {
+  TASK: "bg-blue-50 text-blue-700 border-blue-200",
+  SUBTASK: "bg-sky-50 text-sky-700 border-sky-200",
+  BUG_REPORT: "bg-red-50 text-red-700 border-red-200",
+  TEST_CASE: "bg-violet-50 text-violet-700 border-violet-200",
+  BRD_DOCUMENT: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
 
 export function ChatMessage({
   message,
@@ -211,6 +221,29 @@ export function ChatMessage({
               />
             ) : (
               message.content
+            )}
+
+            {/* Entities referenced with `#`. Rendered as React nodes from the
+                structured entityMentions column rather than injected into
+                htmlContent — that path is dangerouslySetInnerHTML, so building
+                markup out of user-supplied labels there would be an XSS hole. */}
+            {!isDeleted && Array.isArray(message.entityMentions) && message.entityMentions.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {message.entityMentions.map((e: any) => (
+                  <NextLink
+                    key={`${e.type}:${e.id}`}
+                    href={e.url || "#"}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-bold transition-colors hover:brightness-95",
+                      ENTITY_CHIP[e.type] || "border-slate-200 bg-slate-100 text-slate-600"
+                    )}
+                    title={e.label}
+                  >
+                    {e.key}
+                    <span className="max-w-[160px] truncate font-medium opacity-80">{e.label}</span>
+                  </NextLink>
+                ))}
+              </div>
             )}
           </div>
         )}

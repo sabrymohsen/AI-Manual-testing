@@ -1,7 +1,11 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback } from "react"
-import { Hash, Plus, Search, Users, X, Edit2, Send, Smile, Paperclip, AtSign, Bold, Italic, Strikethrough, Link2, Code2, MessageSquare, ChevronDown, Circle } from "lucide-react"
+import { useEditor, EditorContent, useEditorState } from "@tiptap/react"
+import StarterKit from "@tiptap/starter-kit"
+import { FormattedMessage, docToMarkdown } from "@/components/chat/rich-text"
+import Link from "next/link"
+import { Hash, Plus, Search, Users, X, Edit2, Send, Smile, Paperclip, AtSign, Bold, Italic, Strikethrough, Link2, Code2, List, ListOrdered, MessageSquare, ChevronDown, Circle } from "lucide-react"
 import { useChatStore, ChatMessage, ChatChannel } from "@/stores/chatStore"
 import { useSocket } from "@/hooks/useSocket"
 import { EmojiPicker } from "@/components/chat/EmojiPicker"
@@ -21,6 +25,32 @@ interface ProjectMember {
   email: string
   avatarUrl?: string | null
   role?: string
+}
+
+/** A project item referenceable from chat with `#`. */
+interface LinkableEntity {
+  id: string
+  type: string
+  key: string
+  label: string
+  url: string
+  meta?: string | null
+}
+
+const ENTITY_CHIP: Record<string, string> = {
+  TASK: "bg-blue-50 text-blue-700 border-blue-200",
+  SUBTASK: "bg-sky-50 text-sky-700 border-sky-200",
+  BUG_REPORT: "bg-red-50 text-red-700 border-red-200",
+  TEST_CASE: "bg-violet-50 text-violet-700 border-violet-200",
+  BRD_DOCUMENT: "bg-emerald-50 text-emerald-700 border-emerald-200",
+}
+
+/** The token being typed right before the caret, if it starts with @ or #. */
+function activeToken(text: string, caret: number): { trigger: "@" | "#"; query: string } | null {
+  const upto = text.slice(0, caret)
+  const m = upto.match(/(^|\s)([@#])([^\s@#]*)$/)
+  if (!m) return null
+  return { trigger: m[2] as "@" | "#", query: m[3] }
 }
 
 export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPageProps) {
@@ -45,6 +75,17 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
   const [threadMessages, setThreadMessages] = useState<ChatMessage[]>([])
   const [threadParent, setThreadParent] = useState<ChatMessage | null>(null)
   const [messageInput, setMessageInput] = useState("")
+  // Mention pickers for the composer: `@` for people, `#` for project items
+  // (stories, subtasks, bugs, test cases, BRDs).
+  const [mentionMode, setMentionMode] = useState<null | "user" | "entity">(null)
+  const [mentionQuery, setMentionQuery] = useState("")
+  const [entityResults, setEntityResults] = useState<LinkableEntity[]>([])
+  const [entityLoading, setEntityLoading] = useState(false)
+  const [pickedEntities, setPickedEntities] = useState<LinkableEntity[]>([])
+  // Keep the latest picker state readable from TipTap's keydown handler, which
+  // closes over stale props otherwise.
+  const mentionModeRef = useRef<null | "user" | "entity">(null)
+  useEffect(() => { mentionModeRef.current = mentionMode }, [mentionMode])
   const [threadInput, setThreadInput] = useState("")
   const [sendingMessage, setSendingMessage] = useState(false)
   const [sendingThread, setSendingThread] = useState(false)
@@ -170,29 +211,158 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
     return () => clearInterval(interval)
   }, [projectId, setPresences])
 
+  // Debounced `#` search across project items.
+  useEffect(() => {
+    if (mentionMode !== "entity" || !projectId) return
+    let cancelled = false
+    setEntityLoading(true)
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/projects/${projectId}/linkables?q=${encodeURIComponent(mentionQuery)}` +
+            `&types=TASK,SUBTASK,BUG_REPORT,TEST_CASE,BRD_DOCUMENT&limit=12`
+        )
+        if (res.ok && !cancelled) setEntityResults((await res.json()).results || [])
+      } catch {
+        if (!cancelled) setEntityResults([])
+      } finally {
+        if (!cancelled) setEntityLoading(false)
+      }
+    }, 200)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [mentionMode, mentionQuery, projectId])
+
+  /** Replace the half-typed @/# token at the caret with the chosen value. */
+  const replaceToken = useCallback((insert: string) => {
+    const ed = editorRef.current
+    if (!ed) return
+    const from = ed.state.selection.from
+    const before = ed.state.doc.textBetween(0, from, "\n", " ")
+    const m = before.match(/([@#])([^\s@#]*)$/)
+    const tokenLen = m ? m[0].length : 0
+    ed.chain()
+      .focus()
+      .deleteRange({ from: from - tokenLen, to: from })
+      .insertContent(insert + " ")
+      .run()
+    setMentionMode(null)
+  }, [])
+
+  const insertUserMention = useCallback((m: ProjectMember) => {
+    replaceToken(`@${m.name || m.email}`)
+  }, [replaceToken])
+
+  const insertEntityMention = useCallback((e: LinkableEntity) => {
+    replaceToken(`#${e.key}`)
+    setPickedEntities((prev) =>
+      prev.some((p) => p.id === e.id && p.type === e.type) ? prev : [...prev, e]
+    )
+  }, [replaceToken])
+
   // Send message
+  const sendRef = useRef<() => void>(() => {})
+
+  const editor = useEditor({
+    extensions: [StarterKit.configure({ heading: false })],
+    content: "",
+    editorProps: {
+      attributes: {
+        class:
+          // No @tailwindcss/typography in this project, so `prose` would be a
+          // no-op; composer formatting is styled in globals.css instead.
+          "composer-body min-h-[44px] max-h-[160px] overflow-y-auto outline-none px-4 py-3 text-sm text-slate-800",
+      },
+      handleKeyDown: (_view, event) => {
+        if (event.key === "Escape" && mentionModeRef.current) {
+          setMentionMode(null)
+          return true
+        }
+        if (event.key === "Enter" && !event.shiftKey) {
+          // A picker is open — Enter must not send a half-typed token.
+          if (mentionModeRef.current) return true
+          // Inside a list, Enter continues the list (TipTap's own handler).
+          if (editorRef.current?.isActive("listItem")) return false
+          event.preventDefault()
+          sendRef.current()
+          return true
+        }
+        return false
+      },
+    },
+    onUpdate: ({ editor }) => {
+      const text = editor.state.doc.textBetween(0, editor.state.selection.from, "\n", " ")
+      const tok = activeToken(text, text.length)
+      if (tok) {
+        setMentionMode(tok.trigger === "@" ? "user" : "entity")
+        setMentionQuery(tok.query)
+      } else {
+        setMentionMode(null)
+      }
+      if (socketRef.current?.connected && activeChannelId) {
+        socketRef.current.emit("typing", activeChannelId)
+      }
+    },
+    immediatelyRender: false,
+  })
+  /**
+   * TipTap v3's `useEditor` is intentionally non-reactive — the component does
+   * not re-render as the selection moves. Toolbar active states and the Send
+   * button's enabled state both need that, so subscribe explicitly.
+   */
+  const editorState = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      isEmpty: e?.isEmpty ?? true,
+      bold: e?.isActive("bold") ?? false,
+      italic: e?.isActive("italic") ?? false,
+      strike: e?.isActive("strike") ?? false,
+      bulletList: e?.isActive("bulletList") ?? false,
+      orderedList: e?.isActive("orderedList") ?? false,
+      code: e?.isActive("code") ?? false,
+    }),
+  })
+
+  const editorRef = useRef<typeof editor>(null)
+  useEffect(() => { editorRef.current = editor }, [editor])
+
   const handleSendMessage = useCallback(async () => {
-    if (!messageInput.trim() || !activeChannelId || sendingMessage) return
+    const raw = editorRef.current ? docToMarkdown(editorRef.current.getJSON()) : messageInput
+    if (!raw.trim() || !activeChannelId || sendingMessage) return
     setSendingMessage(true)
 
-    const content = replaceEmojiShortcodes(messageInput.trim())
+    const content = replaceEmojiShortcodes(raw.trim())
+
+    // Only keep references whose chip survived any edits to the text.
+    const entityMentions = pickedEntities.filter((e) => content.includes(`#${e.key}`))
+    const mentionedUserIds = projectMembers
+      .filter((m) => content.includes(`@${m.name || m.email}`))
+      .map((m) => m.id)
 
     const socket = socketRef.current
     if (socket?.connected) {
       socket.emit("send-message", {
         channelId: activeChannelId,
         content,
+        mentions: mentionedUserIds,
+        entityMentions,
       })
+      editorRef.current?.commands.clearContent()
       setMessageInput("")
+      setPickedEntities([])
       setSendingMessage(false)
     } else {
       try {
         await fetch(`/api/channels/${activeChannelId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content, mentions: mentionedUserIds, entityMentions }),
         })
+        editorRef.current?.commands.clearContent()
         setMessageInput("")
+        setPickedEntities([])
         // Reload messages
         const res = await fetch(`/api/channels/${activeChannelId}/messages?limit=50`)
         if (res.ok) {
@@ -205,7 +375,9 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
         setSendingMessage(false)
       }
     }
-  }, [messageInput, activeChannelId, sendingMessage])
+  }, [messageInput, activeChannelId, sendingMessage, pickedEntities, projectMembers])
+
+  useEffect(() => { sendRef.current = handleSendMessage }, [handleSendMessage])
 
   // Send thread reply
   const handleSendThreadReply = useCallback(async () => {
@@ -319,7 +491,9 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
   // Insert emoji from the picker into the message input
   const insertEmoji = (emoji: string) => {
-    setMessageInput((prev) => prev + emoji)
+    // Must go through the editor — the old messageInput string is no longer
+    // what gets sent, so appending to it put the emoji nowhere visible.
+    editorRef.current?.chain().focus().insertContent(emoji).run()
   }
 
   // Create channel
@@ -674,10 +848,16 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                         <div className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
                           {msg.isDeleted ? (
                             <span className="italic text-gray-400">This message was deleted</span>
-                          ) : msg.htmlContent ? (
-                            <div dangerouslySetInnerHTML={{ __html: msg.htmlContent }} />
                           ) : (
-                            msg.content
+                            // Rendered from the message text into React nodes:
+                            // bold/italic/lists plus blue @mentions and
+                            // type-coloured #references. htmlContent is
+                            // deliberately not used here — it is raw HTML.
+                            <FormattedMessage
+                              content={msg.content}
+                              people={projectMembers}
+                              entities={(msg.entityMentions as any) || []}
+                            />
                           )}
                         </div>
 
@@ -778,45 +958,129 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
             {/* Message Input */}
             <div className="px-5 pb-4 pt-2 border-t bg-white shrink-0">
-              <div className="rounded-xl border bg-white shadow-sm overflow-hidden focus-within:ring-1 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all">
+              <div className="relative rounded-xl border bg-white shadow-sm focus-within:ring-1 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all">
                 {/* Formatting toolbar */}
                 <div className="flex items-center gap-0.5 px-3 pt-2.5 pb-1 border-b border-gray-100">
-                  <button className="p-1.5 rounded hover:bg-slate-100 text-gray-400 hover:text-gray-600" title="Bold">
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleBold().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.bold ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Bold (**text**)"
+                  >
                     <Bold className="h-4 w-4" />
                   </button>
-                  <button className="p-1.5 rounded hover:bg-slate-100 text-gray-400 hover:text-gray-600" title="Italic">
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleItalic().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.italic ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Italic (*text*)"
+                  >
                     <Italic className="h-4 w-4" />
                   </button>
-                  <button className="p-1.5 rounded hover:bg-slate-100 text-gray-400 hover:text-gray-600" title="Strikethrough">
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleStrike().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.strike ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Strikethrough (~~text~~)"
+                  >
                     <Strikethrough className="h-4 w-4" />
                   </button>
-                  <button className="p-1.5 rounded hover:bg-slate-100 text-gray-400 hover:text-gray-600" title="Link">
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.bulletList ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Bulleted list"
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.orderedList ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Numbered list"
+                  >
+                    <ListOrdered className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleCode().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.code ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Inline code (`code`)"
+                  >
                     <Link2 className="h-4 w-4" />
                   </button>
-                  <button className="p-1.5 rounded hover:bg-slate-100 text-gray-400 hover:text-gray-600" title="Code">
+                  <button
+                    type="button"
+                    onClick={() => editor?.chain().focus().toggleCode().run()}
+                    className={`p-1.5 rounded transition-colors ${editorState?.code ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    title="Inline code"
+                  >
                     <Code2 className="h-4 w-4" />
                   </button>
                 </div>
 
-                {/* Text area */}
-                <textarea
-                  value={messageInput}
-                  onChange={(e) => {
-                    setMessageInput(e.target.value)
-                    // Emit typing
-                    if (socketRef.current?.connected && activeChannelId) {
-                      socketRef.current.emit("typing", activeChannelId)
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSendMessage()
-                    }
-                  }}
-                  placeholder={isDM ? `Message ${activeDisplayName}...` : `Message #${activeChannel.name}...`}
-                  rows={2}
-                  className="w-full px-4 py-3 text-sm resize-none focus:outline-none placeholder:text-gray-400"
+                {/* Mention pickers */}
+                {mentionMode && (
+                  <div className="absolute bottom-full left-3 z-50 mb-1 max-h-60 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                    <p className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                      {mentionMode === "user" ? "Mention a person" : "Reference an item"}
+                    </p>
+
+                    {mentionMode === "user" && (() => {
+                      const q = mentionQuery.toLowerCase()
+                      const list = projectMembers.filter((m) =>
+                        (m.name || m.email).toLowerCase().includes(q)
+                      )
+                      if (list.length === 0)
+                        return <p className="px-3 py-2 text-xs text-slate-500">No matching people.</p>
+                      return list.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={() => insertUserMention(m)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                        >
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold uppercase text-indigo-700">
+                            {(m.name || m.email).slice(0, 2)}
+                          </span>
+                          <span className="truncate">{m.name || m.email}</span>
+                        </button>
+                      ))
+                    })()}
+
+                    {mentionMode === "entity" && (
+                      <>
+                        {entityLoading && <p className="px-3 py-2 text-xs text-slate-500">Searching…</p>}
+                        {!entityLoading && entityResults.length === 0 && (
+                          <p className="px-3 py-2 text-xs text-slate-500">No matching items.</p>
+                        )}
+                        {!entityLoading &&
+                          entityResults.map((e) => (
+                            <button
+                              key={`${e.type}:${e.id}`}
+                              onClick={() => insertEntityMention(e)}
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                            >
+                              <span
+                                className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-bold ${
+                                  ENTITY_CHIP[e.type] || "border-slate-200 bg-slate-100 text-slate-600"
+                                }`}
+                              >
+                                {e.key}
+                              </span>
+                              <span className="truncate">{e.label}</span>
+                            </button>
+                          ))}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Rich text composer. WYSIWYG so Bold/lists visibly apply;
+                    serialised to markdown text on send. */}
+                <EditorContent
+                  editor={editor}
+                  className="composer-editor"
+                  data-placeholder={isDM ? `Message ${activeDisplayName}...` : `Message #${activeChannel.name}...`}
                 />
 
                 {/* Bottom bar */}
@@ -829,7 +1093,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   </div>
                   <button
                     onClick={handleSendMessage}
-                    disabled={!messageInput.trim() || sendingMessage}
+                    disabled={(editorState?.isEmpty ?? true) || sendingMessage}
                     className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Send className="h-3.5 w-3.5" />

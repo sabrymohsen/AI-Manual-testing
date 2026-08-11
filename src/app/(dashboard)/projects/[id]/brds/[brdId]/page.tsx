@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { BrdEditor } from "@/components/brd/brd-editor"
 import { BrdCommentsPanel } from "@/components/brd/brd-comments"
+import { LinkedEntities } from "@/components/entity-links/linked-entities"
 
 const STATUS_STYLES: Record<string, string> = {
   Draft: "bg-slate-100 text-slate-600 border-slate-200",
@@ -428,6 +429,17 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
             ))}
           </div>
         )}
+
+        {/* Generic links to anything else in the project (tasks, bugs, test
+            cases…). The epic/story links above stay on their own BrdLink model. */}
+        <div className="mt-5 border-t pt-4">
+          <LinkedEntities
+            projectId={brd.projectId}
+            entityId={brd.id}
+            entityType="BRD_DOCUMENT"
+            readOnly={!canManage}
+          />
+        </div>
       </div>
     </div>
   )

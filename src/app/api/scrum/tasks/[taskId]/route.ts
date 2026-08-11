@@ -124,18 +124,26 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
     }
 
     // Notify newly-added assignees (not the actor, not existing assignees).
+    // Awaited rather than fire-and-forget: an unawaited promise can be torn
+    // down with the request before the rows are written, which is exactly how
+    // "I assigned it and they never got told" happens.
     const newAssignees = [...after].filter((id) => !before.has(id) && id !== auth.userId)
     if (newAssignees.length > 0) {
-      notify(
-        newAssignees.map((userId) => ({
-          userId,
-          type: "TASK_ASSIGNED" as const,
-          title: "New task assigned",
-          body: `You've been assigned to ${task.title}`,
-          projectId: task.projectId,
-          actionUrl: `/projects/${task.projectId}/scrum?task=${task.id}`,
-        }))
-      ).catch(() => {})
+      const taskKey = auth.boardKey ? `${auth.boardKey}-${task.taskNumber}` : `#${task.taskNumber}`
+      try {
+        await notify(
+          newAssignees.map((userId) => ({
+            userId,
+            type: "TASK_ASSIGNED" as const,
+            title: `Assigned to ${taskKey}`,
+            body: `You were assigned to ${task.title}`,
+            projectId: task.projectId,
+            actionUrl: `/projects/${task.projectId}/scrum?task=${task.id}`,
+          }))
+        )
+      } catch (err) {
+        console.error("Task assignment notification failed:", err)
+      }
     }
   }
   if (d.description !== undefined && (d.description ?? "") !== (existing.description ?? "")) {

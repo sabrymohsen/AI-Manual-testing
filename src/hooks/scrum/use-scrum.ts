@@ -283,7 +283,8 @@ export function useSubtaskMutations(projectId: string, taskId: string) {
     invalidateTaskLists(qc, projectId)
   }
   const add = useMutation({
-    mutationFn: (title: string) => scrumApi.addSubtask(taskId, title),
+    mutationFn: (body: { title: string; description?: string | null; assigneeId?: string | null }) =>
+      scrumApi.addSubtask(taskId, body),
     onSuccess: invalidate,
     onError: () => toast.error("Failed to add subtask"),
   })
@@ -297,11 +298,25 @@ export function useSubtaskMutations(projectId: string, taskId: string) {
       scrumApi.updateSubtask(subtaskId, { title }),
     onSuccess: invalidate,
   })
+  /** Edit description and/or assignee on an existing subtask. */
+  const update = useMutation({
+    mutationFn: ({
+      subtaskId,
+      ...body
+    }: {
+      subtaskId: string
+      title?: string
+      description?: string | null
+      assigneeId?: string | null
+    }) => scrumApi.updateSubtask(subtaskId, body),
+    onSuccess: invalidate,
+    onError: () => toast.error("Failed to update subtask"),
+  })
   const remove = useMutation({
     mutationFn: (subtaskId: string) => scrumApi.deleteSubtask(subtaskId),
     onSuccess: invalidate,
   })
-  return { add, toggle, rename, remove }
+  return { add, toggle, rename, update, remove }
 }
 
 // Comments

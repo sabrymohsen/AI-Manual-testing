@@ -33,7 +33,10 @@ const memberSelect = {
 export const taskInclude = {
   epic: { select: { id: true, title: true, color: true } },
   assignees: { select: memberSelect },
-  subtasks: { orderBy: { createdAt: "asc" } },
+  subtasks: {
+    orderBy: { createdAt: "asc" as const },
+    include: { assignee: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+  },
   _count: { select: { comments: true, testCaseLinks: true, bugLinks: true } },
 } satisfies Prisma.TaskInclude
 
@@ -53,7 +56,10 @@ export const taskDetailInclude = {
   assignees: { select: memberSelect },
   watchers: { select: memberSelect },
   votedBy: { select: { id: true } },
-  subtasks: { orderBy: { createdAt: "asc" } },
+  subtasks: {
+    orderBy: { createdAt: "asc" as const },
+    include: { assignee: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+  },
   comments: {
     orderBy: { createdAt: "asc" },
     include: { author: { select: memberSelect } },

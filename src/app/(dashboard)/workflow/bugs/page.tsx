@@ -41,7 +41,7 @@ export default function BugsWorkflowPage() {
     return (
       <ProjectSelectionGateway 
         title="Bug Reports Triage"
-        description="Select a project workspace scope to triage bug reports, duplicate issues, and OpenProject mappings."
+        description="Select a project workspace scope to triage bug reports, duplicate issues, and issue-tracker mappings."
         targetWorkflow="bug-reports"
       />
     )

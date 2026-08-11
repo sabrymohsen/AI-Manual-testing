@@ -7,7 +7,10 @@ import { z } from "zod"
 
 const schema = z.object({
   title: z.string().min(1).max(300).optional(),
+  description: z.string().max(5000).nullish(),
   completed: z.boolean().optional(),
+  // null clears the assignee.
+  assigneeId: z.string().nullish(),
 })
 
 async function guard(subtaskId: string, permission: ProjectPermission) {
@@ -40,6 +43,7 @@ export async function PATCH(request: Request, { params }: { params: { subtaskId:
   const subtask = await prisma.subtask.update({
     where: { id: params.subtaskId },
     data: parsed.data,
+    include: { assignee: { select: { id: true, name: true, email: true, avatarUrl: true } } },
   })
   return NextResponse.json({ subtask })
 }

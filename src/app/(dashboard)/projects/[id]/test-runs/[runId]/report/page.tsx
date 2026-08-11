@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { StepResultItem } from "@/components/test-runs/step-result"
@@ -11,6 +12,8 @@ import { Bug, Play, Edit, CloudUpload, CheckCircle2, XCircle, RefreshCw, Externa
 
 export default function ReportPage() {
   const params = useParams()
+  // Show whichever tracker the project syncs with, not a fixed vendor name.
+  const { name: trackerName } = useProjectIntegration(params.id as string)
   const router = useRouter()
   const [testRun, setTestRun] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -189,7 +192,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      {/* OpenProject Sync Status */}
+      {/* Tracker sync status */}
       {opSync && (
         <div className={`flex items-center justify-between rounded-lg border p-3 text-sm ${
           opSync.status === "success" ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800" :
@@ -203,7 +206,7 @@ export default function ReportPage() {
              opSync.status === "not_synced" ? <CloudUpload className="h-4 w-4 text-muted-foreground" /> :
              <CloudUpload className="h-4 w-4 text-blue-600" />}
             <span className="font-medium">
-              OpenProject: {opSync.status === "success" ? "Result Synced" : opSync.status === "failed" ? "Sync Failed" : opSync.status === "not_synced" ? "Not Synced" : "Pending"}
+              {trackerName}: {opSync.status === "success" ? "Result Synced" : opSync.status === "failed" ? "Sync Failed" : opSync.status === "not_synced" ? "Not Synced" : "Pending"}
             </span>
             {opSync.externalUrl && (
               <a href={opSync.externalUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline flex items-center gap-0.5">

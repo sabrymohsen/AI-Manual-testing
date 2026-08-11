@@ -19,6 +19,7 @@ import {
   getSessionStats,
   getSessionConnectionStatus,
   activeSessions,
+  getSessionLogs,
 } from "@/lib/recording/session-manager"
 import {
   startPickerSession,
@@ -550,6 +551,11 @@ const server = http.createServer(async (req, res) => {
       const body = await readBody(req)
 
       switch (action) {
+        case "logs": {
+          // Live console/network errors for the Logs panel.
+          sendJson(res, 200, getSessionLogs(sessionId))
+          return
+        }
         case "pause":
           await pauseSession(sessionId)
           sendJson(res, 200, { success: true })

@@ -86,27 +86,58 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
     user
   )
 
-  // Notify @mentioned members, plus the parent comment's author on a reply.
+  // Who hears about this comment:
+  //   1. anyone @mentioned
+  //   2. the parent comment's author, on a reply
+  //   3. the BRD's own author — commenting on someone's document should reach
+  //      them without having to remember to @mention them
+  //   4. everyone who already commented on this BRD (thread participants), so a
+  //      discussion doesn't go silent for the people already in it
+  // The Set dedupes across all four, and the commenter is always excluded.
   const recipients = new Set(mentionIds)
+
   if (d.parentId) {
     const parent = await prisma.brdAnnotation.findUnique({
       where: { id: d.parentId },
       select: { authorId: true },
     })
-    if (parent?.authorId && parent.authorId !== user.id) recipients.add(parent.authorId)
+    if (parent?.authorId) recipients.add(parent.authorId)
   }
+
+  if (brd.uploaderId) recipients.add(brd.uploaderId)
+
+  const priorAuthors = await prisma.brdAnnotation.findMany({
+    where: { brdId: brd.id, authorId: { not: null } },
+    select: { authorId: true },
+    distinct: ["authorId"],
+  })
+  for (const a of priorAuthors) if (a.authorId) recipients.add(a.authorId)
+
+  // Never notify yourself about your own comment.
+  recipients.delete(user.id)
+
   if (recipients.size > 0) {
     const who = user.name || user.email
-    notify(
-      [...recipients].map((userId) => ({
-        userId,
-        type: "COMMENT" as const,
-        title: mentionIds.includes(userId) ? `${who} mentioned you` : `${who} replied`,
-        body: `On BRD "${brd.name}": ${(d.text || "").slice(0, 140)}`,
-        projectId: brd.projectId,
-        actionUrl: `/projects/${brd.projectId}/brds/${brd.id}`,
-      }))
-    ).catch(() => {})
+    const title = (userId: string) =>
+      mentionIds.includes(userId)
+        ? `${who} mentioned you`
+        : d.parentId
+          ? `${who} replied`
+          : `${who} commented on ${brd.name}`
+    try {
+      await notify(
+        [...recipients].map((userId) => ({
+          userId,
+          type: "COMMENT" as const,
+          title: title(userId),
+          body: `On BRD "${brd.name}": ${(d.text || "").slice(0, 140)}`,
+          projectId: brd.projectId,
+          actionUrl: `/projects/${brd.projectId}/brds/${brd.id}`,
+        }))
+      )
+    } catch (err) {
+      console.error("BRD comment notification failed:", err)
+    }
   }
 
   return NextResponse.json({ annotation }, { status: 201 })

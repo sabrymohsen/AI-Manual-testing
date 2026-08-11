@@ -34,7 +34,7 @@ export function TerminalMock({ compact = false }: { compact?: boolean }) {
         <p className="text-amber-400">▸ Bug drafted → BUG-112 &quot;Coupon not applied to total&quot;</p>
         {!compact && (
           <>
-            <p className="text-slate-400">▸ Syncing BUG-112 to OpenProject… <span className="text-emerald-400">work package #4821 ✓</span></p>
+            <p className="text-slate-400">▸ Syncing BUG-112 to your tracker… <span className="text-emerald-400">work package #4821 ✓</span></p>
             <p className="text-slate-500">$ <span className="inline-block w-2 h-4 bg-violet-400 align-middle animate-pulse" /></p>
           </>
         )}

@@ -86,9 +86,14 @@ export const scrumApi = {
       .then((r) => r.data),
 
   // Subtasks
-  addSubtask: (taskId: string, title: string) =>
-    http.post<{ subtask: ScrumSubtask }>(`/scrum/tasks/${taskId}/subtasks`, { title }).then((r) => r.data.subtask),
-  updateSubtask: (subtaskId: string, body: { title?: string; completed?: boolean }) =>
+  addSubtask: (
+    taskId: string,
+    body: { title: string; description?: string | null; assigneeId?: string | null }
+  ) => http.post<{ subtask: ScrumSubtask }>(`/scrum/tasks/${taskId}/subtasks`, body).then((r) => r.data.subtask),
+  updateSubtask: (
+    subtaskId: string,
+    body: { title?: string; description?: string | null; completed?: boolean; assigneeId?: string | null }
+  ) =>
     http.patch<{ subtask: ScrumSubtask }>(`/scrum/subtasks/${subtaskId}`, body).then((r) => r.data.subtask),
   deleteSubtask: (subtaskId: string) => http.delete(`/scrum/subtasks/${subtaskId}`).then((r) => r.data),
 

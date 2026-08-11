@@ -25,6 +25,7 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string
   TASK_ASSIGNED: { icon: ClipboardList, accent: "text-green-600", iconBg: "bg-green-50" },
   SPRINT_STARTED: { icon: Rocket, accent: "text-orange-600", iconBg: "bg-orange-50" },
   COMMENT: { icon: MessageCircle, accent: "text-gray-600", iconBg: "bg-gray-100" },
+  CHAT_MESSAGE: { icon: MessageSquare, accent: "text-indigo-600", iconBg: "bg-indigo-50" },
   SYSTEM: { icon: Bell, accent: "text-slate-600", iconBg: "bg-slate-100" },
 }
 

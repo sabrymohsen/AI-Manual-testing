@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/api-guards";
-import { notify } from "@/lib/notifications";
+import {
+  notify,
+  buildChannelMessageNotifications,
+  type NotificationInput,
+  type EntityMention,
+} from "@/lib/notifications";
 import { extractMentionedUserIds, messagePreview } from "@/lib/mentions";
 
 // GET /api/channels/:id/messages?cursor=&limit=50 -> Cursor-paginated messages
@@ -152,6 +157,10 @@ export async function POST(
 
     const body = await request.json();
     const { content, htmlContent, parentId, mentions, attachments } = body;
+    // `#` entity references picked in the composer (tasks, bugs, test cases, BRDs).
+    const entityMentions: EntityMention[] | null = Array.isArray(body.entityMentions)
+      ? body.entityMentions
+      : null;
 
     if (!content && (!attachments || attachments.length === 0)) {
       return NextResponse.json({ error: "Content or attachments are required" }, { status: 400 });
@@ -186,6 +195,7 @@ export async function POST(
       data: {
         content,
         htmlContent,
+        entityMentions: (entityMentions as any) ?? undefined,
         channelId: params.id,
         senderId: userId,
         parentId,
@@ -229,19 +239,47 @@ export async function POST(
       // socket.io not running or initialized yet, ignore
     }
 
-    // Persist + push a notification per mentioned user.
-    if (mentionIds.length > 0) {
-      const senderName = auth.session!.user.name || auth.session!.user.email;
-      notify(
-        mentionIds.map((mentionedUserId: string) => ({
-          userId: mentionedUserId,
-          type: "MENTION" as const,
-          title: `${senderName} mentioned you`,
-          body: messagePreview(content || ""),
-          projectId: channel.projectId,
-          actionUrl: `/projects/${channel.projectId}/team-chat`,
-        }))
-      ).catch(() => {});
+    // Notifications: an @mention is personal and outranks the generic
+    // "new message" one, so mentioned users get only the mention.
+    const senderName = auth.session!.user.name || auth.session!.user.email;
+    const payloads: NotificationInput[] = mentionIds.map((mentionedUserId: string) => ({
+      userId: mentionedUserId,
+      type: "MENTION" as const,
+      title: `${senderName} mentioned you`,
+      body: messagePreview(content || ""),
+      projectId: channel.projectId,
+      actionUrl: `/projects/${channel.projectId}/team-chat`,
+    }));
+
+    // Everyone else in the channel gets told there's a new message. Previously
+    // only @mentions notified anyone, so ordinary messages were invisible to
+    // anybody who didn't happen to have the channel open.
+    const members = await prisma.channelMember.findMany({
+      where: { channelId: params.id },
+      select: { userId: true },
+    });
+    const alreadyNotified = new Set<string>([...mentionIds, auth.session!.user.id]);
+    const others = members.map((m) => m.userId).filter((id) => !alreadyNotified.has(id));
+
+    if (others.length > 0) {
+      payloads.push(
+        ...buildChannelMessageNotifications({
+          channel: { id: channel.id, name: channel.name, projectId: channel.projectId },
+          senderName,
+          content: content || "",
+          recipientIds: others,
+          entityMentions,
+        })
+      );
+    }
+
+    // One batched insert rather than one round-trip per recipient.
+    if (payloads.length > 0) {
+      try {
+        await notify(payloads);
+      } catch (err) {
+        console.error("Chat message notifications failed:", err);
+      }
     }
 
     return NextResponse.json({ message }, { status: 201 });

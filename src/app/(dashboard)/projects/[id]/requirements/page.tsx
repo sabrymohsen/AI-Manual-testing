@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, Fragment } from "react"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -101,6 +102,8 @@ export default function RequirementsDashboard() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  // Connected tracker name so labels reflect Jira / Azure / OpenProject / …
+  const { name: trackerName } = useProjectIntegration(projectId)
 
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [stats, setStats] = useState<CoverageStats | null>(null)
@@ -157,7 +160,7 @@ export default function RequirementsDashboard() {
       if (res.ok) {
         fetchRequirementsData()
       } else {
-        alert(data.error || "Story sync to OpenProject failed")
+        alert(data.error || `Story sync to ${trackerName} failed`)
       }
     } catch {
       alert("Network error during story sync")
@@ -713,7 +716,7 @@ export default function RequirementsDashboard() {
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0 hover:bg-emerald-50 text-emerald-600 rounded-lg"
-                  title="Synced — open in OpenProject"
+                  title={`Synced — open in ${trackerName}`}
                 >
                   <CheckCircle size={14} />
                 </Button>
@@ -727,7 +730,7 @@ export default function RequirementsDashboard() {
                 className={`h-7 w-7 p-0 hover:bg-slate-100 rounded-lg ${
                   req.openProjectSyncStatus === "Failed" ? "text-red-500" : "text-teal-600"
                 }`}
-                title={req.openProjectSyncStatus === "Failed" ? "Sync failed — retry" : "Sync story to OpenProject"}
+                title={req.openProjectSyncStatus === "Failed" ? "Sync failed — retry" : `Sync story to ${trackerName}`}
               >
                 {syncingReqId === req.id ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
               </Button>
@@ -976,7 +979,7 @@ export default function RequirementsDashboard() {
             className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs"
           >
             {importingStories ? <Loader2 size={15} className="animate-spin" /> : <CloudDownload size={15} className="text-teal-500" />}
-            OpenProject
+            {trackerName}
           </Button>
           <Link href={`/projects/${projectId}/board`}>
             <Button variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">

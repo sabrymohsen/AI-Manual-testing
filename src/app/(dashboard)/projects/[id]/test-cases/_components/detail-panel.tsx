@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useProjectIntegration } from "@/hooks/use-project-integration"
 import Link from "next/link"
 import { useCaseDetail } from "../_hooks/use-test-library"
 import { PRIORITY_META } from "./config"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import {
   ClipboardList,
   Edit2,
@@ -38,6 +40,8 @@ export function DetailPanel({
   onRun: (tc: { id: string; title: string; executionType: string }) => void
 }) {
   const [tab, setTab] = useState<Tab>("details")
+  // Label the sync section with the connected tracker, not a hardcoded vendor.
+  const { name: trackerName } = useProjectIntegration(projectId)
   const { data, isLoading, isError, error } = useCaseDetail(projectId, testCaseId)
   const tc = data?.testCase
 
@@ -257,7 +261,7 @@ export function DetailPanel({
         )}
 
         {tab === "sync" && (
-          <Section title="OpenProject">
+          <Section title={trackerName}>
             <Link
               href={`/projects/${projectId}/openproject-sync`}
               className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
@@ -265,6 +269,14 @@ export function DetailPanel({
               Open sync console <ExternalLink className="h-3 w-3" />
             </Link>
           </Section>
+        )}
+
+        {/* Cross-entity links live on the details tab so they're visible without
+            hunting through tabs — this is the traceability view people want. */}
+        {tab === "details" && (
+          <div className="border-t pt-4">
+            <LinkedEntities projectId={projectId} entityId={tc.id} entityType="TEST_CASE" />
+          </div>
         )}
       </div>
     </div>

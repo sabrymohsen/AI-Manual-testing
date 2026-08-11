@@ -239,7 +239,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
     return (
       <div className="flex gap-4 overflow-x-auto p-1">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-96 w-80 shrink-0 rounded-lg" />
+          <Skeleton key={i} className="h-96 min-w-[300px] flex-1 rounded-lg" />
         ))}
       </div>
     )
@@ -371,7 +371,9 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        <div className="flex min-h-0 flex-1 items-start gap-4 overflow-x-auto p-1">
+        {/* Columns share the available width (flex-1) but never shrink below a
+            readable 300px; past that the row overflows and scrolls sideways. */}
+        <div className="board-scroll flex min-h-0 flex-1 items-start gap-4 overflow-x-auto p-1">
         {columns.map((col: BoardColumn) => {
           const rawList = byStatus.get(col.status) ?? []
           const overLimit = col.wipLimit != null && rawList.length > col.wipLimit
@@ -380,7 +382,10 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
           const indexMap = new Map(displayList.map((t, i) => [t.id, i]))
 
           return (
-            <div key={col.id} className="flex max-h-full w-80 shrink-0 flex-col rounded-lg border bg-muted/60">
+            <div
+              key={col.id}
+              className="flex max-h-full min-w-[300px] max-w-[480px] flex-1 flex-col rounded-lg border bg-muted/60"
+            >
               {/* Column header */}
               <div className="flex items-center justify-between gap-2 px-3 py-2.5">
                 <div className="flex min-w-0 items-center gap-2">
@@ -498,7 +503,11 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex-1 space-y-2 overflow-y-auto px-2 pb-2 transition-colors ${
+                    // min-h-0 is required: a flex item defaults to
+                    // min-height:auto, which refuses to shrink below its
+                    // content, so overflow-y-auto would never actually scroll
+                    // and the column would grow past max-h-full instead.
+                    className={`min-h-0 flex-1 space-y-2 overflow-y-auto px-2 pb-2 transition-colors ${
                       snapshot.isDraggingOver ? "rounded-lg bg-primary/10 ring-2 ring-dashed ring-primary/40" : ""
                     }`}
                   >

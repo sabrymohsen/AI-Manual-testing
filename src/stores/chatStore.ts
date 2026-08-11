@@ -4,6 +4,8 @@ export interface ChatMessage {
   id: string;
   content: string;
   htmlContent: string | null;
+  /** Entities referenced with `#`: [{ type, id, key, label, url }]. */
+  entityMentions?: { type: string; id: string; key: string; label: string; url: string }[] | null;
   type: "TEXT" | "SYSTEM" | "FILE" | "CODE";
   channelId: string;
   senderId: string;

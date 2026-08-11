@@ -41,8 +41,10 @@ import {
   FolderMinus,
   CheckSquare,
   UserPlus,
-  Kanban
+  Kanban,
+  Link2
 } from "lucide-react"
+import { LinkedEntities } from "@/components/entity-links/linked-entities"
 
 interface TestStep {
   id?: string
@@ -667,9 +669,9 @@ export default function ProjectBugReportsPage() {
       if (res.ok) {
         const data = await res.json().catch(() => ({}))
         if (deleteRemote && data.remoteError) {
-          showToastMsg(`Bug deleted, but OpenProject removal failed: ${data.remoteError}`, "error")
+          showToastMsg(`Bug deleted, but ${trackerName} removal failed: ${data.remoteError}`, "error")
         } else if (deleteRemote && data.remoteDeleted) {
-          showToastMsg("Defect deleted from the app and OpenProject.")
+          showToastMsg(`Defect deleted from the app and ${trackerName}.`)
         } else {
           showToastMsg("Defect successfully deleted.")
         }
@@ -815,7 +817,7 @@ export default function ProjectBugReportsPage() {
         )
       )
       const failed = results.filter(r => !r.ok).length
-      if (failed === 0) showToastMsg(`Deleted ${selectedBugIds.length} bug(s)${deleteRemote ? " (app + OpenProject)" : ""}.`)
+      if (failed === 0) showToastMsg(`Deleted ${selectedBugIds.length} bug(s)${deleteRemote ? ` (app + ${trackerName})` : ""}.`)
       else showToastMsg(`${failed} of ${selectedBugIds.length} deletion(s) failed.`, "error")
       setBulkDeleteOpen(false)
       setSelectedBugIds([])
@@ -852,8 +854,8 @@ export default function ProjectBugReportsPage() {
               <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                 This action is irreversible.
                 {deleteTarget.synced
-                  ? " This bug is synced to OpenProject — choose whether to also delete the linked work package."
-                  : " This bug is not synced to OpenProject."}
+                  ? ` This bug is synced to ${trackerName} — choose whether to also delete the linked work package.`
+                  : ` This bug is not synced to ${trackerName}.`}
               </p>
             </div>
 
@@ -869,7 +871,7 @@ export default function ProjectBugReportsPage() {
                   onClick={() => performDeleteBug(deleteTarget.id, true)}
                   className="h-9 w-full bg-slate-800 hover:bg-slate-900 text-white font-bold"
                 >
-                  Delete from app and OpenProject
+                  Delete from app and {trackerName}
                 </Button>
               )}
               <Button
@@ -897,8 +899,8 @@ export default function ProjectBugReportsPage() {
                 <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
                   This action is irreversible.
                   {syncedCount > 0
-                    ? ` ${syncedCount} of these ${syncedCount === 1 ? "is" : "are"} synced to OpenProject — choose whether to also delete the linked work package${syncedCount === 1 ? "" : "s"}.`
-                    : " None of these are synced to OpenProject."}
+                    ? ` ${syncedCount} of these ${syncedCount === 1 ? "is" : "are"} synced to ${trackerName} — choose whether to also delete the linked work package${syncedCount === 1 ? "" : "s"}.`
+                    : ` None of these are synced to ${trackerName}.`}
                 </p>
               </div>
 
@@ -916,7 +918,7 @@ export default function ProjectBugReportsPage() {
                     disabled={bulkApplying}
                     className="h-9 w-full bg-slate-800 hover:bg-slate-900 text-white font-bold"
                   >
-                    {bulkApplying ? "Deleting…" : "Delete from app and OpenProject"}
+                    {bulkApplying ? "Deleting…" : `Delete from app and ${trackerName}`}
                   </Button>
                 )}
                 <Button
@@ -946,7 +948,7 @@ export default function ProjectBugReportsPage() {
           {
             label: "Sync Bugs",
             onClick: () => {
-              showToastMsg("OpenProject bugs synchronization started...")
+              showToastMsg(`${trackerName} bugs synchronization started...`)
               bugs.forEach(b => {
                 if (b.status !== "Closed" && b.status !== "Duplicate") {
                   handleSyncToOpenProject(b.id)
@@ -1195,7 +1197,7 @@ export default function ProjectBugReportsPage() {
             </div>
           </div>
           {opBoards.length > 0 && (
-            <p className="text-[9px] text-indigo-500/70 font-semibold">Board/column moves already-synced bugs on OpenProject immediately; others store the target for their next sync.</p>
+            <p className="text-[9px] text-indigo-500/70 font-semibold">Board/column moves already-synced bugs on {trackerName} immediately; others store the target for their next sync.</p>
           )}
         </div>
       )}
@@ -1395,7 +1397,7 @@ export default function ProjectBugReportsPage() {
                                 variant="ghost" 
                                 onClick={() => handleSyncToOpenProject(b.id)}
                                 className="h-7 w-7 p-0"
-                                title="Sync with OpenProject"
+                                title={`Sync with ${trackerName}`}
                               >
                                 <RefreshCw className="h-4 w-4 text-indigo-600" />
                               </Button>
@@ -1604,7 +1606,7 @@ export default function ProjectBugReportsPage() {
                 { id: "steps", label: "Steps" },
                 { id: "test", label: "Linked Run" },
                 { id: "activity", label: "Activity Logs" },
-                { id: "openproject", label: "OpenProject" }
+                { id: "openproject", label: trackerName }
               ].map((tab) => {
                 const isActive = activeDetailTab === tab.id
                 return (
@@ -1820,6 +1822,14 @@ export default function ProjectBugReportsPage() {
                   </DrawerSection>
 
                   {/* Description */}
+                  <DrawerSection icon={Link2} title="Linked items">
+                    <LinkedEntities
+                      projectId={projectId}
+                      entityId={selectedBug.id}
+                      entityType="BUG_REPORT"
+                    />
+                  </DrawerSection>
+
                   <DrawerSection icon={FileText} title="Description / Action details">
                     {isEditingDesc ? (
                       <div className="space-y-2">
@@ -2214,7 +2224,7 @@ export default function ProjectBugReportsPage() {
                   {opBugFields.length > 0 && (
                     <div className="p-4 border rounded-2xl bg-amber-50/40 border-amber-100 space-y-3">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-700 block">
-                        Required Bug Fields (OpenProject)
+                        Required Bug Fields ({trackerName})
                       </span>
                       {opBugFields.map(f => {
                         const kind = f.isFormattable ? "formattable" : f.isLink ? (f.isMulti ? "link-multi" : "link-single") : "text"
@@ -2253,7 +2263,7 @@ export default function ProjectBugReportsPage() {
                           </div>
                         )
                       })}
-                      <p className="text-[9px] text-slate-400">Required by the OpenProject bug type — sent when you sync.</p>
+                      <p className="text-[9px] text-slate-400">Required by the {trackerName} bug type — sent when you sync.</p>
                     </div>
                   )}
 
@@ -2281,7 +2291,7 @@ export default function ProjectBugReportsPage() {
                             rel="noreferrer"
                             className="text-xs font-bold text-indigo-600 flex items-center gap-1 hover:underline"
                           >
-                            View in OpenProject <ExternalLink className="h-3.5 w-3.5" />
+                            View in {trackerName} <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         </div>
                       )}
@@ -2306,7 +2316,7 @@ export default function ProjectBugReportsPage() {
                     </div>
                   ) : (
                     <div className="p-8 border border-dashed rounded-2xl text-center text-slate-400 italic">
-                      OpenProject integrations connection is disabled for active project. Check Settings.
+                      {trackerName} integrations connection is disabled for active project. Check Settings.
                     </div>
                   )}
                 </div>

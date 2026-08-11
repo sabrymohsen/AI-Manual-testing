@@ -4,6 +4,11 @@ import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { extractMentionedUserIds, messagePreview } from "./src/lib/mentions";
 import { PRESENCE_TTL_MS } from "./src/lib/presence";
+import {
+  buildChannelMessageNotifications,
+  checkSocketBridgeConfig,
+  type EntityMention,
+} from "./src/lib/notifications";
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || "your-secret-key";
@@ -166,10 +171,11 @@ function startSocketServer() {
       htmlContent?: string;
       parentId?: string;
       mentions?: string[];
+      entityMentions?: EntityMention[];
       attachments?: { name: string; url: string; size: number; mimeType: string }[];
     }) => {
       try {
-        const { channelId, content, htmlContent, parentId, mentions, attachments } = payload;
+        const { channelId, content, htmlContent, parentId, mentions, attachments, entityMentions } = payload;
 
         const channel = await prisma.chatChannel.findUnique({
           where: { id: channelId },
@@ -233,6 +239,7 @@ function startSocketServer() {
           data: {
             content,
             htmlContent,
+            entityMentions: (entityMentions as any) ?? undefined,
             channelId,
             senderId: userId,
             parentId,
@@ -284,6 +291,54 @@ function startSocketServer() {
           } catch (err) {
             console.error("mention notification error:", err);
           }
+        }
+
+        // Everyone else in the channel gets a "new message" notification.
+        // Previously only @mentions notified anyone, so ordinary messages were
+        // invisible to members who didn't have the channel open.
+        try {
+          const members = await prisma.channelMember.findMany({
+            where: { channelId },
+            select: { userId: true },
+          });
+          // Skip anyone already sitting in the channel room — they can see it.
+          const inRoom = io?.sockets.adapter.rooms.get(`channel:${channelId}`);
+          const activeUserIds = new Set<string>();
+          if (inRoom) {
+            for (const sid of inRoom) {
+              const uid = io?.sockets.sockets.get(sid)?.data?.userId;
+              if (uid) activeUserIds.add(uid);
+            }
+          }
+          const skip = new Set<string>([...mentionIds, userId, ...activeUserIds]);
+          const recipients = members.map((m) => m.userId).filter((id) => !skip.has(id));
+
+          if (recipients.length > 0) {
+            const payloads = buildChannelMessageNotifications({
+              channel: { id: channel.id, name: channel.name, projectId: channel.projectId },
+              senderName,
+              content: content || "",
+              recipientIds: recipients,
+              entityMentions: entityMentions ?? null,
+            });
+            for (const n of payloads) {
+              const created = await prisma.notification.create({
+                data: {
+                  userId: n.userId,
+                  type: n.type,
+                  title: n.title,
+                  body: n.body,
+                  data: (n.data as any) ?? undefined,
+                  projectId: n.projectId ?? null,
+                  actionUrl: n.actionUrl ?? null,
+                },
+                include: { project: { select: { id: true, name: true } } },
+              });
+              io?.to(`user:${n.userId}`).emit("notification", created);
+            }
+          }
+        } catch (err) {
+          console.error("channel message notification error:", err);
         }
       } catch (err) {
         console.error("send-message error:", err);
@@ -466,6 +521,10 @@ function startSocketServer() {
       if (count) console.log(`> Cleared ${count} stale presence row(s) on startup`);
     })
     .catch((err: unknown) => console.error("Presence startup sweep failed:", err));
+
+  // Warn loudly if the API->socket bridge URL looks wrong; a bad value means
+  // notifications persist but never arrive live, which is easy to miss.
+  checkSocketBridgeConfig();
 
   const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || "3001");
   server.listen(SOCKET_PORT, () => {

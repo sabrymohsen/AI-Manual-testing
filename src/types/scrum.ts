@@ -57,8 +57,11 @@ export interface ScrumMember {
 export interface ScrumSubtask {
   id: string
   title: string
+  description: string | null
   completed: boolean
   taskId: string
+  assigneeId: string | null
+  assignee: { id: string; name: string | null; email: string; avatarUrl: string | null } | null
   createdAt: string
 }
 

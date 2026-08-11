@@ -33,7 +33,9 @@ import {
   LineChart,
   Settings2,
   MessageSquare,
-  FileSpreadsheet
+  FileSpreadsheet,
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react"
 import { BackButton } from "@/components/ui/back-button"
 import { usePermissionStore } from "@/stores/permissionStore"
@@ -104,6 +106,22 @@ export default function DashboardLayout({
   // Command bar search overlay state
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+
+  // Board-style routes render edge to edge instead of inside the padded,
+  // vertically-scrolling document container.
+  const isFullBleed = useMemo(() => /^\/projects\/[^/]+\/scrum(\/|$)/.test(pathname), [pathname])
+
+  // Collapsing the nav hands ~256px back to wide views like the Scrum board.
+  const [navCollapsed, setNavCollapsed] = useState(false)
+  useEffect(() => {
+    setNavCollapsed(localStorage.getItem("navCollapsed") === "1")
+  }, [])
+  const toggleNav = useCallback(() => {
+    setNavCollapsed((c) => {
+      localStorage.setItem("navCollapsed", c ? "0" : "1")
+      return !c
+    })
+  }, [])
 
   // The project id in the URL, when we're on a project-scoped route. `/projects`
   // and `/projects/new` are not project ids.
@@ -336,22 +354,38 @@ export default function DashboardLayout({
     <div className="flex h-screen overflow-hidden bg-background">
       
       {/* 1. LEFT SIDEBAR NAVIGATION */}
-      <aside className="w-64 border-r bg-card flex flex-col overflow-y-auto shrink-0 select-none text-xs font-semibold">
-        <div className="flex h-14 items-center border-b px-6 justify-between select-none">
-          <Link href="/dashboard" className="font-extrabold text-indigo-700 text-sm tracking-tight flex items-center gap-1.5 uppercase">
-            <Zap className="h-4.5 w-4.5 fill-current" /> QA Engine
-          </Link>
-          <button 
-            onClick={() => setShowSearch(true)} 
-            className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors border shadow-sm"
-            title="Open command bar (Ctrl + K)"
-          >
-            <Search className="h-3.5 w-3.5" />
-          </button>
+      <aside
+        className={`${navCollapsed ? "w-14" : "w-64"} border-r bg-card flex flex-col overflow-y-auto overflow-x-hidden shrink-0 select-none text-xs font-semibold transition-[width] duration-200`}
+      >
+        <div className={`flex h-14 items-center border-b select-none ${navCollapsed ? "justify-center px-2" : "px-6 justify-between"}`}>
+          {!navCollapsed && (
+            <Link href="/dashboard" className="font-extrabold text-indigo-700 text-sm tracking-tight flex items-center gap-1.5 uppercase">
+              <Zap className="h-4.5 w-4.5 fill-current" /> QA Engine
+            </Link>
+          )}
+          <div className="flex items-center gap-1">
+            {!navCollapsed && (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors border shadow-sm"
+                title="Open command bar (Ctrl + K)"
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={toggleNav}
+              className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+              title={navCollapsed ? "Expand sidebar" : "Collapse sidebar (more room for the board)"}
+              aria-label={navCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {navCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
 
         {/* Global Project Switcher (with per-project role badges) */}
-        {user?.role !== "Admin" && (
+        {user?.role !== "Admin" && !navCollapsed && (
           <ProjectSwitcher
             projects={projects}
             canCreateProject={canCreateProject}
@@ -364,46 +398,50 @@ export default function DashboardLayout({
         <nav className="flex flex-col gap-1 p-4 flex-grow">
           {user?.role === "Admin" ? (
             <>
-              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Administration</span>
+              {!navCollapsed && <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Administration</span>}
               
               <Link
                 href="/admin?tab=users"
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                title={navCollapsed ? "Users" : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                   pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
                 }`}
               >
                 <Users className="h-4 w-4 shrink-0 text-indigo-600" />
-                Users
+                {!navCollapsed && "Users"}
               </Link>
 
               <Link
                 href="/admin?tab=finance"
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                title={navCollapsed ? "Finance" : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                   pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
                 }`}
               >
                 <DollarSign className="h-4 w-4 shrink-0 text-indigo-600" />
-                Finance
+                {!navCollapsed && "Finance"}
               </Link>
 
               <Link
                 href="/admin?tab=pricing"
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                title={navCollapsed ? "Subscription Panel" : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                   pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
                 }`}
               >
                 <CreditCard className="h-4 w-4 shrink-0 text-indigo-600" />
-                Subscription Panel
+                {!navCollapsed && "Subscription Panel"}
               </Link>
 
               <Link
                 href="/admin?tab=trial"
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                title={navCollapsed ? "Free Trial" : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                   pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
                 }`}
               >
                 <Sparkles className="h-4 w-4 shrink-0 text-indigo-600" />
-                Free Trial
+                {!navCollapsed && "Free Trial"}
               </Link>
             </>
           ) : (
@@ -422,12 +460,13 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={dest}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                    title={navCollapsed ? item.label : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                       isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
                     }`}
                   >
                     <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
-                    {item.label}
+                    {!navCollapsed && item.label}
                   </Link>
                 )
                 return item.permission ? (
@@ -440,7 +479,7 @@ export default function DashboardLayout({
               })}
 
               <div className="border-t my-2" />
-              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">QA Workflows</span>
+              {!navCollapsed && <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">QA Workflows</span>}
 
               {workflowItems.map((item) => {
                 const dest = getHref(item.href)
@@ -449,18 +488,19 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={dest}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                    title={navCollapsed ? item.label : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                       isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
                     }`}
                   >
                     <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
-                    {item.label}
+                    {!navCollapsed && item.label}
                   </Link>
                 )
               })}
 
               <div className="border-t my-2" />
-              <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Management</span>
+              {!navCollapsed && <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Management</span>}
 
               {managementItems.map((item) => {
                 const dest = getHref(item.href)
@@ -469,12 +509,13 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={dest}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs transition-colors ${
+                    title={navCollapsed ? item.label : undefined}
+                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
                       isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
                     }`}
                   >
                     <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
-                    {item.label}
+                    {!navCollapsed && item.label}
                   </Link>
                 )
               })}
@@ -490,7 +531,7 @@ export default function DashboardLayout({
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors w-full"
             >
               <LogOut className="h-4 w-4 shrink-0" />
-              Sign Out
+              {!navCollapsed && "Sign Out"}
             </button>
           </form>
         </div>
@@ -540,10 +581,18 @@ export default function DashboardLayout({
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <div className="flex-1 overflow-y-auto p-6 md:p-8">
-          <BackButton />
-          {children}
-        </div>
+        {/* The Scrum board is a full-bleed app view, not a document: the
+            standard page padding and vertical scroll cost it ~64px of width and
+            break its internal min-h-0 scroll chain, which is what made the
+            columns feel cramped. It manages its own header and scrolling. */}
+        {isFullBleed ? (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-6 md:p-8">
+            <BackButton />
+            {children}
+          </div>
+        )}
       </main>
 
       <Toaster position="top-right" richColors />

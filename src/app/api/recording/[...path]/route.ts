@@ -5,6 +5,10 @@ import { z } from "zod"
 import { getSessionStats, saveRecordedCaseAsTestCase } from "@/lib/recording/session-store"
 import { recorderWorkerRequest, RecorderWorkerError, RECORDER_WORKER_URL } from "@/lib/recording/worker-client"
 import { saveFile } from "@/lib/storage"
+import { ActionType, TargetType } from "@prisma/client"
+
+const ACTION_TYPES = new Set<string>(Object.values(ActionType))
+const TARGET_TYPES = new Set<string>(Object.values(TargetType))
 
 async function verifyRecordingSession(sessionId: string, userId: string) {
   const rec = await prisma.recordingSession.findUnique({
@@ -290,7 +294,26 @@ export async function GET(
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
     const stats = await getSessionStats(sessionId)
-    return NextResponse.json(stats)
+
+    // The live view polls this for the Logs panel. getSessionStats only knows
+    // about saved/draft counts, so the console and network errors have to come
+    // from the recorder worker, which holds them in memory for the live
+    // session. A worker that is down must not break the rest of the stats.
+    let consoleErrors: string[] = []
+    let networkErrors: string[] = []
+    try {
+      const logs = await recorderWorkerRequest<{
+        consoleErrors?: string[]
+        networkErrors?: string[]
+      }>(`/sessions/${sessionId}/logs`, { method: "POST", body: JSON.stringify({}) })
+      consoleErrors = logs?.consoleErrors ?? []
+      networkErrors = logs?.networkErrors ?? []
+    } catch {
+      // Worker unavailable or session no longer live — report no live logs
+      // rather than failing the poll.
+    }
+
+    return NextResponse.json({ ...stats, consoleErrors, networkErrors })
   }
 
   // 1. GET /api/recording/[sessionId]/steps
@@ -571,6 +594,68 @@ export async function POST(
 
     // POST /api/recording/[sessionId]/step-recording — body: { enabled: boolean }
     // Live QA scenario recording start/stop (in-memory flag on the worker).
+    // POST /api/recording/[sessionId]/manual-step — append a hand-written step.
+    // The live view has always called this; there was never a route behind it,
+    // so every manual step failed with "Invalid POST endpoint".
+    if (path.length === 2 && path[1] === "manual-step") {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+
+      const parsed = z
+        .object({
+          actionDescription: z.string().min(1).max(2000),
+          actionType: z.string().max(100).optional().nullable(),
+          targetType: z.string().max(100).optional().nullable(),
+          targetValue: z.string().max(2000).optional().nullable(),
+          inputValue: z.string().max(2000).optional().nullable(),
+          expectedResult: z.string().max(2000).optional().nullable(),
+        })
+        .safeParse(await request.json().catch(() => null))
+      if (!parsed.success) return badRequestResponse("Invalid manual step payload")
+
+      // pageUrl is required on RecordedStep; use wherever the session is now.
+      const sess = await prisma.recordingSession.findUnique({
+        where: { id: sessionId },
+        select: { currentUrl: true, startUrl: true },
+      })
+
+      // Steps hang off the session's current draft case, newest last.
+      const draft = await prisma.recordedTestCase.findFirst({
+        where: { sessionId, status: "Draft" },
+        orderBy: { createdAt: "desc" },
+        select: { id: true },
+      })
+      if (!draft) return badRequestResponse("This session has no draft test case to append to")
+
+      const last = await prisma.recordedStep.findFirst({
+        where: { recordedTestCaseId: draft.id },
+        orderBy: { stepNumber: "desc" },
+        select: { stepNumber: true },
+      })
+
+      const step = await prisma.recordedStep.create({
+        data: {
+          recordedTestCaseId: draft.id,
+          stepNumber: (last?.stepNumber ?? 0) + 1,
+          pageUrl: sess?.currentUrl || sess?.startUrl || "",
+          actionDescription: parsed.data.actionDescription,
+          // The dropdowns are free-form strings; coerce to real enum members so
+          // an unexpected value degrades instead of failing the whole request.
+          actionType: (ACTION_TYPES.has(parsed.data.actionType as any)
+            ? parsed.data.actionType
+            : "custom_instruction") as any,
+          targetType: (TARGET_TYPES.has(parsed.data.targetType as any)
+            ? parsed.data.targetType
+            : "none") as any,
+          targetValue: parsed.data.targetValue || null,
+          inputValue: parsed.data.inputValue || null,
+          expectedResult: parsed.data.expectedResult || null,
+          includeInFinalTestCase: true,
+        },
+      })
+      return NextResponse.json({ step }, { status: 201 })
+    }
+
     if (path.length === 2 && path[1] === "step-recording") {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard

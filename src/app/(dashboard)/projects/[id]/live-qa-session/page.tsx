@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useMemo} from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AnnotationEditor } from "@/components/live-qa/annotation-editor"
-import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
+import { CreateBugModal, type SessionAttachment } from "@/components/bug-reports/create-bug-modal"
 import {
   Maximize,
   Maximize2,
@@ -143,7 +143,7 @@ export default function LiveQASessionPage() {
   // Manual step form state
   const [manualDescription, setManualDescription] = useState("")
   const [manualActionType, setManualActionType] = useState("click")
-  const [manualTargetType, setManualTargetType] = useState("button")
+  const [manualTargetType, setManualTargetType] = useState("css")
   const [manualTargetValue, setManualTargetValue] = useState("")
   const [manualInputValue, setManualInputValue] = useState("")
   const [manualExpected, setManualExpected] = useState("")
@@ -440,6 +440,34 @@ export default function LiveQASessionPage() {
     const ss = String(sec).padStart(2, "0")
     return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`
   }
+
+  /**
+   * Session captures in the shape the bug form expects.
+   *
+   * When a screenshot has been annotated, only the annotated version is
+   * offered — attaching both the marked-up image and its unmarked original
+   * just makes the report noisier.
+   */
+  const sessionAttachments = useMemo<SessionAttachment[]>(() => {
+    const annotatedOriginals = new Set(
+      screenshots.map((s) => s.annotatedFromId).filter(Boolean) as string[]
+    )
+    const shots: SessionAttachment[] = screenshots
+      .filter((s) => s.filePath && !annotatedOriginals.has(s.id))
+      .map((s, i) => ({
+        filePath: s.filePath,
+        fileName: s.filePath.split("/").pop() || `screenshot-${i + 1}.png`,
+        kind: "image" as const,
+      }))
+    const clips: SessionAttachment[] = recordings
+      .filter((r) => !!r.filePath)
+      .map((r, i) => ({
+        filePath: r.filePath as string,
+        fileName: (r.filePath as string).split("/").pop() || `recording-${i + 1}.webm`,
+        kind: "video" as const,
+      }))
+    return [...shots, ...clips]
+  }, [screenshots, recordings])
 
   // Load screenshots & recordings
   useEffect(() => {
@@ -872,7 +900,7 @@ export default function LiveQASessionPage() {
           formData.append("file", blob, `video-${Date.now()}.webm`)
           formData.append("durationMs", String(Math.max(0, Date.now() - startT)))
 
-          const res = await fetch(`/api/recording/${sessionId}/recording`, {
+          const res = await fetch(`/api/recording/${sessionId}/recordings`, {
             method: "POST",
             body: formData,
           })
@@ -901,7 +929,7 @@ export default function LiveQASessionPage() {
     setTogglingSteps(true)
     const nextState = !stepRecording
     try {
-      const res = await fetch(`/api/recording/${sessionId}/set-step-recording`, {
+      const res = await fetch(`/api/recording/${sessionId}/step-recording`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: nextState })
@@ -1155,7 +1183,7 @@ export default function LiveQASessionPage() {
                         value={startUrl}
                         onChange={(e) => setStartUrl(e.target.value)}
                         required
-                        placeholder="https://shod.app.apptomator.com/home"
+                        placeholder="https://example.com/login"
                         className="pl-9 h-10 text-xs font-mono"
                       />
                     </div>
@@ -2110,6 +2138,11 @@ export default function LiveQASessionPage() {
             consoleLogs: consoleErrors.join("\n"),
             networkErrors: networkErrors.join("\n"),
           }}
+          // Everything captured this session is offered in the bug form, with
+          // the screenshots pre-selected. Without these two props the modal has
+          // no idea the session captured anything.
+          attachmentChoices={sessionAttachments}
+          initialAttachmentPaths={sessionAttachments.filter((a) => a.kind === "image")}
         />
       )}
 
@@ -2202,14 +2235,14 @@ export default function LiveQASessionPage() {
                     <option value="fill">fill / type</option>
                     <option value="open_url">open_url</option>
                     <option value="select">select option</option>
-                    <option value="assert">assert / verify</option>
+                    <option value="assert_visible">assert / verify</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="man-ttype">Target Element Type</Label>
                   <select id="man-ttype" value={manualTargetType} onChange={(e) => setManualTargetType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
-                    <option value="button">button</option>
-                    <option value="input">input / field</option>
+                    <option value="role">button</option>
+                    <option value="label">input / field</option>
                     <option value="css">css selector</option>
                     <option value="xpath">xpath query</option>
                   </select>

@@ -6,6 +6,7 @@ export type NotificationType =
   | "TASK_ASSIGNED"
   | "SPRINT_STARTED"
   | "COMMENT"
+  | "CHAT_MESSAGE"
   | "SYSTEM"
 
 export interface NotificationInput {
@@ -70,5 +71,74 @@ async function pushToSocket(notifications: unknown[]) {
     })
   } catch {
     // Socket server not running — persisted notification still shows on next load.
+  }
+}
+
+/** An entity referenced from a chat message via `#`. */
+export interface EntityMention {
+  type: string
+  id: string
+  label: string
+  key?: string
+  url?: string
+}
+
+/**
+ * Build the "new message in a channel" notifications.
+ *
+ * Shared by the HTTP send path and the socket server so both produce identical
+ * payloads. Recipient selection stays with the caller — only the socket server
+ * can see who is currently sitting in the channel room.
+ */
+export function buildChannelMessageNotifications(opts: {
+  channel: { id: string; name: string | null; projectId: string | null }
+  senderName: string
+  content: string
+  recipientIds: string[]
+  entityMentions?: EntityMention[] | null
+}): NotificationInput[] {
+  const { channel, senderName, content, recipientIds } = opts
+  const preview = content.replace(/\s+/g, " ").trim().slice(0, 140)
+
+  // Referenced entities make a message worth opening, so name them up front.
+  const refs = (opts.entityMentions ?? [])
+    .map((m) => m.key || m.label)
+    .filter(Boolean)
+    .slice(0, 3)
+  const refHint = refs.length ? ` · Referenced ${refs.join(", ")}` : ""
+
+  return recipientIds.map((userId) => ({
+    userId,
+    type: "CHAT_MESSAGE" as const,
+    title: `New message in #${channel.name || "channel"}`,
+    body: `${senderName}: ${preview}${refHint}`,
+    projectId: channel.projectId ?? null,
+    actionUrl: channel.projectId ? `/projects/${channel.projectId}/team-chat` : "/dashboard",
+    data: { channelId: channel.id },
+  }))
+}
+
+/**
+ * Warn once at startup if the socket bridge URL looks wrong. A misconfigured
+ * SOCKET_INTERNAL_URL fails silently — notifications still persist, they just
+ * never arrive in real time, which is hard to spot.
+ */
+export function checkSocketBridgeConfig() {
+  const configured = process.env.SOCKET_INTERNAL_URL
+  if (!configured) {
+    if (process.env.NODE_ENV === "production") {
+      console.warn(
+        `[notifications] SOCKET_INTERNAL_URL is not set — falling back to ${SOCKET_INTERNAL_URL}. ` +
+          `In production the socket server is rarely on localhost:3001, so real-time ` +
+          `notification pushes will silently fail (they will still appear on reload).`
+      )
+    }
+    return
+  }
+  try {
+    // eslint-disable-next-line no-new
+    new URL(configured)
+  } catch {
+    console.warn(`[notifications] SOCKET_INTERNAL_URL is not a valid URL: "${configured}"`)
   }
 }
