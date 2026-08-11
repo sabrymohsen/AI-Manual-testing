@@ -105,6 +105,12 @@ export function CreateBugModal({
   >([])
   const [error, setError] = useState("")
   const [aiGenerating, setAiGenerating] = useState(false)
+  // AI Assist: the tester's plain-language prompt and an optional picture.
+  // Kept separate from the Description field so regenerating never clobbers
+  // text the tester wrote by hand.
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [aiImage, setAiImage] = useState<File | null>(null)
+  const [aiNotice, setAiNotice] = useState<{ kind: "ai" | "template"; text: string } | null>(null)
 
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -180,6 +186,9 @@ export function CreateBugModal({
     setAssignee("")
     setParent("")
     setParentOptions([])
+    setAiPrompt("")
+    setAiImage(null)
+    setAiNotice(null)
     setSessionAttachments(initialAttachmentPaths || [])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -253,35 +262,65 @@ export function CreateBugModal({
       reader.readAsDataURL(file)
     })
 
-  // AI Assist: draft the whole bug from a note + screenshot
+  /** Paste a screenshot straight into the AI prompt box. */
+  const handleAiPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const file = Array.from(e.clipboardData?.items || [])
+      .find((item) => item.type.startsWith("image/"))
+      ?.getAsFile()
+    if (file) {
+      e.preventDefault()
+      setAiImage(file)
+    }
+  }
+
+  // AI Assist: draft the whole bug from a plain-language prompt + picture.
   const handleGenerateWithAI = async () => {
-    if (!desc.trim() && !screenshotFile) {
-      setError("Add a description or attach a screenshot for the AI to work from.")
+    // The prompt box is the intended input, but fall back to whatever the
+    // tester already typed / attached so the button is never a dead end.
+    const promptText = aiPrompt.trim() || desc.trim()
+    const image = aiImage || screenshotFile
+
+    if (!promptText && !image) {
+      setError("Describe the bug or attach a picture for the AI to work from.")
       return
     }
     setAiGenerating(true)
     setError("")
+    setAiNotice(null)
     try {
       let imageBase64: string | null = null
       let imageMimeType: string | null = null
-      if (screenshotFile) {
-        imageBase64 = await fileToBase64(screenshotFile)
-        imageMimeType = screenshotFile.type || null
+      if (image) {
+        imageBase64 = await fileToBase64(image)
+        imageMimeType = image.type || null
       }
 
       const res = await fetch(`/api/projects/${projectId}/ai-generate-bug`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description: desc, imageBase64, imageMimeType }),
+        body: JSON.stringify({ description: promptText, imageBase64, imageMimeType }),
       })
 
       if (res.ok) {
         const { draft } = await res.json()
         if (draft.title) setTitle(draft.title)
+        // Fall back to the tester's own words when the model returned no prose.
+        if (draft.description) setDesc(draft.description)
+        else if (!desc.trim() && promptText) setDesc(promptText)
         if (draft.severity) setSeverity(draft.severity)
         if (draft.priority) setPriority(draft.priority)
         if (draft.expectedResult) setExpected(draft.expectedResult)
         if (draft.actualResult) setActual(draft.actualResult)
+        // Carry the AI picture into the bug as evidence, unless one is attached.
+        if (aiImage && !screenshotFile) setScreenshotFile(aiImage)
+        setAiNotice(
+          draft.provider === "rule-based"
+            ? {
+                kind: "template",
+                text: "Drafted from a template — no AI provider is configured, so this is a best-effort guess. Review every field.",
+              }
+            : { kind: "ai", text: "Draft ready — review and edit before saving." }
+        )
         if (Array.isArray(draft.steps) && draft.steps.length > 0) {
           setSteps(
             draft.steps.map((s: any, i: number) => ({
@@ -480,25 +519,80 @@ export function CreateBugModal({
             </div>
           )}
 
-          {/* AI Assist: hidden — feature disabled. Flip the `false &&` guard to re-enable. */}
-          {false && (
-            <div className="p-3.5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-purple-50/40 space-y-2.5">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-indigo-600" />
-                <span className="font-extrabold text-indigo-700 text-[11px] uppercase tracking-wide">Generate with AI</span>
-              </div>
-              <textarea
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                rows={3}
-                className="w-full border rounded-lg p-2.5 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
-              />
-              <Button type="button" onClick={handleGenerateWithAI} disabled={aiGenerating} className="h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-1.5">
+          {/* AI Assist — describe the defect in plain words, optionally attach a
+              screenshot, and let the model fill the whole form. */}
+          <div className="p-3.5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-purple-50/40 space-y-2.5">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-indigo-600" />
+              <span className="font-extrabold text-indigo-700 text-[11px] uppercase tracking-wide">
+                Write this bug with AI
+              </span>
+            </div>
+
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              onPaste={handleAiPaste}
+              rows={3}
+              placeholder="Describe what went wrong in your own words — e.g. 'checkout button does nothing on mobile after applying a discount code'. Paste a screenshot here too."
+              className="w-full border rounded-lg p-2.5 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="h-8 px-3 rounded-lg border bg-background text-[11px] font-bold flex items-center gap-1.5 cursor-pointer hover:bg-muted">
+                <Paperclip className="h-3.5 w-3.5" />
+                {aiImage ? "Change picture" : "Attach picture"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => setAiImage(e.target.files?.[0] || null)}
+                />
+              </label>
+
+              {aiImage && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1">
+                  <Check className="h-3 w-3" />
+                  {aiImage.name.length > 28 ? `${aiImage.name.slice(0, 28)}…` : aiImage.name}
+                  <button
+                    type="button"
+                    onClick={() => setAiImage(null)}
+                    className="text-indigo-400 hover:text-indigo-700"
+                    aria-label="Remove picture"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              )}
+
+              <Button
+                type="button"
+                onClick={handleGenerateWithAI}
+                disabled={aiGenerating}
+                className="h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-1.5"
+              >
                 <Sparkles className="h-3.5 w-3.5" />
-                {aiGenerating ? "Generating..." : "Generate Bug Draft"}
+                {aiGenerating ? "Writing the bug…" : "Generate bug report"}
               </Button>
             </div>
-          )}
+
+            <p className="text-[10px] font-semibold text-muted-foreground">
+              Fills title, description, severity, priority, steps and expected/actual results.
+              Everything stays editable before you save.
+            </p>
+
+            {/* Say which engine answered: a rule-based draft means no AI provider
+                is configured, and the tester should know the difference. */}
+            {aiNotice && (
+              <p
+                className={`text-[10px] font-bold ${
+                  aiNotice.kind === "template" ? "text-amber-700" : "text-emerald-700"
+                }`}
+              >
+                {aiNotice.text}
+              </p>
+            )}
+          </div>
 
           <div className="space-y-1.5">
             <Label className="text-muted-foreground font-bold">Defect Title *</Label>

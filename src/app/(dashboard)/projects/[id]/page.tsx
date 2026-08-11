@@ -18,11 +18,13 @@ import {
   Settings,
   ShieldAlert,
   Trash2,
-  Users
+  Users,
+  Bot
 } from "lucide-react"
 import { TeamPanel } from "@/components/team/team-panel"
+import { ProjectAiPanel } from "@/components/ai/project-ai-panel"
 
-type ProjectTab = "scope" | "credentials" | "integrations" | "team" | "settings"
+type ProjectTab = "scope" | "credentials" | "integrations" | "ai" | "team" | "settings"
 
 export default function ProjectDetailPage() {
   const params = useParams()
@@ -152,6 +154,7 @@ export default function ProjectDetailPage() {
           { id: "scope", label: "Scope / Modules", icon: Layers },
           { id: "credentials", label: "Credentials Vault", icon: Key },
           { id: "integrations", label: integrationTabLabel, icon: Globe },
+          { id: "ai", label: "AI Provider", icon: Bot },
           { id: "team", label: "Team", icon: Users },
           { id: "settings", label: "General Settings", icon: Settings }
         ].map((tab) => {
@@ -254,6 +257,9 @@ export default function ProjectDetailPage() {
             )}
           </div>
         )}
+
+        {/* AI PROVIDER TAB */}
+        {activeTab === "ai" && <ProjectAiPanel projectId={projectId} />}
 
         {/* TEAM TAB */}
         {activeTab === "team" && (

@@ -1,21 +1,30 @@
 import axios from "axios"
 import { getOllamaModels } from "@/lib/ai/test-case-generator"
+import {
+  chatWithConfiguredProvider,
+  hasConfiguredProvider,
+} from "@/lib/ai/provider-chat"
 
 /**
- * Free, self-hostable bug-report drafter.
+ * Bug-report drafter: a tester's note (and optional screenshot) in, a structured
+ * draft out — title, description, severity, priority, steps, expected/actual.
  *
- * Mirrors the test-case generator's provider strategy so it costs nothing:
- *   Primary : Ollama (local, free) — uses a vision model for the screenshot when one
- *             is installed (llava / llama3.2-vision / bakllava / moondream).
- *   Fallback: Hugging Face Inference API (free tier, text-only).
- *   Last     : a deterministic rule-based draft, so the feature always returns
- *             something even with no AI provider available.
+ * Provider order:
+ *   1. Whatever the workspace configured in the AI hub (Kimi, OpenAI, …),
+ *      including the screenshot when the model accepts images.
+ *   2. Ollama (local, free) — vision model for the screenshot when installed
+ *      (llava / llama3.2-vision / bakllava / moondream).
+ *   3. Hugging Face Inference API (free tier, text-only).
+ *   4. A deterministic rule-based draft, so the feature always returns something
+ *      even with no AI provider available.
  *
  * It only DRAFTS a bug — the caller (UI) lets the user edit everything before saving.
  */
 
 export interface BugDraftInput {
   description: string
+  /** Use this project's own AI provider config when it has one. */
+  projectId?: string | null
   imageBase64?: string | null   // raw base64 (no data: prefix)
   imageMimeType?: string | null
   appUrl?: string | null
@@ -29,13 +38,15 @@ export interface BugDraftStep {
 
 export interface BugDraft {
   title: string
+  /** Written summary of the defect — impact and context, not a copy of the note. */
+  description: string
   severity: "Low" | "Medium" | "High" | "Critical"
   priority: "Low" | "Medium" | "High" | "Critical"
   steps: BugDraftStep[]
   stepsToReproduce: string
   expectedResult: string
   actualResult: string
-  provider: "ollama" | "huggingface" | "rule-based"
+  provider: "provider" | "ollama" | "huggingface" | "rule-based"
 }
 
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
@@ -56,6 +67,7 @@ ${(input.description || "").substring(0, 6000)}
 Return ONLY valid JSON (no markdown, no extra text) matching exactly:
 {
   "title": "concise, specific title including the affected area and the problem",
+  "description": "2-4 sentences: what is broken, where, and the impact on the user. Do not restate the title.",
   "severity": "Low | Medium | High | Critical",
   "priority": "Low | Medium | High | Critical",
   "steps": [
@@ -168,6 +180,7 @@ function normalize(raw: any, provider: BugDraft["provider"]): BugDraft {
 
   return {
     title: String(raw?.title || "Untitled defect").substring(0, 200),
+    description: String(raw?.description || raw?.summary || "").substring(0, 4000),
     severity: level(raw?.severity),
     priority: level(raw?.priority),
     steps,
@@ -211,6 +224,7 @@ function ruleBasedDraft(input: BugDraftInput): BugDraft {
 
   return {
     title,
+    description: desc.substring(0, 4000),
     severity,
     priority: severity,
     steps,
@@ -224,7 +238,28 @@ function ruleBasedDraft(input: BugDraftInput): BugDraft {
 export async function generateBugReportDraft(input: BugDraftInput): Promise<BugDraft> {
   const hasImage = !!input.imageBase64
 
-  // 1. Ollama (local, free)
+  // 1. The workspace's configured provider (Section 11). Without this the draft
+  // only ever tried a local Ollama and a HuggingFace token, so a deployed box
+  // always landed on the rule-based template no matter what the hub said.
+  try {
+    if (await hasConfiguredProvider(input.projectId || undefined)) {
+      const out = await chatWithConfiguredProvider({
+        prompt: buildPrompt(input, hasImage),
+        imageBase64: input.imageBase64 || undefined,
+        command: "generate-bug-report",
+        projectId: input.projectId || undefined,
+      })
+      const parsed = parseJson(out)
+      if (parsed) return normalize(parsed, "provider")
+    }
+  } catch (err) {
+    console.warn(
+      "[generate-bug-report] configured provider failed, trying Ollama:",
+      (err as any)?.message
+    )
+  }
+
+  // 2. Ollama (local, free)
   try {
     const out = await callOllama(input, hasImage)
     const parsed = parseJson(out)
@@ -233,7 +268,7 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
     console.warn("[generate-bug-report] Ollama unavailable, trying Hugging Face:", (err as any)?.message)
   }
 
-  // 2. Hugging Face (free tier, text only)
+  // 3. Hugging Face (free tier, text only)
   try {
     const out = await callHuggingFace(input)
     const parsed = parseJson(out)
@@ -242,6 +277,6 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
     console.warn("[generate-bug-report] Hugging Face unavailable, using rule-based draft:", (err as any)?.message)
   }
 
-  // 3. Deterministic fallback — always succeeds.
+  // 4. Deterministic fallback — always succeeds.
   return ruleBasedDraft(input)
 }

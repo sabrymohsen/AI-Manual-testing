@@ -47,6 +47,7 @@ export async function POST(
       text,
       project?.webAppUrl || undefined,
       {
+        projectId: params.projectId,
         provider: provider || "ollama",
         model: model || undefined,
         language: language || "en",

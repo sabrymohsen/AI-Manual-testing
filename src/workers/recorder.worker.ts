@@ -82,7 +82,8 @@ async function checkPlaywrightInstalled(): Promise<boolean> {
 // recorder captures them as steps exactly like direct interaction.
 async function applyInput(
   page: Page,
-  body: any
+  body: any,
+  sessionId?: string
 ): Promise<{ success: boolean; error?: string; unknown?: boolean }> {
   try {
     switch (body.type) {
@@ -138,6 +139,9 @@ async function applyInput(
           const current = page.viewportSize()
           if (!current || current.width !== w || current.height !== h) {
             await page.setViewportSize({ width: w, height: h })
+            // Re-bound the screencast to the new viewport, otherwise a resize
+            // leaves frames scaled for the previous one.
+            if (sessionId) await restreamAtViewport(sessionId, page)
           }
         }
         break
@@ -172,6 +176,72 @@ async function applyInput(
 // One screencast per session, broadcast to every connected viewer. Starts on
 // the first viewer, stops when the last one disconnects. Chromium-only; the
 // client falls back to REST frame polling for Firefox/WebKit.
+
+// Live frames are JPEG, not PNG. Frames are captured at 2x device scale (see
+// session-manager's --force-device-scale-factor), so a Live QA frame is 3024x1556
+// (~4.7 MP). Measured on that geometry:
+//
+//   encode latency  PNG ~617ms/frame  vs  JPEG q70 ~50ms   (fast laptop; worse on a shared vCPU)
+//   frame size      flat UI        168 KB -> 131 KB  (1.3x)
+//                   gradients     1798 KB -> 177 KB (10.2x)
+//                   photographic 11413 KB -> 1576 KB (7.2x)
+//
+// Encode time is the dominant cost: PNG caps the stream near 2 fps no matter how
+// much bandwidth exists, which is why the loop below asks for 30 FPS and never
+// gets close. Size only matters on gradient/photo-heavy pages, but there PNG also
+// blows past what the WAN hop to a deployed worker can carry.
+// Override with RECORDER_STREAM_QUALITY (20-100) if a run needs crisper frames.
+//
+// Measured on a text-heavy page, 1400x800 viewport, scrolling continuously
+// (the worst case — every pixel changes), frames as sent to the viewer:
+//
+//   3840 cap, q70 (was)   22 fps   367 KB/frame   8.3 MB/s   ~67 Mbps
+//   CSS bounds, q70       22 fps   132 KB/frame   2.9 MB/s   ~23 Mbps
+//   CSS bounds, q60       22 fps   109 KB/frame   2.5 MB/s   ~20 Mbps
+//   CSS bounds, q60, n=2  11 fps   109 KB/frame   1.2 MB/s   ~10 Mbps
+//
+// 67 Mbps is far past what a WAN hop to a tester carries, so the ack pacing
+// below throttled the stream and the view fell behind the browser — the lag
+// testers saw while scrolling. The defaults now target ~10 Mbps.
+const STREAM_QUALITY = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 60))
+
+// Send every Nth captured frame. 2 halves the rate during scroll (~11 fps) for
+// half the bandwidth; idle pages are unaffected because they produce almost no
+// frames. RECORDER_STREAM_EVERY_NTH_FRAME=1 restores full rate on a fast link.
+const STREAM_EVERY_NTH_FRAME = Math.min(
+  10,
+  Math.max(1, Number(process.env.RECORDER_STREAM_EVERY_NTH_FRAME) || 2)
+)
+
+// Sessions launch with --force-device-scale-factor=2, so a 1400x800 viewport
+// produces 2800x1600 frames — roughly 4x the pixels and 3-4x the bytes of what
+// the live view can actually display, on a WAN hop to the tester. Capping the
+// screencast at the viewport's CSS size streams 1 device-independent pixel per
+// displayed pixel: same apparent sharpness, a fraction of the bandwidth and of
+// the JPEG encode cost. Retina is kept where it's actually consumed — evidence
+// screenshots still capture at `scale: "device"`.
+// RECORDER_STREAM_MAX_WIDTH (480-3840) raises or lowers the ceiling.
+const STREAM_MAX_EDGE = Math.min(
+  3840,
+  Math.max(480, Number(process.env.RECORDER_STREAM_MAX_WIDTH) || 1600)
+)
+
+/**
+ * Screencast bounds for a page: the viewport's CSS size, never above the
+ * configured ceiling. CDP scales frames to fit these bounds and preserves the
+ * aspect ratio, so the client's coordinate mapping (which scales by the
+ * displayed rect) stays exact at any bound.
+ */
+function screencastBounds(page: Page): { maxWidth: number; maxHeight: number } {
+  const vp = page.viewportSize()
+  const w = vp?.width || STREAM_MAX_EDGE
+  const h = vp?.height || STREAM_MAX_EDGE
+  const scale = Math.min(1, STREAM_MAX_EDGE / Math.max(w, h))
+  return {
+    maxWidth: Math.max(240, Math.round(w * scale)),
+    maxHeight: Math.max(240, Math.round(h * scale)),
+  }
+}
 
 const streamTokens = new Map<string, { sessionId: string; expires: number }>()
 
@@ -247,7 +317,6 @@ async function ensureGenericScreencast(sessionId: string, page: Page): Promise<v
 
     let isRunning = true
     let isCapturing = false
-    const streamQuality = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 100))
 
     const timer = setInterval(async () => {
       if (!isRunning || isCapturing) return
@@ -259,8 +328,12 @@ async function ensureGenericScreencast(sessionId: string, page: Page): Promise<v
       isCapturing = true
       try {
         const buf = await page.screenshot({
-          type: "png",
-          scale: "device"
+          type: "jpeg",
+          quality: STREAM_QUALITY,
+          // CSS scale: a live frame only has to match what the view displays,
+          // and the client maps clicks by the displayed rect, not by frame
+          // pixels. Device scale quadrupled the pixels for no visible gain.
+          scale: "css"
         })
         for (const ws of currentStream.viewers) {
           if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
@@ -311,11 +384,14 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       const ackWhenDrained = () => {
         const cur = sessionStreams.get(sessionId)
         if (!cur || (cur.cdp && cur.cdp !== cdp)) return
-        const buffered = Math.min(
+        // Gate on the *slowest* viewer. Taking the min acked as soon as the
+        // best-connected client drained, so a slow viewer never applied any
+        // backpressure and fell further behind with every frame.
+        const buffered = Math.max(
           ...[...cur.viewers]
             .filter((v) => v.readyState === WebSocket.OPEN)
             .map((v) => v.bufferedAmount),
-          Infinity
+          0
         )
         if (buffered > buf.length && Date.now() < deadline) {
           setTimeout(ackWhenDrained, 15)
@@ -333,10 +409,15 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
     })
     await cdp.send("Page.enable")
     await cdp.send("Page.startScreencast", {
-      format: "png",
-      maxWidth: 3840,
-      maxHeight: 3840,
-      everyNthFrame: 1,
+      format: "jpeg",
+      // CDP only honours `quality` for jpeg — it is ignored for png, which is
+      // why RECORDER_STREAM_QUALITY had no effect while this was png.
+      quality: STREAM_QUALITY,
+      // Bounded to the viewport's CSS size: the 2x capture is downscaled back to
+      // one pixel per displayed pixel instead of shipping 4x the pixels over the
+      // WAN. Re-issued on resize so the bounds track the viewport.
+      ...screencastBounds(page),
+      everyNthFrame: STREAM_EVERY_NTH_FRAME,
     })
     stream.dsf = await page.evaluate(() => window.devicePixelRatio).catch(() => 1)
     stream.cdp = cdp
@@ -348,6 +429,26 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
   } finally {
     stream.starting = null
   }
+}
+
+/**
+ * Re-issue the screencast with bounds for the current viewport. CDP treats a
+ * second startScreencast as a parameter update, so this needs no stop/start
+ * (which would blank the viewer). No-op when the session isn't streaming.
+ */
+async function restreamAtViewport(sessionId: string, page: Page): Promise<void> {
+  const stream = sessionStreams.get(sessionId)
+  if (!stream?.cdp) return
+  await stream.cdp
+    .send("Page.startScreencast", {
+      format: "jpeg",
+      quality: STREAM_QUALITY,
+      ...screencastBounds(page),
+      everyNthFrame: STREAM_EVERY_NTH_FRAME,
+    })
+    .catch(() => {
+      // Session tearing down mid-resize — the next viewer restarts it.
+    })
 }
 
 async function handleViewer(ws: WebSocket, sessionId: string) {
@@ -388,7 +489,7 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
     try {
       const payload = JSON.parse(data.toString())
       const sess = activeSessions.get(sessionId)
-      if (sess) await applyInput(sess.page, payload)
+      if (sess) await applyInput(sess.page, payload, sessionId)
     } catch {
       // malformed message — ignore
     }
@@ -454,11 +555,16 @@ const server = http.createServer(async (req, res) => {
         return
       }
       try {
-        // scale "device" keeps polling frames at device pixels so mouse-coordinate
-        // mapping stays 1:1 regardless of the context's deviceScaleFactor.
-        const buffer = await activeSess.page.screenshot({ type: "png", scale: "device" })
+        // CSS scale: polling frames are a fallback view, and the client maps
+        // clicks by the displayed rect rather than by frame pixels, so device
+        // pixels only cost bandwidth here.
+        const buffer = await activeSess.page.screenshot({
+          type: "jpeg",
+          quality: STREAM_QUALITY,
+          scale: "css",
+        })
         sendJson(res, 200, {
-          frame: `data:image/png;base64,${buffer.toString("base64")}`,
+          frame: `data:image/jpeg;base64,${buffer.toString("base64")}`,
           url: activeSess.page.url(),
           fileChooserOpen: !!activeSess.activeFileChooser,
         })
@@ -629,7 +735,7 @@ const server = http.createServer(async (req, res) => {
             sendJson(res, 400, { error: "Active session not found" })
             return
           }
-          const result = await applyInput(activeSess.page, body)
+          const result = await applyInput(activeSess.page, body, sessionId)
           if (result.unknown) {
             sendJson(res, 400, { error: "Unknown input type" })
           } else {
