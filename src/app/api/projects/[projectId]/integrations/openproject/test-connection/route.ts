@@ -4,10 +4,10 @@
  * Comprehensive connection test — validates URL, token, project, types, statuses, write perms.
  */
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { decryptSecret } from "@/lib/crypto"
 import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { loadIntegration } from "@/lib/integrations/core/load-integration"
+import { persistConnectionStatus, resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { z } from "zod"
 
 const testSchema = z.object({
@@ -34,22 +34,14 @@ export async function POST(
 
   let token = parsed.data.apiToken || ""
 
-  // If no token provided, try to load from saved integration
+  // If no token provided, reuse the saved one — from whichever row owns the
+  // config (unified ProjectIntegration or the legacy OpenProject row).
   if (!token) {
-    const integration = await prisma.openProjectIntegration.findUnique({
-      where: { projectId: params.projectId },
-    })
-    if (integration?.apiTokenEncrypted) {
-      try {
-        token = decryptSecret({
-          encrypted: integration.apiTokenEncrypted,
-          iv: integration.apiTokenIv,
-          authTag: integration.apiTokenAuthTag,
-          keyVersion: integration.apiTokenKeyVersion,
-        })
-      } catch {
-        return NextResponse.json({ error: "Failed to decrypt saved API token" }, { status: 500 })
-      }
+    const resolved = await resolveOpenProject(params.projectId)
+    if (resolved.ok) {
+      token = resolved.apiToken
+    } else if (resolved.status === 500) {
+      return NextResponse.json({ error: "Failed to decrypt saved API token" }, { status: 500 })
     }
   }
 
@@ -66,14 +58,11 @@ export async function POST(
 
     const result = await client.testConnection()
 
-    // Update last connection status
-    await prisma.openProjectIntegration.updateMany({
-      where: { projectId: params.projectId },
-      data: {
-        lastConnectionStatus: result.success ? "connected" : "failed",
-        lastConnectionCheckedAt: new Date(),
-      },
-    })
+    // Update last connection status on whichever row owns the config
+    const loaded = await loadIntegration(params.projectId)
+    if (loaded) {
+      await persistConnectionStatus(loaded, result.success ? "connected" : "failed")
+    }
 
     if (result.success) {
       return NextResponse.json({

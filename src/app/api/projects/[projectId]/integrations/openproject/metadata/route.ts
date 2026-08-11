@@ -4,48 +4,25 @@
  * Dynamic metadata loader — returns types, statuses, versions from the connected OpenProject instance.
  */
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  // Member-level: the bug form's board picker reads this. Owner-only meant
+  // testers saw an empty board list.
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
-  const integration = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: params.projectId },
-  })
-
-  if (!integration?.apiTokenEncrypted) {
-    return NextResponse.json(
-      { error: "OpenProject integration is not configured" },
-      { status: 400 }
-    )
+  const resolved = await resolveOpenProject(params.projectId)
+  if (!resolved.ok) {
+    return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
-
-  let token: string
-  try {
-    token = decryptSecret({
-      encrypted: integration.apiTokenEncrypted,
-      iv: integration.apiTokenIv,
-      authTag: integration.apiTokenAuthTag,
-      keyVersion: integration.apiTokenKeyVersion,
-    })
-  } catch {
-    return NextResponse.json({ error: "Failed to decrypt API token" }, { status: 500 })
-  }
+  const { client } = resolved
 
   try {
-    const client = new OpenProjectClient(
-      integration.baseUrl,
-      integration.openProjectProjectIdentifier,
-      token
-    )
-
     const [types, statuses, versions, boards] = await Promise.allSettled([
       client.getTypes(),
       client.getStatuses(),

@@ -7,8 +7,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function POST(
   _request: Request,
@@ -18,31 +17,13 @@ export async function POST(
     const auth = await requireProjectOwner(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
-    const integration = await prisma.openProjectIntegration.findUnique({
-      where: { projectId: params.projectId },
-    })
-
-    if (!integration?.apiTokenEncrypted) {
-      return NextResponse.json({ error: "OpenProject integration is not configured" }, { status: 400 })
+    // Resolve from whichever row owns the config (unified ProjectIntegration
+    // first, legacy OpenProjectIntegration second).
+    const resolved = await resolveOpenProject(params.projectId)
+    if (!resolved.ok) {
+      return NextResponse.json({ error: resolved.error }, { status: resolved.status })
     }
-
-    let token: string
-    try {
-      token = decryptSecret({
-        encrypted: integration.apiTokenEncrypted,
-        iv: integration.apiTokenIv,
-        authTag: integration.apiTokenAuthTag,
-        keyVersion: integration.apiTokenKeyVersion,
-      })
-    } catch {
-      return NextResponse.json({ error: "Failed to decrypt API token" }, { status: 500 })
-    }
-
-    const client = new OpenProjectClient(
-      integration.baseUrl,
-      integration.openProjectProjectIdentifier,
-      token
-    )
+    const { client, integration } = resolved
 
     // Load all synced test case mappings
     const mappings = await prisma.externalSyncMapping.findMany({

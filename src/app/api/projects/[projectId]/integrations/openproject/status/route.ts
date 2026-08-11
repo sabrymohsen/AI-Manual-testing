@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { loadIntegration } from "@/lib/integrations/core/load-integration"
 
 export async function GET(
   _request: Request,
@@ -14,11 +15,12 @@ export async function GET(
   const auth = await requireProjectOwner(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
-  const integration = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: params.projectId },
-  })
+  // Reads whichever row owns the config (unified ProjectIntegration first,
+  // legacy OpenProjectIntegration second) — a project connected through the
+  // unified UI used to report itself as unconfigured here.
+  const integration = await loadIntegration(params.projectId)
 
-  if (!integration) {
+  if (!integration || integration.provider !== "OpenProject") {
     return NextResponse.json({ configured: false })
   }
 

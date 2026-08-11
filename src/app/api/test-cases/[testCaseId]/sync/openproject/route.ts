@@ -7,8 +7,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { decryptSecret } from "@/lib/crypto"
-import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
 
@@ -32,31 +31,14 @@ export async function POST(
     return NextResponse.json({ error: "Test case not found" }, { status: 404 })
   }
 
-  const integration = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: testCase.projectId },
-  })
-
-  if (!integration?.apiTokenEncrypted) {
-    return NextResponse.json({ error: "OpenProject integration is not configured for this project" }, { status: 400 })
+  // Resolve from whichever row owns the config (unified ProjectIntegration
+  // first, legacy OpenProjectIntegration second).
+  const resolved = await resolveOpenProject(testCase.projectId)
+  if (!resolved.ok) {
+    return NextResponse.json({ error: resolved.error }, { status: resolved.status })
   }
+  const { client, integration } = resolved
 
-  let token: string
-  try {
-    token = decryptSecret({
-      encrypted: integration.apiTokenEncrypted,
-      iv: integration.apiTokenIv,
-      authTag: integration.apiTokenAuthTag,
-      keyVersion: integration.apiTokenKeyVersion,
-    })
-  } catch {
-    return NextResponse.json({ error: "Failed to decrypt API token" }, { status: 500 })
-  }
-
-  const client = new OpenProjectClient(
-    integration.baseUrl,
-    integration.openProjectProjectIdentifier,
-    token
-  )
 
   const mod = (testCase as any).moduleRelation?.name || "General"
   const feature = (testCase as any).feature?.name

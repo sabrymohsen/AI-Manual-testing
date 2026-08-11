@@ -12,6 +12,7 @@ import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
 import { encryptSecret } from "@/lib/crypto"
 import { providerLabels } from "@/lib/integrations/labels"
+import { syncProjectTeam } from "@/lib/team/sync-team"
 
 const schema = z.object({
   provider: z.enum(["OpenProject", "Jira", "AzureDevOps", "ClickUp"]),
@@ -136,5 +137,20 @@ export async function PUT(req: Request, { params }: { params: { projectId: strin
     update: { ...common, ...tokenData },
   })
 
-  return NextResponse.json({ success: true, message: `${providerLabels(d.provider).name} settings saved` })
+  // Fill the assignee pool from the tracker right away, so the developer
+  // dropdowns in the bug and test-case forms work as soon as it's connected.
+  // Best-effort: a tracker that's unreachable must not fail the save.
+  let teamSynced: number | null = null
+  try {
+    const synced = await syncProjectTeam(params.projectId)
+    if (synced.ok) teamSynced = synced.synced
+  } catch {
+    // ignored — the Team tab's Sync button remains available
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: `${providerLabels(d.provider).name} settings saved`,
+    teamSynced,
+  })
 }

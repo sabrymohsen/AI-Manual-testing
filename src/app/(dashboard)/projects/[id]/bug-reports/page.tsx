@@ -319,7 +319,12 @@ export default function ProjectBugReportsPage() {
       .then(data =>
         setOpMembers(
           Array.isArray(data.members)
-            ? data.members.filter((m: any) => m.active).map((m: any) => ({ id: m.id, name: m.name }))
+            ? data.members
+                .filter((m: any) => m.active)
+                // Value is the tracker's own user id: BugReport.assignedTo is
+                // sent straight to the tracker as the assignee, so storing the
+                // pool's row id here left the synced work package unassigned.
+                .map((m: any) => ({ id: m.externalId || m.id, name: m.name }))
             : []
         )
       )

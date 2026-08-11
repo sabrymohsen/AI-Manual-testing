@@ -8,6 +8,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
 import { encryptSecret, decryptSecret } from "@/lib/crypto"
+import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { z } from "zod"
 
 const schema = z.object({
@@ -38,20 +39,12 @@ export async function GET(_req: Request, { params }: Params) {
     where: { projectId_featureId: { projectId: params.projectId, featureId: params.featureId } },
   })
 
-  // Also fetch project integration to compute effective values and isComplete
-  const proj = await prisma.openProjectIntegration.findUnique({
-    where: { projectId: params.projectId },
-    select: {
-      baseUrl: true,
-      openProjectProjectIdentifier: true,
-      apiTokenEncrypted: true,
-      testCaseTypeId: true,
-      passedStatusId: true,
-      failedStatusId: true,
-      blockedStatusId: true,
-      defaultStatusId: true,
-    },
-  })
+  // Also fetch project integration to compute effective values and isComplete —
+  // from whichever row owns it (unified ProjectIntegration or legacy).
+  const resolvedProj = await resolveOpenProject(params.projectId)
+  const proj = resolvedProj.ok
+    ? { ...resolvedProj.integration, apiTokenEncrypted: true as const }
+    : null
 
   const effective = {
     baseUrl: cfg?.baseUrl || proj?.baseUrl || null,
