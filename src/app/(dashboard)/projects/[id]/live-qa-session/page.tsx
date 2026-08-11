@@ -203,6 +203,12 @@ export default function LiveQASessionPage() {
   const lastMoveSentRef = useRef(0)
   const lastPasteSentRef = useRef(0)
   const frameDsfRef = useRef(1)
+  // The remote viewport size this client last asked for (CSS px). Pointer
+  // coordinates are scaled into it, so frame resolution never affects clicks.
+  const remoteViewportRef = useRef<{ width: number; height: number } | null>(null)
+  // True while a streamed frame is decoding; incoming frames are dropped until
+  // it clears so a slow client sheds rate instead of accumulating lag.
+  const decodingFrameRef = useRef(false)
 
   // Timers & Pollers
   const pollerRef = useRef<any>(null)
@@ -378,9 +384,18 @@ export default function LiveQASessionPage() {
         ws.onmessage = (event) => {
           if (!isMounted) return
           if (event.data instanceof Blob) {
+            // Drop a frame rather than queue it when the previous one is still
+            // decoding, or when the tab is hidden. Decoding every frame on a
+            // client that can't keep up turns a bandwidth spike into unbounded,
+            // ever-growing latency — the view drifts further behind the browser
+            // the longer you scroll. Skipping keeps it live at a lower rate.
+            if (decodingFrameRef.current || document.hidden) return
+            decodingFrameRef.current = true
             const url = URL.createObjectURL(event.data)
             if (imgRef.current) {
               imgRef.current.src = url
+            } else {
+              decodingFrameRef.current = false
             }
             if (prevBlobUrl) URL.revokeObjectURL(prevBlobUrl)
             prevBlobUrl = url
@@ -480,42 +495,46 @@ export default function LiveQASessionPage() {
       .catch(() => {})
   }
 
+  /**
+   * Map a pointer event to remote-browser CSS pixels.
+   *
+   * Scales by the ratio between the remote viewport (which this client asked
+   * for via the `resize` message) and the element's displayed box, so the
+   * mapping holds no matter what resolution the frames arrive at. Dividing by
+   * `zoom` alone only worked while frames happened to be displayed 1:1, which
+   * broke as soon as the stream was downscaled to save bandwidth.
+   */
   function liveViewCoords(e: { clientX: number; clientY: number }) {
+    const mapWithin = (rect: DOMRect) => {
+      if (rect.width <= 0 || rect.height <= 0) return null
+      if (
+        e.clientX < rect.left ||
+        e.clientX > rect.right ||
+        e.clientY < rect.top ||
+        e.clientY > rect.bottom
+      ) {
+        return null
+      }
+      const remote = remoteViewportRef.current
+      const z = zoom || 1
+      // Fall back to the zoom-only mapping until the first resize is sent.
+      const scaleX = remote ? remote.width / rect.width : 1 / z
+      const scaleY = remote ? remote.height / rect.height : 1 / z
+      return {
+        x: Math.round((e.clientX - rect.left) * scaleX),
+        y: Math.round((e.clientY - rect.top) * scaleY)
+      }
+    }
+
     const img = imgRef.current
     if (img) {
-      const rect = img.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) {
-        if (
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom
-        ) {
-          const z = zoom || 1
-          return {
-            x: Math.round((e.clientX - rect.left) / z),
-            y: Math.round((e.clientY - rect.top) / z)
-          }
-        }
-      }
+      const hit = mapWithin(img.getBoundingClientRect())
+      if (hit) return hit
     }
     const canvas = liveCanvasRef.current
     if (canvas) {
-      const rect = canvas.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) {
-        if (
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom
-        ) {
-          const z = zoom || 1
-          return {
-            x: Math.round((e.clientX - rect.left) / z),
-            y: Math.round((e.clientY - rect.top) / z)
-          }
-        }
-      }
+      const hit = mapWithin(canvas.getBoundingClientRect())
+      if (hit) return hit
     }
     return null
   }
@@ -593,6 +612,7 @@ export default function LiveQASessionPage() {
       if (rect.width < 320 || rect.height < 320) return
       const width = Math.round(rect.width / zoom)
       const height = Math.round(rect.height / zoom)
+      remoteViewportRef.current = { width, height }
       sendBrowserInput({ type: "resize", width, height })
     }
 
@@ -1705,8 +1725,12 @@ export default function LiveQASessionPage() {
                     ref={imgRef}
                     alt="Live QA Viewport Stream"
                     onLoad={() => {
+                      decodingFrameRef.current = false
                       hasFrameRef.current = true
                       setHasFrame(true)
+                    }}
+                    onError={() => {
+                      decodingFrameRef.current = false
                     }}
                     className="max-w-full max-h-full object-contain pointer-events-none select-none"
                     style={{
