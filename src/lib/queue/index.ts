@@ -40,6 +40,72 @@ const conn = connectionOptions()
 
 export { conn as redisConnection }
 
+/**
+ * Redis reachability, tracked from connection events rather than probed.
+ *
+ * Every ioredis connection here shares one reporting policy: the FIRST failure
+ * after a healthy period is logged once, and everything after it is swallowed
+ * until a connection succeeds again. Without this the app emitted a stack trace
+ * per reconnect per connection — enough to hit Railway's 500 lines/sec cap and
+ * burn CPU on log formatting alone, while telling an operator nothing the first
+ * line hadn't already said.
+ */
+let redisReachable = true
+let outageLogged = false
+
+export function isRedisReachable(): boolean {
+  return redisReachable
+}
+
+/** Human-readable reason for the last outage, for health endpoints. */
+let lastRedisError = ""
+export function lastRedisFailure(): string {
+  return lastRedisError
+}
+
+function noteRedisDown(err: unknown) {
+  redisReachable = false
+  lastRedisError = (err as any)?.message || String(err)
+  if (!outageLogged) {
+    outageLogged = true
+    console.warn(
+      `[queue] Redis unreachable at ${conn.host}:${conn.port} — background jobs ` +
+        `(test execution, visual checks, agent runs) will not run until it is back. ` +
+        `Further connection errors are suppressed. Cause: ${lastRedisError}`
+    )
+  }
+}
+
+function noteRedisUp() {
+  if (!redisReachable) {
+    console.info(`[queue] Redis reachable again at ${conn.host}:${conn.port}`)
+  }
+  redisReachable = true
+  outageLogged = false
+  lastRedisError = ""
+}
+
+/**
+ * Attach the shared reporting policy to anything that emits ioredis-style
+ * connection events (Redis clients, BullMQ Queues, QueueEvents). BullMQ's Queue
+ * objects had no error listener at all, so their connection errors surfaced as
+ * unhandled 'error' events — the actual source of the log flood.
+ */
+function superviseConnection(emitter: {
+  on(event: string, cb: (...args: any[]) => void): unknown
+}): void {
+  emitter.on("error", (err: unknown) => noteRedisDown(err))
+  emitter.on("ready", () => noteRedisUp())
+  emitter.on("connect", () => noteRedisUp())
+}
+
+// Reconnect forever with a widening backoff instead of giving up after a few
+// tries: a queue that stops retrying stays dead until the process restarts, so
+// bringing Redis back would not have healed a running container.
+function retryStrategy(times: number): number {
+  return Math.min(times * 500, 30_000)
+}
+
 // Redis Client for general Redis operations (Pub/Sub, Heartbeats, Cancellations)
 export const redisClient = new Redis({
   host: conn.host,
@@ -48,11 +114,9 @@ export const redisClient = new Redis({
   family: IP_FAMILY,
   maxRetriesPerRequest: null,
   enableOfflineQueue: false,
-  retryStrategy: (times) => (times > 5 ? null : Math.min(times * 200, 2000)),
+  retryStrategy,
 })
-redisClient.on("error", () => {
-  // Silence connection errors when Redis is offline (e.g. during build / static export)
-})
+superviseConnection(redisClient)
 
 // Factory to create subscription connections
 export function createRedisClient(): Redis {
@@ -63,9 +127,9 @@ export function createRedisClient(): Redis {
     family: IP_FAMILY,
     maxRetriesPerRequest: null,
     enableOfflineQueue: false,
-    retryStrategy: (times) => (times > 5 ? null : Math.min(times * 200, 2000)),
+    retryStrategy,
   })
-  client.on("error", () => {})
+  superviseConnection(client)
   return client
 }
 
@@ -87,9 +151,6 @@ export const testExecutionQueue = new Queue("test-execution-queue", {
 export const testRunQueue = testExecutionQueue
 
 export const queueEvents = new QueueEvents("test-execution-queue", { connection: conn })
-queueEvents.on("error", () => {
-  // Silence connection errors when Redis is offline (e.g. during build)
-})
 
 export const visualCheckQueue = new Queue("visual-check-queue", {
   connection: conn,
@@ -146,32 +207,94 @@ export const qaAgentQueue = new Queue(AGENT_RUN_QUEUE_NAME, {
   },
 })
 
+// Every queue shares the connection-reporting policy above. BullMQ Queue
+// objects had no 'error' listener, so a missing Redis surfaced as an unhandled
+// error event per reconnect, per queue.
+for (const q of [
+  testExecutionQueue,
+  visualCheckQueue,
+  recorderValidationQueue,
+  autonomousAgentQueue,
+  agentBrainQueue,
+  qaAgentQueue,
+  queueEvents,
+]) {
+  superviseConnection(q)
+}
+
+/**
+ * Thrown when a job cannot be enqueued because Redis is down, so callers can
+ * answer "the queue is unavailable" instead of a generic 500.
+ */
+export class QueueUnavailableError extends Error {
+  readonly statusCode = 503
+  constructor() {
+    super(
+      "Background job queue is unavailable — Redis is not reachable, so runs cannot be started."
+    )
+    this.name = "QueueUnavailableError"
+  }
+}
+
+/** How long an enqueue may take before the queue is declared unavailable. */
+const ENQUEUE_TIMEOUT_MS = Number(process.env.QUEUE_ENQUEUE_TIMEOUT_MS) || 5_000
+
+async function enqueue<T>(op: () => Promise<T>): Promise<T> {
+  // ioredis buffers commands while disconnected (enableOfflineQueue defaults to
+  // true), so with Redis down `queue.add()` never settles and the HTTP request
+  // that started a run hangs until the client gives up. Racing a timeout turns
+  // that into an immediate, explainable failure. The buffer is left enabled on
+  // purpose: a sub-second reconnect still succeeds instead of erroring.
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      op(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new QueueUnavailableError()), ENQUEUE_TIMEOUT_MS)
+      }),
+    ])
+  } catch (err: any) {
+    if (err instanceof QueueUnavailableError) throw err
+    // ioredis reports an unreachable server as a connection error; anything
+    // else is a real BullMQ failure worth surfacing as-is.
+    if (
+      !isRedisReachable() ||
+      /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|Connection is closed/i.test(err?.message || "")
+    ) {
+      throw new QueueUnavailableError()
+    }
+    throw err
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
+
 // 2. Job Add/Cancel Helpers
 export async function addTestRunJob(testRunId: string): Promise<string> {
-  const job = await testExecutionQueue.add("execute-test-run", { testRunId }, {
+  const job = await enqueue(() => testExecutionQueue.add("execute-test-run", { testRunId }, {
     jobId: testRunId,
-  })
+  }))
   return job.id!
 }
 
 export async function addAutonomousAgentJob(agentRunId: string): Promise<string> {
-  const job = await autonomousAgentQueue.add("execute-autonomous-run", { agentRunId }, {
+  const job = await enqueue(() => autonomousAgentQueue.add("execute-autonomous-run", { agentRunId }, {
     jobId: agentRunId,
-  })
+  }))
   return job.id!
 }
 
 export async function addAgentBrainJob(runId: string): Promise<string> {
-  const job = await agentBrainQueue.add("execute-agent-brain-run", { runId }, {
+  const job = await enqueue(() => agentBrainQueue.add("execute-agent-brain-run", { runId }, {
     jobId: runId,
-  })
+  }))
   return job.id!
 }
 
 export async function addQAAgentJob(runId: string): Promise<string> {
-  const job = await qaAgentQueue.add("execute-qa-agent-run", { runId }, {
+  const job = await enqueue(() => qaAgentQueue.add("execute-qa-agent-run", { runId }, {
     jobId: runId,
-  })
+  }))
   return job.id!
 }
 

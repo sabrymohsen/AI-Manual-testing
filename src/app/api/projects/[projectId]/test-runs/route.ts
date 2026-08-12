@@ -135,8 +135,24 @@ export async function POST(
     })
   }
 
-  // Add job to queue
-  await addTestRunJob(testRun.id)
+  // Add job to queue. If the queue is unavailable the run must not be left
+  // sitting in Queued forever with nothing to pick it up — mark it failed and
+  // say why, so the run list explains itself instead of looking stuck.
+  try {
+    await addTestRunJob(testRun.id)
+  } catch (err: any) {
+    const reason = err?.message || "Could not queue the run"
+    await prisma.testRun.update({
+      where: { id: testRun.id },
+      data: { status: "Failed", completedAt: new Date() },
+    })
+    // TestRun has no error column, so the reason lives in the run's log where
+    // the report view already surfaces it.
+    await prisma.log.create({
+      data: { testRunId: testRun.id, source: "server", level: "error", message: reason },
+    })
+    return NextResponse.json({ error: reason, testRun }, { status: err?.statusCode || 500 })
+  }
 
   return NextResponse.json({ testRun }, { status: 201 })
 }

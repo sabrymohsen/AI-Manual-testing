@@ -102,6 +102,6 @@ export async function POST(
     return NextResponse.json({ testRunId: testRun.id, message: "Retest job successfully queued" })
   } catch (error: any) {
     console.error("POST /api/bug-reports/[bugId]/retest error:", error)
-    return NextResponse.json({ error: error.message || "Failed to trigger retest" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Failed to trigger retest" }, { status: error?.statusCode || 500 })
   }
 }

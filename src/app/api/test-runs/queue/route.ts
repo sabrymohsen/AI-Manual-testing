@@ -113,6 +113,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, queuedCount: testRuns.length, runs: testRuns })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || "Failed to queue test runs" }, { status: 500 })
+    return NextResponse.json({ error: err.message || "Failed to queue test runs" }, { status: err?.statusCode || 500 })
   }
 }
