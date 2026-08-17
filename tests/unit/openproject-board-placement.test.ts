@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
-import { placeBugOnBoard } from "@/lib/integrations/core/sync-bug-report"
+import { placeBugOnBoard, isMissingRemoteItem } from "@/lib/integrations/core/sync-bug-report"
 import type { WorkItemProvider } from "@/lib/integrations/core/provider"
 
 // A board grid as OpenProject returns it: two columns, each rendering an
@@ -166,5 +166,29 @@ describe("placeBugOnBoard", () => {
     })
 
     await expect(placeBugOnBoard(provider, "55", "101", "2", true, null)).resolves.toBeUndefined()
+  })
+})
+
+describe("isMissingRemoteItem", () => {
+  it("recognises the tracker's 404", () => {
+    // The exact shape OpenProjectClient.apiJson throws.
+    expect(isMissingRemoteItem(new Error("OpenProject API 404 — Resource not found"))).toBe(true)
+  })
+
+  it("recognises a plain not-found message from another provider", () => {
+    expect(isMissingRemoteItem(new Error("Issue does not exist or you do not have permission"))).toBe(false)
+    expect(isMissingRemoteItem(new Error("Work item not found"))).toBe(true)
+  })
+
+  it("does not treat auth or server failures as a deleted item", () => {
+    // Recreating the work item on any of these would duplicate it.
+    expect(isMissingRemoteItem(new Error("OpenProject API 403 — Permission denied"))).toBe(false)
+    expect(isMissingRemoteItem(new Error("OpenProject API 500"))).toBe(false)
+    expect(isMissingRemoteItem(new Error("OpenProject unreachable at https://op: timeout"))).toBe(false)
+  })
+
+  it("survives a non-Error throw", () => {
+    expect(isMissingRemoteItem("404")).toBe(true)
+    expect(isMissingRemoteItem(null)).toBe(false)
   })
 })

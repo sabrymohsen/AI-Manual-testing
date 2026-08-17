@@ -273,14 +273,24 @@ export async function rebuildTrackerBugs(projectId: string): Promise<RebuildBugs
     planItems.push({ externalId, title: item.title, url: item.url, action, localBugId })
   }
 
-  // Drop the mappings whose work item is actually gone. Mappings for failed
-  // deletes stay, so the re-sync updates that surviving work item rather than
-  // adding a second one next to it.
-  const staleMappingIds = mappings
-    .filter((m) => deletedExternalIds.has(String(m.externalId)))
+  // Clear every link except the ones pointing at a work item that is still
+  // there. That covers three cases at once, and getting it wrong leaves bugs
+  // permanently unsyncable:
+  //   - we just deleted the work item                → link is dead
+  //   - the link pointed at a work item deleted in   → link was already dead,
+  //     the tracker earlier, by hand                   and updating it 404s
+  //   - a claim row from a run that was interrupted  → blocks the bug as
+  //     (no external id yet)                            "sync already running"
+  // Links to work items we failed to delete survive, so the re-sync updates
+  // that survivor instead of adding a second one next to it.
+  const survivingIds = new Set(
+    planItems.filter((i) => !deletedExternalIds.has(i.externalId)).map((i) => i.externalId)
+  )
+  const deadMappingIds = mappings
+    .filter((m) => !m.externalId || !survivingIds.has(String(m.externalId)))
     .map((m) => m.id)
-  if (staleMappingIds.length > 0) {
-    await prisma.externalSyncMapping.deleteMany({ where: { id: { in: staleMappingIds } } })
+  if (deadMappingIds.length > 0) {
+    await prisma.externalSyncMapping.deleteMany({ where: { id: { in: deadMappingIds } } })
   }
 
   // Push every app bug back, oldest first so the tracker's numbering follows the

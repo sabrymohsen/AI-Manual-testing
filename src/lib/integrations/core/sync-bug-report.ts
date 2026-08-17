@@ -28,6 +28,16 @@ const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://local
 const STALE_CLAIM_MS = 5 * 60 * 1000
 
 /**
+ * Does this provider error mean "the work item you asked about isn't there any
+ * more"? Distinguishing that from a transient failure decides whether we
+ * recreate the item or leave the link alone and surface the error.
+ */
+export function isMissingRemoteItem(err: unknown): boolean {
+  const message = String((err as { message?: unknown } | null)?.message ?? err ?? "")
+  return /\b404\b|resource not found|not found|no longer exists/i.test(message)
+}
+
+/**
  * Resolves a stored screenshot/attachment reference to an on-disk file.
  * Handles public uploads (/uploads/...), files served via /api/files/..., raw
  * storage-relative paths, and absolute paths. Returns null when not found.
@@ -310,24 +320,44 @@ export async function syncBugReport(
   const boardId = bug.openProjectBoardId || loaded.boardConfig.boardId || null
   const columnId = bug.openProjectBoardColumnId || null
 
-  if (existingMapping?.externalId) {
-    const wp = await provider.updateWorkItem(existingMapping.externalId, input)
-    const placed = boardId
-      ? await placeBugOnBoard(
-          provider, boardId, existingMapping.externalId, columnId, false, existingMapping.placementColumnId
-        )
-      : undefined
-    await syncBugAttachments(provider, existingMapping.externalId, bug.screenshotPath, bug.bugAttachments)
-    await prisma.externalSyncMapping.update({
-      where: { id: existingMapping.id },
-      data: {
-        lastSyncedAt: new Date(),
-        lastSyncStatus: "success",
-        lastSyncError: null,
-        ...(placed ? { placementColumnId: placed } : {}),
-      },
-    })
-    return { status: "updated", externalId: wp.externalId, externalUrl: existingMapping.externalUrl }
+  // Set to null below if the linked work item turns out to be gone, which sends
+  // this sync down the create path instead.
+  let mapping = existingMapping
+
+  if (mapping?.externalId) {
+    let wp: Awaited<ReturnType<typeof provider.updateWorkItem>> | null = null
+    try {
+      wp = await provider.updateWorkItem(mapping.externalId, input)
+    } catch (err) {
+      if (!isMissingRemoteItem(err)) throw err
+      // Someone deleted the work item in the tracker. Without this, every future
+      // sync of this bug 404s forever and the bug can never come back.
+      console.warn(
+        `[sync-bug-report] ${loaded.provider} item ${mapping.externalId} is gone; recreating from the app.`
+      )
+      await prisma.externalSyncMapping.delete({ where: { id: mapping.id } }).catch(() => {})
+      mapping = null
+    }
+
+    if (wp && mapping) {
+      const existingMapping = mapping // narrowed for the block below
+      const placed = boardId
+        ? await placeBugOnBoard(
+            provider, boardId, existingMapping.externalId, columnId, false, existingMapping.placementColumnId
+          )
+        : undefined
+      await syncBugAttachments(provider, existingMapping.externalId, bug.screenshotPath, bug.bugAttachments)
+      await prisma.externalSyncMapping.update({
+        where: { id: existingMapping.id },
+        data: {
+          lastSyncedAt: new Date(),
+          lastSyncStatus: "success",
+          lastSyncError: null,
+          ...(placed ? { placementColumnId: placed } : {}),
+        },
+      })
+      return { status: "updated", externalId: wp.externalId, externalUrl: existingMapping.externalUrl }
+    }
   }
 
   // ── First sync for this bug ──────────────────────────────────────────────────
@@ -335,7 +365,7 @@ export async function syncBugReport(
   // the claim atomic, so a second sync racing this one (an impatient re-click,
   // or auto-sync firing while the user syncs by hand) cannot also create a work
   // item — which is how the same bug ended up in the tracker twice.
-  let claim = existingMapping
+  let claim = mapping
   if (claim) {
     // A claim with no external id means an earlier sync is either still running
     // or died partway. Recent ones are left alone; older ones are taken over
