@@ -115,4 +115,28 @@ describe("board column queries", () => {
     expect(body.name).toBe("Bug Workflow")
     expect(body.widgets).toHaveLength(1)
   })
+
+  it("repeats status and type as WIDGET filters, which is what the board renders", async () => {
+    // Filters set only on the query are ignored by the board — the column then
+    // shows every work package in the project.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 55 }),
+      text: async () => "{}",
+    } as unknown as Response)
+    global.fetch = fetchMock as unknown as typeof fetch
+
+    const client = new OpenProjectClient("https://op.example.com", "demo", "token")
+    await client.createBoard("Bug Workflow", [
+      { name: "Open", queryId: "900", statusId: "7", typeId: "12" },
+    ])
+
+    const widget = JSON.parse(fetchMock.mock.calls[0][1].body).widgets[0]
+    expect(widget.options.filters).toEqual([
+      { status: { operator: "=", values: ["7"] } },
+      { type: { operator: "=", values: ["12"] } },
+    ])
+    expect(widget.options.queryId).toBe("900")
+  })
 })

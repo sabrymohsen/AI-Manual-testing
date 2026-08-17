@@ -113,10 +113,15 @@ export async function createBugWorkflowBoard(
   }
 
   // Queries first: a board is only a container for them.
-  const columns: Array<{ name: string; statusName: string | null; queryId: string }> = []
+  const columns: Array<{
+    name: string
+    statusName: string | null
+    queryId: string
+    statusId: string | null
+  }> = []
   for (const col of usable) {
     const queryId = await client.createBoardColumnQuery(col.name, col.statusId, bugType.id)
-    columns.push({ name: col.name, statusName: col.statusName, queryId })
+    columns.push({ name: col.name, statusName: col.statusName, queryId, statusId: col.statusId })
   }
 
   const boardName = opts.name?.trim() || "Bug Workflow"
@@ -124,7 +129,12 @@ export async function createBugWorkflowBoard(
   try {
     boardId = await client.createBoard(
       boardName,
-      columns.map((c) => ({ name: c.name, queryId: c.queryId }))
+      columns.map((c) => ({
+        name: c.name,
+        queryId: c.queryId,
+        statusId: c.statusId,
+        typeId: bugType.id,
+      }))
     )
   } catch (err) {
     // The queries exist by now. Without this, every failed attempt leaves a set

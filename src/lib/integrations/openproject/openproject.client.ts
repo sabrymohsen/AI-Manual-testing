@@ -892,15 +892,33 @@ export class OpenProjectClient {
    * Create a board (a grid scoped to the project's boards) with one column per
    * entry, left to right in the order given. Returns the new board's id.
    */
-  async createBoard(name: string, columnQueryIds: Array<{ name: string; queryId: string }>): Promise<number> {
-    const widgets = columnQueryIds.map((col, index) => ({
-      identifier: "work_package_query",
-      startRow: 1,
-      endRow: 2,
-      startColumn: index + 1,
-      endColumn: index + 2,
-      options: { queryId: col.queryId, name: col.name },
-    }))
+  async createBoard(
+    name: string,
+    columns: Array<{ name: string; queryId: string; statusId?: string | null; typeId?: string | null }>
+  ): Promise<number> {
+    const widgets = columns.map((col, index) => {
+      // The board renders the WIDGET's filters, not the query's — the same
+      // reason this app has always injected id filters here. So the status and
+      // type restrictions have to be repeated on the widget; setting them only
+      // on the query leaves the column showing every work package in the
+      // project.
+      const filters: Array<Record<string, { operator: string; values: string[] }>> = []
+      if (col.statusId) filters.push({ status: { operator: "=", values: [String(col.statusId)] } })
+      if (col.typeId) filters.push({ type: { operator: "=", values: [String(col.typeId)] } })
+
+      return {
+        identifier: "work_package_query",
+        startRow: 1,
+        endRow: 2,
+        startColumn: index + 1,
+        endColumn: index + 2,
+        options: {
+          queryId: col.queryId,
+          name: col.name,
+          ...(filters.length > 0 ? { filters } : {}),
+        },
+      }
+    })
 
     const data = await this.apiJson(`/api/v3/grids`, {
       method: "POST",
