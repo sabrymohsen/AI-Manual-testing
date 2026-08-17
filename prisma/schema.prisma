@@ -1535,6 +1535,12 @@ model ExternalSyncMapping {
   lastSyncStatus String? // "success" | "failed" | "pending"
   lastSyncError  String?
 
+  // Board column this entity was last PLACED in by a sync. Lets a re-sync tell
+  // "the user picked a different column in the app" (place it there) from "the
+  // user dragged the card to another column in the tracker" (leave it alone).
+  // Without it, every sync re-asserted the stored column and undid manual moves.
+  placementColumnId String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

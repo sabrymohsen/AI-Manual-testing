@@ -251,7 +251,9 @@ export async function DELETE(
       // Whichever row owns the config (unified ProjectIntegration or legacy).
       const resolved = await resolveOpenProject(bug.projectId)
 
-      if (mapping && resolved.ok) {
+      // An empty externalId is a sync claim that never got a work package —
+      // there is nothing to delete remotely.
+      if (mapping?.externalId && resolved.ok) {
         try {
           await resolved.client.deleteWorkPackage(mapping.externalId)
           remoteDeleted = true

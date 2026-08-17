@@ -677,30 +677,76 @@ export class OpenProjectClient {
   }
 
   /**
+   * Read-modify-write a board grid's widgets under optimistic locking.
+   *
+   * A board PATCH replaces the ENTIRE widgets array, so every card-placement
+   * write is a read-modify-write over shared state that the user is editing at
+   * the same time in the OpenProject UI (dragging a card rewrites the same
+   * widget filters). Sending a widgets array built from a grid we read seconds
+   * ago silently reverts their drag — the card snaps back, or shows up in two
+   * columns when only part of OpenProject's own bookkeeping is overwritten.
+   *
+   * `lockVersion` closes that window: OpenProject rejects the PATCH with 409 if
+   * the grid changed since we read it, and we re-read and re-apply once. The
+   * mutation must therefore be a pure function of the current widgets.
+   *
+   * Returns false when the grid can't be read or the PATCH is rejected;
+   * `mutate` returning null means "nothing to change" and short-circuits.
+   */
+  private async patchGridWidgets(
+    boardId: number,
+    mutate: (widgets: any[]) => any[] | null,
+    attempt = 0
+  ): Promise<boolean> {
+    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
+    if (!gridRes.ok) return false
+    const grid = await gridRes.json()
+
+    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+    const updatedWidgets = mutate(widgets)
+    if (!updatedWidgets) return true // already in the desired state
+
+    const body: Record<string, any> = { widgets: updatedWidgets }
+    if (grid?.lockVersion != null) body.lockVersion = grid.lockVersion
+
+    const patchRes = await this.apiFetch(`/api/v3/grids/${boardId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    if (patchRes.status === 200) return true
+
+    // 409 = someone else wrote the grid first (a drag in the UI, or a parallel
+    // sync). Re-read and re-apply once; a second conflict means the board is
+    // being actively edited, so leave it to the user rather than fight them.
+    if (patchRes.status === 409 && attempt === 0) {
+      return this.patchGridWidgets(boardId, mutate, attempt + 1)
+    }
+    return false
+  }
+
+  /** Replace a widget's id filter with exactly `wpIds`. */
+  private static withIdFilter(widget: any, wpIds: string[]): any {
+    return { ...widget, options: { ...widget.options, filters: [{ id: { operator: "=", values: wpIds } }] } }
+  }
+
+  /** The work package ids a board widget currently displays. */
+  private static widgetIds(widget: any): string[] {
+    return (widget?.options?.filters?.[0]?.id?.values || []).map(String)
+  }
+
+  /**
    * Places work packages on a free board column by updating the grid widget's
    * options.filters with an explicit ID filter.
    * This is the CE workaround: the board renders widget.options.filters, not the
    * query's own filters, and manualSort (the EE default) shows nothing in CE.
    */
   async setBoardWidgetIdFilter(boardId: number, widgetId: number, wpIds: string[]): Promise<boolean> {
-    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
-    if (!gridRes.ok) return false
-    const grid = await gridRes.json()
-
-    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
-    const updatedWidgets = widgets.map((w: any) => {
-      if (w.id === widgetId) {
-        return { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: wpIds } }] } }
-      }
-      return w
-    })
-
-    const patchRes = await this.apiFetch(`/api/v3/grids/${boardId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ widgets: updatedWidgets }),
-    })
-    return patchRes.status === 200
+    return this.patchGridWidgets(boardId, (widgets) =>
+      widgets.map((w: any) =>
+        w.id === widgetId ? OpenProjectClient.withIdFilter(w, wpIds) : w
+      )
+    )
   }
 
   /**
@@ -710,29 +756,20 @@ export class OpenProjectClient {
    * filter — fine for a full group sync, wrong for placing one bug at a time).
    */
   async addWorkPackageToBoardWidget(boardId: number, widgetId: number, wpId: string | number): Promise<boolean> {
-    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
-    if (!gridRes.ok) return false
-    const grid = await gridRes.json()
-
-    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
-    const target = widgets.find((w: any) => w.id === widgetId)
-    if (!target) return false
-
-    const existing: string[] = target.options?.filters?.[0]?.id?.values || []
-    const merged = Array.from(new Set([...existing.map(String), String(wpId)]))
-
-    const updatedWidgets = widgets.map((w: any) =>
-      w.id === widgetId
-        ? { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: merged } }] } }
-        : w
-    )
-
-    const patchRes = await this.apiFetch(`/api/v3/grids/${boardId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ widgets: updatedWidgets }),
+    const target = String(wpId)
+    let widgetFound = false
+    const ok = await this.patchGridWidgets(boardId, (widgets) => {
+      const widget = widgets.find((w: any) => w.id === widgetId)
+      widgetFound = !!widget
+      if (!widget) return null
+      const existing = OpenProjectClient.widgetIds(widget)
+      if (existing.includes(target)) return null
+      const merged = [...existing, target]
+      return widgets.map((w: any) =>
+        w.id === widgetId ? OpenProjectClient.withIdFilter(w, merged) : w
+      )
     })
-    return patchRes.status === 200
+    return ok && widgetFound
   }
 
   /**
@@ -761,37 +798,24 @@ export class OpenProjectClient {
    * duplicating it. Use this when the user has chosen a specific column in-app.
    */
   async setBoardCardColumn(boardId: number, targetWidgetId: number, wpId: string | number): Promise<boolean> {
-    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
-    if (!gridRes.ok) return false
-    const grid = await gridRes.json()
-    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
     const target = String(wpId)
-
-    let changed = false
-    const updatedWidgets = widgets.map((w: any) => {
-      const values: string[] = (w?.options?.filters?.[0]?.id?.values || []).map(String)
-      const has = values.includes(target)
-      if (w.id === targetWidgetId) {
-        if (has) return w
+    return this.patchGridWidgets(boardId, (widgets) => {
+      let changed = false
+      const updatedWidgets = widgets.map((w: any) => {
+        const values = OpenProjectClient.widgetIds(w)
+        const has = values.includes(target)
+        if (w.id === targetWidgetId) {
+          if (has) return w
+          changed = true
+          return OpenProjectClient.withIdFilter(w, [...values, target])
+        }
+        // Any other column that currently holds the card: drop it (that's the "move").
+        if (!has) return w
         changed = true
-        const merged = Array.from(new Set([...values, target]))
-        return { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: merged } }] } }
-      }
-      // Any other column that currently holds the card: drop it (that's the "move").
-      if (!has) return w
-      changed = true
-      const filtered = values.filter((v) => v !== target)
-      return { ...w, options: { ...w.options, filters: [{ id: { operator: "=", values: filtered } }] } }
+        return OpenProjectClient.withIdFilter(w, values.filter((v) => v !== target))
+      })
+      return changed ? updatedWidgets : null
     })
-
-    if (!changed) return true // already correct — nothing to write
-
-    const patchRes = await this.apiFetch(`/api/v3/grids/${boardId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ widgets: updatedWidgets }),
-    })
-    return patchRes.status === 200
   }
 
   async addWorkPackageComment(wpId: string | number, markdown: string): Promise<boolean> {

@@ -20,6 +20,14 @@ import { IMAGE_CONTENT_TYPES, entityMarker } from "./types"
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
 
 /**
+ * How long a mapping row that has been claimed but has no external id yet is
+ * treated as "a sync is running". Past this, the claim is assumed to be from an
+ * attempt that died and is taken over. Comfortably longer than a sync that is
+ * uploading attachments, short enough that a crash isn't a permanent block.
+ */
+const STALE_CLAIM_MS = 5 * 60 * 1000
+
+/**
  * Resolves a stored screenshot/attachment reference to an on-disk file.
  * Handles public uploads (/uploads/...), files served via /api/files/..., raw
  * storage-relative paths, and absolute paths. Returns null when not found.
@@ -94,45 +102,57 @@ async function syncBugAttachments(
 }
 
 /**
- * Places / moves a synced bug on the given board, idempotently. Mirrors the
- * OpenProject placeBugOnBoard rules but via provider board primitives:
- *  - explicit column  → reconcile to EXACTLY that column (moves it; no-op if there)
- *  - new card         → drop into the chosen/first column
- *  - re-sync, basic, no explicit column → only place if not already on the board
- *  - re-sync, attribute column, no explicit → leave as-is
- * Best-effort: never throws.
+ * Places / moves a synced bug on the given board.
+ *
+ * The tracker board is a shared surface: the app decides where a card starts,
+ * but from then on people drag cards around in the tracker itself. So a sync
+ * only asserts a column when the app-side choice actually CHANGED since the
+ * last sync (`placedColumnId`, recorded on the mapping); otherwise it leaves
+ * the card wherever the user put it. Re-asserting the stored column on every
+ * sync — what this used to do — dragged cards back to their original column
+ * and, racing the user's own drag, could leave the same card showing in two.
+ *
+ *  - new card                      → drop into the chosen/first column
+ *  - app-side column changed       → reconcile to EXACTLY that column
+ *  - card missing from a basic board → put it back (chosen/first column)
+ *  - otherwise                     → leave as-is; the tracker wins
+ *
+ * Returns the column id actually placed into, or undefined when nothing was
+ * placed (so the caller only records real placements). Best-effort: never throws.
  */
-async function placeBugOnBoard(
+export async function placeBugOnBoard(
   provider: WorkItemProvider,
   boardId: string,
   externalId: string,
   columnId: string | null | undefined,
-  isCreate: boolean
-): Promise<void> {
+  isCreate: boolean,
+  placedColumnId: string | null | undefined
+): Promise<string | undefined> {
   try {
     const columns = await provider.getBoardColumns(boardId)
-    if (!columns.length) return
-    const explicit: BoardColumn | null = columnId
+    if (!columns.length) return undefined
+    const chosen: BoardColumn | null = columnId
       ? columns.find((c) => String(c.id) === String(columnId)) || null
       : null
-    const col = explicit || columns[0]
+    const col = chosen || columns[0]
 
-    if (explicit) {
-      await provider.reconcileColumn(boardId, col, externalId)
-      return
-    }
     if (isCreate) {
       await provider.placeOnColumn(boardId, col, externalId)
-      return
+      return String(col.id)
     }
-    if (col.columnType === "basic") {
-      if (!(await provider.boardContains(boardId, externalId))) {
-        await provider.placeOnColumn(boardId, col, externalId)
-      }
+    // The app-side column moved since we last placed the card: honour it.
+    if (chosen && String(columnId) !== String(placedColumnId ?? "")) {
+      await provider.reconcileColumn(boardId, chosen, externalId)
+      return String(chosen.id)
     }
-    // attribute columns on plain re-sync with no explicit column: leave as-is.
+    if (col.columnType === "basic" && !(await provider.boardContains(boardId, externalId))) {
+      await provider.placeOnColumn(boardId, col, externalId)
+      return String(col.id)
+    }
+    return undefined
   } catch (err: any) {
     console.warn(`[sync-bug-report] Board placement for ${externalId} skipped: ${err?.message}`)
+    return undefined
   }
 }
 
@@ -290,32 +310,103 @@ export async function syncBugReport(
   const boardId = bug.openProjectBoardId || loaded.boardConfig.boardId || null
   const columnId = bug.openProjectBoardColumnId || null
 
-  if (existingMapping) {
+  if (existingMapping?.externalId) {
     const wp = await provider.updateWorkItem(existingMapping.externalId, input)
-    if (boardId) await placeBugOnBoard(provider, boardId, existingMapping.externalId, columnId, false)
+    const placed = boardId
+      ? await placeBugOnBoard(
+          provider, boardId, existingMapping.externalId, columnId, false, existingMapping.placementColumnId
+        )
+      : undefined
     await syncBugAttachments(provider, existingMapping.externalId, bug.screenshotPath, bug.bugAttachments)
     await prisma.externalSyncMapping.update({
       where: { id: existingMapping.id },
-      data: { lastSyncedAt: new Date(), lastSyncStatus: "success", lastSyncError: null },
+      data: {
+        lastSyncedAt: new Date(),
+        lastSyncStatus: "success",
+        lastSyncError: null,
+        ...(placed ? { placementColumnId: placed } : {}),
+      },
     })
     return { status: "updated", externalId: wp.externalId, externalUrl: existingMapping.externalUrl }
   }
 
-  const wp = await provider.createWorkItem(input)
-  if (boardId) await placeBugOnBoard(provider, boardId, wp.externalId, columnId, true)
-  await syncBugAttachments(provider, wp.externalId, bug.screenshotPath, bug.bugAttachments)
-  await prisma.externalSyncMapping.create({
-    data: {
-      projectId: bug.projectId,
-      provider: loaded.provider as any,
-      localEntityType: "BugReport",
-      localEntityId: bug.id,
-      externalId: wp.externalId,
-      externalUrl: wp.url,
-      externalType: "Bug",
-      lastSyncedAt: new Date(),
-      lastSyncStatus: "success",
-    },
-  })
-  return { status: "created", externalId: wp.externalId, externalUrl: wp.url }
+  // ── First sync for this bug ──────────────────────────────────────────────────
+  // Claim the mapping row BEFORE talking to the tracker. The unique key makes
+  // the claim atomic, so a second sync racing this one (an impatient re-click,
+  // or auto-sync firing while the user syncs by hand) cannot also create a work
+  // item — which is how the same bug ended up in the tracker twice.
+  let claim = existingMapping
+  if (claim) {
+    // A claim with no external id means an earlier sync is either still running
+    // or died partway. Recent ones are left alone; older ones are taken over
+    // (findByMarker below adopts whatever that attempt managed to create).
+    const claimedAt = claim.updatedAt || claim.createdAt
+    if (Date.now() - claimedAt.getTime() < STALE_CLAIM_MS) {
+      return { status: "skipped", reason: "A sync for this bug is already in progress" }
+    }
+  }
+  if (!claim) {
+    try {
+      claim = await prisma.externalSyncMapping.create({
+        data: {
+          projectId: bug.projectId,
+          provider: loaded.provider as any,
+          localEntityType: "BugReport",
+          localEntityId: bug.id,
+          externalId: "", // filled in below once the tracker assigns one
+          externalType: "Bug",
+          lastSyncStatus: "pending",
+        },
+      })
+    } catch {
+      // Lost the race: another sync claimed it microseconds ago.
+      return { status: "skipped", reason: "A sync for this bug is already in progress" }
+    }
+  }
+
+  try {
+    // A previous attempt may have created the work item and then died before
+    // recording it (a request timeout mid-attachment-upload is the usual way).
+    // The description carries a stable marker, so adopt that orphan instead of
+    // creating a second copy.
+    const orphan = await provider.findByMarker("BugReport", bug.id).catch(() => null)
+    const wp = orphan
+      ? await provider.updateWorkItem(orphan.externalId, input)
+      : await provider.createWorkItem(input)
+    const externalUrl = wp.url || orphan?.url || null
+
+    // Record the external id immediately — before the slow, best-effort board
+    // placement and attachment uploads — so an interruption after this point
+    // can never orphan the work item.
+    await prisma.externalSyncMapping.update({
+      where: { id: claim.id },
+      data: {
+        externalId: wp.externalId,
+        externalUrl,
+        lastSyncedAt: new Date(),
+        lastSyncStatus: "success",
+        lastSyncError: null,
+      },
+    })
+
+    const placed = boardId
+      ? await placeBugOnBoard(provider, boardId, wp.externalId, columnId, !orphan, claim.placementColumnId)
+      : undefined
+    await syncBugAttachments(provider, wp.externalId, bug.screenshotPath, bug.bugAttachments)
+    if (placed) {
+      await prisma.externalSyncMapping.update({
+        where: { id: claim.id },
+        data: { placementColumnId: placed },
+      })
+    }
+
+    return { status: orphan ? "updated" : "created", externalId: wp.externalId, externalUrl }
+  } catch (err: any) {
+    // Release the claim so the next attempt can retry rather than being told a
+    // sync is in progress forever.
+    if (!claim.externalId) {
+      await prisma.externalSyncMapping.delete({ where: { id: claim.id } }).catch(() => {})
+    }
+    throw err
+  }
 }
