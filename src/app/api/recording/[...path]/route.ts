@@ -119,6 +119,70 @@ const startGlobalRecordingSchema = z.object({
   recordingMode: z.enum(["Fast", "Detailed", "Assertion"]).optional(),
 })
 
+/**
+ * Read and validate a JSON body, returning the response to send on failure.
+ *
+ * Exposes both `raw` and `data` because the endpoints below are not uniform:
+ * most write the RAW body through to Prisma while using the schema only as a
+ * gate, and one uses the parsed value. Collapsing them onto one or the other
+ * would change what gets written (Zod strips unknown keys and applies
+ * coercions), so each caller keeps the one it already used.
+ *
+ * `request.json()` is intentionally left unguarded, as before: invalid JSON
+ * throws and is caught by the handler's outer try/catch.
+ */
+type ValidatedBody<T> =
+  | { ok: true; raw: any; data: T }
+  | { ok: false; response: NextResponse }
+
+async function readValidatedBody<T>(
+  // Request, not NextRequest: PUT/PATCH here are typed with the base Request.
+  request: Request,
+  schema: z.ZodType<T>
+): Promise<ValidatedBody<T>> {
+  const raw = await request.json()
+  const parsed = schema.safeParse(raw)
+  if (!parsed.success) {
+    return {
+      ok: false,
+      response: badRequestResponse(parsed.error.errors.map(e => e.message).join(", ")),
+    }
+  }
+  return { ok: true, raw, data: parsed.data }
+}
+
+/**
+ * Run a recorder-worker interaction, translating any failure into the standard
+ * worker error response. Every worker-backed endpoint repeated this try/catch
+ * verbatim; a new one that forgot it would answer 500 instead of the worker's
+ * own status.
+ *
+ * Only used where the catch does nothing else — the two endpoints that inspect
+ * RecorderWorkerError first keep their own try/catch.
+ */
+async function withWorker(op: () => Promise<NextResponse>): Promise<NextResponse> {
+  try {
+    return await op()
+  } catch (err) {
+    return workerErrorResponse(err)
+  }
+}
+
+
+/**
+ * Path-segment matcher for this catch-all route. "*" matches any single
+ * segment (an id), so `matches(path, ["*", "steps", "*", "split"])` replaces
+ * hand-written `path.length === 4 && path[1] === "steps" && path[3] === "split"`
+ * chains, where an off-by-one in an index is easy to miss and impossible to
+ * spot at a glance. Branch order is unchanged, so first-match still wins.
+ */
+function matches(path: string[], pattern: string[]): boolean {
+  return (
+    path.length === pattern.length &&
+    pattern.every((segment, i) => segment === "*" || segment === path[i])
+  )
+}
+
 function workerErrorResponse(err: unknown) {
   if (err instanceof RecorderWorkerError) {
     return NextResponse.json(
@@ -147,7 +211,7 @@ export async function GET(
   }
 
   // GET /api/recording/sessions/active
-  if (path.length === 2 && path[0] === "sessions" && path[1] === "active") {
+  if (matches(path, ["sessions", "active"])) {
     const { searchParams } = new URL(request.url)
     const projectId = searchParams.get("projectId")
     if (!projectId) return badRequestResponse("projectId is required")
@@ -223,7 +287,7 @@ export async function GET(
   }
 
   // GET /api/recording/[sessionId]/connection
-  if (path.length === 2 && path[1] === "connection") {
+  if (matches(path, ["*", "connection"])) {
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
@@ -246,7 +310,7 @@ export async function GET(
   }
 
   // GET /api/recording/[sessionId]/recordings — session video artifacts
-  if (path.length === 2 && path[1] === "recordings") {
+  if (matches(path, ["*", "recordings"])) {
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
@@ -258,7 +322,7 @@ export async function GET(
   }
 
   // GET /api/recording/[sessionId]/screenshots — persisted session captures
-  if (path.length === 2 && path[1] === "screenshots") {
+  if (matches(path, ["*", "screenshots"])) {
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
@@ -270,7 +334,7 @@ export async function GET(
   }
 
   // GET /api/recording/[sessionId]/frame — live preview snapshot (base64 JPEG)
-  if (path.length === 2 && path[1] === "frame") {
+  if (matches(path, ["*", "frame"])) {
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
@@ -289,7 +353,7 @@ export async function GET(
   }
 
   // 1. GET /api/recording/[sessionId]/stats
-  if (path.length === 2 && path[1] === "stats") {
+  if (matches(path, ["*", "stats"])) {
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
@@ -317,7 +381,7 @@ export async function GET(
   }
 
   // 1. GET /api/recording/[sessionId]/steps
-  if (path.length === 2 && path[1] === "steps") {
+  if (matches(path, ["*", "steps"])) {
     const sessionId = path[0]
     const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
     if (guard) return guard
@@ -388,13 +452,10 @@ export async function POST(
 
   try {
     // POST /api/recording/sessions/start
-    if (path.length === 2 && path[0] === "sessions" && path[1] === "start") {
-      const rawBody = await request.json()
-      const parseResult = startGlobalRecordingSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const data = parseResult.data
+    if (matches(path, ["sessions", "start"])) {
+      const bodyResult = await readValidatedBody(request, startGlobalRecordingSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      const data = bodyResult.data
       const { projectId } = data
 
       // Verify project ownership (permission audit)
@@ -466,16 +527,14 @@ export async function POST(
     }
 
     // 1. POST /api/recording/steps/[stepId]/expected-result
-    if (path.length === 3 && firstArg === "steps" && path[2] === "expected-result") {
+    if (matches(path, ["steps", "*", "expected-result"])) {
       const stepId = path[1]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
-      const rawBody = await request.json()
-      const parseResult = expectedResultSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+      const bodyResult = await readValidatedBody(request, expectedResultSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const step = await prisma.recordedStep.update({
         where: { id: stepId },
         data: { expectedResult: body.expectedResult }
@@ -484,16 +543,14 @@ export async function POST(
     }
 
     // 2. POST /api/recording/steps/[stepId]/assertion
-    if (path.length === 3 && firstArg === "steps" && path[2] === "assertion") {
+    if (matches(path, ["steps", "*", "assertion"])) {
       const stepId = path[1]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
-      const rawBody = await request.json()
-      const parseResult = assertionSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+      const bodyResult = await readValidatedBody(request, assertionSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const step = await prisma.recordedStep.update({
         where: { id: stepId },
         data: {
@@ -506,16 +563,14 @@ export async function POST(
     }
 
     // 3. POST /api/recording/steps/[stepId]/screenshot
-    if (path.length === 3 && firstArg === "steps" && path[2] === "screenshot") {
+    if (matches(path, ["steps", "*", "screenshot"])) {
       const stepId = path[1]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
-      const rawBody = await request.json()
-      const parseResult = screenshotSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+      const bodyResult = await readValidatedBody(request, screenshotSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const step = await prisma.recordedStep.update({
         where: { id: stepId },
         data: { screenshotAfter: body.screenshotPath }
@@ -524,7 +579,7 @@ export async function POST(
     }
 
     // 4. POST /api/recording/steps/[stepId]/bug
-    if (path.length === 3 && firstArg === "steps" && path[2] === "bug") {
+    if (matches(path, ["steps", "*", "bug"])) {
       const stepId = path[1]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
@@ -547,7 +602,7 @@ export async function POST(
     }
 
     // 5. POST /api/recording/steps/[stepId]/validate-locator
-    if (path.length === 3 && firstArg === "steps" && path[2] === "validate-locator") {
+    if (matches(path, ["steps", "*", "validate-locator"])) {
       const stepId = path[1]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
@@ -561,35 +616,31 @@ export async function POST(
     // Dynamic session operations (firstArg is sessionId)
     const sessionId = firstArg
 
-    if (path.length === 2 && path[1] === "pause") {
+    if (matches(path, ["*", "pause"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      try {
+      return withWorker(async () => {
         await recorderWorkerRequest(`/sessions/${sessionId}/pause`, { method: "POST", body: "{}" })
         await prisma.recordingSession.update({
           where: { id: sessionId },
           data: { status: "Paused" },
         })
         return NextResponse.json({ success: true })
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // 7. POST /api/recording/[sessionId]/resume
-    if (path.length === 2 && path[1] === "resume") {
+    if (matches(path, ["*", "resume"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      try {
+      return withWorker(async () => {
         await recorderWorkerRequest(`/sessions/${sessionId}/resume`, { method: "POST", body: "{}" })
         await prisma.recordingSession.update({
           where: { id: sessionId },
           data: { status: "Active" },
         })
         return NextResponse.json({ success: true })
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // POST /api/recording/[sessionId]/step-recording — body: { enabled: boolean }
@@ -597,7 +648,7 @@ export async function POST(
     // POST /api/recording/[sessionId]/manual-step — append a hand-written step.
     // The live view has always called this; there was never a route behind it,
     // so every manual step failed with "Invalid POST endpoint".
-    if (path.length === 2 && path[1] === "manual-step") {
+    if (matches(path, ["*", "manual-step"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
 
@@ -656,23 +707,21 @@ export async function POST(
       return NextResponse.json({ step }, { status: 201 })
     }
 
-    if (path.length === 2 && path[1] === "step-recording") {
+    if (matches(path, ["*", "step-recording"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json().catch(() => ({}))
-      try {
+      return withWorker(async () => {
         const result = await recorderWorkerRequest<{ stepRecording: boolean }>(
           `/sessions/${sessionId}/step-recording`,
           { method: "POST", body: JSON.stringify({ enabled: body.enabled !== false }) }
         )
         return NextResponse.json({ success: true, stepRecording: result.stepRecording })
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // 8. POST /api/recording/[sessionId]/finish
-    if (path.length === 2 && path[1] === "finish") {
+    if (matches(path, ["*", "finish"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       try {
@@ -702,7 +751,7 @@ export async function POST(
     }
 
     // 9. POST /api/recording/[sessionId]/cancel
-    if (path.length === 2 && path[1] === "cancel") {
+    if (matches(path, ["*", "cancel"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
 
@@ -726,25 +775,23 @@ export async function POST(
     }
 
     // POST /api/recording/[sessionId]/screenshot — body: { fullPage?: boolean }
-    if (path.length === 2 && path[1] === "screenshot") {
+    if (matches(path, ["*", "screenshot"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json().catch(() => ({}))
-      try {
+      return withWorker(async () => {
         const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/screenshot`, {
           method: "POST",
           body: JSON.stringify({ fullPage: !!body.fullPage }),
         })
         return NextResponse.json(result)
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // POST /api/recording/[sessionId]/screenshot/annotated — persist an
     // annotated screenshot (data URL from the in-app annotator). No worker
     // involvement: the image is saved straight to storage.
-    if (path.length === 3 && path[1] === "screenshot" && path[2] === "annotated") {
+    if (matches(path, ["*", "screenshot", "annotated"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json().catch(() => ({}))
@@ -790,7 +837,7 @@ export async function POST(
     // POST /api/recording/[sessionId]/recordings — upload a MediaRecorder clip
     // (multipart: file + durationMs). Produces a SessionRecording row that is
     // playable/downloadable immediately, before the session ends.
-    if (path.length === 2 && path[1] === "recordings") {
+    if (matches(path, ["*", "recordings"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const formData = await request.formData().catch(() => null)
@@ -818,10 +865,10 @@ export async function POST(
     // POST /api/recording/[sessionId]/stream-token — mint a one-time token for
     // the live-view WebSocket. Ownership is verified here; the browser then
     // connects to the worker directly (ws://…/sessions/:id/stream?token=…).
-    if (path.length === 2 && path[1] === "stream-token") {
+    if (matches(path, ["*", "stream-token"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      try {
+      return withWorker(async () => {
         const result = await recorderWorkerRequest<{ token: string }>(
           `/sessions/${sessionId}/stream-token`,
           { method: "POST", body: "{}" }
@@ -831,30 +878,26 @@ export async function POST(
           token: result.token,
           wsUrl: `${wsBase}/sessions/${sessionId}/stream?token=${result.token}`,
         })
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // POST /api/recording/[sessionId]/input — forward mouse/keyboard/navigation
     // events from the embedded live browser view to the controlled page.
-    if (path.length === 2 && path[1] === "input") {
+    if (matches(path, ["*", "input"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json().catch(() => ({}))
-      try {
+      return withWorker(async () => {
         const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/input`, {
           method: "POST",
           body: JSON.stringify(body),
         })
         return NextResponse.json(result)
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // POST /api/recording/[sessionId]/upload-file
-    if (path.length === 2 && path[1] === "upload-file") {
+    if (matches(path, ["*", "upload-file"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const formData = await request.formData().catch(() => null)
@@ -865,7 +908,7 @@ export async function POST(
       if (!file) {
         return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
       }
-      try {
+      return withWorker(async () => {
         const bytes = await file.arrayBuffer()
         const buffer = Buffer.from(bytes)
         const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/upload-file`, {
@@ -876,51 +919,43 @@ export async function POST(
           })
         })
         return NextResponse.json(result)
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // POST /api/recording/[sessionId]/cancel-file
-    if (path.length === 2 && path[1] === "cancel-file") {
+    if (matches(path, ["*", "cancel-file"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      try {
+      return withWorker(async () => {
         const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/cancel-file`, {
           method: "POST"
         })
         return NextResponse.json(result)
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // 10. POST /api/recording/[sessionId]/test-case/start-new
-    if (path.length === 3 && path[1] === "test-case" && path[2] === "start-new") {
+    if (matches(path, ["*", "test-case", "start-new"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json()
-      try {
+      return withWorker(async () => {
         const data = await recorderWorkerRequest<{ testCase: unknown }>(
           `/sessions/${sessionId}/test-case/start-new`,
           { method: "POST", body: JSON.stringify(body) }
         )
         return NextResponse.json({ testCase: data.testCase })
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // 11. POST /api/recording/[sessionId]/test-case/save-current
-    if (path.length === 3 && path[1] === "test-case" && path[2] === "save-current") {
+    if (matches(path, ["*", "test-case", "save-current"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      const rawBody = await request.json()
-      const parseResult = saveCurrentSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+      const bodyResult = await readValidatedBody(request, saveCurrentSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const { testCaseId } = body
       if (!testCaseId) {
         return NextResponse.json({ error: "testCaseId is required" }, { status: 400 })
@@ -934,15 +969,13 @@ export async function POST(
     }
 
     // 12. POST /api/recording/[sessionId]/steps (append step manually)
-    if (path.length === 2 && path[1] === "steps") {
+    if (matches(path, ["*", "steps"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      const rawBody = await request.json()
-      const parseResult = appendStepSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+      const bodyResult = await readValidatedBody(request, appendStepSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const activeCase = await prisma.recordedTestCase.findFirst({
         where: { sessionId, status: "Draft" },
         orderBy: { createdAt: "desc" }
@@ -967,28 +1000,24 @@ export async function POST(
       return NextResponse.json({ step })
     }
 
-    if (path.length === 2 && path[1] === "validate-flow") {
+    if (matches(path, ["*", "validate-flow"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
-      try {
+      return withWorker(async () => {
         const result = await recorderWorkerRequest(`/sessions/${sessionId}/validate-flow`, {
           method: "POST",
           body: JSON.stringify({ replay: true }),
         })
         return NextResponse.json(result)
-      } catch (err) {
-        return workerErrorResponse(err)
-      }
+      })
     }
 
     // 14. POST /api/recording/[sessionId]/steps/merge
-    if (path.length === 3 && path[1] === "steps" && path[2] === "merge") {
-      const rawBody = await request.json()
-      const parseResult = mergeStepsSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+    if (matches(path, ["*", "steps", "merge"])) {
+      const bodyResult = await readValidatedBody(request, mergeStepsSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const { stepIds, mergedDescription, mergedActionType } = body
       if (!stepIds || stepIds.length < 2) {
         return NextResponse.json({ error: "At least two stepIds are required for merge" }, { status: 400 })
@@ -1053,16 +1082,14 @@ export async function POST(
     }
 
     // 15. POST /api/recording/[sessionId]/steps/[stepId]/split
-    if (path.length === 4 && path[1] === "steps" && path[3] === "split") {
+    if (matches(path, ["*", "steps", "*", "split"])) {
       const stepId = path[2]
       const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
       if (guard) return guard
-      const rawBody = await request.json()
-      const parseResult = splitStepSchema.safeParse(rawBody)
-      if (!parseResult.success) {
-        return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
-      }
-      const body = rawBody
+      const bodyResult = await readValidatedBody(request, splitStepSchema)
+      if (!bodyResult.ok) return bodyResult.response
+      // Deliberately the raw body, not bodyResult.data — see readValidatedBody.
+      const body = bodyResult.raw
       const { firstDescription, secondDescription, secondActionType, secondTargetValue, secondTargetType, secondInputValue } = body
       
       const step = await prisma.recordedStep.findUnique({
@@ -1135,7 +1162,7 @@ export async function PUT(
   }
   
   // 1. PUT /api/recording/steps/[stepId]
-  if (path.length === 2 && path[0] === "steps") {
+  if (matches(path, ["steps", "*"])) {
     const stepId = path[1]
     const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
     if (guard) return guard
@@ -1153,7 +1180,7 @@ export async function PUT(
   }
 
   // 2. PUT /api/recording/test-cases/[recordedTestCaseId]
-  if (path.length === 2 && path[0] === "test-cases") {
+  if (matches(path, ["test-cases", "*"])) {
     const caseId = path[1]
     const guard = await verifyRecordedTestCase(caseId, auth.session!.user.id)
     if (guard) return guard
@@ -1183,7 +1210,7 @@ export async function DELETE(
   const path = params.path
 
   // 1. DELETE /api/recording/steps/[stepId]
-  if (path.length === 2 && path[0] === "steps") {
+  if (matches(path, ["steps", "*"])) {
     const stepId = path[1]
     const guard = await verifyRecordedStep(stepId, auth.session!.user.id)
     if (guard) return guard
