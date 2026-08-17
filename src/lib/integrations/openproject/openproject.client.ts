@@ -795,6 +795,34 @@ export class OpenProjectClient {
     return ok && widgetFound
   }
 
+  /** The ids currently pinned into a board widget's injected id filter. */
+  async getBoardWidgetIds(boardId: number, widgetId: number): Promise<string[]> {
+    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
+    if (!gridRes.ok) return []
+    const grid = await gridRes.json()
+    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+    const widget = widgets.find((w: any) => w.id === widgetId)
+    return widget ? OpenProjectClient.widgetIds(widget) : []
+  }
+
+  /**
+   * The work package ids a board column's QUERY actually returns.
+   *
+   * A board column has two sources of truth that can disagree: the id filter
+   * this app injects into the grid widget, and the query OpenProject's own board
+   * UI maintains when someone drags a card. When they disagree the same card
+   * renders in two columns. Reading the query side is what makes that visible.
+   */
+  async getQueryResultIds(queryId: string | number): Promise<string[]> {
+    try {
+      const data = await this.apiJson(`/api/v3/queries/${queryId}?pageSize=200`)
+      const elements: any[] = data?._embedded?.results?._embedded?.elements || []
+      return elements.map((wp: any) => String(wp.id))
+    } catch {
+      return []
+    }
+  }
+
   /**
    * True if the work package already appears in ANY free/basic board column
    * (i.e. it is present in some widget's id filter). Used to keep placement
