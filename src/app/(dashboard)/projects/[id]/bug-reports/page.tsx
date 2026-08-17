@@ -9,6 +9,7 @@ import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import RebuildTrackerBugsModal from "@/components/bug-reports/rebuild-tracker-bugs-modal"
+import CreateBugBoardModal from "@/components/bug-reports/create-bug-board-modal"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
@@ -205,7 +206,7 @@ export default function ProjectBugReportsPage() {
   const projectId = params.id as string
 
   // Connected tracker name (Jira / Azure DevOps / ClickUp / OpenProject) for labels.
-  const { name: trackerName } = useProjectIntegration(projectId)
+  const { name: trackerName, provider: trackerProvider } = useProjectIntegration(projectId)
 
   // Project details
   const [project, setProject] = useState<any>(null)
@@ -236,6 +237,7 @@ export default function ProjectBugReportsPage() {
   // Form states for manual creation
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showRebuildModal, setShowRebuildModal] = useState(false)
+  const [showCreateBoardModal, setShowCreateBoardModal] = useState(false)
 
   // Inline editing state inside Drawer
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -1081,6 +1083,17 @@ export default function ProjectBugReportsPage() {
             <option value="Manual">Manual</option>
             <option value="Auto">Auto Run</option>
           </select>
+
+          {trackerProvider === "OpenProject" && (
+            <button
+              onClick={() => setShowCreateBoardModal(true)}
+              title="Create a board in OpenProject with one column per bug status"
+              className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-1.5"
+            >
+              <Kanban className="h-3.5 w-3.5 text-indigo-500" />
+              Create bug board
+            </button>
+          )}
 
           {trackerName && (
             <button
@@ -2352,6 +2365,14 @@ export default function ProjectBugReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Create the OpenProject bug board: name it, columns come from the workflow. */}
+      <CreateBugBoardModal
+        projectId={projectId}
+        open={showCreateBoardModal}
+        onClose={() => setShowCreateBoardModal(false)}
+        onCreated={(board) => showToastMsg(`Board created with ${board.columns.length} column(s).`)}
+      />
 
       {/* Tracker rebuild — wipe the tracker's bug work items and push ours back. */}
       <RebuildTrackerBugsModal
