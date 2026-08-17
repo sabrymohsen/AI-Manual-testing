@@ -891,6 +891,10 @@ export class OpenProjectClient {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
+        // `name` is a top-level grid attribute. Passing it only inside `options`
+        // is what OpenProject answered with "Name can't be blank"; it is sent in
+        // both places because the board UI reads the options copy.
+        name,
         rowCount: 1,
         columnCount: widgets.length,
         widgets,
@@ -901,6 +905,20 @@ export class OpenProjectClient {
     const boardId = data?.id
     if (boardId == null) throw new Error("OpenProject accepted the board but returned no id")
     return Number(boardId)
+  }
+
+  /**
+   * Delete a query. Used to clean up the column queries when board creation
+   * fails partway — otherwise every retry leaves another set of orphans behind
+   * in the project. Never throws: cleanup must not mask the original failure.
+   */
+  async deleteQuery(queryId: string | number): Promise<boolean> {
+    try {
+      const res = await this.apiFetch(`/api/v3/queries/${queryId}`, { method: "DELETE" }, false)
+      return res.status === 204 || res.status === 200 || res.status === 404
+    } catch {
+      return false
+    }
   }
 
   /** Board URL as a person would open it. */

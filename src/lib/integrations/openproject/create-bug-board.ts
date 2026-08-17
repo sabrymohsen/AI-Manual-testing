@@ -107,10 +107,18 @@ export async function createBugWorkflowBoard(
   }
 
   const boardName = opts.name?.trim() || "Bug Workflow"
-  const boardId = await client.createBoard(
-    boardName,
-    columns.map((c) => ({ name: c.name, queryId: c.queryId }))
-  )
+  let boardId: number
+  try {
+    boardId = await client.createBoard(
+      boardName,
+      columns.map((c) => ({ name: c.name, queryId: c.queryId }))
+    )
+  } catch (err) {
+    // The queries exist by now. Without this, every failed attempt leaves a set
+    // of orphaned hidden queries behind in the OpenProject project.
+    await Promise.all(columns.map((c) => client.deleteQuery(c.queryId)))
+    throw err
+  }
 
   // Read the board back rather than trusting the create. If OpenProject stored
   // something other than what we asked for, the caller needs to know now — not
