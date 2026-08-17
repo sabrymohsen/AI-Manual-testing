@@ -515,12 +515,35 @@ export class OpenProjectClient {
     return this.apiJson(`/api/v3/work_packages/${id}`)
   }
 
-  async searchWorkPackages(filters: Array<Record<string, any>>): Promise<OpWorkPackage[]> {
+  /**
+   * All work packages matching `filters`, following pagination.
+   *
+   * This used to read a single 100-item page, which silently truncated every
+   * caller on any project big enough to matter — a marker lookup would miss an
+   * item that exists, and a bulk operation would only ever see the first
+   * hundred. `maxItems` is a safety stop, not an expected limit.
+   */
+  async searchWorkPackages(
+    filters: Array<Record<string, any>>,
+    opts: { maxItems?: number } = {}
+  ): Promise<OpWorkPackage[]> {
+    const maxItems = opts.maxItems ?? 2000
+    const pageSize = 100
     const filtersParam = encodeURIComponent(JSON.stringify(filters))
-    const data = await this.apiJson(
-      `/api/v3/projects/${this.projectIdentifier}/work_packages?filters=${filtersParam}&pageSize=100`
-    )
-    return data?._embedded?.elements || []
+    const all: OpWorkPackage[] = []
+
+    // OpenProject's `offset` is a 1-based PAGE number, not a row offset.
+    for (let page = 1; all.length < maxItems; page++) {
+      const data = await this.apiJson(
+        `/api/v3/projects/${this.projectIdentifier}/work_packages?filters=${filtersParam}&pageSize=${pageSize}&offset=${page}`
+      )
+      const elements: OpWorkPackage[] = data?._embedded?.elements || []
+      all.push(...elements)
+      const total = typeof data?.total === "number" ? data.total : all.length
+      if (elements.length < pageSize || all.length >= total) break
+    }
+
+    return all.slice(0, maxItems)
   }
 
   /**

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
+import RebuildTrackerBugsModal from "@/components/bug-reports/rebuild-tracker-bugs-modal"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
@@ -234,6 +235,7 @@ export default function ProjectBugReportsPage() {
 
   // Form states for manual creation
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showRebuildModal, setShowRebuildModal] = useState(false)
 
   // Inline editing state inside Drawer
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -1080,8 +1082,19 @@ export default function ProjectBugReportsPage() {
             <option value="Auto">Auto Run</option>
           </select>
 
+          {trackerName && (
+            <button
+              onClick={() => setShowRebuildModal(true)}
+              title={`Delete every bug work item in ${trackerName} and push this project's bugs back as a clean set`}
+              className="h-9 px-3 rounded-lg border border-red-200 bg-background text-red-700 text-xs font-semibold hover:bg-red-50 transition-colors shrink-0 flex items-center gap-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Rebuild {trackerName}
+            </button>
+          )}
+
           <div className="flex border rounded-lg overflow-hidden shrink-0">
-            <button 
+            <button
               onClick={() => setViewMode("list")}
               className={`h-9 px-3 text-xs font-bold transition-all ${viewMode === "list" ? "bg-slate-100 text-slate-800" : "bg-background hover:bg-slate-50 text-muted-foreground"}`}
             >
@@ -2339,6 +2352,15 @@ export default function ProjectBugReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Tracker rebuild — wipe the tracker's bug work items and push ours back. */}
+      <RebuildTrackerBugsModal
+        projectId={projectId}
+        trackerName={trackerName || "the tracker"}
+        open={showRebuildModal}
+        onClose={() => setShowRebuildModal(false)}
+        onCompleted={loadBugsList}
+      />
 
       {/* 8. Manual Create Bug Modal */}
       <CreateBugModal

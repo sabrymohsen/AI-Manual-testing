@@ -221,6 +221,18 @@ export class OpenProjectProvider implements WorkItemProvider {
           return OpenProjectProvider.STORY_TYPE_HINTS.some((h) => t === h)
         })
       }
+    } else if (role === "bug") {
+      // Filter to the Bug type. Returning every work package here would be
+      // actively dangerous: callers that act on the result (the tracker rebuild
+      // deletes them) would hit tasks, features and stories too.
+      const types = await this.client.getTypes().catch(() => [])
+      const bugType = types.find((t) => /^(bug|defect)$/i.test(t.name))
+      if (bugType) {
+        wps = await this.client.searchWorkPackages([{ type: { operator: "=", values: [String(bugType.id)] } }])
+      } else {
+        const all = await this.client.searchWorkPackages([])
+        wps = all.filter((wp) => /bug|defect/i.test(wp._links?.type?.title || ""))
+      }
     } else {
       wps = await this.client.searchWorkPackages([])
     }
