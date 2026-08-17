@@ -40,7 +40,11 @@ export async function POST(
   }
 
   try {
-    return NextResponse.json(await rebuildTrackerBugs(params.projectId))
+    // resync defaults to true; false wipes the tracker and leaves every bug
+    // reading "Not Synced" so the next sync starts from a known state.
+    return NextResponse.json(
+      await rebuildTrackerBugs(params.projectId, { resync: body?.resync !== false })
+    )
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Tracker rebuild failed" }, { status: 500 })
   }

@@ -63,6 +63,7 @@ export default function RebuildTrackerBugsModal({
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmText, setConfirmText] = useState("")
+  const [resync, setResync] = useState(true)
 
   useEffect(() => {
     if (!open) return
@@ -70,6 +71,7 @@ export default function RebuildTrackerBugsModal({
     setResult(null)
     setError(null)
     setConfirmText("")
+    setResync(true)
     setLoading(true)
     fetch(`/api/projects/${projectId}/integrations/bugs/rebuild`)
       .then(async (res) => {
@@ -88,7 +90,7 @@ export default function RebuildTrackerBugsModal({
       const res = await fetch(`/api/projects/${projectId}/integrations/bugs/rebuild`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: true }),
+        body: JSON.stringify({ confirm: true, resync }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Rebuild failed")
@@ -149,7 +151,14 @@ export default function RebuildTrackerBugsModal({
                     re-sync updated them instead of duplicating them
                   </li>
                 )}
-                <li>{result.resynced} bug(s) pushed back to {trackerName}</li>
+                {resync ? (
+                  <li>{result.resynced} bug(s) pushed back to {trackerName}</li>
+                ) : (
+                  <li>
+                    Nothing pushed back — {trackerName} is empty and every bug now reads
+                    &quot;Not Synced&quot;.
+                  </li>
+                )}
                 {result.resyncFailed > 0 && (
                   <li className="text-amber-700">{result.resyncFailed} bug(s) failed to sync</li>
                 )}
@@ -223,6 +232,26 @@ export default function RebuildTrackerBugsModal({
                 </div>
               )}
 
+              <label className="flex items-start gap-2 p-3 rounded-xl border cursor-pointer hover:bg-accent/20">
+                <input
+                  type="checkbox"
+                  checked={resync}
+                  onChange={(e) => setResync(e.target.checked)}
+                  disabled={running}
+                  className="mt-0.5 h-3.5 w-3.5 accent-indigo-600"
+                />
+                <span className="space-y-0.5">
+                  <span className="block font-bold text-[11px] text-slate-800">
+                    Push the app&apos;s bugs back afterwards
+                  </span>
+                  <span className="block text-[10px] text-muted-foreground font-medium leading-relaxed">
+                    {resync
+                      ? `All ${plan.localBugs} bug(s) are re-created in ${trackerName} right after the wipe.`
+                      : `${trackerName} is left empty and every bug reads "Not Synced" — the synced count goes to zero — so you can sync when you are ready.`}
+                  </span>
+                </span>
+              </label>
+
               <div className="space-y-1.5">
                 <label className="text-[10px] uppercase text-muted-foreground font-bold">
                   Type {CONFIRM_WORD} to confirm
@@ -251,7 +280,11 @@ export default function RebuildTrackerBugsModal({
               className="h-9 bg-red-600 hover:bg-red-700 text-white font-bold"
             >
               <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-              {running ? "Rebuilding…" : `Delete ${plan.trackerBugs} and re-sync`}
+              {running
+                ? "Rebuilding…"
+                : resync
+                  ? `Delete ${plan.trackerBugs} and re-sync`
+                  : `Delete ${plan.trackerBugs} only`}
             </Button>
           </div>
         )}

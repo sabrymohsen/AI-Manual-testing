@@ -228,7 +228,15 @@ async function importTrackerBug(projectId: string, item: WorkItem): Promise<stri
  * Run the rebuild. Destructive: deletes every bug work item in the tracker
  * project. Callers are responsible for confirming with the user first.
  */
-export async function rebuildTrackerBugs(projectId: string): Promise<RebuildBugsResult> {
+export async function rebuildTrackerBugs(
+  projectId: string,
+  opts: { resync?: boolean } = {}
+): Promise<RebuildBugsResult> {
+  // Pushing the bugs back is the default, but skipping it is a real workflow:
+  // it leaves both sides genuinely empty — tracker cleared, every bug in the app
+  // reading "Not Synced" and the synced count at zero — so the next sync starts
+  // from a known state instead of from whatever a half-finished run left behind.
+  const resync = opts.resync !== false
   const { loaded, provider, items, mappings, localBugs } = await loadProviderAndBugs(projectId)
 
   const mappedExternalIds = new Set(mappings.map((m) => String(m.externalId)).filter(Boolean))
@@ -291,6 +299,24 @@ export async function rebuildTrackerBugs(projectId: string): Promise<RebuildBugs
     .map((m) => m.id)
   if (deadMappingIds.length > 0) {
     await prisma.externalSyncMapping.deleteMany({ where: { id: { in: deadMappingIds } } })
+  }
+
+  if (!resync) {
+    const remaining = await prisma.bugReport.count({ where: { projectId } })
+    return {
+      provider: loaded.provider,
+      trackerBugs: planItems.length,
+      linked: planItems.length - planItems.filter((i) => i.action === "import-then-delete").length,
+      unlinked: planItems.filter((i) => i.action === "import-then-delete").length,
+      localBugs: remaining,
+      items: planItems,
+      imported,
+      deleted,
+      deleteFailed,
+      resynced: 0,
+      resyncFailed: 0,
+      errors,
+    }
   }
 
   // Push every app bug back, oldest first so the tracker's numbering follows the

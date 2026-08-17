@@ -100,6 +100,40 @@ describe("OpenProjectClient board grid writes", () => {
     expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "PATCH")).toHaveLength(0)
   })
 
+  it("drops the filter instead of writing an empty one when a column is emptied", async () => {
+    // `{ id: { operator: "=", values: [] } }` is not a valid OpenProject filter,
+    // and a widget carrying one stops being a column — that is how emptying a
+    // column could take the column itself down.
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(grid({ 1: ["101"], 2: [] })))
+      .mockResolvedValueOnce(jsonResponse({}))
+
+    await client.setBoardCardColumn(55, 2, "101")
+
+    const emptied = patchedWidgets(0).widgets[0]
+    expect(emptied.options.filters).toEqual([])
+  })
+
+  it("refuses to write when the board read comes back with no widgets", async () => {
+    // A PATCH carrying an empty widgets array deletes every column on the board.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ lockVersion: 3, _embedded: { widgets: [] } }))
+
+    const ok = await client.setBoardWidgetIdFilter(55, 1, ["101"])
+
+    expect(ok).toBe(false)
+    expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "PATCH")).toHaveLength(0)
+  })
+
+  it("refuses to write an update that would change which columns exist", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(grid({ 1: ["101"], 2: [] })))
+
+    // A mutation that drops a widget must never reach the board.
+    const ok = await (client as any).patchGridWidgets(55, (widgets: any[]) => widgets.slice(0, 1))
+
+    expect(ok).toBe(false)
+    expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "PATCH")).toHaveLength(0)
+  })
+
   it("does not add a work package that the column already lists", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(grid({ 1: ["101"] })))
 

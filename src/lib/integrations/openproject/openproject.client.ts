@@ -726,8 +726,30 @@ export class OpenProjectClient {
     const grid = await gridRes.json()
 
     const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+
+    // Refuse to write when the read produced no widgets. A PATCH carrying an
+    // empty widgets array does not "leave the board alone" — it deletes every
+    // column on it. An unexpected response shape must never be able to do that.
+    if (widgets.length === 0) {
+      console.warn(`[openproject] Board ${boardId} read returned no widgets; skipping the write.`)
+      return false
+    }
+
     const updatedWidgets = mutate(widgets)
     if (!updatedWidgets) return true // already in the desired state
+
+    // Placing a card changes what a column CONTAINS, never which columns exist.
+    // If a mutation ever disagrees, the board is left untouched: losing a card's
+    // position is recoverable, losing someone's board column is not.
+    const before = widgets.map((w: any) => w.id).sort()
+    const after = updatedWidgets.map((w: any) => w.id).sort()
+    if (before.length !== after.length || before.some((id, i) => id !== after[i])) {
+      console.error(
+        `[openproject] Refusing to write board ${boardId}: the update would change its columns ` +
+          `(${before.length} → ${after.length}).`
+      )
+      return false
+    }
 
     const body: Record<string, any> = { widgets: updatedWidgets }
     if (grid?.lockVersion != null) body.lockVersion = grid.lockVersion
@@ -748,9 +770,18 @@ export class OpenProjectClient {
     return false
   }
 
-  /** Replace a widget's id filter with exactly `wpIds`. */
+  /**
+   * Replace a widget's id filter with exactly `wpIds`.
+   *
+   * An empty list drops the filter entirely rather than writing
+   * `{ id: { operator: "=", values: [] } }`. OpenProject has no notion of an
+   * "=" filter matching nothing — an empty value list is not a valid filter, and
+   * a widget carrying one stops behaving as a column. That is how emptying a
+   * column (moving its last card out) could take the column itself down.
+   */
   private static withIdFilter(widget: any, wpIds: string[]): any {
-    return { ...widget, options: { ...widget.options, filters: [{ id: { operator: "=", values: wpIds } }] } }
+    const filters = wpIds.length > 0 ? [{ id: { operator: "=", values: wpIds } }] : []
+    return { ...widget, options: { ...widget.options, filters } }
   }
 
   /** The work package ids a board widget currently displays. */
