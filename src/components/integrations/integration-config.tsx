@@ -84,6 +84,8 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
   const [testing, setTesting] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [applyingParent, setApplyingParent] = useState(false)
+  const [creatingBugBoard, setCreatingBugBoard] = useState(false)
+  const [bugBoardResult, setBugBoardResult] = useState<{ success: boolean; message: string; url?: string } | null>(null)
   const [syncingBoard, setSyncingBoard] = useState(false)
   const [checkingBoard, setCheckingBoard] = useState(false)
   const [validatingParent, setValidatingParent] = useState(false)
@@ -329,6 +331,38 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
       setParentResult({ success: false, message: "Network error" })
     } finally {
       setApplyingParent(false)
+    }
+  }
+
+  // Create a status-column board for the bug workflow, and point bug sync at it.
+  // Status columns need no id filters, so a card can only ever be in one column.
+  async function handleCreateBugBoard() {
+    setCreatingBugBoard(true); setBugBoardResult(null)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/bug-board`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setBugBoardResult({ success: false, message: data.error || "Failed to create the board" })
+        return
+      }
+      const skipped = data.unmatched?.length
+        ? ` Skipped ${data.unmatched.join(", ")} — no matching OpenProject status.`
+        : ""
+      setBugBoardResult({
+        success: true,
+        message: `Created "${data.columns.map((c: any) => c.name).join(" · ")}" and set it as this project's bug board.${skipped}`,
+        url: data.url,
+      })
+      setOp((p) => ({ ...p, targetBoardId: String(data.boardId) }))
+      loadBoardColumns(String(data.boardId))
+    } catch {
+      setBugBoardResult({ success: false, message: "Network error" })
+    } finally {
+      setCreatingBugBoard(false)
     }
   }
 
@@ -690,6 +724,45 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                         ? `Board ID ${op.targetBoardId} saved — click Test Connection to reload board list`
                         : "Click Test Connection above to load available boards from OpenProject"}
                     </div>
+                  )}
+                </div>
+
+                {/* Create a bug-workflow board. Status columns rather than a free
+                    board: a work package holds one status, so a card can only
+                    render in one column — no id filters, no duplicate cards. */}
+                <div className="space-y-1.5 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-semibold">Bug workflow board</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Creates a board in OpenProject with one column per bug status, and points
+                        this project&apos;s bug sync at it. Cards follow the bug&apos;s status, so one
+                        bug can never show in two columns.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={creatingBugBoard}
+                      onClick={handleCreateBugBoard}
+                      className="shrink-0"
+                    >
+                      {creatingBugBoard ? "Creating…" : "Create board"}
+                    </Button>
+                  </div>
+                  {bugBoardResult && (
+                    <p className={`text-xs font-medium ${bugBoardResult.success ? "text-emerald-700" : "text-red-700"}`}>
+                      {bugBoardResult.message}
+                      {bugBoardResult.url && (
+                        <>
+                          {" "}
+                          <a href={bugBoardResult.url} target="_blank" rel="noreferrer" className="underline">
+                            Open it
+                          </a>
+                        </>
+                      )}
+                    </p>
                   )}
                 </div>
 

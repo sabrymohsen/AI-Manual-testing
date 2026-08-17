@@ -826,6 +826,88 @@ export class OpenProjectClient {
     return ok && widgetFound
   }
 
+  /**
+   * Create the query behind one board column.
+   *
+   * Board columns are queries. A column filtered by STATUS needs no id filter of
+   * its own — a card appears in it purely because the work package holds that
+   * status. That is what makes a status board immune to the whole class of
+   * problems the id-filter workaround has: a card can only ever be in one
+   * column, because a work package can only hold one status.
+   *
+   * Board queries are hidden (they don't clutter the project's saved views) and
+   * public (everyone viewing the board runs them).
+   */
+  async createBoardColumnQuery(name: string, statusId: string | null): Promise<string> {
+    const body: Record<string, any> = {
+      name,
+      public: true,
+      hidden: true,
+      showHierarchy: false,
+      timelineVisible: false,
+      displaySums: false,
+      _links: {
+        project: { href: `/api/v3/projects/${this.projectIdentifier}` },
+      },
+    }
+
+    if (statusId) {
+      body.filters = [
+        {
+          _links: {
+            filter: { href: "/api/v3/queries/filters/status" },
+            operator: { href: "/api/v3/queries/operators/=" },
+            values: [{ href: `/api/v3/statuses/${statusId}` }],
+          },
+        },
+      ]
+    }
+
+    const data = await this.apiJson(`/api/v3/queries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    const queryId = data?.id
+    if (queryId == null) throw new Error(`OpenProject accepted the column query "${name}" but returned no id`)
+    return String(queryId)
+  }
+
+  /**
+   * Create a board (a grid scoped to the project's boards) with one column per
+   * entry, left to right in the order given. Returns the new board's id.
+   */
+  async createBoard(name: string, columnQueryIds: Array<{ name: string; queryId: string }>): Promise<number> {
+    const widgets = columnQueryIds.map((col, index) => ({
+      identifier: "work_package_query",
+      startRow: 1,
+      endRow: 2,
+      startColumn: index + 1,
+      endColumn: index + 2,
+      options: { queryId: col.queryId, name: col.name },
+    }))
+
+    const data = await this.apiJson(`/api/v3/grids`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rowCount: 1,
+        columnCount: widgets.length,
+        widgets,
+        options: { name },
+        _links: { scope: { href: `/projects/${this.projectIdentifier}/boards` } },
+      }),
+    })
+    const boardId = data?.id
+    if (boardId == null) throw new Error("OpenProject accepted the board but returned no id")
+    return Number(boardId)
+  }
+
+  /** Board URL as a person would open it. */
+  boardUrl(boardId: number | string): string {
+    return `${this.baseUrl}/projects/${this.projectIdentifier}/boards/${boardId}`
+  }
+
   /** The ids currently pinned into a board widget's injected id filter. */
   async getBoardWidgetIds(boardId: number, widgetId: number): Promise<string[]> {
     const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
