@@ -838,7 +838,11 @@ export class OpenProjectClient {
    * Board queries are hidden (they don't clutter the project's saved views) and
    * public (everyone viewing the board runs them).
    */
-  async createBoardColumnQuery(name: string, statusId: string | null): Promise<string> {
+  async createBoardColumnQuery(
+    name: string,
+    statusId: string | null,
+    typeId: string | null = null
+  ): Promise<string> {
     const body: Record<string, any> = {
       name,
       public: true,
@@ -851,17 +855,28 @@ export class OpenProjectClient {
       },
     }
 
+    const filters: any[] = []
     if (statusId) {
-      body.filters = [
-        {
-          _links: {
-            filter: { href: "/api/v3/queries/filters/status" },
-            operator: { href: "/api/v3/queries/operators/=" },
-            values: [{ href: `/api/v3/statuses/${statusId}` }],
-          },
+      filters.push({
+        _links: {
+          filter: { href: "/api/v3/queries/filters/status" },
+          operator: { href: "/api/v3/queries/operators/=" },
+          values: [{ href: `/api/v3/statuses/${statusId}` }],
         },
-      ]
+      })
     }
+    // Without this the column shows every work package holding the status —
+    // tasks, features and all — rather than only bugs.
+    if (typeId) {
+      filters.push({
+        _links: {
+          filter: { href: "/api/v3/queries/filters/type" },
+          operator: { href: "/api/v3/queries/operators/=" },
+          values: [{ href: `/api/v3/types/${typeId}` }],
+        },
+      })
+    }
+    if (filters.length > 0) body.filters = filters
 
     const data = await this.apiJson(`/api/v3/queries`, {
       method: "POST",

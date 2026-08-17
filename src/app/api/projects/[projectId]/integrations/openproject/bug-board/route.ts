@@ -9,7 +9,11 @@
 import { NextResponse } from "next/server"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
-import { createBugWorkflowBoard, planBugBoardColumns } from "@/lib/integrations/openproject/create-bug-board"
+import {
+  createBugWorkflowBoard,
+  planBugBoardColumns,
+  resolveBugType,
+} from "@/lib/integrations/openproject/create-bug-board"
 
 export async function GET(
   _request: Request,
@@ -24,8 +28,10 @@ export async function GET(
   try {
     const statuses = await resolved.client.getStatuses()
     const plan = planBugBoardColumns(statuses.map((s) => ({ id: String(s.id), name: s.name })))
+    const bugType = await resolveBugType(params.projectId, resolved.client)
     return NextResponse.json({
       columns: plan,
+      bugTypeName: bugType?.name || null,
       trackerStatuses: statuses.map((s) => ({ id: String(s.id), name: s.name })),
     })
   } catch (err: any) {

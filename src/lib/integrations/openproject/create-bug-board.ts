@@ -74,6 +74,8 @@ export interface CreateBugBoardResult {
   /** Bug statuses with no matching tracker status — no column was made for them. */
   unmatched: string[]
   setAsDefault: boolean
+  /** The OpenProject type every column is filtered to. */
+  bugTypeName: string
 }
 
 export async function createBugWorkflowBoard(
@@ -89,6 +91,17 @@ export async function createBugWorkflowBoard(
     throw new Error("OpenProject returned no statuses for this project")
   }
 
+  // Every column is filtered to this type as well as its status. A board meant
+  // for bugs that shows tasks and features is not a bug board, so a type we
+  // cannot resolve is a hard stop rather than a board that looks wrong.
+  const bugType = await resolveBugType(projectId, client)
+  if (!bugType) {
+    throw new Error(
+      "Could not work out which OpenProject type means \"Bug\". Set the bug type in the " +
+        "project's integration settings, then create the board again."
+    )
+  }
+
   const plan = planBugBoardColumns(statuses.map((s) => ({ id: String(s.id), name: s.name })))
   const usable = plan.filter((c) => c.statusId)
   if (usable.length === 0) {
@@ -102,7 +115,7 @@ export async function createBugWorkflowBoard(
   // Queries first: a board is only a container for them.
   const columns: Array<{ name: string; statusName: string | null; queryId: string }> = []
   for (const col of usable) {
-    const queryId = await client.createBoardColumnQuery(col.name, col.statusId)
+    const queryId = await client.createBoardColumnQuery(col.name, col.statusId, bugType.id)
     columns.push({ name: col.name, statusName: col.statusName, queryId })
   }
 
@@ -140,7 +153,26 @@ export async function createBugWorkflowBoard(
     columns,
     unmatched: plan.filter((c) => !c.statusId).map((c) => c.name),
     setAsDefault,
+    bugTypeName: bugType.name,
   }
+}
+
+/**
+ * Which OpenProject type counts as a bug: the project's configured mapping
+ * first, then the tracker's own type named Bug (or Defect).
+ */
+export async function resolveBugType(
+  projectId: string,
+  client: { getTypes(): Promise<Array<{ id: string | number; name: string }>> }
+): Promise<{ id: string; name: string } | null> {
+  const types = await client.getTypes().catch(() => [])
+  const loaded = await loadIntegration(projectId)
+  const mapped = loaded?.typeMapping?.bug
+    ? types.find((t) => String(t.id) === String(loaded.typeMapping.bug))
+    : null
+  const detected = types.find((t) => /^(bug|defect)$/i.test(t.name))
+  const chosen = mapped || detected
+  return chosen ? { id: String(chosen.id), name: chosen.name } : null
 }
 
 /** Point the project's integration at the new board, on whichever row owns it. */

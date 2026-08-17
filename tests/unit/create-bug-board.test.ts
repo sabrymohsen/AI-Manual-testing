@@ -3,11 +3,12 @@
  * a board whose columns quietly hold the wrong cards — or two columns showing
  * the same ones.
  */
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 
 vi.mock("@/lib/db", () => ({ prisma: {} }))
 
 import { planBugBoardColumns } from "@/lib/integrations/openproject/create-bug-board"
+import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
 
 const statuses = (...names: string[]) =>
   names.map((name, i) => ({ id: String(i + 1), name }))
@@ -67,5 +68,51 @@ describe("planBugBoardColumns", () => {
     const plan = planBugBoardColumns(statuses("Alpha", "Beta"))
 
     expect(plan.every((c) => c.statusId === null)).toBe(true)
+  })
+})
+
+describe("board column queries", () => {
+  const originalFetch = global.fetch
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  it("filters each column by BOTH status and the bug type", async () => {
+    // Status alone shows every work package in that state — tasks and features
+    // included — which is not a bug board.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 900 }),
+      text: async () => "{}",
+    } as unknown as Response)
+    global.fetch = fetchMock as unknown as typeof fetch
+
+    const client = new OpenProjectClient("https://op.example.com", "demo", "token")
+    await client.createBoardColumnQuery("Open", "7", "12")
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    const hrefs = body.filters.map((f: any) => f._links.filter.href)
+    expect(hrefs).toEqual(["/api/v3/queries/filters/status", "/api/v3/queries/filters/type"])
+    expect(body.filters[1]._links.values[0].href).toBe("/api/v3/types/12")
+  })
+
+  it("sends the board name as a top-level attribute", async () => {
+    // OpenProject answers "Name can't be blank" when it only appears in options.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: 55 }),
+      text: async () => "{}",
+    } as unknown as Response)
+    global.fetch = fetchMock as unknown as typeof fetch
+
+    const client = new OpenProjectClient("https://op.example.com", "demo", "token")
+    await client.createBoard("Bug Workflow", [{ name: "Open", queryId: "900" }])
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(body.name).toBe("Bug Workflow")
+    expect(body.widgets).toHaveLength(1)
   })
 })

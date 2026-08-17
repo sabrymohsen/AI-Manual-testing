@@ -24,6 +24,7 @@ interface ColumnPlan {
 interface CreateResult {
   boardId: number
   url: string
+  bugTypeName?: string
   columns: Array<{ name: string; statusName: string | null }>
   unmatched: string[]
   setAsDefault: boolean
@@ -40,6 +41,7 @@ interface Props {
 export default function CreateBugBoardModal({ projectId, open, onClose, onCreated }: Props) {
   const [name, setName] = useState("Bug Workflow")
   const [plan, setPlan] = useState<ColumnPlan[] | null>(null)
+  const [bugTypeName, setBugTypeName] = useState<string | null>(null)
   const [result, setResult] = useState<CreateResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -49,6 +51,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
     if (!open) return
     setName("Bug Workflow")
     setPlan(null)
+    setBugTypeName(null)
     setResult(null)
     setError(null)
     setLoading(true)
@@ -57,6 +60,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || "Could not read OpenProject statuses")
         setPlan(data.columns || [])
+        setBugTypeName(data.bugTypeName || null)
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
@@ -124,6 +128,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
               <p className="text-[11px] text-slate-700 leading-relaxed">
                 {result.columns.length} column(s):{" "}
                 <span className="font-bold">{result.columns.map((c) => c.name).join(" · ")}</span>
+                {result.bugTypeName && `, each showing only ${result.bugTypeName} work packages`}
                 {result.setAsDefault && " — and this project's bugs now sync onto it."}
               </p>
               {result.unmatched.length > 0 && (
@@ -169,8 +174,9 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                   ))}
                 </div>
                 <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
-                  Each column shows the bugs holding that status, so a bug is always in exactly one
-                  column — it moves as its status changes, and can never appear twice.
+                  Each column shows only <span className="font-bold">{bugTypeName || "Bug"}</span>{" "}
+                  work packages holding that status — no tasks or features — so a bug is always in
+                  exactly one column and can never appear twice.
                 </p>
               </div>
 
