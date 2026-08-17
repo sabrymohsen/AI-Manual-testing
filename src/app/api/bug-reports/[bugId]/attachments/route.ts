@@ -9,8 +9,30 @@ const MAX_IMAGE_SIZE = 15 * 1024 * 1024 // 15 MB
 const MAX_VIDEO_SIZE = 200 * 1024 * 1024 // 200 MB
 const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
 const ALLOWED_VIDEO_EXTENSIONS = [".webm", ".mp4", ".mov", ".m4v", ".ogg"]
-const IMAGE_DIR = path.join(process.cwd(), "public", "uploads", "bug-screenshots")
-const VIDEO_DIR = path.join(process.cwd(), "public", "uploads", "bug-videos")
+
+// Bug evidence lives under STORAGE_ROOT (a persistent volume in production) and
+// is served through the authenticated /api/files streamer. It must NOT go in
+// public/ — the standalone production build snapshots public/ at boot, so files
+// written there at runtime 404 (and the copied public/ isn't writable by the
+// app user anyway). Same rule as avatars in /api/me/avatar.
+const STORAGE_ROOT = process.env.STORAGE_ROOT || "./storage"
+const IMAGE_DIR = path.join(STORAGE_ROOT, "bug-screenshots")
+const VIDEO_DIR = path.join(STORAGE_ROOT, "bug-videos")
+const IMAGE_URL_PREFIX = "/api/files/bug-screenshots"
+const VIDEO_URL_PREFIX = "/api/files/bug-videos"
+
+/**
+ * Locate a stored session artifact on disk. Session screenshots/recordings are
+ * saved as STORAGE_ROOT-relative paths ("screenshots/liveqa-….png"), which in
+ * production is the mounted volume, not the working directory.
+ */
+function resolveArtifact(filePath: string): string | null {
+  const candidates = [
+    path.resolve(STORAGE_ROOT, filePath),
+    path.resolve(process.cwd(), filePath),
+  ]
+  return candidates.find((c) => fs.existsSync(c) && fs.statSync(c).isFile()) || null
+}
 
 export async function POST(
   request: NextRequest,
@@ -60,13 +82,13 @@ export async function POST(
         return badRequestResponse("Unsupported artifact type")
       }
 
-      const sourcePath = path.resolve(process.cwd(), filePath)
-      if (!fs.existsSync(sourcePath)) {
+      const sourcePath = resolveArtifact(filePath)
+      if (!sourcePath) {
         return notFoundResponse("Artifact file not found on disk")
       }
 
       const targetDir = artifactIsVideo ? VIDEO_DIR : IMAGE_DIR
-      const publicPrefix = artifactIsVideo ? "/uploads/bug-videos" : "/uploads/bug-screenshots"
+      const publicPrefix = artifactIsVideo ? VIDEO_URL_PREFIX : IMAGE_URL_PREFIX
       fs.mkdirSync(targetDir, { recursive: true })
       const storedName = `${params.bugId}-${randomUUID()}${artifactExt}`
       const targetPath = path.join(targetDir, storedName)
@@ -124,13 +146,27 @@ export async function POST(
       return badRequestResponse(`File too large. Maximum size is ${isVideo ? "200" : "15"} MB.`)
     }
 
-    // Persist under public/ so the stored path can be served directly as a static asset.
     const targetDir = isVideo ? VIDEO_DIR : IMAGE_DIR
-    const publicPrefix = isVideo ? "/uploads/bug-videos" : "/uploads/bug-screenshots"
-    fs.mkdirSync(targetDir, { recursive: true })
+    const publicPrefix = isVideo ? VIDEO_URL_PREFIX : IMAGE_URL_PREFIX
     const storedName = `${params.bugId}-${randomUUID()}${ext}`
     const buffer = Buffer.from(await file.arrayBuffer())
-    fs.writeFileSync(path.join(targetDir, storedName), buffer)
+    // Surface the real filesystem error instead of a blank 500 — an unmounted or
+    // read-only volume (EACCES/EROFS) needs an infra fix, not a retry.
+    try {
+      fs.mkdirSync(targetDir, { recursive: true })
+      fs.writeFileSync(path.join(targetDir, storedName), buffer)
+    } catch (e: any) {
+      console.error("Bug attachment write failed:", { dir: targetDir, code: e?.code, message: e?.message })
+      return NextResponse.json(
+        {
+          error: `Could not save the file to storage (${e?.code || e?.message}). The upload ` +
+            `directory "${targetDir}" is not writable — check that the persistent volume is ` +
+            `mounted there and writable by the app.`,
+          code: e?.code || "WRITE_FAILED",
+        },
+        { status: 500 }
+      )
+    }
     const publicPath = `${publicPrefix}/${storedName}`
 
     const bug = await prisma.$transaction(async (tx) => {
