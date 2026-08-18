@@ -12,7 +12,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { prisma } from "@/lib/db"
 import { loadIntegration, persistDetectedBugType } from "./load-integration"
-import { normalizeStoredCustomFields } from "./custom-fields"
+import { mergeStoredCustomFields } from "./custom-fields"
 import type { WorkItemProvider } from "./provider"
 import type { BoardColumn, WorkItemInput } from "./types"
 import { IMAGE_CONTENT_TYPES, entityMarker } from "./types"
@@ -303,7 +303,13 @@ export async function syncBugReport(
   const parentId = bug.openProjectParentId || loaded.parentConfig.defaultParentId || null
 
   // ── Custom fields + bug source ───────────────────────────────────────────────
-  const { linkFields, scalarFields } = normalizeStoredCustomFields(bug.openProjectCustomFields)
+  // Project defaults fill any required field this bug has no value for —
+  // without them, a bug nobody opened the tracker tab for is rejected with
+  // "… can't be blank", and an automatic sync has nobody to ask.
+  const { linkFields, scalarFields } = mergeStoredCustomFields(
+    (loaded.customFieldMapping as any)?.bugFieldDefaults,
+    bug.openProjectCustomFields
+  )
   await applyBugSource(provider, bugTypeId, bug.source, linkFields)
 
   const input: WorkItemInput = {

@@ -307,6 +307,10 @@ export default function ProjectBugReportsPage() {
   const [opSourceOptions, setOpSourceOptions] = useState<string[]>([])
   // Buffered per-bug custom-field values: { fieldKey: { kind, value } }
   const [editCustomFields, setEditCustomFields] = useState<Record<string, { kind: string; value: any }>>({})
+  // Project-level fallbacks for the required bug fields, applied by every sync
+  // to bugs that carry no value of their own.
+  const [bugFieldDefaults, setBugFieldDefaults] = useState<Record<string, { kind: string; value: any }>>({})
+  const [savingDefaults, setSavingDefaults] = useState(false)
 
   // Load project basic scope details
   useEffect(() => {
@@ -349,7 +353,10 @@ export default function ProjectBugReportsPage() {
   useEffect(() => {
     fetch(`/api/projects/${projectId}/integrations/openproject/bug-fields`)
       .then(res => (res.ok ? res.json() : { fields: [] }))
-      .then(data => setOpBugFields(Array.isArray(data.fields) ? data.fields : []))
+      .then(data => {
+        setOpBugFields(Array.isArray(data.fields) ? data.fields : [])
+        setBugFieldDefaults(data.defaults && typeof data.defaults === "object" ? data.defaults : {})
+      })
       .catch(() => setOpBugFields([]))
   }, [projectId])
 
@@ -769,6 +776,31 @@ export default function ProjectBugReportsPage() {
       showToastMsg(`Network error applying ${label.toLowerCase()}`, "error")
     } finally {
       setBulkApplying(false)
+    }
+  }
+
+  // Save the values currently in the drawer as the project's defaults, so every
+  // other bug — including ones synced automatically — satisfies the required
+  // fields without anyone opening them.
+  const handleSaveFieldDefaults = async () => {
+    setSavingDefaults(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/bug-fields`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ defaults: editCustomFields }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        showToastMsg(data.error || "Could not save the defaults", "error")
+        return
+      }
+      setBugFieldDefaults(data.defaults || {})
+      showToastMsg("Saved as the project's default bug fields.")
+    } catch {
+      showToastMsg("Network error saving the defaults", "error")
+    } finally {
+      setSavingDefaults(false)
     }
   }
 
@@ -2289,7 +2321,24 @@ export default function ProjectBugReportsPage() {
                           </div>
                         )
                       })}
-                      <p className="text-[9px] text-slate-400">Required by the {trackerName} bug type — sent when you sync.</p>
+                      <div className="space-y-1.5 pt-1">
+                        <p className="text-[9px] text-slate-400">
+                          Required by the {trackerName} bug type — sent when you sync.
+                          {Object.keys(bugFieldDefaults).length > 0
+                            ? " Bugs with no value of their own fall back to the project defaults."
+                            : " Bugs with no value here fail to sync — save defaults so every bug has one."}
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={savingDefaults || Object.keys(editCustomFields).length === 0}
+                          onClick={handleSaveFieldDefaults}
+                          className="h-7 text-[10px] font-bold"
+                        >
+                          {savingDefaults ? "Saving…" : "Use these as project defaults"}
+                        </Button>
+                      </div>
                     </div>
                   )}
 

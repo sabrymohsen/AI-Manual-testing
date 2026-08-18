@@ -54,3 +54,38 @@ export function richTextValue(value: unknown): string {
 export function isRichTextValue(value: unknown): boolean {
   return !!value && typeof value === "object" && "raw" in (value as any)
 }
+
+/**
+ * Merge project-level defaults with a bug's own custom-field values.
+ *
+ * A tracker can mark custom fields required on the bug type (e.g. "Found in
+ * Build", "Bug Componant"). Values are captured per bug, so any bug that never
+ * had them filled in fails to sync with "… can't be blank" — which is every bug
+ * on an automatic sync, where there is nobody to prompt. Project defaults fill
+ * those gaps; a value on the bug always wins over the default.
+ *
+ * Empty strings and empty arrays count as "not set", so a cleared field falls
+ * back to the default rather than being sent blank and rejected.
+ */
+export function mergeStoredCustomFields(defaults: unknown, own: unknown): NormalizedFieldValues {
+  const isSet = (entry: any): boolean => {
+    if (!entry || typeof entry !== "object") return false
+    const value = entry.value
+    if (value === undefined || value === null || value === "") return false
+    if (Array.isArray(value) && value.length === 0) return false
+    return true
+  }
+
+  const asRecord = (v: unknown): Record<string, any> =>
+    v && typeof v === "object" ? (v as Record<string, any>) : {}
+
+  const merged: Record<string, any> = {}
+  for (const [key, entry] of Object.entries(asRecord(defaults))) {
+    if (isSet(entry)) merged[key] = entry
+  }
+  for (const [key, entry] of Object.entries(asRecord(own))) {
+    if (isSet(entry)) merged[key] = entry
+  }
+
+  return normalizeStoredCustomFields(merged)
+}
