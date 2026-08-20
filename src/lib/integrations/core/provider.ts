@@ -75,6 +75,28 @@ export interface WorkItemProvider {
   /** True if the card already appears anywhere on the board. */
   boardContains(boardId: string, externalId: string): Promise<boolean>
   /**
+   * Which columns the card currently occupies, as column ids, judged by the
+   * side of the board this app writes.
+   *
+   * Normally one. More than one is a broken state no user action can produce —
+   * a placement that half-landed — and it is what lets a sync tell "the user
+   * dragged this card" apart from "our placement never took". Implementations
+   * must not report a column the user may simply have dragged the card to, or
+   * the sync will drag it back. Optional: providers that cannot answer cheaply
+   * omit it, and callers fall back to leaving the card alone.
+   */
+  getCardColumns?(boardId: string, externalId: string): Promise<string[]>
+  /**
+   * The column the TRACKER believes the card is in — the side a person's drag
+   * updates, as opposed to whatever this app last wrote. Null when the tracker
+   * has no opinion (card not on the board, or the provider stores position only
+   * where the app already writes it).
+   *
+   * This is what makes a drag in the tracker visible to the app, so the app can
+   * adopt the move instead of silently disagreeing with it forever. Optional.
+   */
+  getTrackerColumn?(boardId: string, externalId: string): Promise<string | null>
+  /**
    * Reconcile the card to sit in EXACTLY the target column (moves it out of any
    * other column, no-op if already there). Returns false when placement is not
    * permitted. Mirrors OpenProject's setBoardCardColumn semantics.

@@ -41,6 +41,9 @@ export async function POST(
       action: result.status,
       externalId: result.externalId,
       externalUrl: result.externalUrl,
+      // Present when the work item synced but its card did not land where the
+      // app asked — the caller shows this instead of a plain success message.
+      warning: result.warning,
     })
   } catch (err: any) {
     const message = err?.message || "Bug sync failed"

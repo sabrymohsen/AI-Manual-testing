@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { OpenProjectClient } from "@/lib/integrations/openproject/openproject.client"
+import { OpenProjectProvider } from "@/lib/integrations/providers/openproject.provider"
 import { placeBugOnBoard, isMissingRemoteItem } from "@/lib/integrations/core/sync-bug-report"
 import type { WorkItemProvider } from "@/lib/integrations/core/provider"
 
@@ -134,6 +135,19 @@ describe("OpenProjectClient board grid writes", () => {
     expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "PATCH")).toHaveLength(0)
   })
 
+  it("reports every column whose filter lists the card", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(grid({ 1: ["101", "102"], 2: ["101"] })))
+
+    // #101 is pinned in both columns — the stuck state.
+    expect(await client.getWidgetIdsContaining(55, "101")).toEqual(["1", "2"])
+  })
+
+  it("reports a single column for a normally-placed card", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(grid({ 1: ["102"], 2: ["101"] })))
+
+    expect(await client.getWidgetIdsContaining(55, "101")).toEqual(["2"])
+  })
+
   it("does not add a work package that the column already lists", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(grid({ 1: ["101"] })))
 
@@ -164,7 +178,7 @@ describe("placeBugOnBoard", () => {
     const provider = fakeProvider()
     const placed = await placeBugOnBoard(provider, "55", "101", "2", true, null)
 
-    expect(placed).toBe("2")
+    expect(placed.columnId).toBe("2")
     expect(provider.placeOnColumn).toHaveBeenCalledWith("55", columns[1], "101")
   })
 
@@ -173,7 +187,7 @@ describe("placeBugOnBoard", () => {
     // The bug still points at column 2, which is where sync last placed it.
     const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
 
-    expect(placed).toBeUndefined()
+    expect(placed.columnId).toBeUndefined()
     expect(provider.reconcileColumn).not.toHaveBeenCalled()
     expect(provider.placeOnColumn).not.toHaveBeenCalled()
   })
@@ -182,7 +196,7 @@ describe("placeBugOnBoard", () => {
     const provider = fakeProvider()
     const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "1")
 
-    expect(placed).toBe("2")
+    expect(placed.columnId).toBe("2")
     expect(provider.reconcileColumn).toHaveBeenCalledWith("55", columns[1], "101")
   })
 
@@ -190,8 +204,115 @@ describe("placeBugOnBoard", () => {
     const provider = fakeProvider({ boardContains: vi.fn().mockResolvedValue(false) })
     const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
 
-    expect(placed).toBe("2")
+    expect(placed.columnId).toBe("2")
     expect(provider.placeOnColumn).toHaveBeenCalledWith("55", columns[1], "101")
+  })
+
+  it("collapses a card that is stuck rendering in two columns at once", async () => {
+    // The app-side column is unchanged, so the normal rule is "leave it alone".
+    // But the card is in both columns — a state no drag can produce — so it is
+    // stuck: every future sync would see "unchanged" and skip it forever.
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["1", "2"]),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed.columnId).toBe("2")
+    expect(provider.reconcileColumn).toHaveBeenCalledWith("55", columns[1], "101")
+  })
+
+  it("still leaves a card alone when it sits in exactly one column", async () => {
+    // One column means the user dragged it there deliberately. The tracker wins.
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["1"]),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed.columnId).toBeUndefined()
+    expect(provider.reconcileColumn).not.toHaveBeenCalled()
+  })
+
+  it("leaves the card alone when the provider cannot report its columns", async () => {
+    // getCardColumns is optional; providers without it keep the old behaviour.
+    const provider = fakeProvider()
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed.columnId).toBeUndefined()
+    expect(provider.reconcileColumn).not.toHaveBeenCalled()
+  })
+
+  it("does not collapse when no column is chosen app-side", async () => {
+    // With no target there is nothing to collapse *to* — guessing would move
+    // the card somewhere the user never asked for.
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["1", "2"]),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", null, false, null)
+
+    expect(placed.columnId).toBeUndefined()
+    expect(provider.reconcileColumn).not.toHaveBeenCalled()
+  })
+
+  it("adopts the column the card was dragged to in the tracker", async () => {
+    // App believes column 2; the tracker's own query says the card is in 1.
+    // The tracker wins — and the app must record that, not just accept it.
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["2"]),
+      getTrackerColumn: vi.fn().mockResolvedValue("1"),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed.columnId).toBe("1")
+    expect(placed.adopted).toBe(true)
+    expect(provider.reconcileColumn).toHaveBeenCalledWith("55", columns[0], "101")
+  })
+
+  it("explains an unplaceable card instead of only logging it", async () => {
+    // The reason a card didn't move has to reach the person who pressed Sync.
+    const provider = fakeProvider({
+      getBoardColumns: vi.fn().mockRejectedValue(new Error('Workflow does not allow moving #101 to "Done".')),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "1")
+
+    expect(placed.columnId).toBeUndefined()
+    expect(placed.warning).toMatch(/could not be placed.*Workflow does not allow/)
+  })
+
+  it("does not adopt when the tracker agrees with the app", async () => {
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["2"]),
+      getTrackerColumn: vi.fn().mockResolvedValue("2"),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed).toEqual({})
+    expect(provider.reconcileColumn).not.toHaveBeenCalled()
+  })
+
+  it("does not adopt a column that is no longer on the board", async () => {
+    // A stale/removed column must not be written back to the bug.
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["2"]),
+      getTrackerColumn: vi.fn().mockResolvedValue("99"),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed).toEqual({})
+    expect(provider.reconcileColumn).not.toHaveBeenCalled()
+  })
+
+  it("prefers collapsing a split card over adopting a tracker move", async () => {
+    // Both signals present: the split is our own bug and must be fixed first,
+    // and collapsing already writes the card into exactly one column.
+    const provider = fakeProvider({
+      getCardColumns: vi.fn().mockResolvedValue(["1", "2"]),
+      getTrackerColumn: vi.fn().mockResolvedValue("1"),
+    })
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", false, "2")
+
+    expect(placed.columnId).toBe("2")
+    expect(placed.adopted).toBeUndefined()
+    expect(provider.getTrackerColumn).not.toHaveBeenCalled()
   })
 
   it("never throws when the tracker rejects the placement", async () => {
@@ -199,7 +320,116 @@ describe("placeBugOnBoard", () => {
       getBoardColumns: vi.fn().mockRejectedValue(new Error("403 Forbidden")),
     })
 
-    await expect(placeBugOnBoard(provider, "55", "101", "2", true, null)).resolves.toBeUndefined()
+    const placed = await placeBugOnBoard(provider, "55", "101", "2", true, null)
+    expect(placed.columnId).toBeUndefined()
+    expect(placed.warning).toContain("403 Forbidden")
+  })
+
+  describe("status boards", () => {
+    const statusColumns = [
+      { id: "10", name: "New", columnType: "status" as const, attributeId: "1" },
+      { id: "11", name: "In progress", columnType: "status" as const, attributeId: "7" },
+    ]
+    const statusProvider = (overrides: Partial<WorkItemProvider> = {}) =>
+      fakeProvider({ getBoardColumns: vi.fn().mockResolvedValue(statusColumns), ...overrides })
+
+    it("transitions a new bug into the column the user picked", async () => {
+      const provider = statusProvider()
+      const placed = await placeBugOnBoard(provider, "55", "101", "11", true, null)
+
+      expect(placed.columnId).toBe("11")
+      expect(provider.placeOnColumn).toHaveBeenCalledWith("55", statusColumns[1], "101")
+    })
+
+    it("moves the card when the app-side column changed", async () => {
+      const provider = statusProvider()
+      const placed = await placeBugOnBoard(provider, "55", "101", "11", false, "10")
+
+      expect(placed.columnId).toBe("11")
+      expect(provider.reconcileColumn).toHaveBeenCalledWith("55", statusColumns[1], "101")
+    })
+
+    it("does not force a status on a new bug when no column was chosen", async () => {
+      // Falling back to the leftmost column here would overwrite the status the
+      // bug was just created with — a silent edit nobody asked for.
+      const provider = statusProvider()
+      const placed = await placeBugOnBoard(provider, "55", "101", null, true, null)
+
+      expect(placed.columnId).toBeUndefined()
+      expect(provider.placeOnColumn).not.toHaveBeenCalled()
+      expect(provider.reconcileColumn).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe("OpenProjectProvider status-column placement", () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+  const originalFetch = global.fetch
+  const column = { id: "11", name: "In progress", columnType: "status" as const, attributeId: "7" }
+
+  function provider() {
+    return new OpenProjectProvider({
+      baseUrl: "https://op.example.com",
+      externalProjectKey: "demo",
+      apiToken: "token",
+    } as any)
+  }
+
+  beforeEach(() => {
+    fetchMock = vi.fn()
+    global.fetch = fetchMock as unknown as typeof fetch
+  })
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  /** The work-package form response listing the workflow's reachable statuses. */
+  const form = (ids: number[]) =>
+    jsonResponse({ _embedded: { schema: { status: { _embedded: { allowedValues: ids.map((id) => ({ id })) } } } } })
+
+  it("PATCHes the target status when the workflow permits the transition", async () => {
+    fetchMock
+      .mockResolvedValueOnce(form([1, 7])) // POST /form — 7 is reachable
+      .mockResolvedValueOnce(jsonResponse({ id: 101, lockVersion: 3 })) // GET the WP
+      .mockResolvedValueOnce(jsonResponse({ id: 101, lockVersion: 4 })) // PATCH
+
+    const ok = await provider().reconcileColumn("55", column, "101")
+
+    expect(ok).toBe(true)
+    const patch = fetchMock.mock.calls.find((c) => c[1]?.method === "PATCH")!
+    expect(JSON.parse(patch[1].body)._links.status.href).toBe("/api/v3/statuses/7")
+    expect(JSON.parse(patch[1].body).lockVersion).toBe(3)
+  })
+
+  it("refuses the move and names the reachable statuses when the workflow forbids it", async () => {
+    fetchMock
+      .mockResolvedValueOnce(form([1, 3])) // 7 is NOT reachable
+      .mockResolvedValueOnce(jsonResponse({ _embedded: { elements: [
+        { id: 1, name: "New" }, { id: 3, name: "Closed" }, { id: 7, name: "In progress" },
+      ] } }))
+
+    const move = provider().reconcileColumn("55", column, "101")
+    await expect(move).rejects.toThrow(/Workflow does not allow moving #101 to "In progress"/)
+    // The message names what the workflow WOULD accept, so the fix is obvious.
+    await expect(move).rejects.toThrow(/Allowed from its current status: New, Closed/)
+    // The doomed PATCH is never sent.
+    expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "PATCH")).toHaveLength(0)
+  })
+
+  it("attempts the transition anyway when the allowed set cannot be read", async () => {
+    // Older instances / restricted tokens can't read the form. Blocking here
+    // would break status boards that actually work.
+    fetchMock
+      // 403 on the form read, twice: apiFetch retries once with the Bearer header.
+      .mockResolvedValueOnce(jsonResponse({ message: "forbidden" }, 403))
+      .mockResolvedValueOnce(jsonResponse({ message: "forbidden" }, 403))
+      .mockResolvedValueOnce(jsonResponse({ id: 101, lockVersion: 3 }))
+      .mockResolvedValueOnce(jsonResponse({ id: 101, lockVersion: 4 }))
+
+    const ok = await provider().reconcileColumn("55", column, "101")
+
+    expect(ok).toBe(true)
+    expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "PATCH")).toHaveLength(1)
   })
 })
 

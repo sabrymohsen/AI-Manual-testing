@@ -44,9 +44,21 @@ import {
   CheckSquare,
   UserPlus,
   Kanban,
-  Link2
+  Link2,
+  Copy,
+  MoreHorizontal,
+  ChevronDown,
+  Pencil,
+  Tag
 } from "lucide-react"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface TestStep {
   id?: string
@@ -196,6 +208,79 @@ function DrawerSection({ icon: Icon, title, children }: { icon: React.ComponentT
       </h4>
       {children}
     </section>
+  )
+}
+
+/**
+ * The next step in the bug workflow, surfaced as the header's primary button so
+ * the common move is one click instead of a trip through the status menu.
+ * Terminal states (Closed / Rejected / Duplicate) have no next step.
+ */
+const NEXT_BUG_STATUS: Record<string, { next: string; label: string }> = {
+  Open: { next: "InProgress", label: "Start progress" },
+  Reopened: { next: "InProgress", label: "Start progress" },
+  InProgress: { next: "ReadyForRetest", label: "Ready for retest" },
+  ReadyForRetest: { next: "Resolved", label: "Mark resolved" },
+  Resolved: { next: "Closed", label: "Close bug" },
+}
+
+const BUG_STATUS_ORDER = [
+  "Open", "InProgress", "ReadyForRetest", "Reopened", "Resolved", "Closed", "Rejected", "Duplicate",
+] as const
+
+/** Compact select used throughout the metadata sidebar. */
+const SIDE_SELECT =
+  "h-8 w-full cursor-pointer rounded-md border bg-background px-2 text-xs font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200"
+
+/** One card in the right-hand metadata column. */
+function SideCard({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border bg-card/80 p-5 shadow-xs">
+      <h4 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+        <Icon className="h-4 w-4 text-indigo-500" /> {title}
+      </h4>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+/** A label/value line inside a SideCard. */
+function SideRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[86px_1fr] items-center gap-2 border-b border-border/40 py-1.5 last:border-0">
+      <span className="text-xs font-bold text-muted-foreground">{label}</span>
+      <div className="min-w-0">{children}</div>
+    </div>
+  )
+}
+
+/** Header status control: a coloured pill that opens the full status list. */
+function BugStatusPill({ status, onChange }: { status: string; onChange: (s: string) => void }) {
+  const st = BUG_STATUS_STYLES[status] || BUG_STATUS_STYLES.Open
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-extrabold shadow-2xs transition-all hover:scale-105 ${st.chip}`}
+        >
+          <span className={`h-2 w-2 rounded-full ${st.dot}`} />
+          {st.label}
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {BUG_STATUS_ORDER.map((s) => {
+          const meta = BUG_STATUS_STYLES[s]
+          return (
+            <DropdownMenuItem key={s} onClick={() => { if (s !== status) onChange(s) }}>
+              <span className={`mr-2 h-2 w-2 rounded-full ${meta.dot}`} />
+              {meta.label}
+              {s === status && <Check className="ml-auto h-3.5 w-3.5" />}
+            </DropdownMenuItem>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -636,7 +721,11 @@ export default function ProjectBugReportsPage() {
         body: JSON.stringify(placement || {})
       })
       if (res.ok) {
-        showToastMsg(`Synchronised with ${trackerName} successfully!`)
+        // Board placement is best-effort and never fails the sync, so a card
+        // that didn't move comes back as a warning on an otherwise-OK response.
+        const data = await res.json().catch(() => ({}))
+        if (data.warning) showToastMsg(data.warning, "error")
+        else showToastMsg(`Synchronised with ${trackerName} successfully!`)
         handleOpenDetail(bugId)
         loadBugsList()
       } else {
@@ -1588,39 +1677,107 @@ export default function ProjectBugReportsPage() {
 
       {/* 7. Unified Right Slide-over Detail Drawer */}
       {selectedBugId && selectedBug && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-[640px] bg-background h-full shadow-2xl border-l flex flex-col animate-in slide-in-from-right duration-300 text-sm">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setSelectedBugId(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex h-[88vh] w-[min(1180px,96vw)] flex-col overflow-hidden rounded-2xl border bg-background text-sm shadow-2xl animate-in zoom-in-95 duration-200"
+          >
 
-            {/* Header info */}
-            <div className="px-6 pt-5 pb-4 border-b">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] font-bold text-slate-600">
-                    <Bug className="h-3 w-3 text-rose-500" />
-                    {selectedBug.bugKey || "BUG-DETAIL"}
-                  </span>
-                  {(() => {
-                    const st = BUG_STATUS_STYLES[selectedBug.status] || BUG_STATUS_STYLES.Open
-                    return (
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${st.chip}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} /> {st.label}
-                      </span>
-                    )
-                  })()}
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLES[selectedBug.severity] || SEVERITY_STYLES.Low}`}>
-                    {selectedBug.severity} severity
-                  </span>
-                </div>
+            {/* ── Top bar: identity, status, and the one-click next step ── */}
+            <div className="flex shrink-0 items-center justify-between border-b bg-card/60 px-6 py-3.5 backdrop-blur-md">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-6 w-6 items-center justify-center rounded bg-rose-50 text-rose-600">
+                  <Bug className="h-4 w-4" />
+                </span>
+
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedBug.bugKey || selectedBug.id)
+                    showToastMsg("Bug key copied")
+                  }}
+                  title="Copy bug key"
+                  className="flex items-center gap-1 rounded-md border border-border/50 bg-muted/60 px-2.5 py-1 font-mono text-xs font-bold text-muted-foreground transition-all hover:text-foreground"
+                >
+                  <span>{selectedBug.bugKey || "BUG-DETAIL"}</span>
+                  <Copy className="h-3 w-3" />
+                </button>
+
+                <BugStatusPill
+                  status={selectedBug.status}
+                  onChange={(s) => handleChangeBugStatus(selectedBug.id, s)}
+                />
+
+                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLES[selectedBug.severity] || SEVERITY_STYLES.Low}`}>
+                  {selectedBug.severity} severity
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {NEXT_BUG_STATUS[selectedBug.status] && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleChangeBugStatus(selectedBug.id, NEXT_BUG_STATUS[selectedBug.status].next)}
+                    className="h-8 rounded-lg bg-indigo-600 px-3 text-xs font-bold text-white hover:bg-indigo-700"
+                  >
+                    {NEXT_BUG_STATUS[selectedBug.status].label}
+                  </Button>
+                )}
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-muted" title="More actions">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem onClick={() => setIsEditingTitle(true)}>
+                      <Pencil className="mr-2 h-4 w-4" /> Edit title
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?bug=${selectedBug.id}`)
+                        showToastMsg("Link copied")
+                      }}
+                    >
+                      <Link2 className="mr-2 h-4 w-4" /> Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSyncToOpenProject(selectedBug.id, {
+                        parentId: editParentValue,
+                        boardId: editBoardValue,
+                        boardColumnId: editColumnValue,
+                        customFields: editCustomFields,
+                      })}
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" /> Sync to {trackerName || "tracker"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleDeleteBug(selectedBug.id)} className="text-red-600 focus:text-red-600">
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete defect
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <button
                   onClick={() => setSelectedBugId(null)}
-                  className="shrink-0 rounded-lg p-1.5 text-muted-foreground hover:bg-slate-100 hover:text-foreground"
+                  className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
+            </div>
 
+            {/* ── Split view: work content on the left, metadata on the right ── */}
+            <div className="grid min-h-0 flex-1 grid-cols-[1fr_340px] divide-x divide-border overflow-hidden">
+            <div className="flex min-w-0 flex-col overflow-hidden">
+
+            {/* Title + provenance */}
+            <div className="px-6 pt-5 pb-4">
               {isEditingTitle ? (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="flex items-center gap-2">
                   <Input
                     value={editTitleValue}
                     onChange={(e) => setEditTitleValue(e.target.value)}
@@ -1632,7 +1789,7 @@ export default function ProjectBugReportsPage() {
                       if (e.key === "Escape") setIsEditingTitle(false)
                     }}
                     autoFocus
-                    className="h-9 text-base font-semibold"
+                    className="h-10 text-lg font-semibold"
                   />
                   <Button
                     size="sm"
@@ -1640,7 +1797,7 @@ export default function ProjectBugReportsPage() {
                       setIsEditingTitle(false)
                       handleInlineUpdate({ title: editTitleValue })
                     }}
-                    className="h-9 bg-indigo-600 text-white"
+                    className="h-10 bg-indigo-600 text-white"
                   >
                     Save
                   </Button>
@@ -1649,11 +1806,26 @@ export default function ProjectBugReportsPage() {
                 <h3
                   onClick={() => setIsEditingTitle(true)}
                   title="Click to edit title"
-                  className="-mx-1 mt-2 cursor-text rounded-lg px-1 py-0.5 text-lg font-bold leading-snug text-slate-900 hover:bg-slate-50"
+                  className="group -mx-1 flex cursor-text items-start justify-between rounded-lg px-1 py-0.5 text-2xl font-bold leading-snug tracking-tight text-foreground transition-all hover:bg-muted/50"
                 >
-                  {selectedBug.title}
+                  <span>{selectedBug.title}</span>
+                  <Pencil className="ml-2 mt-1.5 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </h3>
               )}
+
+              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">
+                  {(selectedBug.reporter?.name || selectedBug.reporter?.email || "?")[0]}
+                </span>
+                <span>
+                  Reported by{" "}
+                  <span className="font-semibold text-foreground">
+                    {selectedBug.reporter?.name || selectedBug.reporter?.email || "Unknown"}
+                  </span>
+                  {" • "}created {new Date(selectedBug.createdAt).toLocaleDateString()}
+                  {" • "}updated {new Date(selectedBug.updatedAt).toLocaleDateString()}
+                </span>
+              </div>
             </div>
 
             {/* Tab switch row */}
@@ -1687,206 +1859,6 @@ export default function ProjectBugReportsPage() {
               {/* Tab 1: OVERVIEW */}
               {activeDetailTab === "overview" && (
                 <div className="space-y-6">
-                  {/* Triage */}
-                  <DrawerSection icon={AlertCircle} title="Triage">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Severity</Label>
-                        <select
-                          value={selectedBug.severity}
-                          onChange={(e) => handleInlineUpdate({ severity: e.target.value as any })}
-                          className={`h-9 w-full cursor-pointer rounded-lg border px-2.5 text-sm font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200 ${SEVERITY_STYLES[selectedBug.severity] || "bg-background"}`}
-                        >
-                          <option value="Low">Low</option>
-                          <option value="Medium">Medium</option>
-                          <option value="High">High</option>
-                          <option value="Critical">Critical</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Priority</Label>
-                        <select
-                          value={selectedBug.priority}
-                          onChange={(e) => handleInlineUpdate({ priority: e.target.value as any })}
-                          className={`h-9 w-full cursor-pointer rounded-lg border px-2.5 text-sm font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200 ${SEVERITY_STYLES[selectedBug.priority] || "bg-background"}`}
-                        >
-                          <option value="Low">Low</option>
-                          <option value="Medium">Medium</option>
-                          <option value="High">High</option>
-                          <option value="Critical">Critical</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Status</Label>
-                        <select
-                          value={selectedBug.status}
-                          onChange={(e) => handleInlineUpdate({ status: e.target.value as any })}
-                          className={`h-9 w-full cursor-pointer rounded-lg border px-2.5 text-sm font-semibold outline-none transition-colors focus:ring-2 focus:ring-indigo-200 ${(BUG_STATUS_STYLES[selectedBug.status] || BUG_STATUS_STYLES.Open).chip}`}
-                        >
-                          <option value="Open">Open</option>
-                          <option value="InProgress">In Progress</option>
-                          <option value="ReadyForRetest">Ready for Retest</option>
-                          <option value="Reopened">Reopened</option>
-                          <option value="Resolved">Resolved</option>
-                          <option value="Closed">Closed</option>
-                          <option value="Rejected">Rejected</option>
-                          <option value="Duplicate">Duplicate</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Resolution</Label>
-                        <select
-                          value={selectedBug.resolution || ""}
-                          onChange={(e) => handleInlineUpdate({ resolution: (e.target.value || null) as BugReport["resolution"] })}
-                          className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
-                        >
-                          <option value="">Unresolved</option>
-                          <option value="Fixed">Fixed</option>
-                          <option value="WontFix">Won&apos;t Fix</option>
-                          <option value="CannotReproduce">Cannot Reproduce</option>
-                          <option value="Duplicate">Duplicate</option>
-                          <option value="ByDesign">By Design</option>
-                        </select>
-                      </div>
-
-                      {selectedBug.resolution && (
-                        <div className="col-span-2">
-                          <Input
-                            value={editResolutionNoteValue}
-                            onChange={(e) => setEditResolutionNoteValue(e.target.value)}
-                            onBlur={() => {
-                              if (editResolutionNoteValue !== (selectedBug.resolutionNote || "")) {
-                                handleInlineUpdate({ resolutionNote: editResolutionNoteValue })
-                              }
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                            placeholder="Resolution note (optional)…"
-                            className="h-9 bg-background"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </DrawerSection>
-
-                  {/* People */}
-                  <DrawerSection icon={UserPlus} title="People">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Reporter</Label>
-                        <div className="flex h-9 items-center gap-2 rounded-lg border bg-slate-50 px-2.5 text-sm font-medium text-slate-700">
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">
-                            {(selectedBug.reporter?.name || selectedBug.reporter?.email || "?")[0]}
-                          </span>
-                          <span className="truncate">{selectedBug.reporter?.name || selectedBug.reporter?.email || "Unknown"}</span>
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Assigned Developer</Label>
-                        {opMembers.length > 0 ? (
-                          <select
-                            value={selectedBug.assignedTo || ""}
-                            onChange={(e) => handleInlineUpdate({ assignedTo: e.target.value })}
-                            className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
-                          >
-                            <option value="">Unassigned</option>
-                            {selectedBug.assignedTo &&
-                              !opMembers.some(m => m.id === selectedBug.assignedTo) && (
-                                <option value={selectedBug.assignedTo}>{selectedBug.assignedTo}</option>
-                              )}
-                            {opMembers.map(m => (
-                              <option key={m.id} value={m.id}>{m.name}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <Input
-                            value={editAssigneeValue}
-                            onChange={(e) => setEditAssigneeValue(e.target.value)}
-                            onBlur={() => {
-                              if (editAssigneeValue !== (selectedBug.assignedTo || "")) {
-                                handleInlineUpdate({ assignedTo: editAssigneeValue })
-                              }
-                            }}
-                            onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                            placeholder="Developer email…"
-                            className="h-9 bg-background"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </DrawerSection>
-
-                  {/* Organize */}
-                  <DrawerSection icon={Layers} title="Organize">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] font-semibold text-slate-500">Tags</Label>
-                      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-lg border bg-background p-2">
-                        {(selectedBug.tags || []).map((t) => (
-                          <span key={t} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold">
-                            {t}
-                            <button
-                              type="button"
-                              onClick={() => handleInlineUpdate({ tags: (selectedBug.tags || []).filter((x) => x !== t) })}
-                              className="hover:text-indigo-900"
-                              aria-label={`Remove ${t}`}
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </span>
-                        ))}
-                        <input
-                          value={tagInput}
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === ",") {
-                              e.preventDefault()
-                              const t = tagInput.trim().replace(/,$/, "")
-                              if (t && !(selectedBug.tags || []).includes(t)) {
-                                handleInlineUpdate({ tags: [...(selectedBug.tags || []), t] })
-                              }
-                              setTagInput("")
-                            } else if (e.key === "Backspace" && !tagInput && (selectedBug.tags || []).length > 0) {
-                              handleInlineUpdate({ tags: (selectedBug.tags || []).slice(0, -1) })
-                            }
-                          }}
-                          placeholder={(selectedBug.tags || []).length ? "Add…" : "Add tag + Enter"}
-                          className="flex-1 min-w-[70px] bg-transparent text-sm font-medium outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Bug Source — options pulled from an OpenProject list field */}
-                    {opSourceOptions.length > 0 && (
-                      <div className="mt-3 space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Bug Source</Label>
-                        <select
-                          value={selectedBug.source || ""}
-                          onChange={(e) => handleInlineUpdate({ source: e.target.value } as any)}
-                          className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
-                        >
-                          <option value="">— Select source —</option>
-                          {/* Preserve any stored value not in the current option list */}
-                          {selectedBug.source && !opSourceOptions.includes(selectedBug.source) && (
-                            <option value={selectedBug.source}>{selectedBug.source}</option>
-                          )}
-                          {opSourceOptions.map((o) => (
-                            <option key={o} value={o}>{o}</option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </DrawerSection>
-
-                  {/* Description */}
-                  <DrawerSection icon={Link2} title="Linked items">
-                    <LinkedEntities
-                      projectId={projectId}
-                      entityId={selectedBug.id}
-                      entityType="BUG_REPORT"
-                    />
-                  </DrawerSection>
 
                   <DrawerSection icon={FileText} title="Description / Action details">
                     {isEditingDesc ? (
@@ -1923,102 +1895,16 @@ export default function ProjectBugReportsPage() {
                     )}
                   </DrawerSection>
 
-                  {/* OpenProject sync settings */}
-                  <DrawerSection icon={Kanban} title={`${trackerName || "Tracker"} Sync`}>
-                    <div className="space-y-3 rounded-xl border bg-slate-50/60 p-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-[11px] font-semibold text-slate-500">Parent Task (Work Package ID)</Label>
-                        <Input
-                          value={editParentValue}
-                          onChange={(e) => setEditParentValue(e.target.value)}
-                          onBlur={() => {
-                            if (editParentValue !== (selectedBug.openProjectParentId || "")) {
-                              handleInlineUpdate({ openProjectParentId: editParentValue })
-                            }
-                          }}
-                          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
-                          placeholder="e.g. 1234"
-                          className="h-9 bg-background"
-                        />
-                        <p className="text-[11px] text-slate-400">Synced bug will be nested under this work package.</p>
-                      </div>
+                  {/* LinkedEntities renders its own "Linked items" heading —
+                      wrapping it in a DrawerSection would show it twice. */}
+                  <div className="border-t border-border/60 pt-5">
+                    <LinkedEntities
+                      projectId={projectId}
+                      entityId={selectedBug.id}
+                      entityType="BUG_REPORT"
+                    />
+                  </div>
 
-                      {opBoards.length > 0 && (
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-[11px] font-semibold text-slate-500">Target Board</Label>
-                            <select
-                              value={editBoardValue}
-                              onChange={(e) => {
-                                const boardId = e.target.value
-                                // Update the dropdown instantly, clear the column, load the
-                                // new board's columns, then persist in the background.
-                                setEditBoardValue(boardId)
-                                setEditColumnValue("")
-                                loadBoardColumns(boardId)
-                                handleInlineUpdate({ openProjectBoardId: boardId, openProjectBoardColumnId: "" })
-                              }}
-                              className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200"
-                            >
-                              <option value="">No board</option>
-                              {opBoards.map(b => (
-                                <option key={b.id} value={String(b.id)}>
-                                  {b.name}{b.type ? ` (${b.type})` : ""}
-                                </option>
-                              ))}
-                            </select>
-                            <p className="text-[11px] text-slate-400">Synced bug will be placed on this board.</p>
-                          </div>
-
-                          {/* Column selector — appears once a board is chosen (#4) */}
-                          {editBoardValue && (
-                            <div className="space-y-1.5">
-                              <Label className="text-[11px] font-semibold text-slate-500">Board Column</Label>
-                              <select
-                                value={editColumnValue}
-                                onChange={(e) => {
-                                  setEditColumnValue(e.target.value)
-                                  handleInlineUpdate({ openProjectBoardColumnId: e.target.value })
-                                }}
-                                disabled={loadingColumns}
-                                className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60"
-                              >
-                                <option value="">
-                                  {loadingColumns ? "Loading columns..." : "First column (default)"}
-                                </option>
-                                {opBoardColumns.map(c => (
-                                  <option key={c.widgetId} value={String(c.widgetId)}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <p className="text-[11px] text-slate-400">Synced bug will be placed under this column.</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </DrawerSection>
-
-                  {/* Environment */}
-                  <DrawerSection icon={Globe} title="Environment">
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { icon: Globe, label: "Environment", value: selectedBug.environment || "Staging" },
-                        { icon: Terminal, label: "Browser", value: selectedBug.browser || "Chromium" },
-                        { icon: Eye, label: "Viewport", value: selectedBug.viewport || "Desktop (1280x800)" },
-                        { icon: Clock, label: "Created", value: new Date(selectedBug.createdAt).toLocaleString() },
-                      ].map((m) => (
-                        <div key={m.label} className="flex items-center gap-2.5 rounded-xl border bg-slate-50/60 px-3 py-2.5">
-                          <m.icon className="h-4 w-4 shrink-0 text-slate-400" />
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{m.label}</p>
-                            <p className="truncate text-sm font-medium text-slate-700">{m.value}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </DrawerSection>
                 </div>
               )}
 
@@ -2385,7 +2271,7 @@ export default function ProjectBugReportsPage() {
                           {syncingOP ? "Syncing..." : "Sync / Update Mapped Ticket"}
                         </Button>
                         <p className="text-[9px] text-slate-400 text-center">
-                          Uses the Parent / Board / Column set in the Overview tab.
+                          Uses the Parent / Board / Column set in the sidebar.
                         </p>
                       </div>
                     </div>
@@ -2397,6 +2283,254 @@ export default function ProjectBugReportsPage() {
                 </div>
               )}
             </div>
+
+            </div>{/* end left column */}
+
+            {/* ── Right metadata sidebar ── */}
+            <div className="min-w-0 space-y-5 overflow-y-auto bg-muted/15 p-5">
+
+              <SideCard icon={Tag} title="Details &amp; Metadata">
+                <SideRow label="Type">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <Bug className="h-3.5 w-3.5 text-rose-500" /> Bug
+                  </span>
+                </SideRow>
+
+                <SideRow label="Assignee">
+                  {opMembers.length > 0 ? (
+                    <select
+                      value={selectedBug.assignedTo || ""}
+                      onChange={(e) => handleInlineUpdate({ assignedTo: e.target.value })}
+                      className={SIDE_SELECT}
+                    >
+                      <option value="">Unassigned</option>
+                      {selectedBug.assignedTo && !opMembers.some(m => m.id === selectedBug.assignedTo) && (
+                        <option value={selectedBug.assignedTo}>{selectedBug.assignedTo}</option>
+                      )}
+                      {opMembers.map(m => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      value={editAssigneeValue}
+                      onChange={(e) => setEditAssigneeValue(e.target.value)}
+                      onBlur={() => {
+                        if (editAssigneeValue !== (selectedBug.assignedTo || "")) {
+                          handleInlineUpdate({ assignedTo: editAssigneeValue })
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                      placeholder="Developer email…"
+                      className="h-8 bg-background text-xs"
+                    />
+                  )}
+                </SideRow>
+
+                <SideRow label="Reporter">
+                  <span className="flex items-center gap-1.5 truncate text-xs font-semibold text-foreground">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">
+                      {(selectedBug.reporter?.name || selectedBug.reporter?.email || "?")[0]}
+                    </span>
+                    <span className="truncate">{selectedBug.reporter?.name || selectedBug.reporter?.email || "Unknown"}</span>
+                  </span>
+                </SideRow>
+
+                <SideRow label="Severity">
+                  <select
+                    value={selectedBug.severity}
+                    onChange={(e) => handleInlineUpdate({ severity: e.target.value as any })}
+                    className={`${SIDE_SELECT} ${SEVERITY_STYLES[selectedBug.severity] || ""}`}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </SideRow>
+
+                <SideRow label="Priority">
+                  <select
+                    value={selectedBug.priority}
+                    onChange={(e) => handleInlineUpdate({ priority: e.target.value as any })}
+                    className={`${SIDE_SELECT} ${SEVERITY_STYLES[selectedBug.priority] || ""}`}
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </SideRow>
+
+                <SideRow label="Resolution">
+                  <select
+                    value={selectedBug.resolution || ""}
+                    onChange={(e) => handleInlineUpdate({ resolution: (e.target.value || null) as BugReport["resolution"] })}
+                    className={SIDE_SELECT}
+                  >
+                    <option value="">Unresolved</option>
+                    <option value="Fixed">Fixed</option>
+                    <option value="WontFix">Won&apos;t Fix</option>
+                    <option value="CannotReproduce">Cannot Reproduce</option>
+                    <option value="Duplicate">Duplicate</option>
+                    <option value="ByDesign">By Design</option>
+                  </select>
+                </SideRow>
+
+                {selectedBug.resolution && (
+                  <SideRow label="Note">
+                    <Input
+                      value={editResolutionNoteValue}
+                      onChange={(e) => setEditResolutionNoteValue(e.target.value)}
+                      onBlur={() => {
+                        if (editResolutionNoteValue !== (selectedBug.resolutionNote || "")) {
+                          handleInlineUpdate({ resolutionNote: editResolutionNoteValue })
+                        }
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                      placeholder="Optional…"
+                      className="h-8 bg-background text-xs"
+                    />
+                  </SideRow>
+                )}
+
+                {opSourceOptions.length > 0 && (
+                  <SideRow label="Source">
+                    <select
+                      value={selectedBug.source || ""}
+                      onChange={(e) => handleInlineUpdate({ source: e.target.value } as any)}
+                      className={SIDE_SELECT}
+                    >
+                      <option value="">— Select —</option>
+                      {selectedBug.source && !opSourceOptions.includes(selectedBug.source) && (
+                        <option value={selectedBug.source}>{selectedBug.source}</option>
+                      )}
+                      {opSourceOptions.map((o) => (
+                        <option key={o} value={o}>{o}</option>
+                      ))}
+                    </select>
+                  </SideRow>
+                )}
+
+                <SideRow label="Labels">
+                  <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border bg-background p-1.5">
+                    {(selectedBug.tags || []).map((t) => (
+                      <span key={t} className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                        {t}
+                        <button
+                          type="button"
+                          onClick={() => handleInlineUpdate({ tags: (selectedBug.tags || []).filter((x) => x !== t) })}
+                          className="hover:text-indigo-900"
+                          aria-label={`Remove ${t}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                    <input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === ",") {
+                          e.preventDefault()
+                          const t = tagInput.trim().replace(/,$/, "")
+                          if (t && !(selectedBug.tags || []).includes(t)) {
+                            handleInlineUpdate({ tags: [...(selectedBug.tags || []), t] })
+                          }
+                          setTagInput("")
+                        } else if (e.key === "Backspace" && !tagInput && (selectedBug.tags || []).length > 0) {
+                          handleInlineUpdate({ tags: (selectedBug.tags || []).slice(0, -1) })
+                        }
+                      }}
+                      placeholder={(selectedBug.tags || []).length ? "Add…" : "Add + Enter"}
+                      className="min-w-[60px] flex-1 bg-transparent text-xs font-medium outline-none"
+                    />
+                  </div>
+                </SideRow>
+              </SideCard>
+
+              <SideCard icon={Globe} title="Environment">
+                <SideRow label="Env">
+                  <span className="truncate text-xs font-semibold text-foreground">{selectedBug.environment || "Staging"}</span>
+                </SideRow>
+                <SideRow label="Browser">
+                  <span className="truncate text-xs font-semibold text-foreground">{selectedBug.browser || "Chromium"}</span>
+                </SideRow>
+                <SideRow label="Viewport">
+                  <span className="truncate text-xs font-semibold text-foreground">{selectedBug.viewport || "Desktop (1280x800)"}</span>
+                </SideRow>
+              </SideCard>
+
+              <SideCard icon={Kanban} title={`${trackerName || "Tracker"} placement`}>
+                <SideRow label="Parent">
+                  <Input
+                    value={editParentValue}
+                    onChange={(e) => setEditParentValue(e.target.value)}
+                    onBlur={() => {
+                      if (editParentValue !== (selectedBug.openProjectParentId || "")) {
+                        handleInlineUpdate({ openProjectParentId: editParentValue })
+                      }
+                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur() }}
+                    placeholder="e.g. 1234"
+                    className="h-8 bg-background text-xs"
+                  />
+                </SideRow>
+
+                {opBoards.length > 0 && (
+                  <SideRow label="Board">
+                    <select
+                      value={editBoardValue}
+                      onChange={(e) => {
+                        const boardId = e.target.value
+                        setEditBoardValue(boardId)
+                        setEditColumnValue("")
+                        loadBoardColumns(boardId)
+                        handleInlineUpdate({ openProjectBoardId: boardId, openProjectBoardColumnId: "" })
+                      }}
+                      className={SIDE_SELECT}
+                    >
+                      <option value="">No board</option>
+                      {opBoards.map(b => (
+                        <option key={b.id} value={String(b.id)}>
+                          {b.name}{b.type ? ` (${b.type})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </SideRow>
+                )}
+
+                {opBoards.length > 0 && editBoardValue && (
+                  <SideRow label="Column">
+                    <select
+                      value={editColumnValue}
+                      onChange={(e) => {
+                        setEditColumnValue(e.target.value)
+                        handleInlineUpdate({ openProjectBoardColumnId: e.target.value })
+                      }}
+                      disabled={loadingColumns}
+                      className={`${SIDE_SELECT} disabled:opacity-60`}
+                    >
+                      <option value="">{loadingColumns ? "Loading…" : "First column"}</option>
+                      {opBoardColumns.map(c => (
+                        <option key={c.widgetId} value={String(c.widgetId)}>{c.name}</option>
+                      ))}
+                    </select>
+                  </SideRow>
+                )}
+              </SideCard>
+
+              <SideCard icon={Clock} title="Dates">
+                <SideRow label="Created">
+                  <span className="text-xs font-semibold text-foreground">{new Date(selectedBug.createdAt).toLocaleDateString()}</span>
+                </SideRow>
+                <SideRow label="Updated">
+                  <span className="text-xs font-semibold text-foreground">{new Date(selectedBug.updatedAt).toLocaleDateString()}</span>
+                </SideRow>
+              </SideCard>
+
+            </div>
+            </div>{/* end split view */}
 
             {/* Footer deletion */}
             <div className="flex items-center justify-between border-t bg-slate-50/60 px-6 py-3">

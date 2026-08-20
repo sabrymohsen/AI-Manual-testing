@@ -125,11 +125,41 @@ async function syncBugAttachments(
  *  - new card                      → drop into the chosen/first column
  *  - app-side column changed       → reconcile to EXACTLY that column
  *  - card missing from a basic board → put it back (chosen/first column)
+ *  - card showing in two columns   → collapse it to the app-side column
+ *  - tracker shows it elsewhere    → ADOPT that column as the app's own
  *  - otherwise                     → leave as-is; the tracker wins
  *
- * Returns the column id actually placed into, or undefined when nothing was
- * placed (so the caller only records real placements). Best-effort: never throws.
+ * "The tracker wins" used to mean the app just never mentioned the card again,
+ * which left the two sides permanently disagreeing: the app still believed
+ * column A, the board showed column B, and a user re-picking A got nothing
+ * because the app thought A was already current. Adopting the tracker's column
+ * makes "the tracker wins" true in the app's own records too, so the next
+ * app-side change is a real change and moves the card.
+ *
+ * One exception, for status columns: placing there means transitioning the work
+ * item's status, which is a real edit to the item rather than a card move. We
+ * only do that when the user actually picked a column — falling back to the
+ * first column would silently overwrite the status a new bug was created with.
+ *
+ * Best-effort: never throws.
  */
+export interface PlacementOutcome {
+  /** The column the card now sits in, when this sync placed, moved or adopted one. */
+  columnId?: string
+  /**
+   * True when `columnId` came from the tracker rather than the app — the caller
+   * must write it back to the bug's own column field, not just to the mapping,
+   * or the app will keep disagreeing with the board.
+   */
+  adopted?: boolean
+  /**
+   * Why the card is not where the app asked it to be, in words meant for the
+   * person who pressed Sync. Board placement is best-effort and never fails a
+   * sync, so without this the reason reaches the server log and nowhere else —
+   * which is what makes "the bug won't move" so hard to act on.
+   */
+  warning?: string
+}
 export async function placeBugOnBoard(
   provider: WorkItemProvider,
   boardId: string,
@@ -137,32 +167,87 @@ export async function placeBugOnBoard(
   columnId: string | null | undefined,
   isCreate: boolean,
   placedColumnId: string | null | undefined
-): Promise<string | undefined> {
+): Promise<PlacementOutcome> {
   try {
     const columns = await provider.getBoardColumns(boardId)
-    if (!columns.length) return undefined
+    if (!columns.length) return {}
     const chosen: BoardColumn | null = columnId
       ? columns.find((c) => String(c.id) === String(columnId)) || null
       : null
     const col = chosen || columns[0]
 
+    // A status column with no explicit choice would mean "transition this bug
+    // into whatever the leftmost column happens to be" — not a placement the
+    // user asked for. Leave it; the board renders it under its current status.
+    if (col.columnType === "status" && !chosen) return {}
+
     if (isCreate) {
       await provider.placeOnColumn(boardId, col, externalId)
-      return String(col.id)
+      return { columnId: String(col.id) }
     }
     // The app-side column moved since we last placed the card: honour it.
     if (chosen && String(columnId) !== String(placedColumnId ?? "")) {
       await provider.reconcileColumn(boardId, chosen, externalId)
-      return String(chosen.id)
+      return { columnId: String(chosen.id) }
     }
     if (col.columnType === "basic" && !(await provider.boardContains(boardId, externalId))) {
       await provider.placeOnColumn(boardId, col, externalId)
-      return String(col.id)
+      return { columnId: String(col.id) }
     }
-    return undefined
+
+    // Nothing changed app-side, so the rule above says leave the card alone —
+    // with one exception. A card rendering in TWO columns at once is a state no
+    // drag can produce: it means an earlier placement half-landed, or the
+    // board's id filter and its column query have drifted apart. Left alone it
+    // stays stuck forever, because every later sync sees "column unchanged" and
+    // skips. Collapsing it back to the app-side column is safe precisely
+    // because a user's own drag never produces this state.
+    if (chosen && provider.getCardColumns) {
+      const appearsIn = await provider.getCardColumns(boardId, externalId)
+      if (appearsIn.length > 1) {
+        console.warn(
+          `[sync-bug-report] ${externalId} renders in ${appearsIn.length} columns ` +
+            `(${appearsIn.join(", ")}); collapsing to ${chosen.id}.`
+        )
+        await provider.reconcileColumn(boardId, chosen, externalId)
+        return {
+          columnId: String(chosen.id),
+          warning: `The card was showing in ${appearsIn.length} columns at once; it has been put back in "${chosen.name}".`,
+        }
+      }
+    }
+
+    // Last: has someone moved the card in the tracker since we last looked? The
+    // tracker's answer wins, but it has to be written back to the app, not just
+    // respected in silence — otherwise the app keeps believing the old column
+    // and the user's next pick of that column looks like "no change" and does
+    // nothing. Reconciling to it also collapses the two-cards-one-bug rendering
+    // that the disagreement produces.
+    if (chosen && provider.getTrackerColumn) {
+      const trackerColumnId = await provider.getTrackerColumn(boardId, externalId)
+      if (trackerColumnId && String(trackerColumnId) !== String(chosen.id)) {
+        const trackerColumn = columns.find((c) => String(c.id) === String(trackerColumnId))
+        if (trackerColumn) {
+          console.warn(
+            `[sync-bug-report] ${externalId} was moved to "${trackerColumn.name}" in the tracker; ` +
+              `adopting it over the app's "${chosen.name}".`
+          )
+          await provider.reconcileColumn(boardId, trackerColumn, externalId)
+          return {
+            columnId: String(trackerColumn.id),
+            adopted: true,
+            warning:
+              `This bug was moved to "${trackerColumn.name}" in the tracker, so that column now ` +
+              `applies here too (it was set to "${chosen.name}").`,
+          }
+        }
+      }
+    }
+    return {}
   } catch (err: any) {
-    console.warn(`[sync-bug-report] Board placement for ${externalId} skipped: ${err?.message}`)
-    return undefined
+    const message = err?.message || "unknown error"
+    console.warn(`[sync-bug-report] Board placement for ${externalId} skipped: ${message}`)
+    return { warning: `The bug synced, but its card could not be placed on the board: ${message}` }
   }
 }
 
@@ -216,7 +301,13 @@ async function resolvePriorityId(
 }
 
 export type BugSyncResult =
-  | { status: "created" | "updated"; externalId: string; externalUrl: string | null }
+  | {
+      status: "created" | "updated"
+      externalId: string
+      externalUrl: string | null
+      /** Set when the item synced but its board placement did not go as asked. */
+      warning?: string
+    }
   | { status: "skipped"; reason: string }
 
 /**
@@ -347,11 +438,11 @@ export async function syncBugReport(
 
     if (wp && mapping) {
       const existingMapping = mapping // narrowed for the block below
-      const placed = boardId
+      const placed: PlacementOutcome = boardId
         ? await placeBugOnBoard(
             provider, boardId, existingMapping.externalId, columnId, false, existingMapping.placementColumnId
           )
-        : undefined
+        : {}
       await syncBugAttachments(provider, existingMapping.externalId, bug.screenshotPath, bug.bugAttachments)
       await prisma.externalSyncMapping.update({
         where: { id: existingMapping.id },
@@ -359,10 +450,23 @@ export async function syncBugReport(
           lastSyncedAt: new Date(),
           lastSyncStatus: "success",
           lastSyncError: null,
-          ...(placed ? { placementColumnId: placed } : {}),
+          ...(placed.columnId ? { placementColumnId: placed.columnId } : {}),
         },
       })
-      return { status: "updated", externalId: wp.externalId, externalUrl: existingMapping.externalUrl }
+      // The card was moved in the tracker: bring the app's own record into line
+      // so the board and the bug stop disagreeing.
+      if (placed.adopted && placed.columnId) {
+        await prisma.bugReport.update({
+          where: { id: bug.id },
+          data: { openProjectBoardColumnId: placed.columnId },
+        })
+      }
+      return {
+        status: "updated",
+        externalId: wp.externalId,
+        externalUrl: existingMapping.externalUrl,
+        warning: placed.warning,
+      }
     }
   }
 
@@ -425,18 +529,29 @@ export async function syncBugReport(
       },
     })
 
-    const placed = boardId
+    const placed: PlacementOutcome = boardId
       ? await placeBugOnBoard(provider, boardId, wp.externalId, columnId, !orphan, claim.placementColumnId)
-      : undefined
+      : {}
     await syncBugAttachments(provider, wp.externalId, bug.screenshotPath, bug.bugAttachments)
-    if (placed) {
+    if (placed.columnId) {
       await prisma.externalSyncMapping.update({
         where: { id: claim.id },
-        data: { placementColumnId: placed },
+        data: { placementColumnId: placed.columnId },
       })
+      if (placed.adopted) {
+        await prisma.bugReport.update({
+          where: { id: bug.id },
+          data: { openProjectBoardColumnId: placed.columnId },
+        })
+      }
     }
 
-    return { status: orphan ? "updated" : "created", externalId: wp.externalId, externalUrl }
+    return {
+      status: orphan ? "updated" : "created",
+      externalId: wp.externalId,
+      externalUrl,
+      warning: placed.warning,
+    }
   } catch (err: any) {
     // Release the claim so the next attempt can retry rather than being told a
     // sync is in progress forever.

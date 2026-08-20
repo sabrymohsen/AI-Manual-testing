@@ -268,30 +268,99 @@ export class OpenProjectProvider implements WorkItemProvider {
     return this.client.boardContainsWorkPackage(Number(boardId), externalId)
   }
 
+  /**
+   * Which board columns list this card in their widget id filter — the side of
+   * the board this app writes. One read of the grid; no per-column queries.
+   *
+   * Deliberately does NOT consult each column's own query, even though
+   * board-diagnostics does. The query is what OpenProject's board UI updates
+   * when someone drags a card, so filter-vs-query disagreement is the normal
+   * signature of a user drag we have not caught up with. Treating that as
+   * breakage would drag the card straight back out from under them. Two
+   * *filters* holding the same id, by contrast, is only ever our own bug.
+   */
+  async getCardColumns(boardId: string, externalId: string): Promise<string[]> {
+    return this.client.getWidgetIdsContaining(Number(boardId), externalId)
+  }
+
+  /**
+   * The column whose own OpenProject query returns this card — i.e. where the
+   * board UI shows it after someone dragged it there.
+   *
+   * Costs one query read per column, so it is only worth calling when the
+   * cheaper filter-side checks have already come back clean. Status/version/
+   * assignee columns are skipped: their position follows a work package field
+   * that the normal update path already writes, so the query adds nothing.
+   */
+  async getTrackerColumn(boardId: string, externalId: string): Promise<string | null> {
+    const cols = await this.client.getBoardColumns(Number(boardId))
+    const target = String(externalId)
+    for (const c of cols) {
+      if (c.columnType !== "basic" || !c.queryId) continue
+      const queryIds = await this.client.getQueryResultIds(c.queryId)
+      if (queryIds.includes(target)) return String(c.widgetId)
+    }
+    return null
+  }
+
   private async setAttribute(externalId: string, column: BoardColumn): Promise<boolean> {
     if (!column.attributeId) return false
     const links: Record<string, { href: string }> = {}
     if (column.columnType === "version") links.version = { href: this.client.versionHref(column.attributeId) }
     else if (column.columnType === "assignee") links.assignee = { href: this.client.assigneeHref(column.attributeId) }
+    else if (column.columnType === "status") links.status = { href: this.client.statusHref(column.attributeId) }
     else return false
     const wp = await this.client.getWorkPackage(externalId)
     await this.client.updateWorkPackage(externalId, { _links: links }, wp.lockVersion)
     return true
   }
 
+  /**
+   * Moves a card on a STATUS board by transitioning the work package's status —
+   * a status column has no card list to write to, the board renders each work
+   * package under whatever status it currently holds.
+   *
+   * The type's workflow decides which transitions are legal. We ask first, so a
+   * move the workflow forbids fails with a message naming the statuses that are
+   * actually reachable instead of OpenProject's bare "can't be blank"-style 422.
+   * When the allowed set can't be read we attempt the transition anyway and let
+   * the API be the judge.
+   */
+  private async setStatusColumn(column: BoardColumn, externalId: string): Promise<boolean> {
+    if (!column.attributeId) return false
+
+    const allowed = await this.client.getAllowedStatusIds(externalId)
+    if (allowed && !allowed.includes(String(column.attributeId))) {
+      const names = await this.client.getStatusNames()
+      const target = names.get(String(column.attributeId)) || `status ${column.attributeId}`
+      const reachable = allowed.map((id) => names.get(id) || id).join(", ")
+      throw new Error(
+        `Workflow does not allow moving #${externalId} to "${target}". ` +
+          `Allowed from its current status: ${reachable || "(none)"}.`
+      )
+    }
+    return this.setAttribute(externalId, column)
+  }
+
   async reconcileColumn(boardId: string, column: BoardColumn, externalId: string): Promise<boolean> {
     if (column.columnType === "basic") {
       return this.client.setBoardCardColumn(Number(boardId), Number(column.id), externalId)
     }
+    if (column.columnType === "status") {
+      return this.setStatusColumn(column, externalId)
+    }
     if (column.columnType === "version" || column.columnType === "assignee") {
       return this.setAttribute(externalId, column)
     }
-    return true // status boards: WP shows by its status; nothing to place
+    return true
   }
 
   async placeOnColumn(boardId: string, column: BoardColumn, externalId: string): Promise<boolean> {
     if (column.columnType === "basic") {
       return this.client.addWorkPackageToBoardWidget(Number(boardId), Number(column.id), externalId)
+    }
+    if (column.columnType === "status") {
+      return this.setStatusColumn(column, externalId)
     }
     if (column.columnType === "version" || column.columnType === "assignee") {
       return this.setAttribute(externalId, column)

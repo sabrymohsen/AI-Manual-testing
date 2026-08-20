@@ -993,6 +993,25 @@ export class OpenProjectClient {
    * idempotent: if the card is already on the board — possibly moved by the user
    * to a different column — re-placing it would duplicate it.
    */
+  /**
+   * The widget ids of every column whose injected id filter lists this work
+   * package. Single grid read — the cheap sibling of boardContainsWorkPackage,
+   * which answers the same question but throws away *where*.
+   *
+   * More than one entry means the card renders twice on the same board, which
+   * only a half-completed placement produces.
+   */
+  async getWidgetIdsContaining(boardId: number, wpId: string | number): Promise<string[]> {
+    const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
+    if (!gridRes.ok) return []
+    const grid = await gridRes.json()
+    const widgets: any[] = Array.isArray(grid?.widgets) ? grid.widgets : []
+    const target = String(wpId)
+    return widgets
+      .filter((w: any) => OpenProjectClient.widgetIds(w).includes(target))
+      .map((w: any) => String(w.id))
+  }
+
   async boardContainsWorkPackage(boardId: number, wpId: string | number): Promise<boolean> {
     const gridRes = await this.apiFetch(`/api/v3/grids/${boardId}`)
     if (!gridRes.ok) return false
@@ -1082,6 +1101,41 @@ export class OpenProjectClient {
 
   get projectUrl(): string {
     return `${this.baseUrl}/projects/${this.projectIdentifier}`
+  }
+
+  /**
+   * The statuses this work package is allowed to move to right now, as ids.
+   *
+   * OpenProject enforces a per-type workflow: from "New" you may be able to
+   * reach "In progress" but not "Closed". A PATCH to a status the workflow
+   * forbids is rejected with a 422 whose message doesn't say what WOULD have
+   * been allowed. The form endpoint does, so reading it first turns "the card
+   * won't move" into a message naming the statuses that are reachable.
+   *
+   * Returns null when the form can't be read (older instance, permissions) —
+   * callers should then attempt the transition and let the API decide, rather
+   * than blocking a move that might well be legal.
+   */
+  async getAllowedStatusIds(wpId: string | number): Promise<string[] | null> {
+    try {
+      const form = await this.apiJson<any>(`/api/v3/work_packages/${wpId}/form`, { method: "POST" })
+      const allowed: any[] = form?._embedded?.schema?.status?._embedded?.allowedValues || []
+      if (!Array.isArray(allowed) || allowed.length === 0) return null
+      return allowed.map((s: any) => String(s.id ?? String(s._links?.self?.href || "").split("/").pop()))
+    } catch {
+      return null
+    }
+  }
+
+  /** Human-readable status names keyed by id, for error messages. */
+  async getStatusNames(): Promise<Map<string, string>> {
+    try {
+      const data = await this.apiJson<any>(`/api/v3/statuses`)
+      const elements: any[] = data?._embedded?.elements || []
+      return new Map(elements.map((s: any) => [String(s.id), String(s.name)]))
+    } catch {
+      return new Map()
+    }
   }
 
   workPackageUrl(wpId: string | number): string {
