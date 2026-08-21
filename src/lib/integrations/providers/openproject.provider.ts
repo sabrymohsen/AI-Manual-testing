@@ -303,6 +303,42 @@ export class OpenProjectProvider implements WorkItemProvider {
     return null
   }
 
+  /**
+   * Builds the hidden query behind each column, then the board that hosts them.
+   * If the board create fails the queries are deleted again — otherwise every
+   * failed attempt leaves orphaned hidden queries in the OpenProject project.
+   */
+  async createStatusBoard(
+    name: string,
+    columns: Array<{ name: string; statusId: string }>,
+    opts: { typeId?: string | null } = {}
+  ): Promise<{
+    boardId: string
+    url: string
+    columns: Array<{ name: string; statusId: string; queryId: string }>
+  }> {
+    const typeId = opts.typeId ?? null
+    const built: Array<{ name: string; statusId: string; queryId: string }> = []
+
+    for (const col of columns) {
+      const queryId = await this.client.createBoardColumnQuery(col.name, col.statusId, typeId)
+      built.push({ name: col.name, statusId: col.statusId, queryId })
+    }
+
+    let boardId: number
+    try {
+      boardId = await this.client.createBoard(
+        name,
+        built.map((c) => ({ name: c.name, queryId: c.queryId, statusId: c.statusId, typeId }))
+      )
+    } catch (err) {
+      await Promise.all(built.map((c) => this.client.deleteQuery(c.queryId)))
+      throw err
+    }
+
+    return { boardId: String(boardId), url: this.client.boardUrl(boardId), columns: built }
+  }
+
   private async setAttribute(externalId: string, column: BoardColumn): Promise<boolean> {
     if (!column.attributeId) return false
     const links: Record<string, { href: string }> = {}

@@ -43,6 +43,8 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
   const [failedStatusId, setFailedStatusId] = useState("")
   const [blockedStatusId, setBlockedStatusId] = useState("")
   const [boardId, setBoardId] = useState("")
+  /** The full stored statusMapping, so saving here cannot drop keys this panel doesn't edit. */
+  const [statusMapping, setStatusMapping] = useState<Record<string, unknown>>({})
 
   const [autoSyncResults, setAutoSyncResults] = useState(true)
   const [autoCreateBugOnFailure, setAutoCreateBugOnFailure] = useState(true)
@@ -75,6 +77,10 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
         setFailedStatusId(i.statusMapping?.failed || "")
         setBlockedStatusId(i.statusMapping?.blocked || "")
         setBoardId(i.boardConfig?.boardId || "")
+        // Keep the whole object: this panel edits only the test-run statuses,
+        // but the bug status mapping lives in here too and a save that sent
+        // just these three keys would silently drop it.
+        setStatusMapping(i.statusMapping && typeof i.statusMapping === "object" ? i.statusMapping : {})
         setAutoSyncResults(i.autoSyncResults ?? true)
         setAutoCreateBugOnFailure(i.autoCreateBugOnFailure ?? true)
         setAutoSyncBugToTracker(i.autoSyncBugToTracker ?? false)
@@ -132,7 +138,12 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
         body: JSON.stringify({
           ...body(),
           typeMapping: { bug: bugTypeId || null },
-          statusMapping: { passed: passedStatusId || null, failed: failedStatusId || null, blocked: blockedStatusId || null },
+          statusMapping: {
+            ...statusMapping,
+            passed: passedStatusId || null,
+            failed: failedStatusId || null,
+            blocked: blockedStatusId || null,
+          },
           boardConfig: { boardId: boardId || null },
           autoSyncResults,
           autoCreateBugOnFailure,

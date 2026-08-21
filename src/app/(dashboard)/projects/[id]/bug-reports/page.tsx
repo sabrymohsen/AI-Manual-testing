@@ -10,6 +10,7 @@ import { ActiveProjectContextBar } from "@/components/ui/active-project-context-
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import RebuildTrackerBugsModal from "@/components/bug-reports/rebuild-tracker-bugs-modal"
 import CreateBugBoardModal from "@/components/bug-reports/create-bug-board-modal"
+import BugStatusMappingModal from "@/components/bug-reports/bug-status-mapping-modal"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
@@ -49,7 +50,8 @@ import {
   MoreHorizontal,
   ChevronDown,
   Pencil,
-  Tag
+  Tag,
+  GitCompare
 } from "lucide-react"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import {
@@ -323,6 +325,7 @@ export default function ProjectBugReportsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showRebuildModal, setShowRebuildModal] = useState(false)
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false)
+  const [showStatusMappingModal, setShowStatusMappingModal] = useState(false)
 
   // Inline editing state inside Drawer
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -1208,11 +1211,22 @@ export default function ProjectBugReportsPage() {
           {trackerProvider === "OpenProject" && (
             <button
               onClick={() => setShowCreateBoardModal(true)}
-              title="Create a board in OpenProject with one column per bug status"
+              title={`Create a board in ${trackerName || "the tracker"} with one column per status`}
               className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-1.5"
             >
               <Kanban className="h-3.5 w-3.5 text-indigo-500" />
               Create bug board
+            </button>
+          )}
+
+          {trackerName && (
+            <button
+              onClick={() => setShowStatusMappingModal(true)}
+              title={`Choose which ${trackerName} status each bug status means`}
+              className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-1.5"
+            >
+              <GitCompare className="h-3.5 w-3.5 text-indigo-500" />
+              Status mapping
             </button>
           )}
 
@@ -2550,6 +2564,13 @@ export default function ProjectBugReportsPage() {
       )}
 
       {/* Create the OpenProject bug board: name it, columns come from the workflow. */}
+      <BugStatusMappingModal
+        projectId={projectId}
+        open={showStatusMappingModal}
+        onClose={() => setShowStatusMappingModal(false)}
+        onSaved={() => showToastMsg("Bug status mapping saved.")}
+      />
+
       <CreateBugBoardModal
         projectId={projectId}
         open={showCreateBoardModal}

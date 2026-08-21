@@ -13,6 +13,7 @@ import path from "node:path"
 import { prisma } from "@/lib/db"
 import { loadIntegration, persistDetectedBugType } from "./load-integration"
 import { mergeStoredCustomFields } from "./custom-fields"
+import { readBugStatusMapping, trackerStatusIdFor } from "./bug-status-mapping"
 import type { WorkItemProvider } from "./provider"
 import type { BoardColumn, WorkItemInput } from "./types"
 import { IMAGE_CONTENT_TYPES, entityMarker } from "./types"
@@ -403,6 +404,14 @@ export async function syncBugReport(
   )
   await applyBugSource(provider, bugTypeId, bug.source, linkFields)
 
+  // ── Status ───────────────────────────────────────────────────────────────────
+  // Only when the user has mapped this bug status to one of the tracker's own.
+  // Unmapped means "leave the tracker's status alone": the app cannot know what
+  // another tool's statuses mean, and guessing would move a work item somewhere
+  // nobody asked for. On a status board the status IS the column, so this is
+  // also what makes a bug's card follow its status without any placement logic.
+  const statusId = trackerStatusIdFor(readBugStatusMapping(loaded.statusMapping), bug.status)
+
   const input: WorkItemInput = {
     title,
     description,
@@ -410,6 +419,7 @@ export async function syncBugReport(
     priorityId,
     assigneeId: bug.assignedTo || null,
     parentId,
+    statusId,
     linkFields,
     scalarFields,
   }

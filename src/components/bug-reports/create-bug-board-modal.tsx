@@ -6,27 +6,27 @@ import { Input } from "@/components/ui/input"
 import { Kanban, X, ExternalLink, CheckCircle2, AlertTriangle } from "lucide-react"
 
 /**
- * Create the bug-workflow board in OpenProject.
+ * Create the bug board in the connected tracker.
  *
- * The only decision left to the user is the board's name — the columns come from
- * the bug workflow itself, matched to the statuses the OpenProject project
- * actually has. They are shown before creating so there are no surprises, but
- * there is nothing to configure.
+ * The columns are the tracker's OWN statuses — not a fixed set decided by this
+ * app — so the board matches however the team actually works, in whatever
+ * language their tracker is configured in. Every status is ticked by default:
+ * a status with no column is a status a bug can reach and then vanish from the
+ * board, so leaving one out is a deliberate choice, never the default.
  */
 
 interface ColumnPlan {
-  bugStatus: string
+  statusId: string
   name: string
-  statusId: string | null
-  statusName: string | null
+  selected: boolean
 }
 
 interface CreateResult {
-  boardId: number
+  boardId: string
   url: string
-  bugTypeName?: string
-  columns: Array<{ name: string; statusName: string | null }>
-  unmatched: string[]
+  bugTypeName?: string | null
+  columns: Array<{ name: string; statusId: string }>
+  excluded: string[]
   setAsDefault: boolean
 }
 
@@ -41,6 +41,8 @@ interface Props {
 export default function CreateBugBoardModal({ projectId, open, onClose, onCreated }: Props) {
   const [name, setName] = useState("Bug Workflow")
   const [plan, setPlan] = useState<ColumnPlan[] | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [providerName, setProviderName] = useState<string>("the tracker")
   const [bugTypeName, setBugTypeName] = useState<string | null>(null)
   const [result, setResult] = useState<CreateResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -51,6 +53,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
     if (!open) return
     setName("Bug Workflow")
     setPlan(null)
+    setSelected(new Set())
     setBugTypeName(null)
     setResult(null)
     setError(null)
@@ -58,8 +61,11 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
     fetch(`/api/projects/${projectId}/integrations/openproject/bug-board`)
       .then(async (res) => {
         const data = await res.json()
-        if (!res.ok) throw new Error(data.error || "Could not read OpenProject statuses")
-        setPlan(data.columns || [])
+        if (!res.ok) throw new Error(data.error || "Could not read the tracker's statuses")
+        const columns: ColumnPlan[] = data.columns || []
+        setPlan(columns)
+        setSelected(new Set(columns.filter((c) => c.selected).map((c) => c.statusId)))
+        setProviderName(data.provider || "the tracker")
         setBugTypeName(data.bugTypeName || null)
       })
       .catch((err) => setError(err.message))
@@ -73,7 +79,10 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
       const res = await fetch(`/api/projects/${projectId}/integrations/openproject/bug-board`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() || undefined }),
+        body: JSON.stringify({
+          name: name.trim() || undefined,
+          statusIds: Array.from(selected),
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || "Could not create the board")
@@ -88,15 +97,23 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
 
   if (!open) return null
 
-  const willCreate = plan?.filter((c) => c.statusId) || []
-  const skipped = plan?.filter((c) => !c.statusId) || []
+  const willCreate = plan?.filter((c) => selected.has(c.statusId)) || []
+  const skipped = plan?.filter((c) => !selected.has(c.statusId)) || []
+
+  const toggle = (statusId: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(statusId)) next.delete(statusId)
+      else next.add(statusId)
+      return next
+    })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-[520px] bg-background rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 text-xs font-semibold">
         <div className="p-5 border-b flex items-center justify-between bg-accent/10">
           <h3 className="font-extrabold text-sm flex items-center gap-1.5 text-foreground">
-            <Kanban className="h-4 w-4 text-indigo-500" /> Create bug board in OpenProject
+            <Kanban className="h-4 w-4 text-indigo-500" /> Create bug board in {providerName}
           </h3>
           <button
             onClick={onClose}
@@ -116,7 +133,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
 
           {loading && (
             <p className="text-muted-foreground animate-pulse font-bold py-6 text-center">
-              Reading the OpenProject statuses…
+              Reading the tracker's statuses…
             </p>
           )}
 
@@ -128,12 +145,13 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
               <p className="text-[11px] text-slate-700 leading-relaxed">
                 {result.columns.length} column(s):{" "}
                 <span className="font-bold">{result.columns.map((c) => c.name).join(" · ")}</span>
-                {result.bugTypeName && `, each showing only ${result.bugTypeName} work packages`}
+                {result.bugTypeName && `, each showing only ${result.bugTypeName} items`}
                 {result.setAsDefault && " — and this project's bugs now sync onto it."}
               </p>
-              {result.unmatched.length > 0 && (
+              {result.excluded.length > 0 && (
                 <p className="text-[10px] text-amber-700 font-medium">
-                  No column for {result.unmatched.join(", ")} — OpenProject has no matching status.
+                  No column for {result.excluded.join(", ")} — a bug reaching one of those statuses
+                  will not show on this board.
                 </p>
               )}
               <a
@@ -159,24 +177,56 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase text-muted-foreground font-bold">
-                  Columns created for you
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {willCreate.map((col) => (
-                    <span
-                      key={col.bugStatus}
-                      title={`Shows bugs whose OpenProject status is "${col.statusName}"`}
-                      className="px-2 py-1 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-800 text-[10px] font-bold"
-                    >
-                      {col.name}
-                    </span>
-                  ))}
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] uppercase text-muted-foreground font-bold">
+                    Columns — one per {providerName} status
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelected(
+                        selected.size === plan.length
+                          ? new Set()
+                          : new Set(plan.map((c) => c.statusId))
+                      )
+                    }
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700"
+                  >
+                    {selected.size === plan.length ? "Clear all" : "Select all"}
+                  </button>
                 </div>
+
+                <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border p-1.5">
+                  {plan.map((col) => {
+                    const on = selected.has(col.statusId)
+                    return (
+                      <label
+                        key={col.statusId}
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] font-bold transition-colors ${
+                          on
+                            ? "border-indigo-200 bg-indigo-50 text-indigo-800"
+                            : "border-transparent text-muted-foreground hover:bg-accent"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={on}
+                          onChange={() => toggle(col.statusId)}
+                          disabled={creating}
+                          className="rounded"
+                        />
+                        {col.name}
+                      </label>
+                    )
+                  })}
+                </div>
+
                 <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
-                  Each column shows only <span className="font-bold">{bugTypeName || "Bug"}</span>{" "}
-                  work packages holding that status — no tasks or features — so a bug is always in
-                  exactly one column and can never appear twice.
+                  Column names come from {providerName} itself.
+                  {bugTypeName
+                    ? ` Each shows only ${bugTypeName} items holding that status`
+                    : " Each shows only items holding that status"}
+                  , so a bug is always in exactly one column and can never appear twice.
                 </p>
               </div>
 
@@ -187,8 +237,8 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                     No column for {skipped.map((c) => c.name).join(", ")}
                   </p>
                   <p className="text-[10px] text-amber-800/90 font-medium mt-0.5 leading-relaxed">
-                    OpenProject has no status matching these. Add them there and create the board
-                    again if you need those columns.
+                    A bug that reaches one of these statuses will not appear on the board at all —
+                    it is not lost, just not shown. Tick them above unless you mean to hide them.
                   </p>
                 </div>
               )}

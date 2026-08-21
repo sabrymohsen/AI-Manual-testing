@@ -96,6 +96,26 @@ export interface WorkItemProvider {
    * adopt the move instead of silently disagreeing with it forever. Optional.
    */
   getTrackerColumn?(boardId: string, externalId: string): Promise<string | null>
+
+  // ─── Board creation (optional capability) ─────────────────────────────────────
+  /**
+   * Create a board whose columns are each filtered to one tracker status, and
+   * optionally to one work-item type.
+   *
+   * Deliberately takes the columns it is told to make rather than deciding them:
+   * which statuses deserve a column is the user's call and differs per tracker,
+   * so no status vocabulary is assumed here. Providers whose boards cannot be
+   * created through the API simply omit this.
+   */
+  createStatusBoard?(
+    name: string,
+    columns: Array<{ name: string; statusId: string }>,
+    opts?: { typeId?: string | null }
+  ): Promise<{
+    boardId: string
+    url: string
+    columns: Array<{ name: string; statusId: string; queryId: string }>
+  }>
   /**
    * Reconcile the card to sit in EXACTLY the target column (moves it out of any
    * other column, no-op if already there). Returns false when placement is not
