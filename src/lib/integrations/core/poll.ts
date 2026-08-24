@@ -9,6 +9,7 @@
 import { prisma } from "@/lib/db"
 import { loadIntegration } from "./load-integration"
 import { reconcileInboundEvent } from "./inbound"
+import { readBugStatusMapping } from "./bug-status-mapping"
 import type { NormalizedInboundEvent } from "./types"
 
 export interface PollResult {
@@ -25,6 +26,10 @@ export async function pollInboundForProject(projectId: string): Promise<PollResu
   const mappings = await prisma.externalSyncMapping.findMany({
     where: { projectId, provider: loaded.provider as any },
   })
+
+  // Read the project's bug status mapping once and hand it to every reconcile,
+  // rather than letting each of them re-query it per work package.
+  const ctx = { bugStatusMapping: readBugStatusMapping(loaded.statusMapping) }
 
   let checked = 0
   let applied = 0
@@ -44,7 +49,7 @@ export async function pollInboundForProject(projectId: string): Promise<PollResu
         occurredAt: new Date(),
         action: "updated",
       }
-      const did = await reconcileInboundEvent(projectId, loaded.provider, provider, event)
+      const did = await reconcileInboundEvent(projectId, loaded.provider, provider, event, ctx)
       if (did) applied++
     } catch (err: any) {
       console.warn(`[poll] ${loaded.provider} item ${m.externalId} failed: ${err?.message}`)

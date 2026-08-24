@@ -477,6 +477,16 @@ export async function syncBugReport(
           lastSyncStatus: "success",
           lastSyncError: null,
           ...(placed.columnId ? { placementColumnId: placed.columnId } : {}),
+          // Record the status the tracker now reports, so the mirrored board
+          // reflects this sync immediately instead of waiting for the next poll
+          // to tell it what we just wrote.
+          ...(wp.statusId
+            ? {
+                externalStatusId: String(wp.statusId),
+                externalStatusName: wp.statusName || null,
+                externalStatusAt: new Date(),
+              }
+            : {}),
         },
       })
       // The card was moved in the tracker: bring the app's own record into line
@@ -552,6 +562,15 @@ export async function syncBugReport(
         lastSyncedAt: new Date(),
         lastSyncStatus: "success",
         lastSyncError: null,
+        // The tracker's own status for the new card, so the mirrored board can
+        // place it on the very next render rather than after the next poll.
+        ...(wp.statusId
+          ? {
+              externalStatusId: String(wp.statusId),
+              externalStatusName: wp.statusName || null,
+              externalStatusAt: new Date(),
+            }
+          : {}),
       },
     })
 

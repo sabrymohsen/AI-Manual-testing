@@ -116,3 +116,28 @@ export function trackerStatusIdFor(
   if (!appStatus) return null
   return mapping[appStatus as AppBugStatus] ?? null
 }
+
+/**
+ * The reverse: which app bug status a tracker status means, or null when the
+ * user has not mapped that tracker status to anything.
+ *
+ * Null is a real answer, not a failure. A tracker workflow routinely holds
+ * states the app has no word for — "Specified", "To be scheduled", "Developed" —
+ * and inventing a local status for them would be a lie that then syncs back out.
+ * Callers keep the local status as-is and rely on the mirrored board, which
+ * groups by the tracker's own status, to show where the bug really is.
+ *
+ * The PUT handler that saves the mapping rejects two app statuses sharing one
+ * tracker status, so this lookup is unambiguous by construction.
+ */
+export function appStatusForTrackerStatus(
+  mapping: BugStatusMapping,
+  trackerStatusId: string | null | undefined
+): AppBugStatus | null {
+  if (!trackerStatusId) return null
+  const target = String(trackerStatusId).trim()
+  for (const appStatus of APP_BUG_STATUSES) {
+    if (mapping[appStatus] === target) return appStatus
+  }
+  return null
+}

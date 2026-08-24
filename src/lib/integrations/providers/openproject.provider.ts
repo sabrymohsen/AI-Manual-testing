@@ -6,6 +6,7 @@
  * and the normalized domain model. Behavior for existing OpenProject projects is
  * intentionally unchanged.
  */
+import crypto from "crypto"
 import {
   OpenProjectClient,
   type OpWorkPackage,
@@ -36,9 +37,11 @@ function hrefId(href: string | undefined | null): string | null {
 export class OpenProjectProvider implements WorkItemProvider {
   readonly provider: ProviderId = "OpenProject"
   private client: OpenProjectClient
+  private webhookSecret: string | null
 
   constructor(conn: ProviderConnection) {
     this.client = new OpenProjectClient(conn.baseUrl, conn.externalProjectKey, conn.apiToken)
+    this.webhookSecret = conn.webhookSecret || null
   }
 
   private mapWp(wp: OpWorkPackage): WorkItem {
@@ -406,11 +409,80 @@ export class OpenProjectProvider implements WorkItemProvider {
 
   // ─── Inbound: OpenProject has no native webhooks; reconciled via polling. ──────
 
-  verifyWebhook(): boolean {
-    return false
+  // ─── Inbound webhooks ─────────────────────────────────────────────────────────
+  //
+  // These returned `false` / `[]` before, which meant the callback URL the
+  // integration screen hands out rejected every delivery OpenProject made: the
+  // only inbound path that actually worked was the two-minute poll, so a status
+  // change over there took minutes to show up here, if the poll was running at
+  // all. Both halves are implemented below; polling stays as the safety net.
+
+  /**
+   * OpenProject can authenticate a webhook two ways, and which one you get
+   * depends on how the admin filled in the form, so both are accepted:
+   *
+   *   - a signature header, HMAC-SHA1 of the raw body under the webhook secret;
+   *   - the secret carried on the callback URL (?secret=…), which the webhook
+   *     route normalizes into x-webhook-secret.
+   *
+   * With no secret configured there is nothing to check — same posture as the
+   * other providers, and the endpoint still requires a matching integration.
+   */
+  verifyWebhook(headers: Record<string, string>, rawBody: string): boolean {
+    if (!this.webhookSecret) return true
+
+    if (headers["x-webhook-secret"] === this.webhookSecret) return true
+
+    const signature = headers["x-op-signature"] || headers["x-hub-signature"]
+    if (!signature) return false
+
+    const expected =
+      "sha1=" +
+      crypto.createHmac("sha1", this.webhookSecret).update(rawBody, "utf8").digest("hex")
+
+    // Constant-time compare; length differences are rejected before comparing,
+    // because timingSafeEqual throws on mismatched lengths.
+    const a = Buffer.from(signature)
+    const b = Buffer.from(expected)
+    return a.length === b.length && crypto.timingSafeEqual(a, b)
   }
-  parseWebhook(): NormalizedInboundEvent[] {
-    return []
+
+  /**
+   * OpenProject posts `{ action: "work_package:updated", work_package: {…} }`,
+   * where the work package is the same HAL shape the REST API returns — status,
+   * assignee and priority as _links with an href and a human title.
+   *
+   * Only work-package actions are parsed. Project, time-entry and attachment
+   * events carry nothing this app maps to a local record.
+   */
+  parseWebhook(payload: any): NormalizedInboundEvent[] {
+    const action = String(payload?.action || "")
+    if (!action.startsWith("work_package")) return []
+
+    const wp = payload?.work_package
+    if (!wp?.id) return []
+
+    const links = wp._links || {}
+    const event: NormalizedInboundEvent = {
+      externalId: String(wp.id),
+      changed: {},
+      // OpenProject sends the work package's updatedAt, which is the moment the
+      // change happened — the right timestamp for last-writer-wins.
+      occurredAt: wp.updatedAt ? new Date(wp.updatedAt) : new Date(),
+      action: action.endsWith(":deleted") ? "deleted" : "updated",
+    }
+
+    const statusId = hrefId(links.status?.href)
+    if (statusId) event.changed.statusId = statusId
+    if (links.status?.title) event.changed.statusName = links.status.title
+
+    if (wp.subject) event.changed.title = wp.subject
+    const assigneeId = hrefId(links.assignee?.href)
+    if (assigneeId) event.changed.assigneeId = assigneeId
+    const priorityId = hrefId(links.priority?.href)
+    if (priorityId) event.changed.priorityId = priorityId
+
+    return [event]
   }
 
   // ─── URL helpers ──────────────────────────────────────────────────────────────

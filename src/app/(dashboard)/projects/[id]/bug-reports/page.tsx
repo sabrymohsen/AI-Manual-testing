@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useCallback, useEffect, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,7 +51,9 @@ import {
   ChevronDown,
   Pencil,
   Tag,
-  GitCompare
+  GitCompare,
+  AlertTriangle,
+  Download
 } from "lucide-react"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import {
@@ -165,6 +167,33 @@ interface OpBoardColumn {
   attributeId: string | null
 }
 
+/**
+ * The connected tracker's board, as returned by /bug-board-mirror — the columns
+ * to render and which one each bug belongs in according to the tracker itself.
+ */
+interface MirroredColumn {
+  statusId: string
+  name: string
+  appStatus: string | null
+  isClosed: boolean
+  fromBoard: boolean
+}
+
+interface BoardMirror {
+  available: boolean
+  provider: string | null
+  trackerName: string | null
+  boardId: string | null
+  boardName: string | null
+  boardUrl: string | null
+  columns: MirroredColumn[]
+  /** bug id -> tracker status id */
+  placement: Record<string, string>
+  links: Record<string, { externalId: string; url: string | null; statusName: string | null }>
+  unsyncedBugIds: string[]
+  error: string | null
+}
+
 type TabType = "overview" | "evidence" | "steps" | "test" | "activity" | "openproject"
 type ViewMode = "list" | "board"
 
@@ -199,6 +228,120 @@ const BUG_STATUS_STYLES: Record<string, { chip: string; dot: string; label: stri
   Closed: { chip: "bg-slate-100 text-slate-600 border-slate-200", dot: "bg-slate-400", label: "Closed" },
   Rejected: { chip: "bg-slate-100 text-slate-500 border-slate-200", dot: "bg-slate-400", label: "Rejected" },
   Duplicate: { chip: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500", label: "Duplicate" },
+}
+
+/**
+ * The strip above the board that says which board is being shown and where its
+ * columns came from.
+ *
+ * Worth the space because the columns are no longer this app's: when the board
+ * reads "Specified" and "To be scheduled", a person needs to know those are the
+ * tracker's words, that a drag will move the card over there too, and how to get
+ * back to the app's own six if they'd rather.
+ */
+function BoardMirrorBar({
+  mirror,
+  mirrorActive,
+  mirrorLoading,
+  trackerName,
+  useMirror,
+  onToggleMirror,
+  onPull,
+  pulling,
+  unsyncedCount,
+}: {
+  mirror: BoardMirror | null
+  mirrorActive: boolean
+  mirrorLoading: boolean
+  trackerName: string | null
+  useMirror: boolean
+  onToggleMirror: (v: boolean) => void
+  onPull: () => void
+  pulling: boolean
+  unsyncedCount: number
+}) {
+  // Nothing connected: the app's own columns are the only columns, and saying
+  // so on every board render would be noise.
+  if (!mirror?.provider && !mirrorLoading) return null
+
+  const label = mirror?.boardName
+    ? `${mirror.boardName} · ${trackerName || mirror.provider}`
+    : `${trackerName || mirror?.provider} workflow`
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-card/65 px-3 py-2">
+      <span className="flex items-center gap-1.5 text-[11px] font-extrabold text-slate-700 min-w-0">
+        <Kanban className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+        {mirrorLoading ? (
+          <span className="text-slate-400">Reading the tracker board…</span>
+        ) : mirrorActive ? (
+          <span className="truncate" dir="auto">{label}</span>
+        ) : (
+          <span className="text-slate-500">App statuses</span>
+        )}
+      </span>
+
+      {mirrorActive && (
+        <span className="text-[10px] font-semibold text-slate-400">
+          {mirror!.columns.some((c) => c.fromBoard)
+            ? "columns mirrored from the tracker board"
+            : "columns mirrored from the tracker workflow"}
+        </span>
+      )}
+
+      {mirror?.error && (
+        <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700">
+          <AlertTriangle className="h-3 w-3" />
+          {mirror.error}
+        </span>
+      )}
+
+      {mirrorActive && unsyncedCount > 0 && (
+        <span className="text-[10px] font-semibold text-amber-700">
+          {unsyncedCount} not synced
+        </span>
+      )}
+
+      <div className="ml-auto flex items-center gap-2">
+        {mirror?.boardUrl && (
+          <a
+            href={mirror.boardUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-[10px] font-bold hover:bg-accent transition-colors"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Open in {trackerName || mirror.provider}
+          </a>
+        )}
+
+        <button
+          onClick={onPull}
+          disabled={pulling}
+          title={`Pull status changes made in ${trackerName || "the tracker"} right now`}
+          className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-[10px] font-bold hover:bg-accent transition-colors disabled:opacity-50"
+        >
+          <Download className={`h-3 w-3 ${pulling ? "animate-pulse" : ""}`} />
+          {pulling ? "Pulling…" : "Pull changes"}
+        </button>
+
+        {mirror?.available && (
+          <button
+            onClick={() => onToggleMirror(!useMirror)}
+            title={
+              useMirror
+                ? "Show this app's own bug statuses as columns instead"
+                : `Mirror the ${trackerName || "tracker"} board's columns`
+            }
+            className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-[10px] font-bold hover:bg-accent transition-colors"
+          >
+            <GitCompare className="h-3 w-3 text-indigo-500" />
+            {useMirror ? "App statuses" : `${trackerName || "Tracker"} columns`}
+          </button>
+        )}
+      </div>
+    </div>
+  )
 }
 
 /** Section heading used across the drawer Overview tab. */
@@ -367,6 +510,18 @@ export default function ProjectBugReportsPage() {
   // Board view drag-and-drop
   const [draggedBugId, setDraggedBugId] = useState<string | null>(null)
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null)
+
+  // ── Mirrored tracker board ────────────────────────────────────────────────
+  // The board the team actually works on lives in the tracker, and its workflow
+  // is wider than this app's eight bug statuses. Rather than show six local
+  // columns that no one recognises, the board renders the tracker's own columns
+  // when there is an integration, and falls back to the local ones when there
+  // isn't (or the tracker can't be reached).
+  const [mirror, setMirror] = useState<BoardMirror | null>(null)
+  const [mirrorLoading, setMirrorLoading] = useState(false)
+  const [pullingInbound, setPullingInbound] = useState(false)
+  /** Escape hatch: show the app's own statuses even when a mirror is available. */
+  const [useMirror, setUseMirror] = useState(true)
 
   // OpenProject integration details
   const [opSyncStatus, setOpSyncStatus] = useState<{ status: string; externalUrl: string | null; externalId: string | null } | null>(null)
@@ -643,6 +798,9 @@ export default function ProjectBugReportsPage() {
       })
       if (res.ok) {
         showToastMsg(`Moved to ${newStatus}`)
+        // The bug's tracker card may have moved with it (auto-sync), so re-read
+        // where the tracker has it rather than leaving a stale column on screen.
+        if (viewMode === "board") loadBoardMirror({ silent: true })
         return
       }
 
@@ -663,6 +821,125 @@ export default function ProjectBugReportsPage() {
     } catch {
       showToastMsg("Network error updating status", "error")
       loadBugsList()
+    }
+  }
+
+  // ── Mirrored board ──────────────────────────────────────────────────────────
+
+  /**
+   * Read the tracker's board layout and where it currently has each bug.
+   * Failures are deliberately quiet: the board falls back to local columns, and
+   * a red banner over a working board helps nobody.
+   */
+  const loadBoardMirror = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      if (!opts.silent) setMirrorLoading(true)
+      try {
+        const res = await fetch(`/api/projects/${projectId}/bug-board-mirror`)
+        if (res.ok) setMirror(await res.json())
+        else setMirror(null)
+      } catch {
+        setMirror(null)
+      } finally {
+        setMirrorLoading(false)
+      }
+    },
+    [projectId]
+  )
+
+  // Only fetched for the board — the list view has no use for tracker columns.
+  useEffect(() => {
+    if (viewMode === "board") loadBoardMirror()
+  }, [viewMode, loadBoardMirror])
+
+  /**
+   * Pull changes made in the tracker right now, instead of waiting for the
+   * poll worker. The same reconciliation the webhook runs, on demand.
+   */
+  const handlePullInbound = async () => {
+    setPullingInbound(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/integrations/poll`, { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        showToastMsg(
+          data.applied > 0
+            ? `Pulled ${data.applied} change${data.applied === 1 ? "" : "s"} from ${trackerName || "the tracker"}.`
+            : `Already up to date with ${trackerName || "the tracker"}.`
+        )
+        await Promise.all([loadBugsList(), loadBoardMirror({ silent: true })])
+      } else {
+        showToastMsg(data.error || "Could not pull changes", "error")
+      }
+    } catch {
+      showToastMsg("Network error pulling changes", "error")
+    } finally {
+      setPullingInbound(false)
+    }
+  }
+
+  /**
+   * Drop onto a mirrored column: move the card in the tracker, and let the local
+   * status follow when the saved mapping gives that column a local meaning.
+   */
+  const handleMoveToTrackerColumn = async (
+    bugId: string,
+    column: MirroredColumn,
+    resolution?: string
+  ) => {
+    const current = mirror?.placement[bugId]
+    if (current === column.statusId) return
+
+    // Optimistic: place the card immediately, revert on failure.
+    setMirror((prev) =>
+      prev ? { ...prev, placement: { ...prev.placement, [bugId]: column.statusId } } : prev
+    )
+
+    try {
+      const res = await fetch(`/api/bug-reports/${bugId}/board-column`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statusId: column.statusId, ...(resolution ? { resolution } : {}) }),
+      })
+      const data = await res.json().catch(() => ({}))
+
+      if (res.ok) {
+        if (data.localStatusChanged) {
+          setBugs((prev) =>
+            prev.map((b) => (b.id === bugId ? { ...b, status: data.appStatus } : b))
+          )
+          if (selectedBugId === bugId) {
+            setSelectedBug((prev) => (prev ? { ...prev, status: data.appStatus } : prev))
+          }
+          showToastMsg(`Moved to ${column.name}`)
+        } else if (data.localSkipReason === "unmapped") {
+          // Honest about the half-move: the card is where they dropped it, but
+          // no app status means that column, so reports won't reflect it.
+          showToastMsg(
+            `Moved to ${column.name} in ${trackerName || "the tracker"}. No app status is mapped to that column — set one under "Status mapping" if you want reports to follow.`
+          )
+        } else if (data.localSkipReason === "workflow") {
+          showToastMsg(
+            `Moved to ${column.name} in ${trackerName || "the tracker"}, but the app's bug workflow doesn't allow that step, so its status here is unchanged.`
+          )
+        } else {
+          showToastMsg(`Moved to ${column.name}`)
+        }
+        return
+      }
+
+      // Needs a reason before it can be closed — ask, then retry the same drop.
+      if (data.code === "RESOLUTION_REQUIRED" && column.appStatus) {
+        loadBoardMirror({ silent: true })
+        setResolutionPrompt({ bugId, targetStatus: column.appStatus })
+        return
+      }
+
+      showToastMsg(data.error || "Could not move the card", "error")
+      loadBoardMirror({ silent: true })
+    } catch {
+      showToastMsg("Network error moving the card", "error")
+      loadBoardMirror({ silent: true })
     }
   }
 
@@ -957,6 +1234,53 @@ export default function ProjectBugReportsPage() {
       setBulkApplying(false)
     }
   }
+
+  // ── Board columns ───────────────────────────────────────────────────────────
+  // One shape for both worlds so the card rendering below doesn't care which it
+  // got: `mirrored` is set only for a tracker column, and is what tells the drop
+  // handler to go out to the tracker instead of writing a local status.
+  type BoardColumnView = {
+    key: string
+    label: string
+    color: string
+    mirrored: MirroredColumn | null
+  }
+
+  const mirrorActive = useMirror && !!mirror?.available && mirror.columns.length > 0
+
+  /** The app's own six, used when there is no tracker to mirror. */
+  const LOCAL_BOARD_COLUMNS: BoardColumnView[] = [
+    { key: "Open", label: "Open", color: "border-amber-400", mirrored: null },
+    { key: "InProgress", label: "In Progress", color: "border-blue-400", mirrored: null },
+    { key: "ReadyForRetest", label: "Retesting", color: "border-purple-400", mirrored: null },
+    { key: "Resolved", label: "Resolved", color: "border-emerald-400", mirrored: null },
+    { key: "Duplicate", label: "Duplicate", color: "border-slate-300", mirrored: null },
+    { key: "Closed", label: "Closed", color: "border-slate-400", mirrored: null },
+  ]
+
+  const boardColumns: BoardColumnView[] = mirrorActive
+    ? mirror!.columns.map((c) => ({
+        key: c.statusId,
+        label: c.name,
+        // Closed columns read as settled, the rest as in-flight. Deliberately not
+        // a colour per status: the tracker's workflow can hold a dozen, and a
+        // rainbow of invented colours says less than a consistent one.
+        color: c.isClosed ? "border-slate-400" : "border-indigo-400",
+        mirrored: c,
+      }))
+    : LOCAL_BOARD_COLUMNS
+
+  /**
+   * Which bugs belong in a column. Mirrored columns place by the tracker's own
+   * status (as recorded by inbound sync); local columns by the app's status.
+   */
+  const bugsInColumn = (col: BoardColumnView) =>
+    col.mirrored
+      ? bugs.filter((b) => mirror?.placement[b.id] === col.mirrored!.statusId)
+      : bugs.filter((b) => b.status === col.key)
+
+  /** Bugs the mirrored board can't place — never synced, or in a column-less status. */
+  const unplacedBugs = mirrorActive ? bugs.filter((b) => !mirror!.placement[b.id]) : []
 
   return (
     <div className="flex-1 space-y-6 text-xs font-semibold select-none">
@@ -1592,17 +1916,25 @@ export default function ProjectBugReportsPage() {
               </div>
             </div>
           ) : (
-            /* 15. Board View (Kanban) */
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-start">
-              {[
-                { key: "Open", label: "Open", color: "border-amber-400" },
-                { key: "InProgress", label: "In Progress", color: "border-blue-400" },
-                { key: "ReadyForRetest", label: "Retesting", color: "border-purple-400" },
-                { key: "Resolved", label: "Resolved", color: "border-emerald-400" },
-                { key: "Duplicate", label: "Duplicate", color: "border-slate-300" },
-                { key: "Closed", label: "Closed", color: "border-slate-400" }
-              ].map((col) => {
-                const colBugs = bugs.filter(b => b.status === col.key)
+            /* 15. Board View (Kanban) — mirrors the tracker's board when connected */
+            <div className="space-y-3">
+              <BoardMirrorBar
+                mirror={mirror}
+                mirrorActive={mirrorActive}
+                mirrorLoading={mirrorLoading}
+                trackerName={trackerName}
+                useMirror={useMirror}
+                onToggleMirror={setUseMirror}
+                onPull={handlePullInbound}
+                pulling={pullingInbound}
+                unsyncedCount={mirrorActive ? mirror!.unsyncedBugIds.length : 0}
+              />
+
+              <div
+                className="grid gap-4 items-start grid-cols-1 md:grid-flow-col md:auto-cols-[minmax(210px,1fr)] md:overflow-x-auto pb-2"
+              >
+              {boardColumns.map((col) => {
+                const colBugs = bugsInColumn(col)
                 const isDropTarget = dragOverStatus === col.key && draggedBugId !== null
                 return (
                   <div
@@ -1615,7 +1947,13 @@ export default function ProjectBugReportsPage() {
                     }}
                     onDrop={(e) => {
                       e.preventDefault()
-                      if (draggedBugId) handleChangeBugStatus(draggedBugId, col.key)
+                      if (draggedBugId) {
+                        // A mirrored column is a tracker status, so the drop goes
+                        // out to the tracker first and the local status follows;
+                        // a local column is just the app's own status change.
+                        if (col.mirrored) handleMoveToTrackerColumn(draggedBugId, col.mirrored)
+                        else handleChangeBugStatus(draggedBugId, col.key)
+                      }
                       setDraggedBugId(null)
                       setDragOverStatus(null)
                     }}
@@ -1623,12 +1961,29 @@ export default function ProjectBugReportsPage() {
                       isDropTarget ? "bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-200" : "bg-card/65"
                     }`}
                   >
-                    <div className="flex justify-between items-center border-b pb-2 select-none">
-                      <span className="font-extrabold text-slate-800 text-[10px] uppercase flex items-center gap-1.5">
-                        <span className={`h-2 w-2 rounded-full bg-slate-500 border-2 ${col.color}`}></span>
-                        {col.label}
+                    <div className="flex justify-between items-center border-b pb-2 select-none gap-1">
+                      <span
+                        className="font-extrabold text-slate-800 text-[10px] uppercase flex items-center gap-1.5 min-w-0"
+                        title={
+                          col.mirrored
+                            ? col.mirrored.appStatus
+                              ? `${trackerName || "Tracker"} status "${col.mirrored.name}" — mapped to ${col.mirrored.appStatus} in this app`
+                              : `${trackerName || "Tracker"} status "${col.mirrored.name}" — no app status is mapped to it`
+                            : col.label
+                        }
+                      >
+                        <span className={`h-2 w-2 shrink-0 rounded-full bg-slate-500 border-2 ${col.color}`}></span>
+                        <span className="truncate" dir="auto">{col.label}</span>
+                        {/* A column the app has no word for still shows the cards
+                            that are in it — the dot just says reports won't follow. */}
+                        {col.mirrored && !col.mirrored.appStatus && (
+                          <span
+                            className="shrink-0 h-1.5 w-1.5 rounded-full bg-amber-400"
+                            title="No app status is mapped to this column"
+                          />
+                        )}
                       </span>
-                      <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold">
+                      <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full text-[9px] font-extrabold shrink-0">
                         {colBugs.length}
                       </span>
                     </div>
@@ -1684,6 +2039,34 @@ export default function ProjectBugReportsPage() {
                   </div>
                 )
               })}
+              </div>
+
+              {/* Bugs the tracker has never seen have no column to sit in. Say so
+                  rather than silently dropping them off the board. */}
+              {mirrorActive && unplacedBugs.length > 0 && (
+                <div className="p-3 border border-amber-200 bg-amber-50/60 rounded-2xl space-y-2">
+                  <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-amber-800">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    {unplacedBugs.length} defect{unplacedBugs.length === 1 ? "" : "s"} not on the {trackerName || "tracker"} board
+                  </div>
+                  <p className="text-[10px] text-amber-700">
+                    These have not been synced to {trackerName || "the tracker"} yet, or sit in a
+                    status this board has no column for. Sync them to place them.
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {unplacedBugs.map((bug) => (
+                      <button
+                        key={bug.id}
+                        onClick={() => handleOpenDetail(bug.id)}
+                        className="px-2 py-1 rounded-lg border border-amber-200 bg-background text-[10px] font-semibold hover:bg-amber-100/60 transition-colors max-w-[240px] truncate"
+                        dir="auto"
+                      >
+                        {bug.bugKey || "BUG"} · {bug.title}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

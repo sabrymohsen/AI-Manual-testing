@@ -14,6 +14,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getProvider } from "@/lib/integrations/core/factory"
 import { reconcileInboundEvent } from "@/lib/integrations/core/inbound"
+import { readBugStatusMapping } from "@/lib/integrations/core/bug-status-mapping"
 import type { ProviderId } from "@/lib/integrations/core/types"
 
 const PROVIDER_IDS = ["OpenProject", "Jira", "AzureDevOps", "ClickUp"]
@@ -56,10 +57,12 @@ export async function POST(req: Request, { params }: { params: { provider: strin
   }
 
   const events = client.parseWebhook(payload)
+  // Read the bug status mapping once for the whole batch.
+  const ctx = { bugStatusMapping: readBugStatusMapping(integration.statusMapping) }
   let applied = 0
   for (const event of events) {
     try {
-      const did = await reconcileInboundEvent(projectId, provider as ProviderId, client, event)
+      const did = await reconcileInboundEvent(projectId, provider as ProviderId, client, event, ctx)
       if (did) applied++
     } catch (err: any) {
       console.warn(`[webhook:${provider}] reconcile failed for ${event.externalId}: ${err?.message}`)

@@ -1541,12 +1541,27 @@ model ExternalSyncMapping {
   // Without it, every sync re-asserted the stored column and undid manual moves.
   placementColumnId String?
 
+  // The tracker's OWN status for this item, as last read from it.
+  //
+  // Kept raw rather than folded into the local status enum, because a tracker's
+  // workflow is richer than this app's eight BugStatus values: "Specified",
+  // "To be scheduled" and "Developed" have no local equivalent, and collapsing
+  // them to Open/Closed is exactly what made the app's board disagree with the
+  // board people actually work on. The local status is still derived from this
+  // via the project's saved status mapping — this column is what the mirrored
+  // board groups by, so a bug sits in the same column it sits in over there.
+  externalStatusId   String?
+  externalStatusName String?
+  /** When the external status above was last read from the tracker. */
+  externalStatusAt   DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([provider, localEntityType, localEntityId])
   @@index([projectId])
   @@index([localEntityId])
+  @@index([projectId, localEntityType, externalStatusId])
 }
 
 // ─── Bug occurrence — re-run of same failure links here instead of new bug ───
