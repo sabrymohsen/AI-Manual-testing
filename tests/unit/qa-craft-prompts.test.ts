@@ -31,6 +31,7 @@ describe("bug report prompt carries the QA craft", () => {
   it("still carries the tester's note and the JSON contract", () => {
     const p = prompt("checkout button does nothing")
     expect(p).toContain("checkout button does nothing")
+    expect(p).toContain("Every field must be filled with real content.")
     expect(p).toContain('"severity": "Low | Medium | High | Critical"')
     expect(p).toContain("Output valid JSON only.")
   })
@@ -62,6 +63,18 @@ describe("qa-craft content", () => {
 
   it("forbids the vague expected results that make a case unrunnable", () => {
     expect(TEST_DESIGN_CRAFT).toMatch(/works correctly/i)
+  })
+
+  it("treats an attached screenshot as evidence to read, not as invention", () => {
+    // The regression: "do not invent detail the note does not support" read as a
+    // ban on using the screenshot, so drafts came back hedged and near-empty.
+    expect(BUG_REPORT_CRAFT).toMatch(/screenshot is evidence/i)
+    expect(BUG_REPORT_CRAFT).not.toMatch(/do not invent/i)
+  })
+
+  it("demands a complete draft rather than \"not specified\" placeholders", () => {
+    expect(BUG_REPORT_CRAFT).toMatch(/never leave a field empty/i)
+    expect(BUG_REPORT_CRAFT).toMatch(/not specified/i)
   })
 
   it("keeps enum values in English so normalize() does not discard them", () => {

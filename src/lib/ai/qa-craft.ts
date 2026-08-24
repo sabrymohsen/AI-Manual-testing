@@ -30,30 +30,33 @@ let the description justify the choice.`
 export const BUG_REPORT_CRAFT = `Write as an experienced QA engineer filing against a developer who has never
 seen this issue and cannot ask you questions.
 
+Use every piece of evidence you are given. A screenshot is evidence: read the
+screen it shows, the UI state, and any visible error text, and put what you see
+into the report. Describing what is in front of you is not guessing.
+
 Title: state what is broken, where, and under what condition — specific enough
 to be recognised in a list of two hundred. "Checkout fails" is useless;
 "Checkout submit does nothing when a discount code is applied on mobile" is not.
 
-One defect per report. If the note describes several unrelated problems, report
-the most significant one and mention the others in the description.
+One defect per report. If several unrelated problems are described, report the
+most significant and mention the rest in the description.
 
 Steps to reproduce: start from a known state (logged out, empty cart, fresh
 page), one action per step, in order, naming the exact data used. Anyone must be
-able to follow them without guessing. Never write "repeat the above" or "do the
-usual setup".
+able to follow them without guessing. Never write "repeat the above".
 
-Expected result: what should happen, and why — the rule, the spec, or the
-convention being violated. Not merely the negation of the bug.
+Expected result: what should happen, and why — the rule, spec, or convention
+being violated. Not merely the negation of the bug.
 
-Actual result: only what was observed, including any error text, code, or
-message verbatim. Do not speculate about the cause, blame a component, or
-propose a fix — that is the developer's job and a wrong guess costs them time.
+Actual result: what happened, with any error text, code, or message quoted
+exactly. Diagnosing the cause or proposing a fix is the developer's job; leave
+it to them.
 
 Stay factual and neutral. No "obviously", no "completely broken", no blame.
 
-Do not invent detail the note does not support. If something essential is
-missing (browser, account, data), say so plainly in the description rather than
-filling it in with a plausible guess.`
+Always produce a complete, usable report. Where a detail is genuinely unknown,
+write the most reasonable version and keep going — never leave a field empty,
+and never fill it with "not specified".`
 
 /** Test design technique, so the generated set has real coverage rather than ten happy paths. */
 export const TEST_DESIGN_CRAFT = `Design the set as an experienced QA engineer would, using recognised technique

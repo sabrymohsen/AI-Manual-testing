@@ -57,21 +57,26 @@ export interface BugDraft {
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
 
 export function buildPrompt(input: BugDraftInput, hasImage: boolean): string {
-  const urlContext = input.appUrl ? `\nApplication URL: ${input.appUrl}` : ""
+  const urlContext = input.appUrl ? `\nApplication under test: ${input.appUrl}` : ""
+  // Kept next to the note rather than at the top: the screenshot instruction and
+  // the evidence it refers to belong together, or the model reads a page of
+  // method between them and treats the image as background.
   const imageNote = hasImage
-    ? "\nAn attached screenshot of the issue is provided — use it to infer the affected screen, UI elements, and the visible problem."
+    ? "\n\nA screenshot of the issue is attached. Read it for the affected screen, the UI state, and any visible error text, and use what you see in the report."
     : ""
 
-  return `You are a senior QA engineer. Draft a bug report from the tester's note${hasImage ? " and screenshot" : ""}.${urlContext}${imageNote}
+  return `You are a senior QA engineer. Draft a bug report from the evidence below.${urlContext}
 
 ${BUG_REPORT_CRAFT}
 
 ${SEVERITY_PRIORITY_RUBRIC}
 
+${LANGUAGE_RULE}
+
 Tester's note:
 """
 ${(input.description || "").substring(0, 6000)}
-"""
+"""${imageNote}
 
 Return ONLY valid JSON (no markdown, no extra text) matching exactly:
 {
@@ -85,10 +90,8 @@ Return ONLY valid JSON (no markdown, no extra text) matching exactly:
   "expectedResult": "what the system should do overall",
   "actualResult": "what actually happened (the defect)"
 }
-Rules:
-- 2 to 6 reproduction steps, ordered and specific.
-- ${LANGUAGE_RULE}
-- Output valid JSON only.`
+Every field must be filled with real content. 2 to 6 reproduction steps.
+Output valid JSON only.`
 }
 
 async function callOllama(input: BugDraftInput, hasImage: boolean): Promise<string> {
