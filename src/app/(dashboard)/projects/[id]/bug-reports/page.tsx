@@ -1663,7 +1663,7 @@ export default function ProjectBugReportsPage() {
                               </span>
                             </div>
 
-                            <span className="font-bold text-slate-800 line-clamp-2 leading-tight block">
+                            <span className="font-bold text-slate-800 line-clamp-2 leading-tight block" dir="auto">
                               {bug.title}
                             </span>
 
@@ -1822,7 +1822,7 @@ export default function ProjectBugReportsPage() {
                   title="Click to edit title"
                   className="group -mx-1 flex cursor-text items-start justify-between rounded-lg px-1 py-0.5 text-2xl font-bold leading-snug tracking-tight text-foreground transition-all hover:bg-muted/50"
                 >
-                  <span>{selectedBug.title}</span>
+                  <span dir="auto">{selectedBug.title}</span>
                   <Pencil className="ml-2 mt-1.5 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </h3>
               )}
@@ -1903,6 +1903,7 @@ export default function ProjectBugReportsPage() {
                         onClick={() => setIsEditingDesc(true)}
                         title="Click to edit"
                         className={`cursor-text whitespace-pre-wrap rounded-xl border bg-slate-50/60 p-3.5 text-sm leading-relaxed hover:border-indigo-200 hover:bg-indigo-50/30 ${selectedBug.stepsToReproduce ? "text-slate-700" : "italic text-slate-400"}`}
+                        dir="auto"
                       >
                         {selectedBug.stepsToReproduce || "No description provided. Click to add details."}
                       </p>

@@ -1,3 +1,5 @@
+import { BUG_REPORT_CRAFT, SEVERITY_PRIORITY_RUBRIC } from "@/lib/ai/qa-craft"
+
 export interface DraftBugReportInput {
   title: string
   actionDescription: string
@@ -32,8 +34,18 @@ export async function draftBugReport(
 ): Promise<DraftedBugReport> {
   const { baseUrl, apiKey } = getClient()
 
-  const systemPrompt = `You are an expert QA Assistant. Your task is to draft a high-quality, professional Bug Report based on a failed test step.
+  const systemPrompt = `You are a senior QA engineer drafting a bug report from a failed automated test step.
 Analyze the provided step details, error details, and execution logs.
+
+${BUG_REPORT_CRAFT}
+
+${SEVERITY_PRIORITY_RUBRIC}
+
+The failure came from automation, so the reproduction steps must be the manual
+steps a person would follow to see the same thing — not a restatement of the
+automation log. An assertion message is evidence for the actual result, not the
+actual result itself.
+
 Return ONLY valid JSON matching this structure:
 {
   "title": "string (concise and descriptive, including component and issue)",

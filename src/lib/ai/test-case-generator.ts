@@ -3,6 +3,7 @@ import {
   chatWithConfiguredProvider,
   hasConfiguredProvider,
 } from "@/lib/ai/provider-chat";
+import { TEST_DESIGN_CRAFT, LANGUAGE_RULE } from "@/lib/ai/qa-craft";
 
 export interface AIGeneratedTestCase {
   title: string;
@@ -125,8 +126,10 @@ function buildPrompt(
   ].filter(Boolean);
 
   if (isArabic) {
-    return `أنت مسؤول ضمان جودة محترف. بناءً على المتطلبات التالية، قم بإنشاء حالات اختبار مفصلة ومنظمة باللغة الإنجليزية (مهم: يجب أن يكون الإخراج باللغة الإنجليزية فقط للتكامل مع النظام).
+    return `أنت مهندس ضمان جودة خبير. بناءً على المتطلبات التالية، قم بإنشاء حالات اختبار مفصلة ومنظمة باللغة العربية.
 ${urlContext}
+
+${TEST_DESIGN_CRAFT}
 
 المتطلبات:
 """
@@ -142,6 +145,7 @@ ${requirements.substring(0, 15000)}
 - استخدم محددات CSS واضحة عند الإشارة إلى عناصر UI
 - اجعل النتائج المتوقعة قابلة للتحقق (قابلة للقياس)
 - أضف وسوم (tags) مناسبة لكل حالة اختبار
+- اكتب المحتوى بالعربية، مع إبقاء مفاتيح JSON وقيم الأولوية (Low/Medium/High/Critical) بالإنجليزية كما هي
 
 صيغة الإخراج (JSON فقط):
 [
@@ -171,6 +175,8 @@ ${requirements.substring(0, 15000)}
   return `You are a senior QA engineer. Based on the following requirements, generate detailed, structured test cases.
 ${urlContext}
 
+${TEST_DESIGN_CRAFT}
+
 Requirements:
 """
 ${requirements.substring(0, 15000)}
@@ -186,6 +192,7 @@ Instructions:
 - Expected results should be verifiable (measurable/checkable)
 - Add appropriate tags to each test case
 - Consider the target application URL for realistic locators
+- ${LANGUAGE_RULE}
 
 Output format (JSON only):
 [

@@ -4,6 +4,11 @@ import {
   chatWithConfiguredProvider,
   hasConfiguredProvider,
 } from "@/lib/ai/provider-chat"
+import {
+  BUG_REPORT_CRAFT,
+  LANGUAGE_RULE,
+  SEVERITY_PRIORITY_RUBRIC,
+} from "@/lib/ai/qa-craft"
 
 /**
  * Bug-report drafter: a tester's note (and optional screenshot) in, a structured
@@ -51,13 +56,17 @@ export interface BugDraft {
 
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
 
-function buildPrompt(input: BugDraftInput, hasImage: boolean): string {
+export function buildPrompt(input: BugDraftInput, hasImage: boolean): string {
   const urlContext = input.appUrl ? `\nApplication URL: ${input.appUrl}` : ""
   const imageNote = hasImage
     ? "\nAn attached screenshot of the issue is provided — use it to infer the affected screen, UI elements, and the visible problem."
     : ""
 
-  return `You are a senior QA engineer. Draft a professional, structured bug report from the tester's note${hasImage ? " and screenshot" : ""}.${urlContext}${imageNote}
+  return `You are a senior QA engineer. Draft a bug report from the tester's note${hasImage ? " and screenshot" : ""}.${urlContext}${imageNote}
+
+${BUG_REPORT_CRAFT}
+
+${SEVERITY_PRIORITY_RUBRIC}
 
 Tester's note:
 """
@@ -78,7 +87,7 @@ Return ONLY valid JSON (no markdown, no extra text) matching exactly:
 }
 Rules:
 - 2 to 6 reproduction steps, ordered and specific.
-- Choose severity/priority sensibly from the impact described.
+- ${LANGUAGE_RULE}
 - Output valid JSON only.`
 }
 
@@ -204,20 +213,30 @@ function parseJson(text: string): any | null {
   }
 }
 
+/** Arabic (and Persian/Urdu) script, so the fallback does not answer in English. */
+function isArabic(text: string): boolean {
+  return /[؀-ۿݐ-ݿ\ufb50-\ufdff\ufe70-\ufeff]/.test(text)
+}
+
 /** Deterministic fallback so the feature works with no AI provider at all. */
-function ruleBasedDraft(input: BugDraftInput): BugDraft {
+export function ruleBasedDraft(input: BugDraftInput): BugDraft {
   const desc = (input.description || "").trim()
-  const firstLine = desc.split(/\n|\. /)[0]?.trim() || "Reported defect"
+  const firstLine = desc.split(/\n|\. |؟/)[0]?.trim() || "Reported defect"
   const title = firstLine.substring(0, 120)
 
   const lower = desc.toLowerCase()
   let severity: BugDraft["severity"] = "Medium"
-  if (/crash|blocker|data loss|cannot|unable|500|broken|not work/.test(lower)) severity = "High"
-  if (/critical|security|payment|corrupt|production down/.test(lower)) severity = "Critical"
-  if (/typo|cosmetic|minor|alignment|spacing/.test(lower)) severity = "Low"
+  // Keyword sets per language. With English patterns alone every Arabic note
+  // scored "Medium", however plainly it described a crash.
+  if (/crash|blocker|data loss|cannot|unable|500|broken|not work|توقف|انهيار|لا يعمل|لا يمكن|معطل|فقدان البيانات/.test(lower))
+    severity = "High"
+  if (/critical|security|payment|corrupt|production down|حرج|خطير|أمن|دفع|تلف|الإنتاج متوقف/.test(lower))
+    severity = "Critical"
+  if (/typo|cosmetic|minor|alignment|spacing|إملائي|شكلي|بسيط|محاذاة|تنسيق/.test(lower))
+    severity = "Low"
 
   // Turn sentences into rough steps.
-  const sentences = desc.split(/\n|\. /).map((s) => s.trim()).filter(Boolean).slice(0, 6)
+  const sentences = desc.split(/\n|\. |؟|،/).map((s) => s.trim()).filter(Boolean).slice(0, 6)
   const steps: BugDraftStep[] = (sentences.length > 0 ? sentences : [desc || "Reproduce the issue"]).map(
     (s, i) => ({ stepNumber: i + 1, actionDescription: s.substring(0, 300), expectedResult: "" })
   )
@@ -229,7 +248,9 @@ function ruleBasedDraft(input: BugDraftInput): BugDraft {
     priority: severity,
     steps,
     stepsToReproduce: steps.map((s) => `${s.stepNumber}. ${s.actionDescription}`).join("\n"),
-    expectedResult: "The described action should complete without error.",
+    expectedResult: isArabic(desc)
+      ? "يجب أن يكتمل الإجراء المذكور دون خطأ."
+      : "The described action should complete without error.",
     actualResult: desc.substring(0, 1000),
     provider: "rule-based",
   }

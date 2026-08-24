@@ -534,6 +534,7 @@ export function CreateBugModal({
               onChange={(e) => setAiPrompt(e.target.value)}
               onPaste={handleAiPaste}
               rows={3}
+              dir="auto"
               placeholder="Describe what went wrong in your own words — e.g. 'checkout button does nothing on mobile after applying a discount code'. Paste a screenshot here too."
               className="w-full border rounded-lg p-2.5 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
             />
@@ -599,6 +600,7 @@ export function CreateBugModal({
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              dir="auto"
               placeholder="e.g., Application crashes on checkout submit"
               className="h-9 bg-background"
               required
@@ -727,6 +729,7 @@ export function CreateBugModal({
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               rows={2}
+              dir="auto"
               placeholder="Summarize the issue context..."
               className="w-full border rounded-lg p-2.5 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
             />
@@ -769,6 +772,7 @@ export function CreateBugModal({
                     <Input
                       value={step.actionDescription}
                       onChange={(e) => updateStepText(idx, e.target.value)}
+                      dir="auto"
                       placeholder="Step description..."
                       className="h-8 text-xs bg-background flex-1"
                     />
@@ -791,6 +795,7 @@ export function CreateBugModal({
               <Input
                 value={expected}
                 onChange={(e) => setExpected(e.target.value)}
+                dir="auto"
                 placeholder="What should happen..."
                 className="h-9 bg-background"
               />
@@ -800,6 +805,7 @@ export function CreateBugModal({
               <Input
                 value={actual}
                 onChange={(e) => setActual(e.target.value)}
+                dir="auto"
                 placeholder="What happened instead..."
                 className="h-9 bg-background"
               />
