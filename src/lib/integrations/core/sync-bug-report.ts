@@ -21,6 +21,21 @@ import { IMAGE_CONTENT_TYPES, entityMarker } from "./types"
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
 
 /**
+ * Absolute URL for a stored asset reference, for a reader outside this app.
+ *
+ * The video field takes either an uploaded file's stored path or a URL the user
+ * pasted from another tool (Jam, Loom, a CI artifact). Prefixing APP_URL to the
+ * latter produced "https://app.example.comhttps://jam.dev/c/…", which is not a
+ * link anyone can open. Mirrors assetUrl() in the Bug Reports page.
+ */
+export function absoluteAssetUrl(ref: string): string {
+  if (/^(https?:|mailto:)/i.test(ref)) return ref
+  if (ref.startsWith("/uploads/") || ref.startsWith("/api/files/")) return `${APP_URL}${ref}`
+  // A storage-relative path is only reachable through the authenticated proxy.
+  return `${APP_URL}/api/files/${encodeURIComponent(ref.replace(/^\/+/, ""))}`
+}
+
+/**
  * How long a mapping row that has been claimed but has no external id yet is
  * treated as "a sync is running". Past this, the claim is assumed to be from an
  * attempt that died and is taken over. Comfortably longer than a sync that is
@@ -368,7 +383,8 @@ export async function syncBugReport(
   description += `## Actual Result\n${bug.actualResult || "N/A"}\n\n`
   if (bug.consoleLogs) description += `## Console Logs\n\`\`\`\n${bug.consoleLogs}\n\`\`\`\n\n`
   if (bug.networkErrors) description += `## Network Errors\n\`\`\`\n${bug.networkErrors}\n\`\`\`\n\n`
-  if (bug.videoUrl) description += `**Session Recording:** ${APP_URL}${bug.videoUrl}\n\n`
+  if (bug.videoUrl)
+    description += `**Session Recording:** [Open recording](${absoluteAssetUrl(bug.videoUrl)})\n\n`
   description += `[View Bug Report](${APP_URL}/bug-reports?bug=${bug.id})\n\n`
   description += `*Created automatically by QA Engine*\n\n`
   description += `<!-- ${entityMarker("BugReport", bug.id)} -->`
