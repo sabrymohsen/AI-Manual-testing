@@ -1930,9 +1930,11 @@ export default function ProjectBugReportsPage() {
                 unsyncedCount={mirrorActive ? mirror!.unsyncedBugIds.length : 0}
               />
 
-              <div
-                className="grid gap-4 items-start grid-cols-1 md:grid-flow-col md:auto-cols-[minmax(210px,1fr)] md:overflow-x-auto pb-2"
-              >
+              {/* One horizontal lane: every column keeps a readable fixed width
+                  and the lane scrolls sideways, so a tracker board with many
+                  statuses shows all of them instead of squeezing the last ones
+                  down to an unreadable sliver. */}
+              <div className="flex gap-4 items-start overflow-x-auto overscroll-x-contain pb-3 -mx-1 px-1 snap-x">
               {boardColumns.map((col) => {
                 const colBugs = bugsInColumn(col)
                 const isDropTarget = dragOverStatus === col.key && draggedBugId !== null
@@ -1957,7 +1959,7 @@ export default function ProjectBugReportsPage() {
                       setDraggedBugId(null)
                       setDragOverStatus(null)
                     }}
-                    className={`p-3 border rounded-2xl shadow-sm space-y-3 min-h-[300px] transition-all ${
+                    className={`w-[272px] shrink-0 snap-start p-3 border rounded-2xl shadow-sm space-y-3 min-h-[300px] transition-all ${
                       isDropTarget ? "bg-indigo-50/50 border-indigo-300 ring-2 ring-indigo-200" : "bg-card/65"
                     }`}
                   >
@@ -1988,7 +1990,7 @@ export default function ProjectBugReportsPage() {
                       </span>
                     </div>
 
-                    <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
+                    <div className="space-y-2.5 max-h-[560px] overflow-y-auto overflow-x-hidden pr-1">
                       {colBugs.length === 0 ? (
                         <div className="text-center py-8 text-[10px] text-slate-400 italic">No defects</div>
                       ) : (
