@@ -1552,7 +1552,7 @@ model ExternalSyncMapping {
   // board groups by, so a bug sits in the same column it sits in over there.
   externalStatusId   String?
   externalStatusName String?
-  /** When the external status above was last read from the tracker. */
+  // When the external status above was last read from the tracker.
   externalStatusAt   DateTime?
 
   createdAt DateTime @default(now())
