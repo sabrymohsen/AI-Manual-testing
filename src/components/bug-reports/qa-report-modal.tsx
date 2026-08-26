@@ -1,0 +1,440 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  buildQaReportHtml,
+  type QaReportData,
+  type QaReportDefect,
+  type QaReportService
+} from "@/lib/qa-report/template"
+import { FileBarChart, X, Plus, Trash2, Download, Loader2, AlertTriangle } from "lucide-react"
+
+/**
+ * Compose and download the QA / UAT testing report.
+ *
+ * Everything is pre-filled from the project — modules from the test suites,
+ * defects from the bug list — so the common case is "open, glance, download".
+ * The panel exists for the parts a database cannot know: which modules belong
+ * in this report, the customer-facing wording of a remark, the overall verdict
+ * a QA lead signs off on. The generated file keeps its own edit mode, so this
+ * is a starting point rather than the last chance to change anything.
+ */
+
+const SERVICE_STATUS = [
+  "Not Started",
+  "In Progress",
+  "Blocked",
+  "Need Retest",
+  "Passed",
+  "Passed with minor issues",
+  "Passed with some issues"
+]
+const PRIORITY = ["Critical", "High", "Medium", "Low"]
+const BUG_STATUS = [
+  "Open",
+  "InProgress",
+  "ReadyForRetest",
+  "Reopened",
+  "Resolved",
+  "Closed",
+  "Rejected",
+  "Duplicate"
+]
+
+/** BugStatus values are PascalCase in the database; humans read them spaced. */
+function statusLabel(v: string) {
+  if (v === "InProgress") return "In Progress"
+  if (v === "ReadyForRetest") return "Ready For Retest"
+  return v
+}
+
+interface Props {
+  projectId: string
+  open: boolean
+  onClose: () => void
+}
+
+const emptyService: QaReportService = {
+  name: "New module",
+  total: 0,
+  passed: 0,
+  failed: 0,
+  blocked: 0,
+  status: "Not Started",
+  remarks: ""
+}
+
+export default function QaReportModal({ projectId, open, onClose }: Props) {
+  const [data, setData] = useState<QaReportData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState<"details" | "modules" | "defects">("details")
+
+  useEffect(() => {
+    if (!open) return
+    setError(null)
+    setTab("details")
+    setLoading(true)
+    fetch(`/api/projects/${projectId}/qa-report`)
+      .then(async res => {
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.error || "Could not load the report data")
+        setData(body as QaReportData)
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false))
+  }, [open, projectId])
+
+  if (!open) return null
+
+  const patchMeta = (key: keyof QaReportData["meta"], value: string) =>
+    setData(d => (d ? { ...d, meta: { ...d.meta, [key]: value } } : d))
+
+  const patchService = (i: number, patch: Partial<QaReportService>) =>
+    setData(d =>
+      d ? { ...d, services: d.services.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) } : d
+    )
+
+  const patchDefect = (i: number, patch: Partial<QaReportDefect>) =>
+    setData(d =>
+      d ? { ...d, defects: d.defects.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) } : d
+    )
+
+  const handleDownload = () => {
+    if (!data) return
+    const html = buildQaReportHtml(data)
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${(data.meta.fileName || "QA-Testing-Report").replace(/[\\/:*?"<>|#%]/g, "-")}.html`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    onClose()
+  }
+
+  const totals = (data?.services || []).reduce(
+    (acc, s) => ({
+      total: acc.total + (Number(s.total) || 0),
+      passed: acc.passed + (Number(s.passed) || 0),
+      failed: acc.failed + (Number(s.failed) || 0),
+      blocked: acc.blocked + (Number(s.blocked) || 0)
+    }),
+    { total: 0, passed: 0, failed: 0, blocked: 0 }
+  )
+
+  const cellSelect = (value: string, options: string[], onChange: (_v: string) => void) => (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="h-8 w-full px-2 rounded-md border text-[11px] bg-background outline-none"
+    >
+      {options.map(o => (
+        <option key={o} value={o}>
+          {statusLabel(o)}
+        </option>
+      ))}
+    </select>
+  )
+
+  const numberCell = (value: number, onChange: (_v: number) => void) => (
+    <Input
+      type="number"
+      min={0}
+      value={value}
+      onChange={e => onChange(parseInt(e.target.value, 10) || 0)}
+      className="h-8 w-16 text-[11px] text-center px-1"
+    />
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-card w-full max-w-6xl max-h-[90vh] rounded-2xl shadow-xl flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <div className="space-y-0.5">
+            <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
+              <FileBarChart className="h-4 w-4 text-indigo-600" /> QA Testing Report
+            </h2>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              Pre-filled from this project. Review, adjust, then download a standalone HTML report
+              that stays editable after you send it.
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 px-6 pt-3 border-b bg-slate-50/50">
+          {([
+            ["details", "Report details"],
+            ["modules", `Modules (${data?.services.length || 0})`],
+            ["defects", `Defects (${data?.defects.length || 0})`]
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key as typeof tab)}
+              className={`px-3 py-2 text-[11px] font-bold rounded-t-lg transition-colors ${
+                tab === key
+                  ? "bg-card text-slate-800 border border-b-0"
+                  : "text-muted-foreground hover:text-slate-700"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {loading && (
+            <div className="flex items-center justify-center gap-2 py-16 text-xs text-muted-foreground font-semibold">
+              <Loader2 className="h-4 w-4 animate-spin" /> Gathering test results and defects…
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="flex items-start gap-2 p-4 rounded-xl bg-rose-50 border border-rose-100 text-[12px] text-rose-700 font-semibold">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" /> {error}
+            </div>
+          )}
+
+          {!loading && !error && data && (
+            <>
+              {tab === "details" && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {([
+                      ["title", "Report title"],
+                      ["org", "Organization"],
+                      ["system", "System"],
+                      ["environment", "Environment"],
+                      ["dateRange", "Date range"],
+                      ["overallStatus", "Overall status"],
+                      ["engineer", "QA engineer"],
+                      ["reportDate", "Report date"],
+                      ["fileName", "Download file name"]
+                    ] as const).map(([key, label]) => (
+                      <div key={key} className="space-y-1">
+                        <label className="text-[10px] uppercase font-extrabold tracking-wider text-muted-foreground/70">
+                          {label}
+                        </label>
+                        <Input
+                          value={data.meta[key] || ""}
+                          onChange={e => patchMeta(key, e.target.value)}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    {[
+                      { label: "Test cases", value: totals.total },
+                      { label: "Passed", value: totals.passed },
+                      { label: "Failed", value: totals.failed },
+                      { label: "Blocked", value: totals.blocked },
+                      { label: "Defects", value: data.defects.length }
+                    ].map(c => (
+                      <div
+                        key={c.label}
+                        className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 text-center space-y-1"
+                      >
+                        <div className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60">
+                          {c.label}
+                        </div>
+                        <div className="text-lg font-extrabold text-slate-800">{c.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {tab === "modules" && (
+                <div className="space-y-3">
+                  <div className="overflow-x-auto border rounded-xl">
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-slate-50">
+                        <tr className="text-left">
+                          {["Module / Service", "Total", "Passed", "Failed", "Blocked", "Status", "Remarks", ""].map(h => (
+                            <th key={h} className="px-2 py-2 font-extrabold uppercase tracking-wide text-[9px] text-muted-foreground/70 whitespace-nowrap">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.services.map((s, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="px-2 py-1.5 min-w-[180px]">
+                              <Input
+                                value={s.name}
+                                onChange={e => patchService(i, { name: e.target.value })}
+                                className="h-8 text-[11px]"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">{numberCell(s.total, v => patchService(i, { total: v }))}</td>
+                            <td className="px-2 py-1.5">{numberCell(s.passed, v => patchService(i, { passed: v }))}</td>
+                            <td className="px-2 py-1.5">{numberCell(s.failed, v => patchService(i, { failed: v }))}</td>
+                            <td className="px-2 py-1.5">{numberCell(s.blocked, v => patchService(i, { blocked: v }))}</td>
+                            <td className="px-2 py-1.5 min-w-[150px]">
+                              {cellSelect(s.status, SERVICE_STATUS, v => patchService(i, { status: v }))}
+                            </td>
+                            <td className="px-2 py-1.5 min-w-[160px]">
+                              <Input
+                                value={s.remarks}
+                                onChange={e => patchService(i, { remarks: e.target.value })}
+                                placeholder="Optional note"
+                                className="h-8 text-[11px]"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setData(d => (d ? { ...d, services: d.services.filter((_, idx) => idx !== i) } : d))
+                                }
+                                className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                        {!data.services.length && (
+                          <tr>
+                            <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground font-semibold">
+                              No test suites in this project yet — add a module row manually.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setData(d => (d ? { ...d, services: [...d.services, { ...emptyService }] } : d))}
+                    className="h-8 text-[11px] font-bold"
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Add module
+                  </Button>
+                </div>
+              )}
+
+              {tab === "defects" && (
+                <div className="space-y-3">
+                  <div className="overflow-x-auto border rounded-xl">
+                    <table className="w-full text-[11px]">
+                      <thead className="bg-slate-50">
+                        <tr className="text-left">
+                          {["ID", "Title", "Severity", "Priority", "Status", "Area", "Assignee", ""].map(h => (
+                            <th key={h} className="px-2 py-2 font-extrabold uppercase tracking-wide text-[9px] text-muted-foreground/70 whitespace-nowrap">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.defects.map((b, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="px-2 py-1.5 w-24">
+                              <Input
+                                value={b.key}
+                                onChange={e => patchDefect(i, { key: e.target.value })}
+                                className="h-8 text-[11px]"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 min-w-[240px]">
+                              <Input
+                                value={b.title}
+                                onChange={e => patchDefect(i, { title: e.target.value })}
+                                className="h-8 text-[11px]"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 w-28">
+                              {cellSelect(b.severity, PRIORITY, v => patchDefect(i, { severity: v }))}
+                            </td>
+                            <td className="px-2 py-1.5 w-28">
+                              {cellSelect(b.priority, PRIORITY, v => patchDefect(i, { priority: v }))}
+                            </td>
+                            <td className="px-2 py-1.5 w-36">
+                              {cellSelect(b.status, BUG_STATUS, v => patchDefect(i, { status: v }))}
+                            </td>
+                            <td className="px-2 py-1.5 min-w-[140px]">
+                              <Input
+                                value={b.area}
+                                onChange={e => patchDefect(i, { area: e.target.value })}
+                                className="h-8 text-[11px]"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5 min-w-[120px]">
+                              <Input
+                                value={b.assignedTo}
+                                onChange={e => patchDefect(i, { assignedTo: e.target.value })}
+                                className="h-8 text-[11px]"
+                              />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setData(d => (d ? { ...d, defects: d.defects.filter((_, idx) => idx !== i) } : d))
+                                }
+                                className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                        {!data.defects.length && (
+                          <tr>
+                            <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground font-semibold">
+                              No bugs filed for this project yet.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    Removing a defect here only leaves it out of this report — the bug itself is untouched.
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-3 px-6 py-4 border-t bg-slate-50/60">
+          <span className="text-[10px] text-muted-foreground font-semibold">
+            The downloaded file keeps its own Edit Mode, Download and Print buttons.
+          </span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-[11px] font-bold">
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleDownload}
+              disabled={loading || !!error || !data}
+              className="h-8 text-[11px] font-bold"
+            >
+              <Download className="h-3.5 w-3.5 mr-1.5" /> Download report
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

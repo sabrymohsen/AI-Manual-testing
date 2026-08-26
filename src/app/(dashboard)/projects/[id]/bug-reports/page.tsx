@@ -11,6 +11,7 @@ import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
 import RebuildTrackerBugsModal from "@/components/bug-reports/rebuild-tracker-bugs-modal"
 import CreateBugBoardModal from "@/components/bug-reports/create-bug-board-modal"
 import BugStatusMappingModal from "@/components/bug-reports/bug-status-mapping-modal"
+import QaReportModal from "@/components/bug-reports/qa-report-modal"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
@@ -53,7 +54,8 @@ import {
   Tag,
   GitCompare,
   AlertTriangle,
-  Download
+  Download,
+  FileBarChart
 } from "lucide-react"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import {
@@ -469,6 +471,8 @@ export default function ProjectBugReportsPage() {
   const [showRebuildModal, setShowRebuildModal] = useState(false)
   const [showCreateBoardModal, setShowCreateBoardModal] = useState(false)
   const [showStatusMappingModal, setShowStatusMappingModal] = useState(false)
+  // Downloadable QA/UAT testing report composed from this project's suites and bugs.
+  const [showQaReportModal, setShowQaReportModal] = useState(false)
 
   // Inline editing state inside Drawer
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -1408,6 +1412,11 @@ export default function ProjectBugReportsPage() {
               })
             },
             icon: RefreshCw
+          },
+          {
+            label: "QA Report",
+            onClick: () => setShowQaReportModal(true),
+            icon: FileBarChart
           },
           {
             label: "Export",
@@ -2971,6 +2980,13 @@ export default function ProjectBugReportsPage() {
         open={showRebuildModal}
         onClose={() => setShowRebuildModal(false)}
         onCompleted={loadBugsList}
+      />
+
+      {/* Downloadable QA/UAT testing report — pre-filled, editable, self-contained. */}
+      <QaReportModal
+        projectId={projectId}
+        open={showQaReportModal}
+        onClose={() => setShowQaReportModal(false)}
       />
 
       {/* 8. Manual Create Bug Modal */}
