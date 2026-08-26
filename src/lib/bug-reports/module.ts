@@ -7,8 +7,8 @@ import { prisma } from "@/lib/db"
  * through the linked test case, because most bugs are filed by hand during
  * exploratory testing and never point at a case — and a defect can legitimately
  * belong to a module none of its cases live in. The link is auto-filled from
- * the case's suite where one exists (see the create middleware in src/lib/db),
- * and freely editable afterwards.
+ * the case's suite where one exists (see withBugModule below), and freely
+ * editable afterwards.
  */
 
 /**
@@ -45,4 +45,52 @@ export async function resolveBugSuiteId(
   }
 
   return null
+}
+
+/**
+ * Fill in a new bug's module from its linked test case.
+ *
+ * Wraps the `data` of a `bugReport.create` so the auto-fill lives in one place
+ * rather than being re-implemented at each of the creation paths:
+ *
+ *     await tx.bugReport.create({ data: await withBugModule({ ...fields }) })
+ *
+ * This was briefly a Prisma `$use` middleware in src/lib/db. It cannot live
+ * there: that module is pulled in by the Next.js edge middleware through
+ * @/lib/auth, and its only other top-level statement is a NODE_ENV check the
+ * bundler proves false, so the whole module gets dropped from the edge bundle.
+ * An unconditional side effect keeps it — which drags PrismaClient into the
+ * edge runtime, where it throws on import and 500s every route.
+ *
+ * A caller that already decided the module (including deciding on "Unfiled")
+ * passes `suiteId` and is left alone.
+ */
+export async function withBugModule<
+  T extends { projectId?: string | null; testCaseId?: string | null; suiteId?: string | null }
+>(data: T): Promise<T> {
+  if (data.suiteId !== undefined || !data.testCaseId) return data
+
+  const testCase = await prisma.testCase.findUnique({
+    where: { id: data.testCaseId },
+    select: { suiteId: true, projectId: true }
+  })
+  if (!testCase?.suiteId) return data
+  // A case from another project cannot lend its module to this bug.
+  if (data.projectId && testCase.projectId !== data.projectId) return data
+
+  return { ...data, suiteId: testCase.suiteId }
+}
+
+/**
+ * The module a test case is filed under, for creation paths whose bug row does
+ * not itself carry `testCaseId` (a bug filed against a manual session, say).
+ * Returns null when there is no case or the case is unfiled.
+ */
+export async function suiteIdOfTestCase(testCaseId: string | null | undefined): Promise<string | null> {
+  if (!testCaseId) return null
+  const testCase = await prisma.testCase.findUnique({
+    where: { id: testCaseId },
+    select: { suiteId: true }
+  })
+  return testCase?.suiteId ?? null
 }

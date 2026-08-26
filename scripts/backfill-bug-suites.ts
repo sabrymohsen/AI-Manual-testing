@@ -16,8 +16,9 @@
  *   - skips a case whose suite belongs to a different project than the bug,
  *     which can only mean data has been moved between projects.
  *
- * Bugs filed after the migration get their module from the create middleware in
- * src/lib/db; this script is only for the ones that already existed.
+ * Bugs filed after the migration get their module from withBugModule() in
+ * src/lib/bug-reports/module.ts; this script is only for the ones that already
+ * existed.
  */
 import { PrismaClient } from "@prisma/client"
 

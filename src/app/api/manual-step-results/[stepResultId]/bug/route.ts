@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { suiteIdOfTestCase } from "@/lib/bug-reports/module"
 import { z } from "zod"
 
 const bodySchema = z.object({
@@ -77,9 +78,14 @@ export async function POST(
       requirementIds = tcRequirements.map((r) => r.requirementId)
     }
 
+    // The bug row links to the manual session rather than the case, so the
+    // module is read from the case behind that session.
+    const suiteId = await suiteIdOfTestCase(testCaseId)
+
     const bugReport = await prisma.bugReport.create({
       data: {
         title: title || `Failed: ${stepResult.sessionCase.testCase.title} - Step ${stepResult.stepNumber}`,
+        suiteId,
         severity: severity || "High",
         priority: priority || "High",
         environment: manualSession.environment,

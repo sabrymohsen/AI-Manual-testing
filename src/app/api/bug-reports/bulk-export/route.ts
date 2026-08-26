@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
+import { buildAssigneeNameMap, assigneeName } from "@/lib/bug-reports/assignees"
 
 const bulkExportSchema = z.object({
   bugIds: z.array(z.string()).min(1)
@@ -48,6 +49,13 @@ export async function POST(request: Request) {
       }
     })
 
+    // assignedTo holds the tracker's user id, which is meaningless in an export.
+    // One map per project involved, then every bug reads its name from there.
+    const nameMaps = new Map<string, Map<string, string>>()
+    for (const pid of bugProjectIds) {
+      nameMaps.set(pid, await buildAssigneeNameMap(pid))
+    }
+
     const exported = bugReports.map(b => ({
       id: b.id,
       bugKey: b.bugKey || "",
@@ -57,7 +65,8 @@ export async function POST(request: Request) {
       priority: b.priority,
       status: b.status,
       environment: b.environment || "Staging",
-      assignedTo: b.assignedTo || "Unassigned",
+      assignedTo:
+        assigneeName(b.assignedTo, nameMaps.get(b.projectId || "") ?? new Map()) || "Unassigned",
       stepsToReproduce: b.stepsToReproduce,
       expectedResult: b.expectedResult,
       actualResult: b.actualResult,

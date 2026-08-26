@@ -1,6 +1,7 @@
 import { Worker } from "bullmq"
 import { redisConnection, registerWorkerHeartbeat, publishAgentRunEvent, addTestRunJob, isAutonomousAgentCancelSignalSet, clearAutonomousAgentCancelSignal } from "@/lib/queue"
 import { prisma } from "@/lib/db"
+import { withBugModule } from "@/lib/bug-reports/module"
 import { chromium } from "playwright"
 import { decryptSecret } from "@/lib/crypto"
 import { handleLogin } from "@/lib/playwright/login-handler"
@@ -247,7 +248,7 @@ async function runAutonomousQA(agentRunId: string) {
     if (failedStep) {
       console.log(`[Autonomous Agent] Test run ${run.id} failed at step ${failedStep.stepNumber}. Creating bug report...`)
       await prisma.bugReport.create({
-        data: {
+        data: await withBugModule({
           title: `[Agent Auto-Bug] Failed executing step ${failedStep.stepNumber}: ${failedStep.actionDescription}`,
           severity: "High",
           priority: "High",
@@ -261,7 +262,7 @@ async function runAutonomousQA(agentRunId: string) {
           actualResult: failedStep.actualResult || "Execution timed out or element was missing.",
           screenshotPath: failedStep.screenshotAfter || failedStep.screenshotBefore,
           autonomousAgentRunId: agentRunId
-        }
+        })
       })
     }
   }

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db"
+import { withBugModule } from "@/lib/bug-reports/module"
 import { chromium, Page, Browser, BrowserContext } from "playwright"
 import { ExecutionPlanItem, ExecutionStepPlan, BrainMetrics } from "./types"
 import {
@@ -282,7 +283,7 @@ export async function runExecutionPlan(
         // If step failed, generate a Bug Report immediately and stop scenario
         if (status === "Failed") {
           await prisma.bugReport.create({
-            data: {
+            data: await withBugModule({
               title: `[Agent Defect] Scenario failed at step ${stepResults.length}: ${step.actionDescription}`,
               severity: "High",
               priority: "High",
@@ -296,7 +297,7 @@ export async function runExecutionPlan(
               actualResult: "Execution failed to find element or complete action.",
               screenshotPath,
               agentBrainRunId
-            }
+            })
           })
           break
         }

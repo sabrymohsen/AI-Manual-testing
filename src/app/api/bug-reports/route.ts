@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { createBugReportSchema } from "@/schemas"
 import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { withBugModule } from "@/lib/bug-reports/module"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -241,7 +242,7 @@ export async function POST(request: Request) {
     // 2. Write bug report
     const bugReport = await prisma.$transaction(async (tx) => {
       const bug = await tx.bugReport.create({
-        data: {
+        data: await withBugModule({
           bugKey,
           title,
           projectId,
@@ -264,7 +265,7 @@ export async function POST(request: Request) {
                 }))
               }
             : undefined
-        }
+        })
       })
 
       // Add audit log activity

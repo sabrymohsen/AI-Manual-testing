@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
+import { buildAssigneeNameMap, assigneeName } from "@/lib/bug-reports/assignees"
 
 /**
  * Data feed for the downloadable QA / UAT testing report.
@@ -66,7 +67,7 @@ export async function GET(
 
   const projectId = params.projectId
 
-  const [project, suites, testCases, bugs] = await Promise.all([
+  const [project, suites, testCases, bugs, assigneeNames] = await Promise.all([
     prisma.project.findUnique({
       where: { id: projectId },
       select: { id: true, name: true, environment: true, description: true }
@@ -103,7 +104,10 @@ export async function GET(
         testCase: { select: { title: true } }
       },
       orderBy: { createdAt: "asc" }
-    })
+    }),
+    // Names for the tracker user ids stored on the bugs. A report that credits
+    // a defect to "62" tells the reader nothing.
+    buildAssigneeNameMap(projectId)
   ])
 
   if (!project) return unauthorizedResponse("Project not found")
@@ -149,7 +153,7 @@ export async function GET(
     // even though it points at no test case.
     module: b.suite?.name || UNFILED_LABEL,
     area: b.testCase?.title || "",
-    assignedTo: b.assignedTo || "",
+    assignedTo: assigneeName(b.assignedTo, assigneeNames),
     reportedOn: b.createdAt.toISOString().slice(0, 10)
   }))
 

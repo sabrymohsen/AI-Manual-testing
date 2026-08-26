@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "@/lib/db"
+import { withBugModule } from "@/lib/bug-reports/module"
 import { loadIntegration, type LoadedIntegration } from "@/lib/integrations/core/load-integration"
 import { syncBugReport } from "@/lib/integrations/core/sync-bug-report"
 import type { WorkItemProvider } from "@/lib/integrations/core/provider"
@@ -154,7 +155,7 @@ async function autoCreateOrUpdateBug(testRun: any): Promise<string | null> {
     const title = `[Auto Bug] ${tc.title} failed${failedStepNumber ? ` at Step ${failedStepNumber}` : ""}`
 
     const newBug = await prisma.bugReport.create({
-      data: {
+      data: await withBugModule({
         bugKey,
         title,
         projectId: testRun.projectId,
@@ -170,7 +171,7 @@ async function autoCreateOrUpdateBug(testRun: any): Promise<string | null> {
         expectedResult: failedStep?.expectedResult || "Test case should pass all steps",
         actualResult: errorMessage,
         screenshotPath: failedStep?.screenshotAfter || null,
-      },
+      }),
     })
 
     console.log(`[bug-auto] Created bug ${newBug.bugKey} for run ${testRun.id}`)
