@@ -79,6 +79,8 @@ export const createBugReportSchema = z.object({
   expectedResult: z.string().optional().nullable(),
   actualResult: z.string().optional().nullable(),
   testCaseId: z.string().optional().nullable(),
+  // Module/service the defect belongs to (a TestSuite id). Null clears it.
+  suiteId: z.string().optional().nullable(),
   requirementIds: z.array(z.string()).optional(),
 })
 

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { requireProjectOwner, requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { createBugReportSchema } from "@/schemas"
 import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
+import { resolveBugSuiteId } from "@/lib/bug-reports/module"
 import { z } from "zod"
 
 export async function GET(
@@ -74,6 +75,16 @@ export async function GET(
     }
   }
 
+  // Module/service filter. "unfiled" is a first-class answer, not the absence
+  // of a filter: a project's unfiled defects are exactly what a QA lead chases
+  // before publishing a report.
+  const suite = searchParams.get("suite")
+  if (suite === "unfiled") {
+    where.AND.push({ suiteId: null })
+  } else if (suite && suite !== "all") {
+    where.AND.push({ suiteId: suite })
+  }
+
   // Triage filters. "Who has nothing assigned?" and "what's been reopened?" are
   // the two questions a triage session actually starts with, and neither was
   // expressible before.
@@ -114,6 +125,9 @@ export async function GET(
     include: {
       testCase: {
         select: { id: true, title: true }
+      },
+      suite: {
+        select: { id: true, name: true }
       },
       testRun: {
         select: { id: true, status: true, browserType: true, createdAt: true }
@@ -252,6 +266,13 @@ export async function POST(
     requirementIds = tcRequirements.map((r) => r.requirementId)
   }
 
+  // Module/service the defect belongs to: what the caller picked, or the linked
+  // case's suite when they picked nothing.
+  const suiteId = await resolveBugSuiteId(params.projectId, {
+    suiteId: parsed.data.suiteId,
+    testCaseId
+  })
+
   // Generate sequential bug key e.g., BUG-0001
   const count = await prisma.bugReport.count({ where: { projectId: params.projectId } })
   const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
@@ -288,6 +309,7 @@ export async function POST(
         testRunId: parsed.data.testRunId || null,
         manualTestSessionId: parsed.data.manualTestSessionId || null,
         testCaseId: testCaseId || null,
+        suiteId,
         requirements: requirementIds.length > 0
           ? {
               create: requirementIds.map((reqId) => ({

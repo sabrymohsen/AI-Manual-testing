@@ -42,6 +42,9 @@ export interface QaReportDefect {
   severity: string
   priority: string
   status: string
+  /** Module/service the defect is filed under; "Unfiled" when it has none. */
+  module: string
+  /** The linked test case, when there is one. Narrower than the module. */
   area: string
   assignedTo: string
   reportedOn: string
@@ -243,7 +246,7 @@ table.edit input.num { width:64px; min-width:64px; text-align:center; }
       <div class="edit-section-title"><i class="fas fa-bug"></i> Defects</div>
       <div class="table-wrap">
         <table class="edit">
-          <thead><tr><th>ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Status</th><th>Area</th><th>Assignee</th><th>Reported</th><th></th></tr></thead>
+          <thead><tr><th>ID</th><th>Title</th><th>Module</th><th>Severity</th><th>Priority</th><th>Status</th><th>Test case</th><th>Assignee</th><th>Reported</th><th></th></tr></thead>
           <tbody id="editDefBody"></tbody>
         </table>
       </div>
@@ -271,10 +274,15 @@ table.edit input.num { width:64px; min-width:64px; text-align:center; }
   </div>
 
   <div class="card section">
+    <div class="card-title"><i class="fas fa-bug"></i> Defects by Module</div>
+    <div class="chart-wrapper tall"><canvas id="moduleDefectBar"></canvas></div>
+  </div>
+
+  <div class="card section">
     <div class="card-title"><i class="fas fa-table"></i> Module Results Overview</div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Module / Service</th><th>Total TC</th><th>Passed</th><th>Failed</th><th>Blocked</th><th>Pass %</th><th>Status</th><th>Remarks</th></tr></thead>
+        <thead><tr><th>Module / Service</th><th>Total TC</th><th>Passed</th><th>Failed</th><th>Blocked</th><th>Pass %</th><th>Defects</th><th>Open</th><th>Status</th><th>Remarks</th></tr></thead>
         <tbody id="svcBody"></tbody>
       </table>
     </div>
@@ -284,7 +292,7 @@ table.edit input.num { width:64px; min-width:64px; text-align:center; }
     <div class="card-title"><i class="fas fa-bug"></i> Defect Log</div>
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>#</th><th>ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Status</th><th>Area</th><th>Assignee</th><th>Reported</th></tr></thead>
+        <thead><tr><th>#</th><th>ID</th><th>Title</th><th>Severity</th><th>Priority</th><th>Status</th><th>Test case</th><th>Assignee</th><th>Reported</th></tr></thead>
         <tbody id="defBody"></tbody>
       </table>
     </div>
@@ -312,6 +320,21 @@ var PRIORITY_COLORS = { Critical:'#b02a2a', High:'#d9534f', Medium:'#f0ad4e', Lo
 var STATUS_COLORS = { Open:'#d9534f', InProgress:'#9b59b6', ReadyForRetest:'#5bc0de', Reopened:'#e8743b',
   Resolved:'#1a6b8a', Closed:'#2a9d6e', Rejected:'#8a9baa', Duplicate:'#c4ccd3' };
 var OPEN_STATUSES = ['Open','InProgress','ReadyForRetest','Reopened'];
+var UNFILED = 'Unfiled';
+
+/** Module names in report order, plus any a defect names that no module row has. */
+function moduleNames() {
+  var names = services.map(function (s) { return s.name || UNFILED; });
+  defects.forEach(function (d) {
+    var m = d.module || UNFILED;
+    if (names.indexOf(m) === -1) names.push(m);
+  });
+  if (names.indexOf(UNFILED) === -1 && defects.some(function (d) { return !d.module; })) names.push(UNFILED);
+  return names;
+}
+function defectsOf(moduleName) {
+  return defects.filter(function (d) { return (d.module || UNFILED) === moduleName; });
+}
 
 var charts = {};
 var editMode = false;
@@ -432,6 +455,14 @@ function renderEditDefects() {
     var tr = document.createElement('tr');
     tdNode(tr, textInput(d.key, function (v) { d.key = v; }));
     tdNode(tr, textInput(d.title, function (v) { d.title = v; }));
+    // Options are the module rows above, so re-filing a defect and the table it
+    // will be counted in cannot drift apart. A module the file no longer has is
+    // kept as its own option rather than silently reset.
+    var moduleOptions = services.map(function (s) { return s.name || UNFILED; });
+    if (moduleOptions.indexOf(UNFILED) === -1) moduleOptions.push(UNFILED);
+    var current = d.module || UNFILED;
+    if (moduleOptions.indexOf(current) === -1) moduleOptions.push(current);
+    tdNode(tr, selectInput(moduleOptions, current, function (v) { d.module = v; }));
     tdNode(tr, selectInput(PRIORITY, d.severity, function (v) { d.severity = v; }));
     tdNode(tr, selectInput(PRIORITY, d.priority, function (v) { d.priority = v; }));
     tdNode(tr, selectInput(BUG_STATUS, d.status, function (v) { d.status = v; }));
@@ -444,7 +475,7 @@ function renderEditDefects() {
   if (!defects.length) {
     var tr2 = document.createElement('tr');
     var c = td(tr2, 'No defects yet — add one.');
-    c.colSpan = 9; c.className = 'empty';
+    c.colSpan = 10; c.className = 'empty';
     body.appendChild(tr2);
   }
 }
@@ -503,38 +534,73 @@ function renderServiceTable() {
     nameCell.appendChild(strong);
     td(tr, num(s.total)); td(tr, num(s.passed)); td(tr, num(s.failed)); td(tr, num(s.blocked));
     td(tr, (num(s.total) > 0 ? Math.round((num(s.passed) / num(s.total)) * 100) : 0) + '%');
+    // Counted from the defect log rather than stored on the row, so re-filing a
+    // defect in the edit panel moves its count here in the same click — there is
+    // no second number that can drift out of agreement with the log.
+    var mine = defectsOf(s.name || UNFILED);
+    var open = mine.filter(function (d) { return OPEN_STATUSES.indexOf(d.status) > -1; }).length;
+    td(tr, mine.length);
+    var openCell = td(tr, open);
+    if (open > 0) { openCell.style.color = '#c73e3e'; openCell.style.fontWeight = '700'; }
     tdNode(tr, tagFor(s.status || '—', serviceTone(s.status)));
     td(tr, s.remarks || '—');
     body.appendChild(tr);
   });
   if (!services.length) {
     var tr2 = document.createElement('tr');
-    var c = td(tr2, 'No modules recorded.'); c.colSpan = 8; c.className = 'empty';
+    var c = td(tr2, 'No modules recorded.'); c.colSpan = 10; c.className = 'empty';
     body.appendChild(tr2);
   }
 }
 
+/**
+ * The defect log, grouped under the module each defect is filed against.
+ *
+ * A flat list of forty defects tells a reader nothing about where the system is
+ * weak; the same forty under six headings does. Numbering stays continuous
+ * across groups so "defect 23" means one thing in the whole document.
+ */
 function renderDefectTable() {
   var body = document.getElementById('defBody');
   body.innerHTML = '';
-  defects.forEach(function (d, i) {
-    var tr = document.createElement('tr');
-    td(tr, i + 1);
-    td(tr, d.key || '—');
-    td(tr, d.title || '—');
-    tdNode(tr, tagFor(d.severity || '—', priorityTone(d.severity)));
-    tdNode(tr, tagFor(d.priority || '—', priorityTone(d.priority)));
-    tdNode(tr, tagFor(label(d.status) || '—', bugTone(d.status)));
-    td(tr, d.area || '—');
-    td(tr, d.assignedTo || '—');
-    td(tr, d.reportedOn || '—');
-    body.appendChild(tr);
-  });
+
   if (!defects.length) {
-    var tr2 = document.createElement('tr');
-    var c = td(tr2, 'No defects recorded.'); c.colSpan = 9; c.className = 'empty';
-    body.appendChild(tr2);
+    var empty = document.createElement('tr');
+    var c = td(empty, 'No defects recorded.'); c.colSpan = 9; c.className = 'empty';
+    body.appendChild(empty);
+    return;
   }
+
+  var n = 0;
+  moduleNames().forEach(function (moduleName) {
+    var rows = defectsOf(moduleName);
+    if (!rows.length) return;
+
+    var open = rows.filter(function (d) { return OPEN_STATUSES.indexOf(d.status) > -1; }).length;
+    var head = document.createElement('tr');
+    var hc = document.createElement('td');
+    hc.colSpan = 9;
+    hc.style.cssText = 'background:#f0f4f9;font-weight:700;color:#1f3a4e;font-size:12.5px;padding:8px 12px;';
+    hc.textContent = moduleName + '  ·  ' + rows.length + ' defect' + (rows.length === 1 ? '' : 's') +
+      (open ? ', ' + open + ' open' : '');
+    head.appendChild(hc);
+    body.appendChild(head);
+
+    rows.forEach(function (d) {
+      n += 1;
+      var tr = document.createElement('tr');
+      td(tr, n);
+      td(tr, d.key || '—');
+      td(tr, d.title || '—');
+      tdNode(tr, tagFor(d.severity || '—', priorityTone(d.severity)));
+      tdNode(tr, tagFor(d.priority || '—', priorityTone(d.priority)));
+      tdNode(tr, tagFor(label(d.status) || '—', bugTone(d.status)));
+      td(tr, d.area || '—');
+      td(tr, d.assignedTo || '—');
+      td(tr, d.reportedOn || '—');
+      body.appendChild(tr);
+    });
+  });
 }
 
 function countBy(list, key) {
@@ -552,7 +618,7 @@ function orderedKeys(counts, canonical) {
 function renderCharts() {
   if (typeof Chart === 'undefined') return;
   var t = totals();
-  ['resultsPie', 'severityBar', 'serviceBar', 'statusPie'].forEach(function (id) {
+  ['resultsPie', 'severityBar', 'serviceBar', 'statusPie', 'moduleDefectBar'].forEach(function (id) {
     if (charts[id]) { charts[id].destroy(); charts[id] = null; }
   });
 
@@ -589,6 +655,33 @@ function renderCharts() {
       plugins: { legend: { position: 'top', labels: { boxWidth: 14, padding: 12 } } },
       scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
         y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef2f6' } } } }
+  });
+
+  // Defects per module, split by severity. Stacked rather than grouped because
+  // the question is "which module carries the most defect weight", and the
+  // severity split answers "and how bad are they" inside the same bar.
+  var modules = moduleNames().filter(function (m) { return defectsOf(m).length > 0; });
+  charts.moduleDefectBar = new Chart(document.getElementById('moduleDefectBar'), {
+    type: 'bar',
+    data: {
+      labels: modules.map(function (m) { return m.length > 22 ? m.slice(0, 20) + '…' : m; }),
+      datasets: PRIORITY.map(function (p) {
+        return {
+          label: p,
+          data: modules.map(function (m) {
+            return defectsOf(m).filter(function (d) { return d.severity === p; }).length;
+          }),
+          backgroundColor: PRIORITY_COLORS[p],
+          borderRadius: 3,
+          barPercentage: 0.7
+        };
+      })
+    },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 14, padding: 12 } },
+        tooltip: { callbacks: { title: function (items) { return modules[items[0].dataIndex]; } } } },
+      scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef2f6' } } } }
   });
 
   var st = countBy(defects, 'status');
@@ -688,7 +781,7 @@ document.getElementById('addSvcBtn').addEventListener('click', function () {
   renderEditServices();
 });
 document.getElementById('addDefBtn').addEventListener('click', function () {
-  defects.push({ key: '', title: 'New defect', severity: 'Medium', priority: 'Medium', status: 'Open', area: '', assignedTo: '', reportedOn: '' });
+  defects.push({ key: '', title: 'New defect', module: (services[0] && services[0].name) || UNFILED, severity: 'Medium', priority: 'Medium', status: 'Open', area: '', assignedTo: '', reportedOn: '' });
   renderEditDefects();
 });
 

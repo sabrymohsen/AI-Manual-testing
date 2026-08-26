@@ -12,6 +12,7 @@ import RebuildTrackerBugsModal from "@/components/bug-reports/rebuild-tracker-bu
 import CreateBugBoardModal from "@/components/bug-reports/create-bug-board-modal"
 import BugStatusMappingModal from "@/components/bug-reports/bug-status-mapping-modal"
 import QaReportModal from "@/components/bug-reports/qa-report-modal"
+import { ModuleSelect, useProjectModules } from "@/components/bug-reports/module-select"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { OpenOnBoardLink } from "@/components/board/open-on-board-link"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
@@ -126,6 +127,9 @@ interface BugReport {
   testCaseId: string | null
   testRunId: string | null
   testCase?: { id: string; title: string } | null
+  /** Module/service the defect is filed under; null = Unfiled. */
+  suiteId?: string | null
+  suite?: { id: string; name: string } | null
   testRun?: { id: string; status: string; browserType: string; createdAt: string } | null
   manualTestSession?: { id: string; name: string } | null
   // Present on the single-bug detail response. The LIST endpoint deliberately
@@ -454,6 +458,10 @@ export default function ProjectBugReportsPage() {
   const [filterPriority, setFilterPriority] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterSource, setFilterSource] = useState("all")
+  // Module/service filter. "unfiled" is its own answer, not "no filter".
+  const [filterModule, setFilterModule] = useState("all")
+  // The project's suite tree, shared by the filter, the drawer and bulk actions.
+  const { modules: projectModules } = useProjectModules(projectId)
   // Triage filters — the two questions a triage session actually opens with.
   const [filterUnassigned, setFilterUnassigned] = useState(false)
   const [filterReopened, setFilterReopened] = useState(false)
@@ -501,6 +509,9 @@ export default function ProjectBugReportsPage() {
   const [selectedBugIds, setSelectedBugIds] = useState<string[]>([])
   const [bulkParentValue, setBulkParentValue] = useState("")
   const [bulkAssigneeValue, setBulkAssigneeValue] = useState("")
+  // Bulk module filing. "" is a real choice here (Unfiled), so the Apply button
+  // is always enabled rather than gated on a non-empty value.
+  const [bulkModuleValue, setBulkModuleValue] = useState("")
   const [bulkBoardValue, setBulkBoardValue] = useState("")
   const [bulkColumnValue, setBulkColumnValue] = useState("")
   const [bulkBoardColumns, setBulkBoardColumns] = useState<OpBoardColumn[]>([])
@@ -629,6 +640,7 @@ export default function ProjectBugReportsPage() {
       if (filterPriority !== "all") qParams.push(`priority=${filterPriority}`)
       if (filterStatus !== "all") qParams.push(`status=${filterStatus}`)
       if (filterSource !== "all") qParams.push(`source=${filterSource}`)
+      if (filterModule !== "all") qParams.push(`suite=${encodeURIComponent(filterModule)}`)
       if (debouncedSearch) qParams.push(`search=${encodeURIComponent(debouncedSearch)}`)
       if (filterUnassigned) qParams.push("assignee=unassigned")
       if (filterReopened) qParams.push("reopened=true")
@@ -659,7 +671,7 @@ export default function ProjectBugReportsPage() {
   useEffect(() => {
     loadBugsList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, debouncedSearch, filterUnassigned, filterReopened])
+  }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, filterModule, debouncedSearch, filterUnassigned, filterReopened])
 
   // Read query params on load to automatically open detail drawer
   useEffect(() => {
@@ -1180,6 +1192,36 @@ export default function ProjectBugReportsPage() {
   const handleBulkAssignParent = () => handleBulkUpdate({ openProjectParentId: bulkParentValue }, "Parent")
   const handleBulkAssignee = () => handleBulkUpdate({ assignedTo: bulkAssigneeValue }, "Assignee")
 
+  /**
+   * File every selected bug under one module.
+   *
+   * Uses the dedicated bulk endpoint rather than N single PUTs: it validates
+   * once that the module and the bugs belong to the same project, and refuses
+   * outright on a mixed-project selection instead of applying to half of it.
+   */
+  const handleBulkModule = async () => {
+    if (selectedBugIds.length === 0) return
+    setBulkApplying(true)
+    try {
+      const res = await fetch(`/api/bug-reports/bulk-update-module`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bugIds: selectedBugIds, suiteId: bulkModuleValue || null })
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        showToastMsg(`${data.count || selectedBugIds.length} bug(s) filed under ${data.suiteName || "Unfiled"}.`)
+        loadBugsList()
+      } else {
+        showToastMsg(data.error || "Failed to set the module", "error")
+      }
+    } catch {
+      showToastMsg("Network error setting the module", "error")
+    } finally {
+      setBulkApplying(false)
+    }
+  }
+
   // Bulk board/column: for bugs already synced to OpenProject, run the sync so
   // the card actually MOVES to the chosen column (placeBugOnBoard reconciles it);
   // for not-yet-synced bugs, just store the target for their first sync.
@@ -1541,6 +1583,20 @@ export default function ProjectBugReportsPage() {
             <option value="Auto">Auto Run</option>
           </select>
 
+          {/* Module/service filter — the suites the test library files cases
+              under, so defects and their coverage line up under one heading. */}
+          <select
+            value={filterModule}
+            onChange={(e) => setFilterModule(e.target.value)}
+            className="h-9 px-3 rounded-lg border text-xs bg-background outline-none min-w-[150px] max-w-[220px]"
+          >
+            <option value="all">Module: All</option>
+            <option value="unfiled">Unfiled</option>
+            {projectModules.map(m => (
+              <option key={m.id} value={m.id}>{m.path}</option>
+            ))}
+          </select>
+
           {trackerProvider === "OpenProject" && (
             <button
               onClick={() => setShowCreateBoardModal(true)}
@@ -1644,6 +1700,22 @@ export default function ProjectBugReportsPage() {
                 )}
               </div>
               <Button onClick={handleBulkAssignee} disabled={bulkApplying} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0">Apply</Button>
+            </div>
+
+            {/* Module / service */}
+            <div className="flex items-end gap-1.5">
+              <div className="space-y-1">
+                <span className="text-[9px] font-extrabold uppercase tracking-wide text-indigo-600/80 flex items-center gap-1"><Layers className="h-3 w-3" /> Module</span>
+                <select
+                  value={bulkModuleValue}
+                  onChange={(e) => setBulkModuleValue(e.target.value)}
+                  className="h-8 rounded-md border bg-background px-2 text-xs font-bold min-w-[150px] max-w-[220px]"
+                >
+                  <option value="">— Unfiled —</option>
+                  {projectModules.map(m => <option key={m.id} value={m.id}>{m.path}</option>)}
+                </select>
+              </div>
+              <Button onClick={handleBulkModule} disabled={bulkApplying} size="sm" className="h-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shrink-0">Apply</Button>
             </div>
 
             {/* Board + column */}
@@ -1813,6 +1885,15 @@ export default function ProjectBugReportsPage() {
                             </span>
                           </td>
                           <td className="p-3 space-y-0.5 max-w-[200px]">
+                            {b.suite && (
+                              <div
+                                className="flex items-center gap-1 text-[10px] font-bold text-sky-700 truncate"
+                                title="Module / service"
+                              >
+                                <Layers className="h-3.5 w-3.5 text-sky-500 shrink-0" />
+                                <span className="truncate">{b.suite.name}</span>
+                              </div>
+                            )}
                             {b.testCase && (
                               <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600 truncate">
                                 <FileText className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
@@ -2032,6 +2113,13 @@ export default function ProjectBugReportsPage() {
                             <span className="font-bold text-slate-800 line-clamp-2 leading-tight block" dir="auto">
                               {bug.title}
                             </span>
+
+                            {bug.suite && (
+                              <div className="text-[9px] text-sky-700 font-bold truncate flex items-center gap-1">
+                                <Layers className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{bug.suite.name}</span>
+                              </div>
+                            )}
 
                             {bug.testCase && (
                               <div className="text-[9px] text-slate-500 font-semibold bg-slate-50 p-1.5 rounded truncate">
@@ -2743,6 +2831,21 @@ export default function ProjectBugReportsPage() {
                     </span>
                     <span className="truncate">{selectedBug.reporter?.name || selectedBug.reporter?.email || "Unknown"}</span>
                   </span>
+                </SideRow>
+
+                {/* Module/service. Auto-filled from the linked test case's suite
+                    when the bug was created, and changeable here. */}
+                <SideRow label="Module">
+                  <ModuleSelect
+                    projectId={projectId}
+                    value={selectedBug.suiteId || ""}
+                    onChange={(next) => {
+                      if (next !== (selectedBug.suiteId || "")) {
+                        handleInlineUpdate({ suiteId: next || null } as Partial<BugReport>)
+                      }
+                    }}
+                    className={SIDE_SELECT}
+                  />
                 </SideRow>
 
                 <SideRow label="Severity">

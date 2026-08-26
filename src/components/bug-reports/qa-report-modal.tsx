@@ -32,6 +32,7 @@ const SERVICE_STATUS = [
   "Passed with some issues"
 ]
 const PRIORITY = ["Critical", "High", "Medium", "Low"]
+const UNFILED = "Unfiled"
 const BUG_STATUS = [
   "Open",
   "InProgress",
@@ -115,6 +116,18 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
     document.body.removeChild(a)
     setTimeout(() => URL.revokeObjectURL(url), 1000)
     onClose()
+  }
+
+  /**
+   * Module choices for a defect row: every module in the report, plus the one
+   * this defect already names if it is not among them — so an unusual value is
+   * visible and preserved instead of being silently reset to Unfiled.
+   */
+  const moduleOptions = (current?: string) => {
+    const names = (data?.services || []).map(s => s.name || UNFILED)
+    if (!names.includes(UNFILED)) names.push(UNFILED)
+    if (current && !names.includes(current)) names.push(current)
+    return names
   }
 
   const totals = (data?.services || []).reduce(
@@ -335,7 +348,7 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
                     <table className="w-full text-[11px]">
                       <thead className="bg-slate-50">
                         <tr className="text-left">
-                          {["ID", "Title", "Severity", "Priority", "Status", "Area", "Assignee", ""].map(h => (
+                          {["ID", "Title", "Module", "Severity", "Priority", "Status", "Test case", "Assignee", ""].map(h => (
                             <th key={h} className="px-2 py-2 font-extrabold uppercase tracking-wide text-[9px] text-muted-foreground/70 whitespace-nowrap">
                               {h}
                             </th>
@@ -358,6 +371,13 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
                                 onChange={e => patchDefect(i, { title: e.target.value })}
                                 className="h-8 text-[11px]"
                               />
+                            </td>
+                            <td className="px-2 py-1.5 w-40">
+                              {cellSelect(
+                                b.module || UNFILED,
+                                moduleOptions(b.module),
+                                v => patchDefect(i, { module: v })
+                              )}
                             </td>
                             <td className="px-2 py-1.5 w-28">
                               {cellSelect(b.severity, PRIORITY, v => patchDefect(i, { severity: v }))}
@@ -398,7 +418,7 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
                         ))}
                         {!data.defects.length && (
                           <tr>
-                            <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground font-semibold">
+                            <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground font-semibold">
                               No bugs filed for this project yet.
                             </td>
                           </tr>
@@ -418,7 +438,7 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 px-6 py-4 border-t bg-slate-50/60">
           <span className="text-[10px] text-muted-foreground font-semibold">
-            The downloaded file keeps its own Edit Mode, Download and Print buttons.
+            Defects are grouped by module in the report. The downloaded file keeps its own Edit, Download and Print buttons.
           </span>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-[11px] font-bold">

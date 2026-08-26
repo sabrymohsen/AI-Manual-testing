@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
 import { checkTransition } from "@/lib/bug-reports/workflow"
+import { resolveBugSuiteId } from "@/lib/bug-reports/module"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function GET(
@@ -15,6 +16,7 @@ export async function GET(
         project: { select: { id: true, name: true } },
         reporter: { select: { id: true, name: true, email: true } },
         testCase: { select: { id: true, title: true } },
+        suite: { select: { id: true, name: true } },
         requirements: { include: { requirement: true } },
         testRun: {
           include: {
@@ -85,7 +87,8 @@ export async function PUT(
       actualResult,
       requirementIds,
       testCaseId,
-      testRunId
+      testRunId,
+      suiteId
     } = body
 
     const existingBug = await prisma.bugReport.findUnique({
@@ -157,6 +160,22 @@ export async function PUT(
       changes.push(`Linked Test Run updated to ${testRunId || "None"}`)
     }
 
+    // Module/service. Resolved through the same helper the create path uses, so
+    // a suite id belonging to another project cannot be written here either.
+    let resolvedSuiteId: string | null | undefined
+    if (suiteId !== undefined) {
+      resolvedSuiteId = await resolveBugSuiteId(existingBug.projectId!, { suiteId })
+      if (resolvedSuiteId !== existingBug.suiteId) {
+        const suiteName = resolvedSuiteId
+          ? (await prisma.testSuite.findUnique({
+              where: { id: resolvedSuiteId },
+              select: { name: true }
+            }))?.name
+          : null
+        changes.push(`Module updated to ${suiteName || "Unfiled"}`)
+      }
+    }
+
     const updatedBug = await prisma.$transaction(async (tx) => {
       const bug = await tx.bugReport.update({
         where: { id: params.bugId },
@@ -184,6 +203,7 @@ export async function PUT(
           actualResult: actualResult !== undefined ? actualResult : undefined,
           testCaseId: testCaseId !== undefined ? (testCaseId || null) : undefined,
           testRunId: testRunId !== undefined ? (testRunId || null) : undefined,
+          suiteId: resolvedSuiteId,
           requirements: requirementIds !== undefined
             ? {
               deleteMany: {},

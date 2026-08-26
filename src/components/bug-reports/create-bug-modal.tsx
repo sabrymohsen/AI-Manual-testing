@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { ModuleSelect } from "@/components/bug-reports/module-select"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +41,8 @@ interface CreateBugModalProps {
     expectedResult?: string
     actualResult?: string
     environment?: string
+    /** Pre-select the module/service (a TestSuite id). */
+    suiteId?: string
   }
   /**
    * Steps recorded during a Live QA Session, offered as an opt-in inside the
@@ -93,6 +96,8 @@ export function CreateBugModal({
   const [env, setEnv] = useState("Staging")
   const [browser, setBrowser] = useState("Chromium")
   const [source, setSource] = useState("")
+  // Module/service this defect belongs to (a TestSuite id); "" = Unfiled.
+  const [suiteId, setSuiteId] = useState("")
   const [expected, setExpected] = useState("")
   const [actual, setActual] = useState("")
   const [steps, setSteps] = useState<CreateBugStep[]>([])
@@ -175,6 +180,7 @@ export function CreateBugModal({
     setEnv(initialValues?.environment || "Staging")
     setBrowser("Chromium")
     setSource("")
+    setSuiteId(initialValues?.suiteId || "")
     setExpected(initialValues?.expectedResult || "")
     setActual(initialValues?.actualResult || "")
     setSteps([])
@@ -405,6 +411,7 @@ export function CreateBugModal({
       status: "Open",
     }
     if (source) body.source = source
+    if (suiteId) body.suiteId = suiteId
     if (recordingSessionId) body.recordingSessionId = recordingSessionId
     // A pasted video URL is stored directly; an uploaded video file takes precedence.
     if (videoUrl.trim() && !videoFile) {
@@ -675,6 +682,14 @@ export function CreateBugModal({
                 <option value="Critical">Critical</option>
               </select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-muted-foreground font-bold">Module / Service</Label>
+            <ModuleSelect projectId={projectId} value={suiteId} onChange={setSuiteId} enabled={open} />
+            <p className="text-[10px] text-muted-foreground font-medium">
+              Groups this defect in the QA report. Left empty, it inherits the linked test case's module.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

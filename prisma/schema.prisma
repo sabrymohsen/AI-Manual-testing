@@ -551,7 +551,8 @@ model TestSuite {
   description String?
   orderIndex  Int     @default(0)
 
-  testCases TestCase[]
+  testCases  TestCase[]
+  bugReports BugReport[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -794,6 +795,16 @@ model BugReport {
   testStepResultId String?
   testStepResult   TestStepResult? @relation(fields: [testStepResultId], references: [id], onDelete: SetNull)
 
+  // Which module/service of the system the defect belongs to. Deliberately its
+  // OWN field rather than something derived from testCase.suite: most bugs are
+  // filed by hand during exploratory testing and never point at a case, and a
+  // defect can belong to a module none of its cases live in. Auto-filled from
+  // the linked case's suite when one exists, then freely editable.
+  // SetNull, so deleting a suite leaves its bugs unfiled rather than deleting
+  // them.
+  suiteId String?
+  suite   TestSuite? @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+
   severity Priority
   priority Priority
   status   BugStatus @default(Open)
@@ -878,6 +889,9 @@ model BugReport {
   @@index([projectId])
   @@index([status])
   @@index([testCaseId])
+  @@index([suiteId])
+  // The report and the module filter both ask "bugs of this project, by module".
+  @@index([projectId, suiteId])
   @@index([testRunId])
   @@index([autonomousAgentRunId])
   @@index([agentBrainRunId])

@@ -16,8 +16,13 @@ import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
  *              the project total; requirement links are many-to-many and would
  *              double-count.
  *   defects  — one row per bug, carrying the app's OWN severity/priority and
- *              status values. No translation to a foreign vocabulary: a
- *              ReadyForRetest bug says ReadyForRetest in the report.
+ *              status values, and the module it is filed under. No translation
+ *              to a foreign vocabulary: a ReadyForRetest bug says
+ *              ReadyForRetest in the report.
+ *
+ * Defects and modules meet on BugReport.suiteId — the bug's own link, so a
+ * defect filed by hand during exploratory testing lands in the right section
+ * even though it points at no test case.
  *
  * Read-only and member-level: anyone who can see the bug list can export it.
  */
@@ -33,8 +38,14 @@ interface ServiceRow {
   remarks: string
 }
 
+/**
+ * One label for "no module", used by the row, the chart and the defect log so
+ * they cannot disagree. Bugs and cases both fall here when unfiled.
+ */
+const UNFILED_LABEL = "Unfiled"
+
 /** Derive a suite's overall verdict from its counts, using the app's vocabulary. */
-function deriveStatus(row: Omit<ServiceRow, "status" | "remarks">): string {
+function deriveStatus(row: Pick<ServiceRow, "total" | "passed" | "failed" | "blocked">): string {
   const executed = row.passed + row.failed + row.blocked
   if (row.total === 0) return "Not Started"
   if (executed === 0) return "Not Started"
@@ -87,7 +98,9 @@ export async function GET(
         environment: true,
         assignedTo: true,
         createdAt: true,
-        testCase: { select: { title: true, suite: { select: { name: true } } } }
+        suiteId: true,
+        suite: { select: { id: true, name: true } },
+        testCase: { select: { title: true } }
       },
       orderBy: { createdAt: "asc" }
     })
@@ -96,12 +109,14 @@ export async function GET(
   if (!project) return unauthorizedResponse("Project not found")
 
   // ── Services ──────────────────────────────────────────────────────────────
+  const blank = (name: string): ServiceRow => ({
+    name, total: 0, passed: 0, failed: 0, blocked: 0, status: "", remarks: ""
+  })
+
   const buckets = new Map<string, ServiceRow>()
-  for (const s of suites) {
-    buckets.set(s.id, { name: s.name, total: 0, passed: 0, failed: 0, blocked: 0, status: "", remarks: "" })
-  }
+  for (const s of suites) buckets.set(s.id, blank(s.name))
   const UNFILED = "__unfiled__"
-  buckets.set(UNFILED, { name: "Unfiled", total: 0, passed: 0, failed: 0, blocked: 0, status: "", remarks: "" })
+  buckets.set(UNFILED, blank(UNFILED_LABEL))
 
   for (const tc of testCases) {
     const row = buckets.get(tc.suiteId ?? UNFILED) ?? buckets.get(UNFILED)!
@@ -111,9 +126,15 @@ export async function GET(
     else if (tc.lastStatus === "Blocked") row.blocked += 1
   }
 
+  // Per-module defect counts are NOT stored on the row: the report derives them
+  // from the defect list so that re-filing a defect in the downloaded file moves
+  // its count in the same click. The tally here only decides whether the
+  // "Unfiled" row is worth showing at all.
+  const unfiledDefects = bugs.filter(b => !b.suiteId).length
+
   const services = Array.from(buckets.entries())
     // An empty "Unfiled" bucket is noise; an empty suite is a real (untested) row.
-    .filter(([key, row]) => key !== UNFILED || row.total > 0)
+    .filter(([key, row]) => key !== UNFILED || row.total > 0 || unfiledDefects > 0)
     .map(([, row]) => ({ ...row, status: deriveStatus(row) }))
 
   // ── Defects ───────────────────────────────────────────────────────────────
@@ -123,7 +144,11 @@ export async function GET(
     severity: b.severity,
     priority: b.priority,
     status: b.status,
-    area: b.testCase?.suite?.name || b.testCase?.title || "",
+    // The module the defect is filed under. Its own link now, so a bug filed by
+    // hand during exploratory testing lands in the right section of the report
+    // even though it points at no test case.
+    module: b.suite?.name || UNFILED_LABEL,
+    area: b.testCase?.title || "",
     assignedTo: b.assignedTo || "",
     reportedOn: b.createdAt.toISOString().slice(0, 10)
   }))
