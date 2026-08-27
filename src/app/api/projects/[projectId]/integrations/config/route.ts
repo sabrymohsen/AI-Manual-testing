@@ -10,7 +10,7 @@ import crypto from "node:crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { encryptSecret } from "@/lib/crypto"
+import { encryptSecret, EncryptionKeyError } from "@/lib/crypto"
 import { providerLabels } from "@/lib/integrations/labels"
 import { syncProjectTeam } from "@/lib/team/sync-team"
 
@@ -97,7 +97,11 @@ export async function PUT(req: Request, { params }: { params: { projectId: strin
       }
     } catch (err) {
       console.error("[integrations/config] token encryption failed:", err)
-      return NextResponse.json({ error: "Failed to encrypt API token" }, { status: 500 })
+      // A misconfigured key is an operator problem, not a bug in this
+      // route — say which variable is wrong instead of a dead end.
+      const message =
+        err instanceof EncryptionKeyError ? err.message : "Failed to encrypt API token"
+      return NextResponse.json({ error: message }, { status: 500 })
     }
   }
 

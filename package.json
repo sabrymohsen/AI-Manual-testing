@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/ensure-env.mjs",
     "dev": "next dev",
     "dev:socket": "tsx socket-server.ts",
     "dev:all": "npm run dev:socket & npm run dev",
@@ -14,7 +15,8 @@
     "recorder-worker": "tsx src/workers/recorder.worker.ts",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "setup:env": "node scripts/ensure-env.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

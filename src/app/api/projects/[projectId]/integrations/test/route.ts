@@ -2,7 +2,20 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { z } from "zod"
-import { decryptSecret } from "@/lib/crypto"
+import { decryptSecret, checkEncryptionKey } from "@/lib/crypto"
+
+/**
+ * A connection test that passes is only half the answer: the token still has to
+ * be storable. Without this, "Test connection" said success and Save then died
+ * with "Failed to encrypt API token", which reads as a bug in the integration
+ * rather than an unset variable on the host.
+ */
+function storageWarning(): { warning?: string } {
+  const encryption = checkEncryptionKey()
+  return encryption.ok
+    ? {}
+    : { warning: `Connection works, but this server cannot save the token: ${encryption.reason}` }
+}
 
 export async function POST(
   request: Request,
@@ -149,7 +162,7 @@ export async function POST(
             },
           })
           if (res2.ok) {
-            return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!" })
+            return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!", ...storageWarning() })
           }
         } catch {}
       }
@@ -168,7 +181,7 @@ export async function POST(
         )
       }
 
-      return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!" })
+      return NextResponse.json({ success: true, message: "Successfully connected to OpenProject!", ...storageWarning() })
     }
 
     return NextResponse.json({ error: "Unsupported provider" }, { status: 400 })

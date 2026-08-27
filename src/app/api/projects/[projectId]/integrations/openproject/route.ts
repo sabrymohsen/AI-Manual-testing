@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
-import { encryptSecret } from "@/lib/crypto"
+import { encryptSecret, EncryptionKeyError } from "@/lib/crypto"
 import { z } from "zod"
 
 const settingsSchema = z.object({
@@ -139,7 +139,11 @@ export async function POST(
       }
     } catch (err) {
       console.error("[openproject] Token encryption failed:", err)
-      return NextResponse.json({ error: "Failed to encrypt API token" }, { status: 500 })
+      // A misconfigured key is an operator problem, not a bug in this
+      // route — say which variable is wrong instead of a dead end.
+      const message =
+        err instanceof EncryptionKeyError ? err.message : "Failed to encrypt API token"
+      return NextResponse.json({ error: message }, { status: 500 })
     }
   }
 

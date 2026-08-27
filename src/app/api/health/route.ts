@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { redisConnection } from "@/lib/queue"
 import { Redis } from "ioredis"
 import { checkStorageHealth } from "@/lib/storage-health"
+import { checkEncryptionKey } from "@/lib/crypto"
 
 export async function GET() {
   const checks = {
@@ -42,6 +43,11 @@ export async function GET() {
   // Check Storage: writable *and* persistent. Writability alone is not enough —
   // an ephemeral container filesystem is perfectly writable and still loses
   // every upload on the next deploy.
+  // Can this server store secrets at all? Reported, but deliberately NOT part
+  // of the 503 decision: a missing key breaks saving tokens, not serving the
+  // app, and failing readiness over it would take a working deployment down.
+  const encryption = checkEncryptionKey()
+
   const storage = await checkStorageHealth()
   checks.storage = storage.writable
   checks.storagePersistent = storage.writable && !storage.looksEphemeral
@@ -53,6 +59,11 @@ export async function GET() {
     {
       status: allHealthy ? "healthy" : "unhealthy",
       checks,
+      encryption: {
+        configured: encryption.ok,
+        // Names an environment variable and nothing from the key itself.
+        reason: encryption.ok ? undefined : encryption.reason,
+      },
       storage: {
         // Absolute path deliberately omitted — this endpoint is unauthenticated.
         persistedSince: storage.markerCreatedAt,

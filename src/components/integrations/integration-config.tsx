@@ -446,7 +446,14 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
         }),
       })
       const data = await res.json()
-      setTestResult(res.ok ? { success: true, message: data.message } : { success: false, message: data.error })
+      setTestResult(
+        res.ok
+          // A warning here means the connection is fine but this server cannot
+          // store the token — surfaced now rather than at Save, where it used
+          // to appear as "Failed to encrypt API token".
+          ? { success: !data.warning, message: data.warning || data.message }
+          : { success: false, message: data.error }
+      )
     } catch {
       setTestResult({ success: false, message: "Network error" })
     } finally {
