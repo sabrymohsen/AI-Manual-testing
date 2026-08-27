@@ -36,7 +36,10 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
   }
 
   try {
-  const [suites, unfiled] = await Promise.all([
+  // Counts are DIRECT, never rolled up through the subtree: a case and a bug
+  // each live in exactly one suite, so direct counts sum to the project total.
+  // Rolling parents up would double-count everything under them.
+  const [suites, unfiled, caseStatuses, bugStatuses] = await Promise.all([
     prisma.testSuite.findMany({
       where: { projectId: params.projectId },
       orderBy: [{ parentId: "asc" }, { orderIndex: "asc" }, { name: "asc" }],
@@ -50,10 +53,51 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
       },
     }),
     prisma.testCase.count({ where: { projectId: params.projectId, suiteId: null } }),
+    // Two grouped queries rather than per-suite counts, so a project with 60
+    // modules costs two round-trips instead of a hundred and twenty.
+    prisma.testCase.groupBy({
+      by: ["suiteId", "lastStatus"],
+      where: { projectId: params.projectId, suiteId: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.bugReport.groupBy({
+      by: ["suiteId", "status"],
+      where: { projectId: params.projectId, suiteId: { not: null } },
+      _count: { _all: true },
+    }),
   ])
 
+  const OPEN_BUG_STATUSES = new Set(["Open", "InProgress", "ReadyForRetest", "Reopened"])
+
+  const passed = new Map<string, number>()
+  const failed = new Map<string, number>()
+  for (const row of caseStatuses) {
+    if (!row.suiteId) continue
+    const n = row._count._all
+    if (row.lastStatus === "Passed") passed.set(row.suiteId, (passed.get(row.suiteId) ?? 0) + n)
+    else if (row.lastStatus === "Failed") failed.set(row.suiteId, (failed.get(row.suiteId) ?? 0) + n)
+  }
+
+  const bugs = new Map<string, number>()
+  const openBugs = new Map<string, number>()
+  for (const row of bugStatuses) {
+    if (!row.suiteId) continue
+    const n = row._count._all
+    bugs.set(row.suiteId, (bugs.get(row.suiteId) ?? 0) + n)
+    if (OPEN_BUG_STATUSES.has(row.status)) {
+      openBugs.set(row.suiteId, (openBugs.get(row.suiteId) ?? 0) + n)
+    }
+  }
+
   return NextResponse.json({
-    suites: suites.map(({ _count, ...s }) => ({ ...s, caseCount: _count.testCases })),
+    suites: suites.map(({ _count, ...s }) => ({
+      ...s,
+      caseCount: _count.testCases,
+      passedCount: passed.get(s.id) ?? 0,
+      failedCount: failed.get(s.id) ?? 0,
+      bugCount: bugs.get(s.id) ?? 0,
+      openBugCount: openBugs.get(s.id) ?? 0,
+    })),
     unfiledCount: unfiled,
   })
   } catch (err) {

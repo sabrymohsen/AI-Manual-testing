@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { TeamPanel } from "@/components/team/team-panel"
 import { ProjectAiPanel } from "@/components/ai/project-ai-panel"
+import { ModulesPanel } from "@/components/modules/modules-panel"
 
 type ProjectTab = "scope" | "credentials" | "integrations" | "ai" | "team" | "settings"
 
@@ -47,23 +48,20 @@ export default function ProjectDetailPage() {
         : "scope"
 
   const [project, setProject] = useState<any>(null)
-  const [hierarchyModules, setHierarchyModules] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<ProjectTab>(initialTab)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
 
   const loadData = async () => {
     try {
-      const [projRes, hierRes] = await Promise.all([
-        fetch(`/api/projects/${projectId}`),
-        fetch(`/api/projects/${projectId}/hierarchy`)
-      ])
-
+      // `/hierarchy` used to be fetched here for the old read-only scope tree.
+      // That endpoint never existed, so it 404'd on every load and the tab
+      // always read "No modules defined"; the Modules tab now reads the
+      // project's real test suites instead.
+      const projRes = await fetch(`/api/projects/${projectId}`)
       const projData = projRes.ok ? await projRes.json() : {}
-      const hierData = hierRes.ok ? await hierRes.json() : {}
 
       setProject(projData.project)
-      setHierarchyModules(hierData.modules || [])
     } catch (err) {
       console.error("Error loading project dynamic details:", err)
     }
@@ -151,7 +149,7 @@ export default function ProjectDetailPage() {
       {/* Tabs navigation */}
       <div className="flex border-b pb-px overflow-x-auto gap-4">
         {[
-          { id: "scope", label: "Scope / Modules", icon: Layers },
+          { id: "scope", label: "Modules", icon: Layers },
           { id: "credentials", label: "Credentials Vault", icon: Key },
           { id: "integrations", label: integrationTabLabel, icon: Globe },
           { id: "ai", label: "AI Provider", icon: Bot },
@@ -176,56 +174,11 @@ export default function ProjectDetailPage() {
       </div>
 
       <div className="mt-6">
-        {/* SCOPE TAB */}
+        {/* MODULES TAB — the project's test suites, which are also what bugs
+            are filed under and what the QA report groups by. */}
         {activeTab === "scope" && (
-          <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card space-y-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-800">Workspace Scope Folders Hierarchy</h2>
-              <p className="text-[10px] text-slate-400 font-medium">Read-only overview of modules, features, and components structure.</p>
-            </div>
-            
-            {hierarchyModules.length === 0 ? (
-              <div className="text-center p-12 text-slate-450 italic">No modules defined in active project scope folder tree.</div>
-            ) : (
-              <div className="space-y-4">
-                {hierarchyModules.map((mod) => (
-                  <div key={mod.id} className="border border-slate-100 rounded-xl p-4 bg-slate-500/[0.01] space-y-3">
-                    <h3 className="font-extrabold text-sm text-slate-800 border-b pb-2 flex justify-between items-center">
-                      <span>📦 Module: {mod.name}</span>
-                      <span className="text-[10px] text-slate-400 font-medium">{mod.features?.length || 0} features</span>
-                    </h3>
-
-                    {mod.features?.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic">No features defined.</p>
-                    ) : (
-                      <div className="space-y-3">
-                        {mod.features.map((feat: any) => (
-                          <div key={feat.id} className="pl-3.5 border-l-2 border-slate-200 space-y-2">
-                            <h4 className="text-xs font-bold text-slate-700">⚡ Feature: {feat.name}</h4>
-
-                            {feat.components?.length === 0 ? (
-                              <p className="text-[10px] text-slate-400 italic pl-2">No components defined.</p>
-                            ) : (
-                              <div className="flex flex-wrap gap-2 pl-2">
-                                {feat.components.map((comp: any) => (
-                                  <div
-                                    key={comp.id}
-                                    className="text-[11px] px-2.5 py-1 rounded-lg border font-semibold flex items-center gap-1.5 bg-slate-50 text-slate-600 border-slate-200"
-                                  >
-                                    <span className="h-1.5 w-1.5 rounded-full bg-slate-450"></span>
-                                    {comp.name}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
+            <ModulesPanel projectId={projectId} />
           </div>
         )}
 

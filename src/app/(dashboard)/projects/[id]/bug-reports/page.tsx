@@ -504,7 +504,9 @@ export default function ProjectBugReportsPage() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [filterSource, setFilterSource] = useState("all")
   // Module/service filter. "unfiled" is its own answer, not "no filter".
-  const [filterModule, setFilterModule] = useState("all")
+  // Seeded from ?suite= so the module counts on the project page can link
+  // straight to the defects they are counting.
+  const [filterModule, setFilterModule] = useState(() => searchParams.get("suite") || "all")
   // The project's suite tree, shared by the filter, the drawer and bulk actions.
   const { modules: projectModules } = useProjectModules(projectId)
   // Triage filters — the two questions a triage session actually opens with.

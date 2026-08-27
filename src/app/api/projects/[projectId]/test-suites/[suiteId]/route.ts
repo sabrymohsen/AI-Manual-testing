@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectPermission, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectPermission, requireProjectMember, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { z } from "zod"
 
 const updateSchema = z.object({
@@ -30,6 +30,69 @@ async function wouldCreateCycle(suiteId: string, candidateParentId: string): Pro
     cursor = parent?.parentId ?? null
   }
   return false
+}
+
+/** Every suite id in this suite's subtree, itself included. */
+async function subtreeIds(projectId: string, suiteId: string): Promise<string[]> {
+  const all = await prisma.testSuite.findMany({
+    where: { projectId },
+    select: { id: true, parentId: true },
+  })
+  const childrenOf = new Map<string | null, string[]>()
+  for (const s of all) {
+    const list = childrenOf.get(s.parentId) ?? []
+    list.push(s.id)
+    childrenOf.set(s.parentId, list)
+  }
+  const subtree: string[] = []
+  const stack = [suiteId]
+  const seen = new Set<string>()
+  while (stack.length) {
+    const id = stack.pop()!
+    if (seen.has(id)) continue
+    seen.add(id)
+    subtree.push(id)
+    stack.push(...(childrenOf.get(id) ?? []))
+  }
+  return subtree
+}
+
+/**
+ * GET — what deleting this suite would cost.
+ *
+ * The delete itself is not reversible, and its blast radius is invisible from
+ * the row: a module with two cases of its own may hold four sub-modules with
+ * forty between them, plus the bugs filed against all of it. The confirmation
+ * dialog reads these numbers rather than guessing, so nobody is surprised by
+ * what they just unfiled.
+ */
+export async function GET(
+  _request: Request,
+  { params }: { params: { projectId: string; suiteId: string } }
+) {
+  const auth = await requireProjectMember(params.projectId)
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const existing = await prisma.testSuite.findFirst({
+    where: { id: params.suiteId, projectId: params.projectId },
+    select: { id: true, name: true },
+  })
+  if (!existing) return notFoundResponse("Suite not found")
+
+  const subtree = await subtreeIds(params.projectId, params.suiteId)
+  const [cases, bugs] = await Promise.all([
+    prisma.testCase.count({ where: { suiteId: { in: subtree } } }),
+    prisma.bugReport.count({ where: { suiteId: { in: subtree } } }),
+  ])
+
+  return NextResponse.json({
+    id: existing.id,
+    name: existing.name,
+    // The suite itself counts as one; 3 means "this and two sub-modules".
+    suitesRemoved: subtree.length,
+    casesUnfiled: cases,
+    bugsUnfiled: bugs,
+  })
 }
 
 export async function PATCH(
@@ -89,9 +152,10 @@ export async function PATCH(
 /**
  * DELETE — removes the suite and its descendant suites (FK cascade).
  *
- * Test cases are never deleted: TestCase.suiteId is ON DELETE SET NULL, so
- * cases in the removed subtree fall back to "Unfiled". The response reports how
- * many were unfiled so the UI can say so plainly.
+ * Neither test cases nor bugs are deleted: TestCase.suiteId and
+ * BugReport.suiteId are both ON DELETE SET NULL, so everything in the removed
+ * subtree falls back to "Unfiled". The response reports how many of each, so
+ * the UI can say so plainly.
  */
 export async function DELETE(
   _request: Request,
@@ -106,28 +170,21 @@ export async function DELETE(
   })
   if (!existing) return notFoundResponse("Suite not found")
 
-  // Collect the subtree so we can report the true number of affected cases.
-  const all = await prisma.testSuite.findMany({
-    where: { projectId: params.projectId },
-    select: { id: true, parentId: true },
-  })
-  const childrenOf = new Map<string | null, string[]>()
-  for (const s of all) {
-    const list = childrenOf.get(s.parentId) ?? []
-    list.push(s.id)
-    childrenOf.set(s.parentId, list)
-  }
-  const subtree: string[] = []
-  const stack = [params.suiteId]
-  while (stack.length) {
-    const id = stack.pop()!
-    subtree.push(id)
-    stack.push(...(childrenOf.get(id) ?? []))
-  }
+  const subtree = await subtreeIds(params.projectId, params.suiteId)
 
-  const unfiled = await prisma.testCase.count({ where: { suiteId: { in: subtree } } })
+  // Counted BEFORE the delete: afterwards the rows point at nothing and there
+  // is no way to say what was affected.
+  const [unfiledCases, unfiledBugs] = await Promise.all([
+    prisma.testCase.count({ where: { suiteId: { in: subtree } } }),
+    prisma.bugReport.count({ where: { suiteId: { in: subtree } } }),
+  ])
 
   await prisma.testSuite.delete({ where: { id: params.suiteId } })
 
-  return NextResponse.json({ success: true, suitesRemoved: subtree.length, casesUnfiled: unfiled })
+  return NextResponse.json({
+    success: true,
+    suitesRemoved: subtree.length,
+    casesUnfiled: unfiledCases,
+    bugsUnfiled: unfiledBugs,
+  })
 }
