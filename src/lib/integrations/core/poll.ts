@@ -15,12 +15,40 @@ import type { NormalizedInboundEvent } from "./types"
 export interface PollResult {
   checked: number
   applied: number
+  /** Items the tracker refused or could not return, and the first reason why. */
+  failed: number
+  error?: string
+  /**
+   * Why nothing was checked, when nothing was. Without this the caller cannot
+   * tell "the tracker had no news" from "this project has no integration", and
+   * a manual pull that did nothing reported success either way.
+   */
+  skipped?: "no-integration" | "inbound-disabled" | "no-mappings"
+}
+
+export interface PollOptions {
+  /**
+   * Run even when the project's `inboundSyncEnabled` flag is off.
+   *
+   * That flag governs the UNATTENDED path — the worker and webhooks — where
+   * reading a tracker nobody asked about is a surprise. A person clicking
+   * "Pull changes" has asked, so the flag is not their answer. It also
+   * defaults to false, and is hardcoded false for legacy OpenProject rows,
+   * which is why the button silently did nothing on most projects.
+   */
+  force?: boolean
 }
 
 /** Poll one project's mapped items and reconcile any external changes. */
-export async function pollInboundForProject(projectId: string): Promise<PollResult> {
+export async function pollInboundForProject(
+  projectId: string,
+  opts: PollOptions = {}
+): Promise<PollResult> {
   const loaded = await loadIntegration(projectId)
-  if (!loaded || !loaded.inboundSyncEnabled) return { checked: 0, applied: 0 }
+  if (!loaded) return { checked: 0, applied: 0, failed: 0, skipped: "no-integration" }
+  if (!loaded.inboundSyncEnabled && !opts.force) {
+    return { checked: 0, applied: 0, failed: 0, skipped: "inbound-disabled" }
+  }
 
   const provider = loaded.getClient()
   const mappings = await prisma.externalSyncMapping.findMany({
@@ -31,8 +59,14 @@ export async function pollInboundForProject(projectId: string): Promise<PollResu
   // rather than letting each of them re-query it per work package.
   const ctx = { bugStatusMapping: readBugStatusMapping(loaded.statusMapping) }
 
+  if (mappings.length === 0) {
+    return { checked: 0, applied: 0, failed: 0, skipped: "no-mappings" }
+  }
+
   let checked = 0
   let applied = 0
+  let failed = 0
+  let firstError: string | undefined
   for (const m of mappings) {
     try {
       const item = await provider.getWorkItem(m.externalId)
@@ -52,10 +86,15 @@ export async function pollInboundForProject(projectId: string): Promise<PollResu
       const did = await reconcileInboundEvent(projectId, loaded.provider, provider, event, ctx)
       if (did) applied++
     } catch (err: any) {
+      // Swallowed per item so one deleted work package cannot end the pull —
+      // but counted and reported, because a pull where every item failed used
+      // to be indistinguishable from a pull where nothing had changed.
+      failed++
+      if (!firstError) firstError = err?.message || "Unknown error"
       console.warn(`[poll] ${loaded.provider} item ${m.externalId} failed: ${err?.message}`)
     }
   }
-  return { checked, applied }
+  return { checked, applied, failed, error: firstError }
 }
 
 /** Poll every project that has inbound sync enabled (unified model). */

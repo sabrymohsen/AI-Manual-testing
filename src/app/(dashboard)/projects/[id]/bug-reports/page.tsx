@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useEffect, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -94,6 +94,18 @@ interface BugActivity {
   action: string
   details: string | null
   createdAt: string
+}
+
+/** How often the page re-reads the tracker in the background. */
+const AUTO_PULL_INTERVAL_MS = 60_000
+
+/** "12s ago" / "3m ago" — coarse on purpose; the exact time is in the tooltip. */
+function sinceLabel(at: number): string {
+  const seconds = Math.max(0, Math.round((Date.now() - at) / 1000))
+  if (seconds < 60) return `${seconds}s ago`
+  const minutes = Math.round(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  return `${Math.round(minutes / 60)}h ago`
 }
 
 interface BugReport {
@@ -255,16 +267,24 @@ function BoardMirrorBar({
   onPull,
   pulling,
   unsyncedCount,
+  autoPull,
+  onToggleAutoPull,
+  autoPulling,
+  lastPulledAt,
 }: {
   mirror: BoardMirror | null
   mirrorActive: boolean
   mirrorLoading: boolean
   trackerName: string | null
   useMirror: boolean
-  onToggleMirror: (v: boolean) => void
+  onToggleMirror: (_v: boolean) => void
   onPull: () => void
   pulling: boolean
   unsyncedCount: number
+  autoPull: boolean
+  onToggleAutoPull: (_v: boolean) => void
+  autoPulling: boolean
+  lastPulledAt: number | null
 }) {
   // Nothing connected: the app's own columns are the only columns, and saying
   // so on every board render would be noise.
@@ -321,6 +341,14 @@ function BoardMirrorBar({
           </a>
         )}
 
+        {/* When the last read landed. Without it, "auto" is a claim the user
+            has to take on faith while looking at a board that may be stale. */}
+        {lastPulledAt && !pulling && (
+          <span className="text-[10px] font-semibold text-slate-400" title={new Date(lastPulledAt).toLocaleTimeString()}>
+            {autoPulling ? "Checking…" : `Updated ${sinceLabel(lastPulledAt)}`}
+          </span>
+        )}
+
         <button
           onClick={onPull}
           disabled={pulling}
@@ -329,6 +357,23 @@ function BoardMirrorBar({
         >
           <Download className={`h-3 w-3 ${pulling ? "animate-pulse" : ""}`} />
           {pulling ? "Pulling…" : "Pull changes"}
+        </button>
+
+        <button
+          onClick={() => onToggleAutoPull(!autoPull)}
+          title={
+            autoPull
+              ? "Stop checking the tracker automatically"
+              : `Check ${trackerName || "the tracker"} every minute while this page is open`
+          }
+          className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold transition-colors ${
+            autoPull
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+              : "bg-background hover:bg-accent"
+          }`}
+        >
+          <RefreshCw className={`h-3 w-3 ${autoPulling ? "animate-spin" : ""}`} />
+          Auto {autoPull ? "on" : "off"}
         </button>
 
         {mirror?.available && (
@@ -534,7 +579,20 @@ export default function ProjectBugReportsPage() {
   // isn't (or the tracker can't be reached).
   const [mirror, setMirror] = useState<BoardMirror | null>(null)
   const [mirrorLoading, setMirrorLoading] = useState(false)
+  /**
+   * Whether the tracker has answered yet at all.
+   *
+   * Distinct from `mirror === null`, which also means "answered: no board".
+   * Until the first answer arrives the board must not fall back to the app's own
+   * six columns — that fallback is what made the old board flash up and get
+   * replaced a moment later.
+   */
+  const [mirrorResolved, setMirrorResolved] = useState(false)
   const [pullingInbound, setPullingInbound] = useState(false)
+  /** Background refresh: on by default, paused while the tab is hidden. */
+  const [autoPull, setAutoPull] = useState(true)
+  const [autoPulling, setAutoPulling] = useState(false)
+  const [lastPulledAt, setLastPulledAt] = useState<number | null>(null)
   /** Escape hatch: show the app's own statuses even when a mirror is available. */
   const [useMirror, setUseMirror] = useState(true)
 
@@ -847,6 +905,20 @@ export default function ProjectBugReportsPage() {
    * Failures are deliberately quiet: the board falls back to local columns, and
    * a red banner over a working board helps nobody.
    */
+  /**
+   * The list loader, reachable from a memoised callback.
+   *
+   * `loadBugsList` is redeclared every render and closes over the current
+   * filters. `runPull` is memoised so the background interval isn't torn down
+   * and rebuilt on every render — which means it would otherwise hold the
+   * FIRST render's loader and refetch with whatever filters were set when the
+   * page opened.
+   */
+  const loadBugsListRef = useRef(loadBugsList)
+  useEffect(() => {
+    loadBugsListRef.current = loadBugsList
+  })
+
   const loadBoardMirror = useCallback(
     async (opts: { silent?: boolean } = {}) => {
       if (!opts.silent) setMirrorLoading(true)
@@ -858,41 +930,130 @@ export default function ProjectBugReportsPage() {
         setMirror(null)
       } finally {
         setMirrorLoading(false)
+        setMirrorResolved(true)
       }
     },
     [projectId]
   )
 
-  // Only fetched for the board — the list view has no use for tracker columns.
+  /**
+   * Fetched on mount rather than when the board is opened.
+   *
+   * It used to wait for the switch to board view, so the first paint of the
+   * board always had `mirror === null` and rendered the app's own columns until
+   * the request came back. Asking on mount means the answer is usually already
+   * in hand by the time the board opens; `mirrorResolved` covers the rest.
+   */
   useEffect(() => {
-    if (viewMode === "board") loadBoardMirror()
-  }, [viewMode, loadBoardMirror])
+    loadBoardMirror()
+  }, [loadBoardMirror])
 
   /**
-   * Pull changes made in the tracker right now, instead of waiting for the
-   * poll worker. The same reconciliation the webhook runs, on demand.
+   * Read the tracker and reconcile whatever has changed there.
+   *
+   * One implementation for both the button and the background refresh; only the
+   * reporting differs. `silent` keeps the background pass from firing a toast
+   * every minute — it still refreshes the data and the "updated" stamp.
+   *
+   * The pull is forced, meaning it ignores the project's `inboundSyncEnabled`
+   * flag. That flag exists for the unattended worker; a person on this page has
+   * asked for the tracker to be read.
    */
-  const handlePullInbound = async () => {
-    setPullingInbound(true)
-    try {
-      const res = await fetch(`/api/projects/${projectId}/integrations/poll`, { method: "POST" })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok) {
-        showToastMsg(
-          data.applied > 0
-            ? `Pulled ${data.applied} change${data.applied === 1 ? "" : "s"} from ${trackerName || "the tracker"}.`
-            : `Already up to date with ${trackerName || "the tracker"}.`
-        )
-        await Promise.all([loadBugsList(), loadBoardMirror({ silent: true })])
-      } else {
-        showToastMsg(data.error || "Could not pull changes", "error")
+  const runPull = useCallback(
+    async ({ silent }: { silent: boolean }) => {
+      if (silent) setAutoPulling(true)
+      else setPullingInbound(true)
+      try {
+        const res = await fetch(`/api/projects/${projectId}/integrations/poll`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ force: true })
+        })
+        const data = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+          if (!silent) showToastMsg(data.error || "Could not pull changes", "error")
+          return
+        }
+
+        setLastPulledAt(Date.now())
+        if (data.applied > 0) {
+          await Promise.all([loadBugsListRef.current(), loadBoardMirror({ silent: true })])
+        }
+
+        if (silent) return
+
+        // Say what actually happened. "Already up to date" used to be printed
+        // even when the pull never reached the tracker, which is how a button
+        // that did nothing looked like a button that worked.
+        const tracker = trackerName || "the tracker"
+        if (data.applied > 0) {
+          showToastMsg(`Pulled ${data.applied} change${data.applied === 1 ? "" : "s"} from ${tracker}.`)
+        } else if (data.skipped === "no-integration") {
+          showToastMsg("This project has no tracker connected.", "error")
+        } else if (data.skipped === "no-mappings") {
+          showToastMsg(`No bugs are synced with ${tracker} yet — sync one first.`, "error")
+        } else if (data.failed > 0 && data.checked === 0) {
+          showToastMsg(`${tracker} could not be read: ${data.error || "request failed"}`, "error")
+        } else if (data.failed > 0) {
+          showToastMsg(`Up to date, but ${data.failed} item(s) could not be read from ${tracker}.`, "error")
+        } else {
+          showToastMsg(`Already up to date with ${tracker} (${data.checked} checked).`)
+        }
+      } catch {
+        if (!silent) showToastMsg("Network error pulling changes", "error")
+      } finally {
+        if (silent) setAutoPulling(false)
+        else setPullingInbound(false)
       }
-    } catch {
-      showToastMsg("Network error pulling changes", "error")
-    } finally {
-      setPullingInbound(false)
+    },
+    [projectId, trackerName, loadBoardMirror]
+  )
+
+  const handlePullInbound = () => runPull({ silent: false })
+
+  // A project with no tracker has nothing to pull; polling it every minute
+  // would be a request whose only possible answer is "no integration".
+  const hasTracker = !!mirror?.provider
+
+  /**
+   * Background refresh — read the tracker every minute while this page is open.
+   *
+   * Paused whenever the tab is hidden: a board nobody is looking at does not
+   * need polling, and a laptop that slept for an hour should not wake and fire
+   * the backlog of missed ticks. Returning to the tab pulls immediately
+   * instead, which is the moment a stale board is most obvious.
+   */
+  useEffect(() => {
+    if (!autoPull || !hasTracker) return
+
+    let timer: ReturnType<typeof setInterval> | null = null
+
+    const start = () => {
+      if (timer) return
+      timer = setInterval(() => runPull({ silent: true }), AUTO_PULL_INTERVAL_MS)
     }
-  }
+    const stop = () => {
+      if (!timer) return
+      clearInterval(timer)
+      timer = null
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        runPull({ silent: true })
+        start()
+      } else {
+        stop()
+      }
+    }
+
+    if (document.visibilityState === "visible") start()
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [autoPull, hasTracker, runPull])
 
   /**
    * Drop onto a mirrored column: move the card in the tracker, and let the local
@@ -1304,7 +1465,17 @@ export default function ProjectBugReportsPage() {
     { key: "Closed", label: "Closed", color: "border-slate-400", mirrored: null },
   ]
 
-  const boardColumns: BoardColumnView[] = mirrorActive
+  /**
+   * No columns at all until the tracker has answered.
+   *
+   * The board used to render the app's own six the moment it opened and swap
+   * them for the tracker's a moment later — the "old view" flashing past. An
+   * empty lane plus the skeleton below is the honest state: we do not yet know
+   * whose board this is.
+   */
+  const boardColumns: BoardColumnView[] = !mirrorResolved
+    ? []
+    : mirrorActive
     ? mirror!.columns.map((c) => ({
         key: c.statusId,
         label: c.name,
@@ -2018,7 +2189,25 @@ export default function ProjectBugReportsPage() {
                 onPull={handlePullInbound}
                 pulling={pullingInbound}
                 unsyncedCount={mirrorActive ? mirror!.unsyncedBugIds.length : 0}
+                autoPull={autoPull}
+                onToggleAutoPull={setAutoPull}
+                autoPulling={autoPulling}
+                lastPulledAt={lastPulledAt}
               />
+
+              {/* Waiting on the tracker: placeholder columns rather than the
+                  app's own, which would be replaced a moment later. */}
+              {!mirrorResolved && (
+                <div className="flex gap-4 items-start overflow-hidden pb-3 -mx-1 px-1" aria-hidden>
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <div key={i} className="w-[260px] shrink-0 space-y-2 animate-pulse">
+                      <div className="h-7 rounded-lg bg-slate-100" />
+                      <div className="h-20 rounded-xl bg-slate-50 border border-slate-100" />
+                      <div className="h-20 rounded-xl bg-slate-50 border border-slate-100" />
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* One horizontal lane: every column keeps a readable fixed width
                   and the lane scrolls sideways, so a tracker board with many
