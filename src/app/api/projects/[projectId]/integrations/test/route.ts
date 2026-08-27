@@ -86,7 +86,7 @@ export async function POST(
         return NextResponse.json({ error: `Jira returned status ${res.status}: ${text.slice(0, 100)}` }, { status: 400 })
       }
 
-      return NextResponse.json({ success: true, message: "Successfully connected to Jira!" })
+      return NextResponse.json({ success: true, message: "Successfully connected to Jira!", ...storageWarning() })
     }
 
     if (provider === "azure_devops") {
@@ -112,7 +112,7 @@ export async function POST(
         return NextResponse.json({ error: `Azure DevOps returned status ${res.status}: ${text.slice(0, 100)}` }, { status: 400 })
       }
 
-      return NextResponse.json({ success: true, message: "Successfully connected to Azure DevOps!" })
+      return NextResponse.json({ success: true, message: "Successfully connected to Azure DevOps!", ...storageWarning() })
     }
 
     if (provider === "openproject") {
