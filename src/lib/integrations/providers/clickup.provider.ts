@@ -244,7 +244,10 @@ export class ClickUpProvider extends BaseProvider {
     }
   }
 
-  async searchByRole(_role: "testCase" | "bug" | "userStory"): Promise<WorkItem[]> {
+  async searchByRole(role: "testCase" | "bug" | "userStory" | "epic"): Promise<WorkItem[]> {
+    // ClickUp has no Epic/Feature dimension, so there is nothing to import as a
+    // module. Returning the list's tasks here would turn every task into one.
+    if (role === "epic") return []
     // ClickUp has no work-item type dimension; return the list's tasks.
     const tasks = await this.listTasks()
     return tasks.map((t) => this.mapTask(t))

@@ -17,6 +17,10 @@ import {
   Bug,
   FileText,
   Loader2,
+  Link2,
+  ExternalLink,
+  DownloadCloud,
+  RefreshCw,
 } from "lucide-react"
 
 /**
@@ -45,6 +49,21 @@ export interface ModuleRow {
   failedCount: number
   bugCount: number
   openBugCount: number
+  // Set when this module was imported from the tracker's Epic/Feature.
+  externalProvider: string | null
+  externalId: string | null
+  externalType: string | null
+  externalUrl: string | null
+}
+
+interface ImportableModule {
+  externalId: string
+  title: string
+  type: string | null
+  url: string
+  parentExternalId: string | null
+  linkedSuiteId: string | null
+  linkedSuiteName: string | null
 }
 
 interface DeleteImpact {
@@ -106,6 +125,16 @@ export function ModulesPanel({ projectId }: Props) {
   const [deleteTarget, setDeleteTarget] = useState<DeleteImpact | null>(null)
   const [deleting, setDeleting] = useState(false)
 
+  // ── Import from the project's tracker ──────────────────────────────────────
+  const [importOpen, setImportOpen] = useState(false)
+  const [importable, setImportable] = useState<ImportableModule[]>([])
+  const [provider, setProvider] = useState<string | null>(null)
+  const [importUnavailable, setImportUnavailable] = useState<string | null>(null)
+  const [loadingImportable, setLoadingImportable] = useState(false)
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const [importing, setImporting] = useState(false)
+  const [importNote, setImportNote] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     setError(null)
     try {
@@ -124,6 +153,103 @@ export function ModulesPanel({ projectId }: Props) {
   useEffect(() => {
     load()
   }, [load])
+
+  /**
+   * Bring linked modules back in step with the tracker, then re-read the list.
+   *
+   * Runs once when the panel opens and on demand. Deliberately silent when
+   * there is no integration or nothing linked: a project that never imported a
+   * module should see no trace of this.
+   */
+  const refreshLinked = useCallback(
+    async (opts: { silent?: boolean } = {}) => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/test-suites/external`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "refresh" }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error || "Refresh failed")
+        if (data.updated > 0) await load()
+        if (!opts.silent) {
+          setImportNote(
+            data.skipped
+              ? "Nothing linked to the tracker yet."
+              : `Checked ${data.checked} linked module(s): ${data.updated} updated` +
+                (data.missing ? `, ${data.missing} no longer in the tracker` : "") + "."
+          )
+        }
+      } catch (err: any) {
+        if (!opts.silent) setImportNote(err.message)
+      }
+    },
+    [projectId, load]
+  )
+
+  useEffect(() => {
+    refreshLinked({ silent: true })
+    // Once per project: a linked module's name is not worth a poll of its own,
+    // and the import picker re-reads the tracker whenever it opens.
+  }, [refreshLinked])
+
+  const openImport = useCallback(async () => {
+    setImportOpen(true)
+    setImportNote(null)
+    setPicked(new Set())
+    setLoadingImportable(true)
+    setImportUnavailable(null)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/test-suites/external`)
+      const data = await res.json().catch(() => ({}))
+      setProvider(data.provider ?? null)
+      if (!res.ok) throw new Error(data.error || "Could not reach the tracker")
+      if (data.unavailable === "no-integration") {
+        setImportUnavailable("This project is not connected to a management tool yet.")
+      } else if (data.unavailable === "provider-unsupported") {
+        setImportUnavailable(`${data.provider} does not expose Epics or Features.`)
+      } else if ((data.items || []).length === 0) {
+        setImportUnavailable("No Epics or Features found in the tracker.")
+      }
+      setImportable(data.items || [])
+    } catch (err: any) {
+      setImportUnavailable(err.message)
+      setImportable([])
+    } finally {
+      setLoadingImportable(false)
+    }
+  }, [projectId])
+
+  async function runImport() {
+    if (picked.size === 0) return
+    setImporting(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/test-suites/external`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "import", externalIds: Array.from(picked) }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.error) throw new Error(data.error || "Import failed")
+      await load()
+      setImportOpen(false)
+      setImportNote(
+        `Imported ${data.created} new module(s)` +
+          (data.linked ? `, linked ${data.linked} existing` : "") +
+          (data.skipped ? `, ${data.skipped} already linked` : "") + "."
+      )
+    } catch (err: any) {
+      setImportUnavailable(err.message)
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  /** Epics already imported are shown, but cannot be picked again. */
+  const importableCount = useMemo(
+    () => importable.filter(i => !i.linkedSuiteId).length,
+    [importable]
+  )
 
   const ordered = useMemo(() => flatten(rows), [rows])
 
@@ -301,7 +427,23 @@ export function ModulesPanel({ projectId }: Props) {
             of each.
           </p>
         </div>
-        <div className="flex gap-3 text-center">
+        <div className="flex items-center gap-3 text-center">
+          <div className="flex flex-col gap-1.5">
+            <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={openImport}>
+              <DownloadCloud className="h-3.5 w-3.5 mr-1.5" />
+              Import from tracker
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-[10px] text-slate-500"
+              onClick={() => refreshLinked()}
+              title="Re-read the names and nesting of modules linked to the tracker"
+            >
+              <RefreshCw className="h-3 w-3 mr-1.5" />
+              Refresh linked
+            </Button>
+          </div>
           {[
             { label: "Modules", value: rows.length },
             { label: "Test cases", value: totals.cases },
@@ -320,6 +462,17 @@ export function ModulesPanel({ projectId }: Props) {
       {error && (
         <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-50 border border-rose-100 text-[11px] text-rose-700 font-semibold">
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {error}
+        </div>
+      )}
+
+      {importNote && (
+        <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-[11px] text-indigo-700 font-semibold">
+          <span className="flex items-start gap-2">
+            <Link2 className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {importNote}
+          </span>
+          <button onClick={() => setImportNote(null)} className="text-indigo-400 hover:text-indigo-700">
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       )}
 
@@ -444,6 +597,20 @@ export function ModulesPanel({ projectId }: Props) {
                         >
                           {row.depth > 0 && <span className="text-slate-300">└</span>}
                           <span dir="auto" className="truncate">{row.name}</span>
+                          {row.externalId && (
+                            <a
+                              href={row.externalUrl || "#"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={e => { if (!row.externalUrl) e.preventDefault() }}
+                              title={`${row.externalType || "Linked"} ${row.externalId} in ${row.externalProvider} — name and nesting follow the tracker`}
+                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-indigo-100 bg-indigo-50/70 text-[9px] font-extrabold text-indigo-600 hover:bg-indigo-100"
+                            >
+                              <Link2 className="h-2.5 w-2.5" />
+                              {row.externalType || "Linked"}
+                              <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                            </a>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -574,6 +741,124 @@ export function ModulesPanel({ projectId }: Props) {
           {unfiledCount} test case{unfiledCount === 1 ? "" : "s"} in this project {unfiledCount === 1 ? "is" : "are"}{" "}
           not filed under any module. They show as “Unfiled” in the test library and the QA report.
         </p>
+      )}
+
+      {/* Import picker — Epics and Features only, never Stories or Tasks. */}
+      {importOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl p-6 space-y-4 max-h-[85vh] flex flex-col">
+            <div className="space-y-1">
+              <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
+                <DownloadCloud className="h-4 w-4 text-indigo-600" />
+                Import modules{provider ? ` from ${provider}` : ""}
+              </h3>
+              <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                Only <strong>Epics</strong> and <strong>Features</strong> are offered — a module is
+                a part of the system under test, so Stories and Tasks are the wrong grain. An
+                imported module keeps its name and nesting in step with the tracker; its test cases
+                and bugs stay yours.
+              </p>
+            </div>
+
+            {loadingImportable ? (
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground py-8 justify-center">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading the tracker…
+              </div>
+            ) : importUnavailable ? (
+              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3 font-medium">
+                {importUnavailable}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+                  <span>
+                    {importableCount} available · {importable.length - importableCount} already
+                    imported
+                  </span>
+                  <button
+                    className="text-indigo-600 hover:underline font-extrabold"
+                    onClick={() =>
+                      setPicked(
+                        picked.size === importableCount
+                          ? new Set()
+                          : new Set(importable.filter(i => !i.linkedSuiteId).map(i => i.externalId))
+                      )
+                    }
+                  >
+                    {picked.size === importableCount && importableCount > 0
+                      ? "Clear all"
+                      : "Select all available"}
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto rounded-xl border border-slate-100 divide-y">
+                  {importable.map(item => {
+                    const already = !!item.linkedSuiteId
+                    const checked = picked.has(item.externalId)
+                    return (
+                      <label
+                        key={item.externalId}
+                        className={`flex items-start gap-3 p-2.5 text-[11px] ${
+                          already ? "opacity-60" : "hover:bg-slate-50/70 cursor-pointer"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          disabled={already}
+                          checked={checked}
+                          onChange={() => {
+                            const next = new Set(picked)
+                            if (next.has(item.externalId)) next.delete(item.externalId)
+                            else next.add(item.externalId)
+                            setPicked(next)
+                          }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-800 truncate" dir="auto">
+                              {item.title}
+                            </span>
+                            {item.type && (
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-slate-100 text-[9px] font-extrabold text-slate-600">
+                                {item.type}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-medium">
+                            {item.externalId}
+                            {item.parentExternalId && ` · under ${item.parentExternalId}`}
+                            {already && ` · already imported as “${item.linkedSuiteName}”`}
+                          </div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setImportOpen(false)}
+                disabled={importing}
+                className="h-8 text-[11px] font-bold"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={runImport}
+                disabled={importing || picked.size === 0}
+                className="h-8 text-[11px] font-bold"
+              >
+                {importing ? "Importing…" : `Import ${picked.size || ""}`.trim()}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete confirmation — real numbers, read from the server. */}

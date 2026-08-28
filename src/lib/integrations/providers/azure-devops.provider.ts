@@ -299,9 +299,11 @@ export class AzureDevOpsProvider extends BaseProvider {
     }
   }
 
-  async searchByRole(role: "testCase" | "bug" | "userStory"): Promise<WorkItem[]> {
+  async searchByRole(role: "testCase" | "bug" | "userStory" | "epic"): Promise<WorkItem[]> {
     const typeNames =
-      role === "userStory" ? ["User Story", "Feature", "Epic"] : role === "bug" ? ["Bug"] : ["Task", "Test Case"]
+      role === "epic"
+        ? ["Epic", "Feature"]
+        : role === "userStory" ? ["User Story", "Feature", "Epic"] : role === "bug" ? ["Bug"] : ["Task", "Test Case"]
     const inClause = typeNames.map((n) => `'${n}'`).join(", ")
     const ids = await this.wiql(
       `SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = @project AND [System.WorkItemType] IN (${inClause}) ORDER BY [System.CreatedDate] DESC`

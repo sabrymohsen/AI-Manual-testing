@@ -551,6 +551,23 @@ model TestSuite {
   description String?
   orderIndex  Int     @default(0)
 
+  // ── Link to an Epic/Feature in the project's tracker ────────────────────────
+  // A module may be imported from the management tool instead of typed by hand.
+  // Only container types (Epic, Feature) are ever linked: a module is a part of
+  // the system under test, not a unit of work, so Stories and Tasks are the
+  // wrong grain and are never offered.
+  //
+  // Nullable throughout, because a locally-created module is still a first-class
+  // module — the tracker is an optional source, not the source of truth. When
+  // the link is set, the name and parent follow the tracker on refresh; nothing
+  // else about the module does.
+  externalProvider ExternalProvider?
+  externalId       String?
+  // The tracker's own type name, e.g. "Epic" / "Feature" — shown on the row.
+  externalType     String?
+  externalUrl      String?
+  externalSyncedAt DateTime?
+
   testCases  TestCase[]
   bugReports BugReport[]
 
@@ -560,6 +577,8 @@ model TestSuite {
   @@index([projectId])
   @@index([parentId])
   @@index([projectId, parentId, orderIndex])
+  // Import and refresh both ask "is this Epic already a module here?".
+  @@index([projectId, externalProvider, externalId])
 }
 
 model TestStep {

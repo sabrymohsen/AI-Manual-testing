@@ -57,8 +57,16 @@ export interface WorkItemProvider {
   getWorkItem(externalId: string): Promise<WorkItem>
   /** Find an existing item created by us for a local entity (via the embedded marker). */
   findByMarker(entityType: EntityType, localId: string): Promise<WorkItem | null>
-  /** Search items by logical role (used by requirement import: role="userStory"). */
-  searchByRole?(role: "testCase" | "bug" | "userStory"): Promise<WorkItem[]>
+  /**
+   * Search items by logical role (used by requirement import: role="userStory").
+   *
+   * role="epic" means the tracker's CONTAINER types — Epic and Feature — and
+   * nothing else. It backs module import, where a Story or Task would be the
+   * wrong grain: a module is a part of the system under test, not a unit of
+   * work. Providers with no container type return an empty list rather than
+   * falling back to "everything", so nobody imports 400 tasks as modules.
+   */
+  searchByRole?(role: "testCase" | "bug" | "userStory" | "epic"): Promise<WorkItem[]>
   deleteWorkItem(externalId: string): Promise<boolean>
   addComment(externalId: string, markdown: string): Promise<boolean>
 

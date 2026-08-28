@@ -49,6 +49,11 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
         name: true,
         description: true,
         orderIndex: true,
+        // Tracker link, so a row can show which Epic/Feature it came from.
+        externalProvider: true,
+        externalId: true,
+        externalType: true,
+        externalUrl: true,
         _count: { select: { testCases: true } },
       },
     }),

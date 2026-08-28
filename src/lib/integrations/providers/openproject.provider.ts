@@ -208,9 +208,24 @@ export class OpenProjectProvider implements WorkItemProvider {
   /** Story-type name hints used when no explicit type is configured. */
   private static STORY_TYPE_HINTS = ["user story", "story", "feature", "requirement", "epic"]
 
-  async searchByRole(role: "testCase" | "bug" | "userStory"): Promise<WorkItem[]> {
+  /** Container types a module can be imported from, most specific name first. */
+  private static EPIC_TYPE_HINTS = ["epic", "feature"]
+
+  async searchByRole(role: "testCase" | "bug" | "userStory" | "epic"): Promise<WorkItem[]> {
     let wps: OpWorkPackage[]
-    if (role === "userStory") {
+    if (role === "epic") {
+      // Epic and Feature only. An instance that has neither yields nothing to
+      // import, which is the honest answer — falling back to every work package
+      // would offer tasks and bugs as modules.
+      const types = await this.client.getTypes().catch(() => [])
+      const epicTypes = types.filter((t) =>
+        OpenProjectProvider.EPIC_TYPE_HINTS.includes(t.name.toLowerCase())
+      )
+      if (epicTypes.length === 0) return []
+      wps = await this.client.searchWorkPackages([
+        { type: { operator: "=", values: epicTypes.map((t) => String(t.id)) } },
+      ])
+    } else if (role === "userStory") {
       const types = await this.client.getTypes().catch(() => [])
       const storyType = OpenProjectProvider.STORY_TYPE_HINTS
         .map((h) => types.find((t) => t.name.toLowerCase() === h))

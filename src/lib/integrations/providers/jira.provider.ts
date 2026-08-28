@@ -293,9 +293,11 @@ export class JiraProvider extends BaseProvider {
     }
   }
 
-  async searchByRole(role: "testCase" | "bug" | "userStory"): Promise<WorkItem[]> {
+  async searchByRole(role: "testCase" | "bug" | "userStory" | "epic"): Promise<WorkItem[]> {
     const typeNames =
-      role === "userStory" ? ["Story", "User Story", "Epic"] : role === "bug" ? ["Bug"] : ["Task", "Test"]
+      role === "epic"
+        ? ["Epic", "Feature"]
+        : role === "userStory" ? ["Story", "User Story", "Epic"] : role === "bug" ? ["Bug"] : ["Task", "Test"]
     const inClause = typeNames.map((n) => `"${n}"`).join(", ")
     const jql = `project = "${this.projectKey}" AND issuetype in (${inClause}) ORDER BY created DESC`
     const data = await this.api(
