@@ -59,11 +59,13 @@ test-results/
 public/uploads/avatars/
 preview-screenshot.png
 
-# Playwright's raw per-session capture. Scratch, not an asset: the served copy
-# is written to public/videos/<sessionId>.webm by session-manager.ts, and
-# nothing — no EvidenceFile row, no BugReport.videoUrl — ever points in here.
-# These are large (individual files reach 87 MB), so keep them out of history.
-public/videos/raw/
+# Session recordings, raw captures and finished alike. Runtime output, not
+# source: session-manager writes raw/ during a session, copies the finished
+# file to public/videos/<sessionId>.webm, and resolves the URL by probing the
+# filesystem (fs.access) — a missing file just means no video link, never an
+# error. Each deployment records its own; the committed ones were one laptop's
+# and were dead weight everywhere else, at 205 MB and growing per session.
+public/videos/
 
 # Local Claude Code settings
 .claude/settings.local.json
