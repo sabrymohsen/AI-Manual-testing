@@ -59,5 +59,11 @@ test-results/
 public/uploads/avatars/
 preview-screenshot.png
 
+# Playwright's raw per-session capture. Scratch, not an asset: the served copy
+# is written to public/videos/<sessionId>.webm by session-manager.ts, and
+# nothing — no EvidenceFile row, no BugReport.videoUrl — ever points in here.
+# These are large (individual files reach 87 MB), so keep them out of history.
+public/videos/raw/
+
 # Local Claude Code settings
 .claude/settings.local.json
