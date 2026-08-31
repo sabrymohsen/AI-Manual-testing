@@ -27,16 +27,33 @@ export default function ScopedOpenProjectSyncPage() {
   const handleSyncAll = async () => {
     setSyncing(true)
     try {
-      const res = await fetch(`/api/projects/${projectId}/integrations/openproject/sync`, {
-        method: "POST"
+      // The provider-neutral inbound poll. This button used to POST to
+      // .../openproject/sync, which has never existed — every click 404'd and
+      // still reported "triggered successfully", so the page claimed to sync
+      // and nothing was ever read from OpenProject.
+      const res = await fetch(`/api/projects/${projectId}/integrations/poll`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true })
       })
-      if (res.ok) {
-        alert("OpenProject background sync task triggered successfully!")
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.error || "Failed to trigger OpenProject sync.")
+      } else if (data.skipped === "no-integration") {
+        alert("This project is not connected to OpenProject yet.")
+      } else if (data.skipped === "no-mappings") {
+        alert("Nothing is mapped to OpenProject yet, so there was nothing to check.")
       } else {
-        alert("Failed to trigger OpenProject sync.")
+        // Say what actually happened rather than that something was triggered.
+        alert(
+          `Checked ${data.checked} item(s): ${data.applied} updated` +
+            (data.failed ? `, ${data.failed} failed (${data.error || "see logs"})` : "") + "."
+        )
       }
+      fetchStatus()
     } catch (err) {
       console.error(err)
+      alert("Failed to reach the sync service.")
     } finally {
       setSyncing(false)
     }

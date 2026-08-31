@@ -283,12 +283,24 @@ export default function AutomationHubPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: userText, testName: selectedTestName })
       })
+      const d = await res.json().catch(() => ({}))
       if (res.ok) {
-        const d = await res.json()
         setChatMessages(prev => [...prev, { role: "doctor", text: d.response }])
+      } else {
+        // Previously the reply was dropped on any non-OK response, so a failing
+        // Doctor was indistinguishable from a slow one — the question simply
+        // vanished. Say what went wrong instead.
+        setChatMessages(prev => [
+          ...prev,
+          { role: "doctor", text: d.error || "The Doctor could not answer that." }
+        ])
       }
     } catch (err) {
       console.error(err)
+      setChatMessages(prev => [
+        ...prev,
+        { role: "doctor", text: "Could not reach the Doctor service." }
+      ])
     }
   }
 
