@@ -9,7 +9,7 @@ import {
   type QaReportDefect,
   type QaReportService
 } from "@/lib/qa-report/template"
-import { FileBarChart, X, Plus, Trash2, Download, Loader2, AlertTriangle } from "lucide-react"
+import { FileBarChart, X, Plus, Trash2, Download, Loader2, AlertTriangle, Check } from "lucide-react"
 
 /**
  * Compose and download the QA / UAT testing report.
@@ -55,6 +55,12 @@ interface Props {
   projectId: string
   open: boolean
   onClose: () => void
+  /**
+   * Called after a module added here is created in the project, so the page
+   * behind the modal can refresh its module filter and pickers without a
+   * reload.
+   */
+  onModulesChanged?: () => void
 }
 
 const emptyService: QaReportService = {
@@ -67,22 +73,44 @@ const emptyService: QaReportService = {
   remarks: ""
 }
 
-export default function QaReportModal({ projectId, open, onClose }: Props) {
+export default function QaReportModal({ projectId, open, onClose, onModulesChanged }: Props) {
   const [data, setData] = useState<QaReportData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<"details" | "modules" | "defects">("details")
+  /**
+   * Module rows that exist in the project, keyed by row index.
+   *
+   * A row added here used to live only inside the generated file: the report
+   * listed a module the rest of the app had never heard of, so no defect could
+   * be filed against it and it never appeared on the Bug Reports page. Adding a
+   * module now creates a real one, and these ids are what say so.
+   */
+  const [savedModules, setSavedModules] = useState<Record<number, string>>({})
+  const [savingModule, setSavingModule] = useState<number | null>(null)
+  const [moduleError, setModuleError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setError(null)
+    setModuleError(null)
+    setSavedModules({})
     setTab("details")
     setLoading(true)
     fetch(`/api/projects/${projectId}/qa-report`)
       .then(async res => {
         const body = await res.json()
         if (!res.ok) throw new Error(body.error || "Could not load the report data")
-        setData(body as QaReportData)
+        const payload = body as QaReportData
+        setData(payload)
+        // Rows that came from the project start out already saved, so their
+        // rename updates that module instead of creating a second one, and the
+        // marks show which rows the rest of the app knows about.
+        const seeded: Record<number, string> = {}
+        payload.services.forEach((svc, i) => {
+          if (svc.suiteId) seeded[i] = svc.suiteId
+        })
+        setSavedModules(seeded)
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
@@ -102,6 +130,54 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
     setData(d =>
       d ? { ...d, defects: d.defects.map((b, idx) => (idx === i ? { ...b, ...patch } : b)) } : d
     )
+
+  /**
+   * Create a module row in the project so the rest of the app can see it.
+   *
+   * Called when the name is committed rather than when the row appears: the
+   * row starts life as the placeholder "New module", and creating a suite by
+   * that name on every click would litter the project with them.
+   *
+   * Idempotent per row — a row already created is renamed rather than
+   * duplicated, so editing the name after saving does not leave an orphan.
+   */
+  const persistModule = async (index: number, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed || trimmed === emptyService.name) return
+    // Never create a second suite for a name the project already has: the row
+    // may simply be describing a module that came from the project to begin
+    // with.
+    const existing = (data?.services || []).some(
+      (svc, i) => i !== index && svc.name.trim().toLowerCase() === trimmed.toLowerCase()
+    )
+    if (existing && savedModules[index] === undefined) return
+
+    setSavingModule(index)
+    setModuleError(null)
+    try {
+      const savedId = savedModules[index]
+      const res = savedId
+        ? await fetch(`/api/projects/${projectId}/test-suites/${savedId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: trimmed })
+          })
+        : await fetch(`/api/projects/${projectId}/test-suites`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: trimmed })
+          })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Could not save the module")
+      const id = body.suite?.id || savedId
+      if (id) setSavedModules(prev => ({ ...prev, [index]: id }))
+      onModulesChanged?.()
+    } catch (err: any) {
+      setModuleError(err.message)
+    } finally {
+      setSavingModule(null)
+    }
+  }
 
   const handleDownload = () => {
     if (!data) return
@@ -285,12 +361,31 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
                       <tbody>
                         {data.services.map((s, i) => (
                           <tr key={i} className="border-t">
-                            <td className="px-2 py-1.5 min-w-[180px]">
-                              <Input
-                                value={s.name}
-                                onChange={e => patchService(i, { name: e.target.value })}
-                                className="h-8 text-[11px]"
-                              />
+                            <td className="px-2 py-1.5 min-w-[200px]">
+                              <div className="flex items-center gap-1.5">
+                                <Input
+                                  value={s.name}
+                                  onChange={e => patchService(i, { name: e.target.value })}
+                                  // Committed on blur or Enter, not on every
+                                  // keystroke — otherwise a module would be
+                                  // created for each letter typed.
+                                  onBlur={e => persistModule(i, e.target.value)}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+                                  }}
+                                  className="h-8 text-[11px]"
+                                />
+                                {savingModule === i ? (
+                                  <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
+                                ) : savedModules[i] ? (
+                                  <span
+                                    title="Saved to the project — this module appears on the Bug Reports page and defects can be filed against it"
+                                    className="shrink-0 text-emerald-600"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </span>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="px-2 py-1.5">{numberCell(s.total, v => patchService(i, { total: v }))}</td>
                             <td className="px-2 py-1.5">{numberCell(s.passed, v => patchService(i, { passed: v }))}</td>
@@ -311,9 +406,28 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() =>
+                                onClick={() => {
                                   setData(d => (d ? { ...d, services: d.services.filter((_, idx) => idx !== i) } : d))
-                                }
+                                  // Rows are tracked by index, so removing one
+                                  // shifts every row after it. Without this the
+                                  // saved-module marks would slide onto the
+                                  // wrong rows — and a later rename would
+                                  // rename the wrong module.
+                                  //
+                                  // The project module itself is deliberately
+                                  // left alone: dropping a row from a report
+                                  // must not delete a module that test cases
+                                  // and defects are filed under.
+                                  setSavedModules(prev => {
+                                    const next: Record<number, string> = {}
+                                    for (const [key, id] of Object.entries(prev)) {
+                                      const idx = Number(key)
+                                      if (idx < i) next[idx] = id
+                                      else if (idx > i) next[idx - 1] = id
+                                    }
+                                    return next
+                                  })
+                                }}
                                 className="h-8 w-8 p-0 text-rose-600 hover:bg-rose-50"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -339,6 +453,16 @@ export default function QaReportModal({ projectId, open, onClose }: Props) {
                   >
                     <Plus className="h-3.5 w-3.5 mr-1.5" /> Add module
                   </Button>
+                  <p className="text-[10px] text-muted-foreground font-medium mt-2 leading-relaxed">
+                    Naming a module saves it to the project, so it appears on the Bug Reports page
+                    and defects can be filed against it. Removing a row here only takes it out of
+                    this report — the module and everything filed under it stay.
+                  </p>
+                  {moduleError && (
+                    <p className="text-[10px] text-rose-700 font-semibold mt-1.5 flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3" /> {moduleError}
+                    </p>
+                  )}
                 </div>
               )}
 

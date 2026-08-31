@@ -30,6 +30,14 @@ import { buildAssigneeNameMap, assigneeName } from "@/lib/bug-reports/assignees"
 
 /** Suite tree is flattened to one row per suite; children roll up into their own row. */
 interface ServiceRow {
+  /**
+   * The module this row came from, or null for the synthetic "Unfiled" bucket.
+   *
+   * Returned so the report editor can tell a row that is a real project module
+   * from one typed into the report, and so renaming a row updates that module
+   * rather than creating a second one beside it.
+   */
+  suiteId: string | null
   name: string
   total: number
   passed: number
@@ -113,12 +121,12 @@ export async function GET(
   if (!project) return unauthorizedResponse("Project not found")
 
   // ── Services ──────────────────────────────────────────────────────────────
-  const blank = (name: string): ServiceRow => ({
-    name, total: 0, passed: 0, failed: 0, blocked: 0, status: "", remarks: ""
+  const blank = (name: string, suiteId: string | null = null): ServiceRow => ({
+    suiteId, name, total: 0, passed: 0, failed: 0, blocked: 0, status: "", remarks: ""
   })
 
   const buckets = new Map<string, ServiceRow>()
-  for (const s of suites) buckets.set(s.id, blank(s.name))
+  for (const s of suites) buckets.set(s.id, blank(s.name, s.id))
   const UNFILED = "__unfiled__"
   buckets.set(UNFILED, blank(UNFILED_LABEL))
 

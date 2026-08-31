@@ -27,6 +27,8 @@ export interface QaReportMeta {
 }
 
 export interface QaReportService {
+  /** Project module this row came from; null for a row typed into the report. */
+  suiteId?: string | null
   name: string
   total: number
   passed: number

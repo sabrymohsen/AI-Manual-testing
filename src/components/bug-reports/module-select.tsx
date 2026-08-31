@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 /**
  * Picker for the module/service a bug belongs to.
@@ -70,6 +70,10 @@ function flatten(rows: SuiteRow[]): ProjectModule[] {
 export function useProjectModules(projectId: string, enabled = true) {
   const [rows, setRows] = useState<SuiteRow[]>([])
   const [loading, setLoading] = useState(false)
+  // Bumped to re-run the fetch. Callers use `refresh` after creating a module
+  // elsewhere — the QA report can add one — so the pickers on this page pick it
+  // up without a reload.
+  const [nonce, setNonce] = useState(0)
 
   useEffect(() => {
     if (!enabled || !projectId) return
@@ -92,10 +96,11 @@ export function useProjectModules(projectId: string, enabled = true) {
       .catch(() => { if (!cancelled) setRows([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [projectId, enabled])
+  }, [projectId, enabled, nonce])
 
+  const refresh = useCallback(() => setNonce(n => n + 1), [])
   const modules = useMemo(() => flatten(rows), [rows])
-  return { modules, loading }
+  return { modules, loading, refresh }
 }
 
 interface Props {

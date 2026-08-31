@@ -508,7 +508,7 @@ export default function ProjectBugReportsPage() {
   // straight to the defects they are counting.
   const [filterModule, setFilterModule] = useState(() => searchParams.get("suite") || "all")
   // The project's suite tree, shared by the filter, the drawer and bulk actions.
-  const { modules: projectModules } = useProjectModules(projectId)
+  const { modules: projectModules, refresh: refreshModules } = useProjectModules(projectId)
   // Triage filters — the two questions a triage session actually opens with.
   const [filterUnassigned, setFilterUnassigned] = useState(false)
   const [filterReopened, setFilterReopened] = useState(false)
@@ -3281,6 +3281,10 @@ export default function ProjectBugReportsPage() {
         projectId={projectId}
         open={showQaReportModal}
         onClose={() => setShowQaReportModal(false)}
+        // A module named in the report is created in the project, so the filter
+        // and the drawer's picker on this page have to learn about it without a
+        // reload.
+        onModulesChanged={refreshModules}
       />
 
       {/* 8. Manual Create Bug Modal */}
