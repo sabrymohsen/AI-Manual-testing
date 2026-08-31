@@ -1,12 +1,12 @@
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
 // custom.properties is SHAFT's single source of truth for engine configuration.
 // The Data & Config → Properties editor reads/writes this file so the next
 // SHAFT run picks up whatever the user saved in the UI.
 export const CUSTOM_PROPS_PATH = path.join(
-  MAVEN_PROJECT_PATH,
+  ARTIFACT_ROOT,
   "src/main/resources/properties/custom.properties"
 )
 

@@ -45,6 +45,9 @@ storage/videos/*
 storage/exports/*
 storage/dom_snapshots/*
 storage/recordings/*
+# Generated per run by the Automation Hub: the Playwright workspace (specs,
+# config, traces, video). Runtime output, and traces run to tens of MB.
+storage/hub-workspace/
 # Runtime persistence marker — must never be committed or baked into an image,
 # or a wiped volume would still look persistent. See src/lib/storage-health.ts
 storage/.storage-marker.json

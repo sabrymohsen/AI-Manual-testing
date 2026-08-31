@@ -8,10 +8,10 @@
 import { prisma } from "@/lib/db"
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 import { listTraces, resolveTraceZip, unzipEntry, sanitizeJsonControlChars } from "@/lib/hub-traces"
 
-const CUSTOM_PROPS = path.join(MAVEN_PROJECT_PATH, "src/main/resources/properties/custom.properties")
+const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
 
 // Buckets reflect the wait types SHAFT v10 actually performs.
 export type WaitBucket = "navigation" | "elementSync" | "lazyLoad" | "validation" | "other"

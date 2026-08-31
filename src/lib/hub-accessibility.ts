@@ -8,7 +8,7 @@
 import { prisma } from "@/lib/db"
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
 export interface AccessibilityViolation {
   ruleId: string
@@ -29,7 +29,7 @@ const SEVERITIES = ["critical", "serious", "moderate", "minor"] as const
 
 // Find JSON artifacts created after `since` that look like axe-core / accessibility output
 function findAccessibilityArtifacts(since: number): string[] {
-  const roots = [path.join(MAVEN_PROJECT_PATH, "allure-results"), path.join(MAVEN_PROJECT_PATH, "target")]
+  const roots = [path.join(ARTIFACT_ROOT, "allure-results"), path.join(ARTIFACT_ROOT, "target")]
   const hits: { file: string; mtime: number }[] = []
 
   const walk = (dir: string, depth: number) => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic"
 // This endpoint reads / writes that single source of truth so the Test Studio
 // "Enable GIF recording" toggle stays in sync with what SHAFT will actually do
 // on the next run.
-const CUSTOM_PROPS = path.join(MAVEN_PROJECT_PATH, "src/main/resources/properties/custom.properties")
+const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
 
 // SHAFT property names for GIF capture.
 const KEY_ENABLED = "createAnimatedGif"

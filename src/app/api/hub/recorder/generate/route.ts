@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { generateShaftJava } from "@/lib/recorder-codegen"
+import { generatePlaywrightSpec } from "@/lib/recorder-codegen"
 import { getActiveSession } from "@/lib/hub-recorder"
 
 export const dynamic = "force-dynamic"
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     const actions = Array.isArray(body.actions) ? body.actions : getActiveSession()?.actions || []
-    const code = generateShaftJava(actions, className)
+    const code = generatePlaywrightSpec(actions, className)
 
     return NextResponse.json({ code, className, actionCount: actions.length })
   } catch (err: any) {

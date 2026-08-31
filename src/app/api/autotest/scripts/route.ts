@@ -1,96 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
+import { DEFAULT_HUB_TEMPLATES } from "@/lib/hub-templates"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 
 // Default templates code definitions
-const DEFAULT_TEMPLATES = [
-  {
-    name: "LoginFlowTest",
-    type: "Web",
-    tags: ["Web", "Login", "Sanity"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-
-public class LoginFlowTest extends BaseTest {
-    @Test(description = "Verify login flow redirection and page title using SHAFT Engine")
-    public void testLoginRedirection() {
-        // Navigate to example login page
-        navigateTo("https://example.com/login");
-
-        // Verify page url and title using core assertions
-        assertCurrentUrl("https://example.com/login");
-        assertPageTitle("Login Page");
-    }
-}`
-  },
-  {
-    name: "ApiCrudTest",
-    type: "API",
-    tags: ["API", "REST", "CRUD"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-import com.shaft.driver.SHAFT;
-
-public class ApiCrudTest {
-    @Test(description = "Verify GET user list API response using REST Assured via SHAFT")
-    public void testGetUserList() {
-        SHAFT.API api = new SHAFT.API("https://reqres.in");
-        
-        api.get("/api/users?page=2")
-           .perform();
-           
-        api.assertThatResponse()
-           .extractedJsonValue("data[0].first_name")
-           .isEqualTo("Michael")
-           .perform();
-    }
-}`
-  },
-  {
-    name: "DbQueryTest",
-    type: "Database",
-    tags: ["Database", "JDBC", "Inventory"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-import com.shaft.driver.SHAFT;
-
-public class DbQueryTest {
-    @Test(description = "Verify active users query matches specifications using SHAFT Database validations")
-    public void testDatabaseConnection() {
-        // Example SHAFT Database validation pattern
-        // SHAFT.DB db = new SHAFT.DB(SHAFT.DB.DatabaseType.POSTGRESQL, "localhost", "5432", "mydb", "user", "pass");
-        
-        // Mock validation assertion to ensure JDBC driver functions cleanly
-        SHAFT.Validations.assertThat()
-                         .object("Active")
-                         .isEqualTo("Active")
-                         .perform();
-    }
-}`
-  },
-  {
-    name: "SearchFlowTest",
-    type: "Web",
-    tags: ["Web", "Search", "Regression"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-
-public class SearchFlowTest extends BaseTest {
-    @Test(description = "Verify search input query and title updates using SHAFT Engine")
-    public void testSearchFunctionality() {
-        // Navigate to example search page
-        navigateTo("https://example.com");
-
-        // Assert title matches static domain spec
-        assertPageTitle("Example Domain");
-    }
-}`
-  }
-]
+// Seeded from the shared Playwright templates rather than a second copy of
+// the SHAFT/Java set — one definition, so Test Studio and this route cannot
+// drift into offering scripts the runner cannot execute.
+const DEFAULT_TEMPLATES = DEFAULT_HUB_TEMPLATES.map((t) => ({
+  name: t.name,
+  type: t.type,
+  code: t.code,
+  tags: t.tags,
+}))
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()

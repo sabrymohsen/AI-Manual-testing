@@ -93,32 +93,34 @@ const FOLDERS: { type: HubScriptType; label: string; icon: any }[] = [
 
 const BROWSERS = ["Chrome", "Firefox", "Edge", "Headless"]
 
-const SHAFT_SNIPPETS: { label: string; insertText: string; detail: string }[] = [
-  { label: "driver.element().click", insertText: 'driver.element().click(By.id("${1:elementId}"));', detail: "Click a web element" },
-  { label: "driver.element().type", insertText: 'driver.element().type(By.id("${1:elementId}"), "${2:text}");', detail: "Type into a field" },
-  { label: "driver.element().hover", insertText: 'driver.element().hover(By.id("${1:elementId}"));', detail: "Hover over an element" },
-  { label: "driver.element().select", insertText: 'driver.element().select(By.id("${1:elementId}"), "${2:option}");', detail: "Select a dropdown option" },
-  { label: "driver.element().assertThat", insertText: 'driver.element().assertThat(By.id("${1:elementId}")).text().isEqualTo("${2:expected}").perform();', detail: "Assert element text" },
-  { label: "driver.browser().navigateToURL", insertText: 'driver.browser().navigateToURL("${1:https://example.com}");', detail: "Navigate the browser" },
-  { label: "driver.browser().assertThat", insertText: 'driver.browser().assertThat().url().isEqualTo("${1:https://example.com}").perform();', detail: "Assert current URL" },
-  { label: "SHAFT.API", insertText: 'SHAFT.API api = new SHAFT.API("${1:https://api.example.com}");', detail: "Create a SHAFT API driver" },
-  { label: "api.get", insertText: 'api.get("${1:/endpoint}").perform();', detail: "Perform GET request" },
-  { label: "api.post", insertText: 'api.post("${1:/endpoint}").setRequestBody("${2:{}}").perform();', detail: "Perform POST request" },
-  { label: "api.assertThatResponse", insertText: 'api.assertThatResponse().extractedJsonValue("${1:path}").isEqualTo("${2:expected}").perform();', detail: "Assert JSON response value" },
-  { label: "SHAFT.Validations.assertThat", insertText: 'SHAFT.Validations.assertThat().object(${1:actual}).isEqualTo(${2:expected}).perform();', detail: "Hard assertion" },
-  { label: "SHAFT.Validations.verifyThat", insertText: 'SHAFT.Validations.verifyThat().object(${1:actual}).isEqualTo(${2:expected}).perform();', detail: "Soft assertion" },
-  { label: "SHAFT.DB", insertText: 'SHAFT.DB db = new SHAFT.DB(SHAFT.DB.DatabaseType.${1:POSTGRESQL}, "${2:localhost}", "${3:5432}", "${4:mydb}", "${5:user}", "${6:pass}");', detail: "Create a SHAFT DB driver" },
-  { label: "navigateTo", insertText: 'navigateTo("${1:https://example.com}");', detail: "BaseTest: navigate helper" },
-  { label: "assertPageTitle", insertText: 'assertPageTitle("${1:Expected Title}");', detail: "BaseTest: assert page title" },
-  { label: "assertCurrentUrl", insertText: 'assertCurrentUrl("${1:https://example.com}");', detail: "BaseTest: assert current URL" },
-  { label: "By.id", insertText: 'By.id("${1:elementId}")', detail: "Locator by id" },
-  { label: "By.name", insertText: 'By.name("${1:elementName}")', detail: "Locator by name" },
-  { label: "By.cssSelector", insertText: 'By.cssSelector("${1:.selector}")', detail: "Locator by CSS" },
-  { label: "By.xpath", insertText: 'By.xpath("${1://div}")', detail: "Locator by XPath" },
-  { label: "@Test", insertText: '@Test(description = "${1:Test description}")', detail: "TestNG test annotation" }
+// Editor autocomplete for the Playwright API the runner actually executes.
+// These were SHAFT/Selenium Java snippets — offering them in a studio whose
+// runner is Playwright would hand people code that cannot run.
+const PW_SNIPPETS: { label: string; insertText: string; detail: string }[] = [
+  { label: "test", insertText: 'test("${1:scenario}", async ({ page }) => {\n  $0\n});', detail: "New test block" },
+  { label: "page.goto", insertText: 'await page.goto("${1:https://example.com}");', detail: "Navigate the page" },
+  { label: "getByRole", insertText: 'page.getByRole("${1:button}", { name: "${2:Submit}" })', detail: "Locator by ARIA role (preferred)" },
+  { label: "getByLabel", insertText: 'page.getByLabel("${1:Username}")', detail: "Locator by form label" },
+  { label: "getByText", insertText: 'page.getByText("${1:Welcome}")', detail: "Locator by visible text" },
+  { label: "getByTestId", insertText: 'page.getByTestId("${1:submit-btn}")', detail: "Locator by test id" },
+  { label: "page.locator", insertText: 'page.locator("${1:.selector}")', detail: "Locator by CSS or XPath" },
+  { label: ".click", insertText: 'await ${1:locator}.click();', detail: "Click an element" },
+  { label: ".fill", insertText: 'await ${1:locator}.fill("${2:text}");', detail: "Fill an input" },
+  { label: ".selectOption", insertText: 'await ${1:locator}.selectOption("${2:value}");', detail: "Choose a dropdown option" },
+  { label: ".press", insertText: 'await ${1:locator}.press("${2:Enter}");', detail: "Press a key" },
+  { label: ".hover", insertText: 'await ${1:locator}.hover();', detail: "Hover over an element" },
+  { label: "expect toBeVisible", insertText: 'await expect(${1:locator}).toBeVisible();', detail: "Assert element is visible" },
+  { label: "expect toHaveText", insertText: 'await expect(${1:locator}).toHaveText("${2:expected}");', detail: "Assert element text" },
+  { label: "expect toHaveURL", insertText: 'await expect(page).toHaveURL("${1:https://example.com}");', detail: "Assert the current URL" },
+  { label: "expect toHaveValue", insertText: 'await expect(${1:locator}).toHaveValue("${2:expected}");', detail: "Assert an input value" },
+  { label: "request.get", insertText: 'const res = await request.get("${1:/endpoint}");', detail: "API GET request" },
+  { label: "request.post", insertText: 'const res = await request.post("${1:/endpoint}", { data: ${2:{}} });', detail: "API POST request" },
+  { label: "expect status", insertText: 'expect(res.status()).toBe(${1:200});', detail: "Assert a response status" },
+  { label: "page.screenshot", insertText: 'await page.screenshot({ path: "${1:shot.png}" });', detail: "Capture a screenshot" },
+  { label: "waitForSelector", insertText: 'await page.waitForSelector("${1:.selector}");', detail: "Wait for an element" },
 ]
 
-let shaftCompletionsRegistered = false
+let pwCompletionsRegistered = false
 
 // ---------- Component ----------
 
@@ -376,16 +378,17 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
       })
     }
 
-    const classMatch = code.match(/public\s+class\s+(\w+)/)
-    if (classMatch && name && classMatch[1] !== name) {
-      const lineIdx = lines.findIndex((l) => l.includes(`class ${classMatch[1]}`)) + 1
+    // A spec with no test() block runs green while asserting nothing, which is
+    // the most misleading outcome available — flag it where the Java class-name
+    // check used to be.
+    if (code.trim() && !/\btest\s*\(/.test(code)) {
       markers.push({
         severity: monaco.MarkerSeverity.Warning,
-        message: `Class name "${classMatch[1]}" does not match script name "${name}" — the runner writes ${name}.java`,
-        startLineNumber: Math.max(lineIdx, 1),
+        message: `No test() block found — the runner will report "No tests found" for ${name || "this script"}.`,
+        startLineNumber: 1,
         startColumn: 1,
-        endLineNumber: Math.max(lineIdx, 1),
-        endColumn: (lines[Math.max(lineIdx - 1, 0)]?.length || 0) + 1
+        endLineNumber: 1,
+        endColumn: (lines[0]?.length || 0) + 1
       })
     }
 
@@ -396,9 +399,9 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
     editorRef.current = editor
     monacoRef.current = monaco
 
-    if (!shaftCompletionsRegistered) {
-      shaftCompletionsRegistered = true
-      monaco.languages.registerCompletionItemProvider("java", {
+    if (!pwCompletionsRegistered) {
+      pwCompletionsRegistered = true
+      monaco.languages.registerCompletionItemProvider("typescript", {
         triggerCharacters: [".", "@"],
         provideCompletionItems: (model: any, position: any) => {
           const word = model.getWordUntilPosition(position)
@@ -409,7 +412,7 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
             endColumn: word.endColumn
           }
           return {
-            suggestions: SHAFT_SNIPPETS.map((s) => ({
+            suggestions: PW_SNIPPETS.map((s) => ({
               label: s.label,
               kind: monaco.languages.CompletionItemKind.Snippet,
               detail: s.detail,
@@ -1009,7 +1012,7 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
           <div className="bg-slate-900 min-h-[520px]">
             <Editor
               height="520px"
-              defaultLanguage="java"
+              defaultLanguage="typescript"
               theme="vs-dark"
               value={editorCode}
               onChange={handleCodeChange}

@@ -2,9 +2,9 @@
 // asynchronous log4j output (target/logs/log4j.log) rather than blocking on it.
 
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
-export const LOG4J_PATH = path.join(MAVEN_PROJECT_PATH, "target/logs/log4j.log")
+export const LOG4J_PATH = path.join(ARTIFACT_ROOT, "target/logs/log4j.log")
 
 // SHAFT colourises its console output; strip the ANSI escape codes so the
 // browser viewer can apply its own semantic colouring by log level.

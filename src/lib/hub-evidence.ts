@@ -1,13 +1,26 @@
 // Evidence harvesting for the Automation Hub Evidence Vault.
-// After a Test Studio run completes, scans the SHAFT maven workspace for
-// artifacts created during the run (screenshots, videos, logs, HAR traces)
-// and registers them as EvidenceFile rows tied to the TestExecution.
+// After a Test Studio run completes, scans the Playwright workspace for
+// artifacts created during the run (screenshots, video, traces, logs) and
+// registers them as EvidenceFile rows tied to the TestExecution.
+//
+// Playwright writes all of these itself under test-results/ when trace, video
+// and screenshot are enabled — which the generated config always does. The
+// previous version scanned a Maven target/ directory that no run ever produced.
 
 import { prisma } from "@/lib/db"
 import * as fs from "fs"
 import * as path from "path"
+import { RESULTS_DIR, WORKSPACE_ROOT } from "@/lib/hub-workspace"
 
-export const MAVEN_PROJECT_PATH = "/Users/sabrymohsen/Desktop/AI-Manual-testing/shaft-engine-core"
+/**
+ * Every artifact must resolve inside this directory.
+ *
+ * Used by the evidence file/download routes as a path-traversal guard: an
+ * EvidenceFile row stores a path, and a stored path must never be able to walk
+ * out of the workspace and serve, say, /etc/passwd. Named for what it is now
+ * that the Maven workspace is gone.
+ */
+export const ARTIFACT_ROOT = WORKSPACE_ROOT
 
 // Sentinel filePath for the Maven console log, which lives in the DB
 // (TestExecution.logOutput), not on disk.
@@ -23,7 +36,9 @@ const TYPE_BY_EXT: Record<string, string> = {
   ".mov": "video",
   ".har": "har",
   ".log": "log",
-  ".txt": "log"
+  ".txt": "log",
+  // Playwright's trace bundle — what the Trace Viewer tab reads.
+  ".zip": "trace"
 }
 
 interface FoundArtifact {
@@ -33,10 +48,7 @@ interface FoundArtifact {
 }
 
 function scanArtifacts(since: number): FoundArtifact[] {
-  const roots = [
-    path.join(MAVEN_PROJECT_PATH, "allure-results"),
-    path.join(MAVEN_PROJECT_PATH, "target")
-  ]
+  const roots = [RESULTS_DIR]
   const found: FoundArtifact[] = []
 
   const walk = (dir: string, depth: number) => {
@@ -44,8 +56,6 @@ function scanArtifacts(since: number): FoundArtifact[] {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const full = path.join(dir, entry.name)
       if (entry.isDirectory()) {
-        // surefire-reports only contains tiny HTML report assets, not evidence
-        if (entry.name === "surefire-reports") continue
         walk(full, depth + 1)
         continue
       }
@@ -54,7 +64,7 @@ function scanArtifacts(since: number): FoundArtifact[] {
       if (!type) continue
       const stat = fs.statSync(full)
       if (stat.mtimeMs < since) continue
-      // skip icon-sized images; real SHAFT screenshots are far larger
+      // skip icon-sized images; real page screenshots are far larger
       if (type === "screenshot" && stat.size < 5 * 1024) continue
       if (stat.size === 0) continue
       found.push({ file: full, type, mtime: stat.mtimeMs })
@@ -94,9 +104,9 @@ export async function harvestEvidence(opts: {
     filePath: EXECUTION_LOG_SENTINEL,
     stepNumber: rows.length + 1,
     pageUrl: "",
-    elementLocator: `mvn test -Dtest=${opts.scriptName}`,
+    elementLocator: `npx playwright test ${opts.scriptName}`,
     status: opts.status,
-    tags: [opts.scriptType, opts.scriptName, opts.browser, "Maven"]
+    tags: [opts.scriptType, opts.scriptName, opts.browser, "Playwright"]
   })
 
   try {

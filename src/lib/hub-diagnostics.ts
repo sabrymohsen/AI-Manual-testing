@@ -6,11 +6,11 @@
 
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 import { stripAnsi, LOG4J_PATH } from "@/lib/hub-logs"
 import { findTraceForTest, resolveTraceZip, zipEntries, unzipEntry } from "@/lib/hub-traces"
 
-const ENV_XML = path.join(MAVEN_PROJECT_PATH, "allure-results/environment.xml")
+const ENV_XML = path.join(ARTIFACT_ROOT, "allure-results/environment.xml")
 
 // ---------- Run metadata (environment.xml + log4j) ----------
 

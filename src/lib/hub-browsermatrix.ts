@@ -8,10 +8,10 @@ import { prisma } from "@/lib/db"
 import { execFile } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
-export const BROWSERSTACK_YML = path.join(MAVEN_PROJECT_PATH, "browserstack.yml")
-const CUSTOM_PROPS = path.join(MAVEN_PROJECT_PATH, "src/main/resources/properties/custom.properties")
+export const BROWSERSTACK_YML = path.join(ARTIFACT_ROOT, "browserstack.yml")
+const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
 
 // Per parallel-session minute; overridable via env for accuracy against a plan.
 const BS_RATE_PER_MINUTE = Number(process.env.BROWSERSTACK_RATE_PER_MINUTE) || 0.15

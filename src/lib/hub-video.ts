@@ -8,10 +8,10 @@ import { prisma } from "@/lib/db"
 import { execFile } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
-const CUSTOM_PROPS = path.join(MAVEN_PROJECT_PATH, "src/main/resources/properties/custom.properties")
-export const CLIPS_DIR = path.join(MAVEN_PROJECT_PATH, "target/video-clips")
+const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
+export const CLIPS_DIR = path.join(ARTIFACT_ROOT, "target/video-clips")
 
 // ---------- custom.properties helpers ----------
 
@@ -108,7 +108,7 @@ export async function cleanupOldVideos(days: number): Promise<number> {
   for (const v of old) {
     try {
       const resolved = path.resolve(v.filePath)
-      if (resolved.startsWith(MAVEN_PROJECT_PATH) && fs.existsSync(resolved)) fs.unlinkSync(resolved)
+      if (resolved.startsWith(ARTIFACT_ROOT) && fs.existsSync(resolved)) fs.unlinkSync(resolved)
     } catch {}
     try {
       await prisma.evidenceFile.delete({ where: { id: v.id } })

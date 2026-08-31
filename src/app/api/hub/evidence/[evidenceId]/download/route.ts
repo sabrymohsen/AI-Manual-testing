@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { EXECUTION_LOG_SENTINEL, MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { EXECUTION_LOG_SENTINEL, ARTIFACT_ROOT } from "@/lib/hub-evidence"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -35,7 +35,7 @@ export async function GET(
     }
 
     const resolved = path.resolve(item.filePath)
-    if (!resolved.startsWith(MAVEN_PROJECT_PATH) || !fs.existsSync(resolved)) {
+    if (!resolved.startsWith(ARTIFACT_ROOT) || !fs.existsSync(resolved)) {
       return NextResponse.json({ error: "Evidence file missing on disk" }, { status: 404 })
     }
 

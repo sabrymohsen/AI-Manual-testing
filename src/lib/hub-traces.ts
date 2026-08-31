@@ -9,10 +9,18 @@ import { prisma } from "@/lib/db"
 import { execFile } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH, EXECUTION_LOG_SENTINEL } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT, EXECUTION_LOG_SENTINEL } from "@/lib/hub-evidence"
+import { RESULTS_DIR } from "@/lib/hub-workspace"
+import { parsePlaywrightTrace } from "@/lib/hub-playwright-trace"
 
-export const SHAFT_TRACES_DIR = path.join(MAVEN_PROJECT_PATH, "target/shaft-traces")
-export const TRACE_ZIP_NAME = "shaft-trace.zip"
+// Playwright writes one directory per test under test-results/, each holding a
+// trace.zip — the same shape the old SHAFT layout had, so discovery below is
+// unchanged apart from the names.
+export const TRACES_DIR = RESULTS_DIR
+export const TRACE_ZIP_NAME = "trace.zip"
+
+/** @deprecated name kept so existing imports keep resolving. */
+export const SHAFT_TRACES_DIR = TRACES_DIR
 
 // SHAFT's shaft-trace.json embeds raw newlines inside string values (stack
 // traces, code snippets), which strict JSON.parse rejects. Escape control
@@ -156,15 +164,19 @@ export async function listTraces(): Promise<TraceSummary[]> {
       mtime
     }
     try {
-      const t = parseTraceJson(await unzipEntry(zip, "shaft-trace.json"))
+      const t = await parsePlaywrightTrace(zip)
+      // Playwright names the directory <Spec>-<test title>-<project>; the
+      // leading segment is the spec, which is what the hub calls the class.
+      const parts = d.name.split("-")
+      const failed = t.actions.some((a) => a.status === "failed")
       summary = {
         id: d.name,
-        className: t.test?.className || d.name,
-        methodName: t.test?.methodName || "",
-        displayName: t.test?.displayName || t.test?.methodName || d.name,
-        status: t.test?.status || "unknown",
-        generatedAt: t.generatedAt || null,
-        actionCount: Array.isArray(t.actions) ? t.actions.length : 0,
+        className: parts[0] || d.name,
+        methodName: parts.slice(1, -1).join("-") || "",
+        displayName: d.name.replace(/-/g, " "),
+        status: failed ? "failed" : "passed",
+        generatedAt: t.startedAtMs ? new Date(t.startedAtMs).toISOString() : new Date(mtime).toISOString(),
+        actionCount: t.actions.length,
         mtime
       }
     } catch {
@@ -198,19 +210,41 @@ export async function readTrace(traceId: string) {
   const zip = resolveTraceZip(traceId)
   if (!zip) return null
 
-  const trace = parseTraceJson(await unzipEntry(zip, "shaft-trace.json"))
+  const parsed = await parsePlaywrightTrace(zip)
+  const failed = parsed.actions.some((a) => a.status === "failed")
+  const firstFailure = parsed.actions.find((a) => a.status === "failed")
+  const parts = traceId.split("-")
 
-  // Network: prefer the trace's own array, fall back to the HAR bundle.
-  let network: any[] = Array.isArray(trace.network) ? trace.network : []
-  if (network.length === 0) {
-    try {
-      const har = parseTraceJson(await unzipEntry(zip, "shaft-network.har"))
-      const entries = har?.log?.entries
-      if (Array.isArray(entries)) network = entries.map(normalizeHarEntry)
-    } catch {
-      // no HAR — leave network empty
-    }
+  // Assembled from the Playwright events rather than read from a pre-shaped
+  // document; the viewer's contract is unchanged.
+  const trace: any = {
+    schemaVersion: null,
+    generatedAt: parsed.startedAtMs ? new Date(parsed.startedAtMs).toISOString() : null,
+    test: {
+      className: parts[0] || traceId,
+      methodName: parts.slice(1, -1).join("-") || "",
+      displayName: traceId.replace(/-/g, " "),
+      description: parsed.browserName ? `Ran on ${parsed.browserName}` : "",
+      status: failed ? "failed" : "passed",
+    },
+    exception: firstFailure
+      ? {
+          type: firstFailure.exception.type,
+          message: firstFailure.exception.message,
+          stacktrace: "",
+        }
+      : null,
+    source: null,
+    snapshot: null,
+    // Playwright has no locator-healing concept; the panel reports it as off
+    // rather than implying a capability that is not there.
+    locatorHealth: { enabled: false },
+    browserObservability: { warnings: [] },
+    actions: parsed.actions,
+    console: parsed.console,
+    attachments: [],
   }
+  const network = parsed.network
 
   // Evidence sync: link the trace to the most recent matching execution so the
   // UI can show per-action screenshots and deep-link into the Evidence Vault.

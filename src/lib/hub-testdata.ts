@@ -5,9 +5,9 @@
 
 import * as fs from "fs"
 import * as path from "path"
-import { MAVEN_PROJECT_PATH } from "@/lib/hub-evidence"
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
-export const TESTDATA_DIR = path.join(MAVEN_PROJECT_PATH, "src/test/resources/testDataFiles")
+export const TESTDATA_DIR = path.join(ARTIFACT_ROOT, "src/test/resources/testDataFiles")
 
 // A safe on-disk file name derived from a display name: letters/digits/_/-, .json
 export function toFileName(name: string): string {

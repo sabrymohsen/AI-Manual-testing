@@ -6,7 +6,9 @@ import * as path from "path"
 
 export const dynamic = "force-dynamic"
 
-const MAVEN_PROJECT_PATH = "/Users/sabrymohsen/Desktop/AI-Manual-testing/shaft-engine-core"
+// Guard shared with the evidence routes rather than a second hardcoded copy
+// of one machine's home directory.
+import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
 // GET /api/hub/executions/{id}/screenshot — serve the captured screenshot evidence
 export async function GET(
@@ -27,7 +29,7 @@ export async function GET(
     }
 
     const resolved = path.resolve(execution.screenshotPath)
-    if (!resolved.startsWith(MAVEN_PROJECT_PATH) || !fs.existsSync(resolved)) {
+    if (!resolved.startsWith(ARTIFACT_ROOT) || !fs.existsSync(resolved)) {
       return NextResponse.json({ error: "Screenshot file missing" }, { status: 404 })
     }
 

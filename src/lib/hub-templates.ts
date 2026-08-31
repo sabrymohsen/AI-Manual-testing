@@ -1,4 +1,9 @@
-// Shared SHAFT test script templates used by the Test Studio (UI + API seed)
+// Shared Playwright test templates used by the Test Studio (UI + API seed).
+//
+// These were SHAFT/TestNG Java classes, run through `mvn test` against a
+// workspace that had no pom.xml and no sources — so nothing here was ever
+// executable. They are now @playwright/test specs, which the hub runner can
+// actually run, on a laptop or in a container.
 
 export type HubScriptType = "Web" | "API" | "Database"
 
@@ -9,174 +14,116 @@ export interface HubTemplate {
   code: string
 }
 
-// Builds a fresh script body for the "New Test" dropdown, injecting the class name
+/**
+ * A fresh script body for the "New Test" dropdown.
+ *
+ * `title` is the readable name shown in reports; the file name comes from the
+ * script's own name, so the two are kept in step by the caller.
+ */
 export function buildTemplateCode(type: HubScriptType, className: string): string {
+  const title = className.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+
   if (type === "API") {
-    return `package com.ourcompany.tests;
+    return `import { test, expect } from "@playwright/test"
 
-import org.testng.annotations.Test;
-import com.shaft.driver.SHAFT;
+test("${title} — verify API response", async ({ request }) => {
+  const res = await request.get("https://reqres.in/api/users?page=2")
 
-public class ${className} {
-    @Test(description = "Verify API response using REST Assured via SHAFT")
-    public void testApiEndpoint() {
-        SHAFT.API api = new SHAFT.API("https://reqres.in");
+  expect(res.status()).toBe(200)
 
-        api.get("/api/users?page=2")
-           .perform();
-
-        api.assertThatResponse()
-           .extractedJsonValue("page")
-           .isEqualTo("2")
-           .perform();
-    }
-}`
+  const body = await res.json()
+  expect(body.page).toBe(2)
+  expect(Array.isArray(body.data)).toBe(true)
+})
+`
   }
 
   if (type === "Database") {
-    return `package com.ourcompany.tests;
+    // Kept dependency-free: the hub cannot assume a driver is installed, and a
+    // template that fails to import is worse than one that shows the shape.
+    return `import { test, expect } from "@playwright/test"
 
-import org.testng.annotations.Test;
-import com.shaft.driver.SHAFT;
+/**
+ * Database checks run through your API rather than a direct driver, so the
+ * spec needs no extra dependency and runs anywhere the app runs. Point it at
+ * an endpoint that reads the rows you care about.
+ */
+test("${title} — verify persisted data", async ({ request }) => {
+  const res = await request.get("https://reqres.in/api/users/2")
+  expect(res.ok()).toBeTruthy()
 
-public class ${className} {
-    @Test(description = "Verify database query results using SHAFT Database validations")
-    public void testDatabaseQuery() {
-        // SHAFT.DB db = new SHAFT.DB(SHAFT.DB.DatabaseType.POSTGRESQL, "localhost", "5432", "mydb", "user", "pass");
-        // String result = db.executeSelectQuery("SELECT status FROM users WHERE id = 1").toString();
-
-        SHAFT.Validations.assertThat()
-                         .object("Active")
-                         .isEqualTo("Active")
-                         .perform();
-    }
-}`
+  const { data } = await res.json()
+  expect(data).toBeTruthy()
+  expect(data.id).toBe(2)
+  expect(data.email).toContain("@")
+})
+`
   }
 
-  return `package com.ourcompany.tests;
+  return `import { test, expect } from "@playwright/test"
 
-import org.testng.annotations.Test;
+test("${title}", async ({ page }) => {
+  await page.goto("https://practice.expandtesting.com/login")
 
-public class ${className} extends BaseTest {
-    @Test(description = "Verify web flow using SHAFT Engine")
-    public void testWebFlow() {
-        // Navigate to the target page
-        navigateTo("https://example.com");
+  await page.getByLabel("Username").fill("practice")
+  await page.getByLabel("Password").fill("SuperSecretPassword!")
+  await page.getByRole("button", { name: "Login" }).click()
 
-        // Assert on the page title
-        assertPageTitle("Example Domain");
-    }
-}`
+  await expect(page.getByText("You logged into a secure area!")).toBeVisible()
+})
+`
 }
 
-// Default library seeded on first load: LoginFlow, ApiCrud, DbQuery, SearchFlow, FormSubmit
 export const DEFAULT_HUB_TEMPLATES: HubTemplate[] = [
   {
     name: "LoginFlowTest",
     type: "Web",
-    tags: ["Web", "Login", "Sanity"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-
-public class LoginFlowTest extends BaseTest {
-    @Test(description = "Verify login flow redirection and page title using SHAFT Engine")
-    public void testLoginRedirection() {
-        // Navigate to example login page
-        navigateTo("https://example.com/login");
-
-        // Verify page url and title using core assertions
-        assertCurrentUrl("https://example.com/login");
-        assertPageTitle("Login Page");
-    }
-}`
+    tags: ["smoke", "auth"],
+    code: buildTemplateCode("Web", "LoginFlowTest"),
   },
   {
     name: "ApiCrudTest",
     type: "API",
-    tags: ["API", "REST", "CRUD"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-import com.shaft.driver.SHAFT;
-
-public class ApiCrudTest {
-    @Test(description = "Verify GET user list API response using REST Assured via SHAFT")
-    public void testGetUserList() {
-        SHAFT.API api = new SHAFT.API("https://reqres.in");
-
-        api.get("/api/users?page=2")
-           .perform();
-
-        api.assertThatResponse()
-           .extractedJsonValue("data[0].first_name")
-           .isEqualTo("Michael")
-           .perform();
-    }
-}`
+    tags: ["api", "regression"],
+    code: buildTemplateCode("API", "ApiCrudTest"),
   },
   {
     name: "DbQueryTest",
     type: "Database",
-    tags: ["Database", "JDBC", "Inventory"],
-    code: `package com.ourcompany.tests;
-
-import org.testng.annotations.Test;
-import com.shaft.driver.SHAFT;
-
-public class DbQueryTest {
-    @Test(description = "Verify active users query matches specifications using SHAFT Database validations")
-    public void testDatabaseConnection() {
-        // Example SHAFT Database validation pattern
-        // SHAFT.DB db = new SHAFT.DB(SHAFT.DB.DatabaseType.POSTGRESQL, "localhost", "5432", "mydb", "user", "pass");
-
-        // Mock validation assertion to ensure JDBC driver functions cleanly
-        SHAFT.Validations.assertThat()
-                         .object("Active")
-                         .isEqualTo("Active")
-                         .perform();
-    }
-}`
+    tags: ["data"],
+    code: buildTemplateCode("Database", "DbQueryTest"),
   },
   {
     name: "SearchFlowTest",
     type: "Web",
-    tags: ["Web", "Search", "Regression"],
-    code: `package com.ourcompany.tests;
+    tags: ["search", "regression"],
+    code: `import { test, expect } from "@playwright/test"
 
-import org.testng.annotations.Test;
+test("Search returns results for a known term", async ({ page }) => {
+  await page.goto("https://practice.expandtesting.com/search")
 
-public class SearchFlowTest extends BaseTest {
-    @Test(description = "Verify search input query and title updates using SHAFT Engine")
-    public void testSearchFunctionality() {
-        // Navigate to example search page
-        navigateTo("https://example.com");
+  await page.getByPlaceholder("Search").fill("test")
+  await page.getByRole("button", { name: "Search" }).click()
 
-        // Assert title matches static domain spec
-        assertPageTitle("Example Domain");
-    }
-}`
+  await expect(page.getByRole("list")).toBeVisible()
+  await expect(page.getByRole("listitem")).not.toHaveCount(0)
+})
+`,
   },
   {
     name: "FormSubmitTest",
     type: "Web",
-    tags: ["Web", "Forms", "Regression"],
-    code: `package com.ourcompany.tests;
+    tags: ["forms", "regression"],
+    code: `import { test, expect } from "@playwright/test"
 
-import org.testng.annotations.Test;
+test("Contact form accepts a valid submission", async ({ page }) => {
+  await page.goto("https://practice.expandtesting.com/inputs")
 
-public class FormSubmitTest extends BaseTest {
-    @Test(description = "Verify form field typing and submit flow using SHAFT Engine")
-    public void testFormSubmission() {
-        // Navigate to the target form page
-        navigateTo("https://example.com");
+  await page.getByRole("textbox", { name: "Input: Text" }).fill("QA Automation Hub")
+  await page.getByRole("spinbutton").fill("42")
 
-        // driver.element().type(By.id("name"), "QA Tester");
-        // driver.element().type(By.id("email"), "tester@example.com");
-        // driver.element().click(By.cssSelector("button[type='submit']"));
-
-        assertPageTitle("Example Domain");
-    }
-}`
-  }
+  await expect(page.getByRole("textbox", { name: "Input: Text" })).toHaveValue("QA Automation Hub")
+})
+`,
+  },
 ]

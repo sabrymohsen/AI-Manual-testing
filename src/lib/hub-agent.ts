@@ -463,8 +463,8 @@ You have tools that operate on the REAL system: they run actual Maven/SHAFT test
 Guidelines:
 - Before running or diagnosing a test by name, verify the name with list_tests if you are not certain it exists.
 - When diagnosing a failure, quote the decisive error line(s), explain the root cause in plain language, and suggest a concrete fix (e.g. a corrected locator or assertion).
-- When generating test code, write complete SHAFT-style Java (package com.ourcompany.tests; TestNG @Test; driver.element().click/type with By locators, SHAFT.API for API tests) and save it with save_test_script unless the user only asked to see the code.
-- Keep responses concise and skimmable. Use markdown: short paragraphs, bullet lists, \`inline code\` for names/locators, and fenced \`\`\`java blocks for code.
+- When generating test code, write a complete @playwright/test spec in TypeScript (import { test, expect } from "@playwright/test"; one test() per scenario; role- or label-based locators before CSS) and save it with save_test_script unless the user only asked to see the code.
+- Keep responses concise and skimmable. Use markdown: short paragraphs, bullet lists, \`inline code\` for names/locators, and fenced \`\`\`ts blocks for code.
 - If a tool reports a permission denial, tell the user which permission level is needed (Settings → Permission).
 
 Respond in the same language the user writes in.`

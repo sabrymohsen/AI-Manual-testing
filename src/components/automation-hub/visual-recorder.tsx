@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import Editor from "@monaco-editor/react"
-import { generateShaftJava, RecordedAction } from "@/lib/recorder-codegen"
+import { generatePlaywrightSpec, RecordedAction } from "@/lib/recorder-codegen"
 import {
   Play,
   Square,
@@ -259,7 +259,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
 
   // Live code preview generated from captured actions (until the user edits manually)
   useEffect(() => {
-    if (!codeEdited) setCode(generateShaftJava(actions))
+    if (!codeEdited) setCode(generatePlaywrightSpec(actions))
   }, [actions, codeEdited])
 
   // ---------- Session controls ----------
@@ -269,7 +269,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
     setPhase("starting")
     setActions([])
     setFrame(null)
-    setCode(generateShaftJava([]))
+    setCode(generatePlaywrightSpec([]))
     setCodeEdited(false)
     setSavedName("")
     try {

@@ -1,12 +1,17 @@
-// Shared SHAFT Java code generation from Visual Recorder actions.
+// Playwright code generation from Visual Recorder actions.
 // Used by the live client-side preview and by POST /api/hub/recorder/generate.
+//
+// This emitted SHAFT/TestNG Java, which the hub had no way to run — the Maven
+// workspace it targeted held no pom.xml and no sources. Recorded flows now come
+// out as @playwright/test specs, the same thing Test Studio stores and the
+// runner executes, so a recording can be saved and run without a rewrite.
 
 export interface RecordedAction {
   id: string
   step: number
   kind: "navigate" | "click" | "type" | "select" | "press"
   label: string // human readable element / target name
-  locator?: string // ready-to-paste Java By locator
+  locator?: string // selector captured for the element
   value?: string
   isPassword?: boolean
   url?: string
@@ -15,61 +20,96 @@ export interface RecordedAction {
   at: number
 }
 
-const escapeJava = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")
+const escapeJs = (s: string) => s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")
 
-export function actionToJavaLine(action: RecordedAction): string | null {
+/**
+ * Turn a captured locator into a Playwright one.
+ *
+ * The recorder stores whatever the page gave it, and older recordings hold
+ * Selenium `By.id("x")` strings from when this emitted Java. Those are
+ * translated rather than dropped, so a flow recorded before this change still
+ * generates a runnable spec.
+ */
+export function toPlaywrightLocator(raw?: string): string | null {
+  if (!raw) return null
+  const s = raw.trim()
+
+  const by = s.match(/^By\.(\w+)\(\s*"(.*)"\s*\)$/)
+  if (by) {
+    const [, kind, rawValue] = by
+    const value = escapeJs(rawValue)
+    switch (kind.toLowerCase()) {
+      case "id": return `page.locator("#${value}")`
+      case "cssselector": return `page.locator("${value}")`
+      case "xpath": return `page.locator("xpath=${value}")`
+      case "name": return `page.locator("[name='${value}']")`
+      case "linktext": return `page.getByRole("link", { name: "${value}" })`
+      case "classname": return `page.locator(".${value}")`
+      default: return `page.locator("${value}")`
+    }
+  }
+
+  if (s.startsWith("page.")) return s
+  return `page.locator("${escapeJs(s)}")`
+}
+
+export function actionToPlaywrightLine(action: RecordedAction): string | null {
+  const loc = toPlaywrightLocator(action.locator)
+
   switch (action.kind) {
     case "navigate":
-      return action.url ? `navigateTo("${escapeJava(action.url)}");` : null
+      return action.url ? `await page.goto("${escapeJs(action.url)}");` : null
     case "click":
-      return action.locator ? `driver.element().click(${action.locator});` : null
+      return loc ? `await ${loc}.click();` : null
     case "type": {
-      if (!action.locator) return null
-      const value = action.isPassword ? "[REDACTED]" : action.value || ""
-      return `driver.element().type(${action.locator}, "${escapeJava(value)}");`
+      if (!loc) return null
+      // A recorded password is never written into the spec. It is emitted as an
+      // env lookup so the file can be committed and still run.
+      if (action.isPassword) {
+        return `await ${loc}.fill(process.env.RECORDED_PASSWORD ?? "");`
+      }
+      return `await ${loc}.fill("${escapeJs(action.value || "")}");`
     }
     case "select":
-      return action.locator
-        ? `driver.element().select(${action.locator}, "${escapeJava(action.value || "")}");`
-        : null
+      return loc ? `await ${loc}.selectOption("${escapeJs(action.value || "")}");` : null
     case "press":
-      return action.locator
-        ? `driver.element().keyPress(${action.locator}, Keys.${action.value || "ENTER"});`
-        : null
+      return loc ? `await ${loc}.press("${escapeJs(action.value || "Enter")}");` : null
     default:
       return null
   }
 }
 
-export function generateShaftJava(actions: RecordedAction[], className = "RecordedFlowTest"): string {
-  const usesKeys = actions.some((a) => a.kind === "press")
-  const usesBy = actions.some((a) => a.locator)
-
+export function generatePlaywrightSpec(
+  actions: RecordedAction[],
+  className = "RecordedFlowTest"
+): string {
+  const title = className.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
   const lines: string[] = []
   let step = 0
+
   for (const action of actions) {
-    const code = actionToJavaLine(action)
+    const code = actionToPlaywrightLine(action)
     if (!code) continue
     step++
     const label = (action.label || "").replace(/\s+/g, " ").trim().slice(0, 60)
-    lines.push(`        // Step ${step}: ${action.kind} — ${label}`)
-    lines.push(`        ${code}`)
+    lines.push(`  // Step ${step}: ${action.kind} — ${label}`)
+    lines.push(`  ${code}`)
   }
 
   const body =
     lines.length > 0
       ? lines.join("\n")
-      : "        // No actions recorded yet — interact with the browser view to capture steps"
+      : "  // No actions recorded yet — interact with the browser view to capture steps"
 
-  return `package com.ourcompany.tests;
+  return `import { test, expect } from "@playwright/test"
 
-${usesBy ? "import org.openqa.selenium.By;\n" : ""}${usesKeys ? "import org.openqa.selenium.Keys;\n" : ""}import org.testng.annotations.Test;
-
-public class ${className} extends BaseTest {
-    @Test(description = "Flow recorded with the Automation Hub Visual Recorder")
-    public void testRecordedFlow() {
+test("${title}", async ({ page }) => {
 ${body}
-    }
-}
+})
 `
 }
+
+/** @deprecated Kept so older imports resolve; emits Playwright now. */
+export const generateShaftJava = generatePlaywrightSpec
+/** @deprecated Renamed to actionToPlaywrightLine. */
+export const actionToJavaLine = actionToPlaywrightLine
