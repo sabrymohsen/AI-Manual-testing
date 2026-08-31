@@ -62,16 +62,36 @@ if (!process.env.NEXTAUTH_SECRET) {
   process.env.NEXTAUTH_SECRET = "test-secret-key-for-integration-tests-only"
 }
 
+/**
+ * Empty every table between tests.
+ *
+ * ONE statement, not a loop. TRUNCATE takes an ACCESS EXCLUSIVE lock on each
+ * table it touches, and pg_tables returns them in no particular order, so two
+ * test files resetting at the same time grabbed the same locks in different
+ * orders and deadlocked — Postgres killed one of them and the run failed with
+ * "deadlock detected" on whichever test happened to be mid-flight.
+ *
+ * Listing every table in a single TRUNCATE makes Postgres acquire the whole
+ * lock set as one unit, so concurrent resets queue behind each other instead of
+ * forming a cycle. The names are sorted as well, so every worker issues the
+ * identical statement.
+ *
+ * CASCADE is still required: the tables reference each other, and truncating a
+ * parent without its children is rejected.
+ */
 export async function resetDatabase() {
   const tables = await prismaTest.$queryRaw<Array<{ tablename: string }>>`
     SELECT tablename FROM pg_tables WHERE schemaname='public'
   `
-  for (const { tablename } of tables) {
-    if (tablename === "_prisma_migrations") continue
-    await prismaTest.$executeRawUnsafe(
-      `TRUNCATE TABLE "public"."${tablename}" CASCADE;`
-    )
-  }
+  const names = tables
+    .map((t) => t.tablename)
+    .filter((name) => name !== "_prisma_migrations")
+    .sort()
+
+  if (names.length === 0) return
+
+  const list = names.map((name) => `"public"."${name}"`).join(", ")
+  await prismaTest.$executeRawUnsafe(`TRUNCATE TABLE ${list} CASCADE;`)
 }
 
 export async function createTestUser(
