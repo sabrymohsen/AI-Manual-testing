@@ -10,6 +10,10 @@ const bodySchema = z.object({
   title: z.string().optional(),
   errorDetails: z.string().optional(),
   logs: z.any().optional(),
+  // Optional so existing callers keep working; when present, the project's own
+  // AI key is preferred over the workspace/env one.
+  projectId: z.string().optional(),
+
 })
 
 export async function POST(request: Request) {
@@ -32,6 +36,7 @@ export async function POST(request: Request) {
     }
 
     const draft = await draftBugReport({
+      projectId: body.projectId,
       title: body.title || "Failed Test Step",
       actionDescription: body.actionDescription,
       expectedResult: body.expectedResult,

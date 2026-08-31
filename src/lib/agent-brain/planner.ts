@@ -1,11 +1,6 @@
 import { AppUnderstanding, ExecutionPlan, ExecutionPlanItem } from "./types"
 import { prisma } from "@/lib/db"
-
-function getClient() {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-  return { baseUrl, apiKey }
-}
+import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
 
 export async function generateExecutionPlan(
   projectId: string,
@@ -29,10 +24,9 @@ export async function generateExecutionPlan(
     return { executionPlan: [] }
   }
 
-  const { baseUrl, apiKey } = getClient()
-
-  if (!apiKey) {
-    console.warn("[AgentBrain] OPENAI_COMPATIBLE_API_KEY not configured. Generating template plan.")
+  // This project's own AI key first, then workspace, then env — see resolveProvider.
+  if (!(await resolveProvider(projectId))) {
+    console.warn("[AgentBrain] No AI provider configured for this project. Generating template plan.")
     return getFallbackPlan(project, understanding)
   }
 
@@ -81,26 +75,14 @@ Requirements: ${project.requirements.map(r => r.title).join(", ") || "None"}
 Generate a comprehensive execution plan containing at least 3-5 test scenarios.`
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.3,
-        response_format: { type: "json_object" },
-      }),
+    const content = await chatWithConfiguredProvider({
+      projectId,
+      system: systemPrompt,
+      prompt: userMessage,
+      temperature: 0.3,
+      json: true,
+      command: "agent-brain-plan",
     })
-
-    if (!res.ok) throw new Error(`LLM Error: ${res.statusText}`)
-    const data = await res.json()
-    const content = data.choices?.[0]?.message?.content
     if (!content) throw new Error("Empty response from LLM")
 
     return JSON.parse(content) as ExecutionPlan

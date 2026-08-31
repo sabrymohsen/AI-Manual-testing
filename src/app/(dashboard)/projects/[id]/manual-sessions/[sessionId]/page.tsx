@@ -574,6 +574,8 @@ export default function ManualSessionWorkspace() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // Lets the suggestion use this project's own AI key.
+          projectId,
           actionDescription: step.actionDescription,
           testCaseTitle: session?.sessionCases[activeCaseIndex]?.testCase.title
         })

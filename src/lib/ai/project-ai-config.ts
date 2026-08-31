@@ -16,6 +16,39 @@ export interface ProjectAiSettings {
   model: string
   /** Whether a key is stored on the project itself (vs inherited). */
   hasKey: boolean
+  /**
+   * A key IS stored but can no longer be decrypted — APP_ENCRYPTION_KEY is not
+   * the one it was saved with.
+   *
+   * This is the difference between "this project has no AI key" and "this
+   * project's AI key became unreadable", and it is the whole reason the key
+   * seemed to vanish on every deploy: the row survived, the secret inside it
+   * did not, and the app quietly reported the project as unconfigured. Saying
+   * so lets the UI name the real fix (pin APP_ENCRYPTION_KEY on the host)
+   * instead of inviting someone to paste the key in again every time.
+   */
+  keyUnreadable: boolean
+}
+
+/** Can the stored key still be read with the key this server holds? */
+function canDecrypt(row: {
+  apiKeyEncrypted: string
+  apiKeyIv: string
+  apiKeyAuthTag: string
+  apiKeyKeyVersion: string
+}): boolean {
+  if (!row.apiKeyEncrypted) return false
+  try {
+    decryptSecret({
+      encrypted: row.apiKeyEncrypted,
+      iv: row.apiKeyIv,
+      authTag: row.apiKeyAuthTag,
+      keyVersion: row.apiKeyKeyVersion,
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 export interface ProjectAiCredentials {
@@ -33,6 +66,7 @@ export async function getProjectAiSettings(projectId: string): Promise<ProjectAi
     enabled: row.enabled,
     model: row.model,
     hasKey: !!row.apiKeyEncrypted,
+    keyUnreadable: !!row.apiKeyEncrypted && !canDecrypt(row),
   }
 }
 
@@ -125,6 +159,8 @@ export async function saveProjectAiConfig(
     enabled: row.enabled,
     model: row.model,
     hasKey: !!row.apiKeyEncrypted,
+    // Just written with this server's key, so by definition readable.
+    keyUnreadable: false,
   }
 }
 

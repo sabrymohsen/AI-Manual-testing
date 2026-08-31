@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
+import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
 
 function sanitizeInputText(text: string): string {
   if (!text) return ""
@@ -13,19 +14,11 @@ function sanitizeInputText(text: string): string {
     .replace(/(authorization:\s*)[^\r\n]+/gi, "$1[REDACTED]")
 }
 
-function getClient() {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-
-  if (!apiKey) {
-    throw new Error("AI provider not configured.")
-  }
-
-  return { baseUrl, apiKey }
-}
-
 const bodySchema = z.object({
   action: z.string().min(1, "Action is required"),
+  // Optional so existing callers keep working; when present, the project's own
+  // AI key is preferred over the workspace/env one.
+  projectId: z.string().optional(),
   title: z.string().optional(),
   stepsToReproduce: z.string().optional(),
   expectedResult: z.string().optional(),
@@ -47,6 +40,7 @@ export async function POST(request: Request) {
     const body = rawBody
     const {
       action,
+      projectId,
       title,
       stepsToReproduce,
       expectedResult,
@@ -66,17 +60,9 @@ export async function POST(request: Request) {
     const cleanActual = sanitizeInputText(actualResult || "")
     const cleanExpected = sanitizeInputText(expectedResult || "")
 
-    let apiKey = ""
-    let baseUrl = ""
-    let hasApiKey = false
-
-    try {
-      const client = getClient()
-      apiKey = client.apiKey
-      baseUrl = client.baseUrl
-      hasApiKey = true
-    } catch (e) {
-      // Local fallback heuristics if API key is not configured
+    // The project's own AI key first, then the workspace provider, then env.
+    if (!(await resolveProvider(projectId))) {
+      // Local fallback heuristics if no provider is configured
       let output = ""
 
       if (action === "suggest-title") {
@@ -135,28 +121,14 @@ export async function POST(request: Request) {
       userMessage = `Title: ${title}\nExpected: ${cleanExpected}\nActual: ${cleanActual}\nConsole logs: ${cleanLogs}\nNetwork: ${cleanNetwork}`
     }
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.2
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const suggestion = data.choices?.[0]?.message?.content || "No suggestion generated."
+    const suggestion =
+      (await chatWithConfiguredProvider({
+        projectId,
+        system: systemPrompt,
+        prompt: userMessage,
+        temperature: 0.2,
+        command: `bug-assistance:${action}`,
+      })) || "No suggestion generated."
 
     return NextResponse.json({ suggestion })
   } catch (error: any) {

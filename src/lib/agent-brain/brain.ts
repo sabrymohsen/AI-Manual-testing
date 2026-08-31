@@ -1,11 +1,6 @@
 import { prisma } from "@/lib/db"
 import { AppUnderstanding } from "./types"
-
-function getClient() {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-  return { baseUrl, apiKey }
-}
+import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
 
 export async function analyzeApplicationContext(
   projectId: string,
@@ -26,10 +21,11 @@ export async function analyzeApplicationContext(
     throw new Error(`Project ${projectId} not found`)
   }
 
-  const { baseUrl, apiKey } = getClient()
-
-  if (!apiKey) {
-    console.warn("[AgentBrain] OPENAI_COMPATIBLE_API_KEY is not set. Using context default heuristics.")
+  // Resolved through the shared cascade: this project's own AI key first, then
+  // the workspace provider, then any env key. Previously this read
+  // OPENAI_COMPATIBLE_API_KEY alone, so a key saved on the project was ignored.
+  if (!(await resolveProvider(projectId))) {
+    console.warn("[AgentBrain] No AI provider configured for this project. Using context default heuristics.")
     return getFallbackUnderstanding(project)
   }
 
@@ -56,28 +52,16 @@ Sample Locators: ${project.elementLocators.map(l => `${l.friendlyName} (${l.page
 User Intent/Instruction: ${userInstruction || "N/A"}`
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-      }),
+    const content = await chatWithConfiguredProvider({
+      projectId,
+      system: systemPrompt,
+      prompt: userMessage,
+      temperature: 0.2,
+      json: true,
+      command: "agent-brain-context",
     })
-
-    if (!res.ok) throw new Error(`LLM Error: ${res.statusText}`)
-    const data = await res.json()
-    const content = data.choices?.[0]?.message?.content
     if (!content) throw new Error("Empty response from LLM")
-    
+
     return JSON.parse(content) as AppUnderstanding
   } catch (err: any) {
     console.error("[AgentBrain] Failed to analyze context with LLM, falling back to heuristics:", err.message)

@@ -25,6 +25,8 @@ interface Config {
   enabled: boolean
   model: string
   hasKey: boolean
+  /** A key is stored but this server can no longer decrypt it. */
+  keyUnreadable?: boolean
 }
 
 interface Effective {
@@ -160,6 +162,28 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
           Leave it empty to use the workspace provider.
         </p>
       </div>
+
+      {/*
+        A stored key this server cannot decrypt. Called out on its own, above
+        the status line, because it is the one failure that looks exactly like
+        "no key was ever saved" — and the fix is on the host, not in this form.
+      */}
+      {config?.keyUnreadable && (
+        <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3.5 py-3 text-[11px] font-semibold text-rose-800 space-y-1.5">
+          <div className="flex items-center gap-2 font-extrabold">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            This project&apos;s saved AI key can no longer be read
+          </div>
+          <p className="font-medium leading-relaxed">
+            The key is still stored, but it was encrypted with a different
+            <code className="mx-1 px-1 py-0.5 rounded bg-rose-100 font-mono text-[10px]">APP_ENCRYPTION_KEY</code>
+            than this server holds. That happens when the variable is unset or regenerated on deploy —
+            which is why the key appears to disappear each time. Pasting it in again fixes it only until
+            the next deploy; setting a permanent <code className="font-mono text-[10px]">APP_ENCRYPTION_KEY</code>
+            on the host fixes it for good.
+          </p>
+        </div>
+      )}
 
       {/* What a generation in this project would use right now. */}
       <div

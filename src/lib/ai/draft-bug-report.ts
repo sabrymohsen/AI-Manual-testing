@@ -1,6 +1,9 @@
 import { BUG_REPORT_CRAFT, SEVERITY_PRIORITY_RUBRIC } from "@/lib/ai/qa-craft"
+import { chatWithConfiguredProvider } from "@/lib/ai/provider-chat"
 
 export interface DraftBugReportInput {
+  /** Prefer this project's own AI key when it has one. */
+  projectId?: string
   title: string
   actionDescription: string
   expectedResult: string
@@ -18,22 +21,9 @@ export interface DraftedBugReport {
   actualResult: string
 }
 
-function getClient() {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-
-  if (!apiKey) {
-    throw new Error("AI provider not configured. Set OPENAI_COMPATIBLE_API_KEY in settings.")
-  }
-
-  return { baseUrl, apiKey }
-}
-
 export async function draftBugReport(
   input: DraftBugReportInput
 ): Promise<DraftedBugReport> {
-  const { baseUrl, apiKey } = getClient()
-
   const systemPrompt = `You are a senior QA engineer drafting a bug report from a failed automated test step.
 Analyze the provided step details, error details, and execution logs.
 
@@ -63,29 +53,14 @@ Return ONLY valid JSON matching this structure:
 - Error: ${input.errorDetails || "None"}
 - Logs: ${(input.logs || []).join("\n")}`
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-    }),
+  const content = await chatWithConfiguredProvider({
+    projectId: input.projectId,
+    system: systemPrompt,
+    prompt: userMessage,
+    temperature: 0.3,
+    json: true,
+    command: "draft-bug-report",
   })
-
-  if (!response.ok) {
-    throw new Error(`AI API error: ${response.status} ${response.statusText}`)
-  }
-
-  const data = await response.json()
-  const content = data.choices?.[0]?.message?.content
 
   if (!content) {
     throw new Error("AI returned empty response")

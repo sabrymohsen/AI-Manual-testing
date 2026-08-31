@@ -26,6 +26,31 @@ export interface ResolvedProvider {
   provider: AiProvider
   apiKey: string
   model: string
+  /**
+   * Endpoint override. Set only by the legacy OPENAI_COMPATIBLE_* fallback, so
+   * a deployment pointing at a proxy or a self-hosted gateway keeps working;
+   * every other provider resolves its URL from the catalog as before.
+   */
+  baseUrl?: string
+}
+
+/**
+ * The pre-catalog way of configuring AI, still the only thing many deployments
+ * set. Half the AI features in this app read these two variables directly and
+ * knew nothing about the provider catalog or a project's own key.
+ *
+ * Kept as the LAST resort in resolveProvider so those deployments keep working
+ * untouched, while a project that saves its own key now overrides them.
+ */
+function legacyEnvProvider(): ResolvedProvider | null {
+  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
+  if (!apiKey) return null
+  return {
+    provider: "OpenAI",
+    apiKey,
+    model: process.env.OPENAI_COMPATIBLE_MODEL || "gpt-4o-mini",
+    baseUrl: process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1",
+  }
 }
 
 export interface ChatOptions {
@@ -42,16 +67,25 @@ export interface ChatOptions {
   timeoutMs?: number
   /** Prefer this project's own provider config when it has one. */
   projectId?: string
+  /**
+   * Ask the provider for strict JSON. Sent as response_format on the
+   * OpenAI-compatible branch; Anthropic has no equivalent, so callers must
+   * still say "return only JSON" in the prompt and parse defensively.
+   */
+  json?: boolean
 }
 
 /**
  * The provider a call should use, most specific first:
  *   1. the project's own config (its AI Provider tab),
  *   2. the workspace-wide AiProviderConfig — default+enabled, else any enabled,
- *   3. any provider whose key env var is set.
+ *   3. any provider whose key env var is set,
+ *   4. the legacy OPENAI_COMPATIBLE_API_KEY / _BASE_URL pair.
  *
- * The env fallback means a deployment can supply the key (e.g. KIMI_API_KEY)
- * without writing it into AiProviderConfig.apiKey, a plaintext column.
+ * The env fallbacks mean a deployment can supply the key (e.g. KIMI_API_KEY)
+ * without writing it into AiProviderConfig.apiKey, a plaintext column — and
+ * that a box configured only the old way keeps working after every AI feature
+ * was moved onto this resolver.
  */
 export async function resolveProvider(projectId?: string): Promise<ResolvedProvider | null> {
   if (projectId) {
@@ -85,7 +119,8 @@ export async function resolveProvider(projectId?: string): Promise<ResolvedProvi
     }
   }
 
-  return null
+  // Last: the legacy OPENAI_COMPATIBLE_* pair.
+  return legacyEnvProvider()
 }
 
 /** True when a real model is reachable, i.e. generators can skip the templates. */
@@ -163,7 +198,7 @@ async function callOpenAiCompatible(
   resolved: ResolvedProvider,
   opts: ChatOptions
 ): Promise<string> {
-  const baseUrl = openAiCompatBaseUrl(resolved.provider)
+  const baseUrl = resolved.baseUrl || openAiCompatBaseUrl(resolved.provider)
   const userContent = opts.imageBase64
     ? [
         { type: "text", text: opts.prompt },
@@ -191,6 +226,7 @@ async function callOpenAiCompatible(
       messages,
       max_tokens: opts.maxTokens ?? 4000,
       ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+      ...(opts.json ? { response_format: { type: "json_object" } } : {}),
     }),
     signal: AbortSignal.timeout(opts.timeoutMs ?? 120_000),
   })

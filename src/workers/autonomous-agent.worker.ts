@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db"
 import { withBugModule } from "@/lib/bug-reports/module"
 import { chromium } from "playwright"
 import { decryptSecret } from "@/lib/crypto"
+import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
 import { handleLogin } from "@/lib/playwright/login-handler"
 
 console.log("[AGENT WORKER STARTUP] Starting Autonomous QA Agent worker process...")
@@ -128,7 +129,7 @@ async function runAutonomousQA(agentRunId: string) {
   })
 
   // Call LLM to generate test cases
-  const generatedTests = await callLlmToGenerateTests(project.name, project.webAppUrl, discoveredRoutes, discoveredElements, agentRun.mode)
+  const generatedTests = await callLlmToGenerateTests(project.id, project.name, project.webAppUrl, discoveredRoutes, discoveredElements, agentRun.mode)
   console.log(`[Autonomous Agent] LLM generated ${generatedTests.length} test cases.`)
 
   // Save generated test cases in DB
@@ -282,7 +283,7 @@ async function runAutonomousQA(agentRunId: string) {
     totalDurationMs: Date.now() - startTime
   }
 
-  const aiSummary = await callLlmToSummarizeRun(project.name, metrics, finalRuns)
+  const aiSummary = await callLlmToSummarizeRun(project.id, project.name, metrics, finalRuns)
 
   await prisma.autonomousAgentRun.update({
     where: { id: agentRunId },
@@ -300,16 +301,18 @@ async function runAutonomousQA(agentRunId: string) {
 }
 
 async function callLlmToGenerateTests(
+  projectId: string,
   projectName: string,
   webAppUrl: string,
   routes: string[],
   elements: any[],
   mode: string
 ): Promise<any[]> {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-  if (!apiKey) {
-    console.warn("[Autonomous Agent] OPENAI_COMPATIBLE_API_KEY is not configured. Creating dummy test cases.")
+  // The project's own AI key first, then workspace, then env — this used to
+  // read OPENAI_COMPATIBLE_API_KEY alone, so a key saved on the project never
+  // reached the autonomous agent.
+  if (!(await resolveProvider(projectId))) {
+    console.warn("[Autonomous Agent] No AI provider configured for this project. Creating dummy test cases.")
     return getDummyTestCases(webAppUrl, routes)
   }
 
@@ -343,28 +346,16 @@ Interactive DOM Elements: ${JSON.stringify(elements)}
 Please generate ${count} essential E2E test cases (smoke and functional scenarios) for this project.`
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.3,
-        response_format: { type: "json_object" },
-      }),
+    const content = await chatWithConfiguredProvider({
+      projectId,
+      system: systemPrompt,
+      prompt: userMessage,
+      temperature: 0.3,
+      json: true,
+      command: "autonomous-generate-tests",
     })
-
-    if (!res.ok) throw new Error(`LLM Error: ${res.statusText}`)
-    const data = await res.json()
-    const content = data.choices?.[0]?.message?.content
     if (!content) throw new Error("Empty response from LLM")
-    
+
     const parsed = JSON.parse(content)
     if (Array.isArray(parsed)) return parsed
     if (parsed.testCases && Array.isArray(parsed.testCases)) return parsed.testCases
@@ -376,11 +367,14 @@ Please generate ${count} essential E2E test cases (smoke and functional scenario
   }
 }
 
-async function callLlmToSummarizeRun(projectName: string, metrics: any, runs: any[]): Promise<string> {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-  if (!apiKey) {
-    return "Test run completed. AI summary is unavailable because OPENAI_COMPATIBLE_API_KEY is not configured."
+async function callLlmToSummarizeRun(
+  projectId: string,
+  projectName: string,
+  metrics: any,
+  runs: any[]
+): Promise<string> {
+  if (!(await resolveProvider(projectId))) {
+    return "Test run completed. AI summary is unavailable because no AI provider is configured for this project."
   }
 
   const userMessage = `Project: ${projectName}
@@ -389,25 +383,15 @@ Run details: ${JSON.stringify(runs.map(r => ({ id: r.id, status: r.status, durat
 Please provide a brief, professional summary explaining the results, failure patterns, or healed elements.`
 
   try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: "You are a QA Lead. Write a concise run summary based on execution metrics." },
-          { role: "user", content: userMessage },
-        ],
+    return (
+      (await chatWithConfiguredProvider({
+        projectId,
+        system: "You are a QA Lead. Write a concise run summary based on execution metrics.",
+        prompt: userMessage,
         temperature: 0.3,
-      }),
-    })
-
-    if (!res.ok) return "Execution completed. AI summary generator failed."
-    const data = await res.json()
-    return data.choices?.[0]?.message?.content || "No summary available"
+        command: "autonomous-run-summary",
+      })) || "No summary available"
+    )
   } catch {
     return "Execution completed. AI summary generator unavailable."
   }

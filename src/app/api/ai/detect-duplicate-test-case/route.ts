@@ -2,17 +2,7 @@ import { NextResponse } from "next/server"
 import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-
-function getClient() {
-  const baseUrl = process.env.OPENAI_COMPATIBLE_BASE_URL || "https://api.openai.com/v1"
-  const apiKey = process.env.OPENAI_COMPATIBLE_API_KEY
-
-  if (!apiKey) {
-    throw new Error("AI provider not configured. Set OPENAI_COMPATIBLE_API_KEY in settings.")
-  }
-
-  return { baseUrl, apiKey }
-}
+import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
 
 function localJaccardSimilarity(str1: string, str2: string): number {
   const getTokens = (s: string) => {
@@ -71,16 +61,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ similarCaseFound: false })
     }
 
-    let apiKey = ""
-    let baseUrl = ""
-    let hasApiKey = false
-
-    try {
-      const client = getClient()
-      apiKey = client.apiKey
-      baseUrl = client.baseUrl
-      hasApiKey = true
-    } catch (e) {
+    // The project's own AI key first, then the workspace provider, then env.
+    // This used to read OPENAI_COMPATIBLE_API_KEY only, so a key saved on the
+    // project never reached duplicate detection.
+    if (!(await resolveProvider(projectId))) {
       // Local fallback
       let highestSimilarity = 0
       let similarCase: { id: string; title: string } | null = null
@@ -120,29 +104,14 @@ New Steps: ${JSON.stringify(steps || [])}
 Existing cases in project:
 ${existing.map(e => `- ID: ${e.id} | Title: ${e.title}`).join("\n")}`
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        temperature: 0.2,
-        response_format: { type: "json_object" }
-      }),
+    const content = await chatWithConfiguredProvider({
+      projectId,
+      system: systemPrompt,
+      prompt: userMessage,
+      temperature: 0.2,
+      json: true,
+      command: "detect-duplicate-test-case",
     })
-
-    if (!response.ok) {
-      throw new Error(`AI API error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
 
     if (!content) {
       return NextResponse.json({ similarCaseFound: false })

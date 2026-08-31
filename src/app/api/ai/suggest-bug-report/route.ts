@@ -10,6 +10,10 @@ const bodySchema = z.object({
   actualResult: z.string().min(1, "actualResult is required"),
   consoleLogs: z.string().optional(),
   networkErrors: z.string().optional(),
+  // Optional so existing callers keep working; when present, the project's own
+  // AI key is preferred over the workspace/env one.
+  projectId: z.string().optional(),
+
 })
 
 export async function POST(request: Request) {
@@ -23,7 +27,7 @@ export async function POST(request: Request) {
       return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
     }
     const body = rawBody
-    const { actionDescription, expectedResult, actualResult, consoleLogs, networkErrors } = body
+    const { actionDescription, expectedResult, actualResult, consoleLogs, networkErrors, projectId } = body
 
     if (!actionDescription || !expectedResult || !actualResult) {
       return NextResponse.json({ error: "Missing required step outcome data" }, { status: 400 })
@@ -39,6 +43,7 @@ export async function POST(request: Request) {
     const logsArray = [cleanLogs, cleanErrors].filter(Boolean)
 
     const draft = await draftBugReport({
+      projectId,
       title: "Failed step result",
       actionDescription: cleanAction,
       expectedResult: cleanExpected,

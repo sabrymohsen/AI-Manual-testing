@@ -49,6 +49,7 @@ export async function POST(request: Request) {
       name: project.name,
       webAppUrl: project.webAppUrl,
       description: project.description,
+      projectId,
     })
 
     return NextResponse.json({ generated })

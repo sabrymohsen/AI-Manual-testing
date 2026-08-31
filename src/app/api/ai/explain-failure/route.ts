@@ -7,6 +7,10 @@ const bodySchema = z.object({
   errorMessage: z.string().min(1, "errorMessage is required"),
   stepDescription: z.string().min(1, "stepDescription is required"),
   logs: z.array(z.string()).optional(),
+  // Optional so existing callers keep working; when present, the project's own
+  // AI key is preferred over the workspace/env one.
+  projectId: z.string().optional(),
+
 })
 
 export async function POST(request: Request) {
@@ -19,7 +23,7 @@ export async function POST(request: Request) {
     if (!parseResult.success) {
       return badRequestResponse(parseResult.error.errors.map(e => e.message).join(", "))
     }
-    const { errorMessage, logs, stepDescription } = rawBody
+    const { errorMessage, logs, stepDescription, projectId } = rawBody
 
     if (!errorMessage || !stepDescription) {
       return NextResponse.json(
@@ -28,7 +32,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const explanation = await explainFailure(errorMessage, logs || [], stepDescription)
+    const explanation = await explainFailure(errorMessage, logs || [], stepDescription, projectId)
     return NextResponse.json({ explanation })
   } catch (error) {
     const message = error instanceof Error ? error.message : "AI explanation failed"
