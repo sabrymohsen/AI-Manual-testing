@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { StepBuilder } from "@/components/test-cases/step-builder"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { AssigneeSelect } from "@/components/team/assignee-select"
+import { ModuleSelect } from "@/components/bug-reports/module-select"
 
 export default function EditTestCasePage() {
   const params = useParams()
@@ -17,6 +18,7 @@ export default function EditTestCasePage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [assignee, setAssignee] = useState("")
+  const [suiteId, setSuiteId] = useState<string>("")
 
   const [requirementIds, setRequirementIds] = useState<string[]>([])
 
@@ -26,6 +28,7 @@ export default function EditTestCasePage() {
       .then((data) => {
         setTestCase(data.testCase)
         setAssignee(data.testCase.assignee || "")
+        setSuiteId(data.testCase.suiteId || data.testCase.suite?.id || "")
         setRequirementIds((data.testCase.requirements || []).map((r: any) => r.requirementId))
         setSteps(
           data.testCase.steps.map((s: any) => ({
@@ -53,6 +56,7 @@ export default function EditTestCasePage() {
       priority: form.get("priority"),
       preconditions: form.get("preconditions") || null,
       assignee: assignee || null,
+      suiteId: suiteId || null,
       steps,
       requirementIds
     }
@@ -64,7 +68,7 @@ export default function EditTestCasePage() {
     })
 
     if (res.ok) {
-      router.push(`/projects/${params.id}/test-cases`)
+      router.push(`/projects/${params.id}/test-cases${suiteId ? `?suite=${encodeURIComponent(suiteId)}` : ""}`)
     } else {
       const data = await res.json()
       setError(data.error || "Failed to update test case")
@@ -79,9 +83,19 @@ export default function EditTestCasePage() {
       <h1 className="text-3xl font-bold">Edit Test Case</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label htmlFor="title">Title *</Label>
             <Input id="title" name="title" required defaultValue={testCase.title} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="suite">Module / Suite</Label>
+            <ModuleSelect
+              projectId={params.id as string}
+              value={suiteId}
+              onChange={setSuiteId}
+              placeholder="— Unfiled (No Module) —"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>
@@ -92,7 +106,7 @@ export default function EditTestCasePage() {
               <option value="Critical">Critical</option>
             </select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label htmlFor="assignee">Assignee</Label>
             <AssigneeSelect
               id="assignee"

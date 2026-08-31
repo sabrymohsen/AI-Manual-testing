@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import {
+  requireProjectOwner,
+  requireProjectMember,
+  requireProjectPermission,
+  unauthorizedResponse,
+  badRequestResponse,
+  notFoundResponse,
+} from "@/lib/api-guards"
 import { updateTestCaseSchema } from "@/schemas"
 import { createAuditLog } from "@/lib/auth/audit"
 
@@ -41,8 +48,8 @@ export async function PUT(
   request: Request,
   { params }: { params: { projectId: string; tcId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const auth = await requireProjectPermission(params.projectId, "canCreateStories")
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const body = await request.json()
   const parsed = updateTestCaseSchema.safeParse(body)
@@ -87,8 +94,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: { projectId: string; tcId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const auth = await requireProjectPermission(params.projectId, "canDeleteStories")
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   // Load test case
   const testCase = await prisma.testCase.findFirst({

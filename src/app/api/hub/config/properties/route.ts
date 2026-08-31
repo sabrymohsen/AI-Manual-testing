@@ -45,7 +45,7 @@ export async function GET() {
       name,
       group: "Other",
       type: "string",
-      description: "Custom property (not in the SHAFT catalog).",
+      description: "Custom property (not in the settings catalog).",
       options: null,
       min: null,
       max: null,

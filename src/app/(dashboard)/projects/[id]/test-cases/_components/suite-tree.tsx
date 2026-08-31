@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useSuites, useSuiteMutations, useMoveCases, type SuiteNode } from "../_hooks/use-test-library"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Input } from "@/components/ui/input"
@@ -14,6 +15,7 @@ import {
 import {
   ChevronDown,
   ChevronRight,
+  FlaskConical,
   Folder,
   FolderOpen,
   Inbox,
@@ -47,6 +49,7 @@ export function SuiteTree({
   onSelectSuite: (suiteId: string | undefined) => void
   draggingCaseIds: string[]
 }) {
+  const router = useRouter()
   const { data, isLoading } = useSuites(projectId)
   const { create, update, remove } = useSuiteMutations(projectId)
   const moveCases = useMoveCases(projectId)
@@ -185,7 +188,14 @@ export function SuiteTree({
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                className="gap-2 text-xs font-medium"
+                onClick={() => router.push(`/projects/${projectId}/test-cases/new?suite=${suite.id}`)}
+              >
+                <FlaskConical className="h-3.5 w-3.5 text-primary" /> Add test case in suite
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="gap-2 text-xs"
                 onClick={() => {

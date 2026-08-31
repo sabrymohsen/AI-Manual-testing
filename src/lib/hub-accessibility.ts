@@ -1,5 +1,8 @@
 // Section 1b — Accessibility Audit parsing.
-// SHAFT can emit accessibility (axe-core) results as JSON artifacts during a run.
+// Accessibility results are read from whatever axe-core JSON a run leaves in
+// test-results/ — typically written by a spec using @axe-core/playwright and
+// testInfo.attach(). The engine no longer produces them on its own, so a run
+// with no such artifact reports "no audit" rather than inventing one.
 // After an execution completes we scan the workspace for those artifacts, parse
 // the axe-core shape, derive a WCAG compliance level, and persist an
 // AccessibilityResult row tied to the execution. If no artifact is found we do
@@ -8,7 +11,7 @@
 import { prisma } from "@/lib/db"
 import * as fs from "fs"
 import * as path from "path"
-import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
+import { RESULTS_DIR } from "@/lib/hub-workspace"
 
 export interface AccessibilityViolation {
   ruleId: string
@@ -29,7 +32,7 @@ const SEVERITIES = ["critical", "serious", "moderate", "minor"] as const
 
 // Find JSON artifacts created after `since` that look like axe-core / accessibility output
 function findAccessibilityArtifacts(since: number): string[] {
-  const roots = [path.join(ARTIFACT_ROOT, "allure-results"), path.join(ARTIFACT_ROOT, "target")]
+  const roots = [RESULTS_DIR]
   const hits: { file: string; mtime: number }[] = []
 
   const walk = (dir: string, depth: number) => {

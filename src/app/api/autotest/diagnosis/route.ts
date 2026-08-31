@@ -13,40 +13,40 @@ const SEED_DIAGNOSES = [
     findings: {
       "Assertion Stated": "driver.assertThat().element(By.id(\"submit-btn-old\")).exists()",
       "Actual DOM State": "The target node was updated to use dynamic class names rather than static IDs.",
-      "SHAFT Doctor Assessment": "DOM query failed due to updated layout template styling on checkout wrapper."
+      "Diagnosis": "DOM query failed due to updated layout template styling on checkout wrapper."
     },
-    remediationSteps: "1. Update locator selector to By.xpath(\"//button[@type='submit' and contains(@class, 'indigo')]\")\n2. Introduce an explicit waiting condition inside element initialization\n3. Leverage SHAFT Heal configuration parameters to auto-recover this node in future runs.",
+    remediationSteps: "1. Update locator selector to By.xpath(\"//button[@type='submit' and contains(@class, 'indigo')]\")\n2. Introduce an explicit waiting condition inside element initialization\n3. Prefer a role- or label-based locator so a class rename cannot break it again.",
     similarFailuresCount: 4,
-    doctorReportPath: "target/shaft-doctor/login-fail-doctor-report.json"
+    doctorReportPath: "test-results/login-fail/trace.zip"
   },
   {
     testExecutionId: "exec-api-fail-002",
     testName: "ApiCrudTest.testGetUserList",
-    errorMessage: "java.lang.AssertionError: JSON path data[0].first_name expected Michael but was null (HTTP Status 429 Too Many Requests)",
+    errorMessage: "Error: expect(received).toBe(expected) — data[0].first_name expected 'Michael', received null (HTTP 429 Too Many Requests)",
     primaryCause: "HTTP RateLimiting & API Endpoint Stale Data Integration Response",
     confidence: 0.88,
     findings: {
       "Endpoint Request URL": "https://reqres.in/api/users?page=2",
       "Response Body": "{\"error\": \"Rate limit exceeded. Try again in 60 seconds.\"}",
-      "SHAFT Doctor Assessment": "Third party rate limits reached on mock endpoints. Test logic expects data arrays."
+      "Diagnosis": "Third party rate limits reached on mock endpoints. Test logic expects data arrays."
     },
     remediationSteps: "1. Switch target URL to local mock stub integration environment\n2. Introduce a delay retry handler hook to execute if 429 is encountered\n3. Mock database states locally using in-memory databases.",
     similarFailuresCount: 3,
-    doctorReportPath: "target/shaft-doctor/api-fail-doctor-report.json"
+    doctorReportPath: "test-results/api-fail/trace.zip"
   },
   {
     testExecutionId: "exec-settings-fail-003",
     testName: "SettingsTest.testBillingUpgrade",
-    errorMessage: "org.openqa.selenium.NoSuchElementException: Cannot locate element with class name pricing-plan-free",
+    errorMessage: "Error: locator.click: no element matches locator('.pricing-plan-free')",
     primaryCause: "Stale test execution context data & caching overlap",
     confidence: 0.76,
     findings: {
       "State context": "The previous test execution failed to clean local storage mock parameters.",
-      "SHAFT Doctor Assessment": "Concurrent data write conflicts detected between active test threads."
+      "Diagnosis": "Concurrent data write conflicts detected between active test threads."
     },
     remediationSteps: "1. Clear browser cookies and local storage state in setUp/tearDown hooks\n2. Ensure unique user profiles are initialized on each thread run\n3. Add clean-up queries to SQL seed fixtures.",
     similarFailuresCount: 1,
-    doctorReportPath: "target/shaft-doctor/settings-fail-doctor-report.json"
+    doctorReportPath: "test-results/settings-fail/trace.zip"
   }
 ]
 
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         findings: findings || {},
         remediationSteps: remediationSteps || "",
         similarFailuresCount: similarFailuresCount || 0,
-        doctorReportPath: doctorReportPath || "target/shaft-doctor/"
+        doctorReportPath: doctorReportPath || "test-results/"
       }
     })
 

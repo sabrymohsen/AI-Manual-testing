@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Recorder session not found" }, { status: 404 })
     }
 
-    // Build finalized SHAFT Java code block based on actions log
+    // Build finalized Playwright TypeScript code block based on actions log
     let javaSteps = ""
     if (actionsLog && actionsLog.length > 0) {
       actionsLog.forEach((act: any) => {

@@ -329,7 +329,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
 
               <div>
                 <span className="text-[9px] uppercase font-black text-slate-400 flex items-center gap-1.5">
-                  <Lock size={11} /> SHAFT redaction rules applied
+                  <Lock size={11} /> Redaction rules applied
                 </span>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {data.redaction.rules.map((r) => (
@@ -351,7 +351,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5">
               {[
-                { icon: Package, label: "SHAFT", value: data.metadata.system.shaftVersion },
+                { icon: Package, label: "Playwright", value: data.metadata.system.shaftVersion },
                 { icon: Coffee, label: "Java", value: data.metadata.system.javaVersion },
                 { icon: Monitor, label: "OS", value: data.metadata.system.os },
                 { icon: Cpu, label: "Arch", value: data.metadata.system.arch },

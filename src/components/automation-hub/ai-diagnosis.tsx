@@ -87,7 +87,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
 
   // Doctor Chat State
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "doctor"; text: string }[]>([
-    { role: "doctor", text: "Dr. SHAFT AI failure analyzer ready. Paste any stack trace or click an inbox failure item to automatically parse elements." }
+    { role: "doctor", text: "Test Doctor failure analyzer ready. Paste any stack trace or click an inbox failure item to automatically parse elements." }
   ])
   const [chatInput, setChatInput] = useState("")
   const [chatting, setChatting] = useState(false)
@@ -190,7 +190,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
     try {
       const res = await fetch(`/api/hub/diagnoses/${id}/analyze`, { method: "POST" })
       if (res.ok) {
-        showToast("SHAFT Doctor analysis triggered successfully!")
+        showToast("Test Doctor analysis triggered successfully!")
         loadDiagnosisData()
       }
     } catch (err) {

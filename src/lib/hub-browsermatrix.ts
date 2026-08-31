@@ -1,26 +1,32 @@
 // Backend for Browser Matrix Section 8: BrowserStack cloud config +
 // cross-browser parallel / Docker execution. Configuration is persisted to real
-// files (browserstack.yml, custom.properties); analytics are derived from real
+// files (browserstack.yml and the hub settings); analytics are derived from real
 // CrossBrowserResult / TestExecution rows. Nothing about a live BrowserStack
 // session is fabricated — sessions only appear once a cloud run produces them.
+//
+// The parallel settings written here are the same keys the runner reads when it
+// generates playwright.config, so switching cross-browser mode on genuinely
+// changes the next run. They used to be TestNG keys (setParallel, threadCount)
+// in a properties file no run consumed.
 
 import { prisma } from "@/lib/db"
 import { execFile } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
 import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
+import { SETTINGS_PATH } from "@/lib/hub-properties"
 
 export const BROWSERSTACK_YML = path.join(ARTIFACT_ROOT, "browserstack.yml")
-const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
+const CUSTOM_PROPS = SETTINGS_PATH
 
 // Per parallel-session minute; overridable via env for accuracy against a plan.
 const BS_RATE_PER_MINUTE = Number(process.env.BROWSERSTACK_RATE_PER_MINUTE) || 0.15
 
-export const DEFAULT_BROWSERSTACK_YML = `# SHAFT shaft-browserstack SDK configuration
+export const DEFAULT_BROWSERSTACK_YML = `# BrowserStack SDK configuration
 # Credentials are read from BROWSERSTACK_USERNAME / BROWSERSTACK_ACCESS_KEY
 userName: \${BROWSERSTACK_USERNAME}
 accessKey: \${BROWSERSTACK_ACCESS_KEY}
-framework: testng
+framework: playwright
 
 platforms:
   - os: Windows
@@ -34,7 +40,7 @@ platforms:
 
 parallelsPerPlatform: 1
 browserstackLocal: false
-buildName: SHAFT Automation Hub
+buildName: QA Automation Hub
 projectName: AI Manual Testing
 debug: true
 networkLogs: true
@@ -81,8 +87,9 @@ export function readParallelConfig() {
   const address = p["executionAddress"] || "local"
   return {
     crossBrowserMode: p["crossBrowserMode"] || "off", // "off" | "parallelized"
-    parallel: p["setParallel"] || "METHODS",
-    threadCount: Number(p["threadCount"]) || 1,
+    // Reported for the panel; `workers` is the key the runner actually applies.
+    parallel: p["fullyParallel"] === "true" ? "FULL" : "NONE",
+    threadCount: Number(p["workers"]) || 1,
     onDocker: address === "dockerized",
     executionAddress: address
   }
@@ -92,16 +99,18 @@ export function writeParallelConfig(opts: { crossBrowserMode?: string; threadCou
   const pairs: Record<string, string> = {}
   if (opts.crossBrowserMode !== undefined) {
     pairs["crossBrowserMode"] = opts.crossBrowserMode
-    // Parallelized cross-browser implies TestNG parallel methods.
-    pairs["setParallel"] = opts.crossBrowserMode === "parallelized" ? "METHODS" : "NONE"
+    // Cross-browser in parallel means Playwright runs files concurrently.
+    pairs["fullyParallel"] = opts.crossBrowserMode === "parallelized" ? "true" : "false"
   }
-  if (opts.threadCount !== undefined) pairs["threadCount"] = String(Math.max(1, Math.min(16, opts.threadCount)))
+  // Written as `workers`, the key writeConfig reads — so the number set here is
+  // the number of browsers that actually run at once.
+  if (opts.threadCount !== undefined) pairs["workers"] = String(Math.max(1, Math.min(16, opts.threadCount)))
   if (opts.onDocker !== undefined) pairs["executionAddress"] = opts.onDocker ? "dockerized" : "local"
   upsertProps(pairs)
   return readParallelConfig()
 }
 
-// Real docker daemon probe (installed? daemon running? SHAFT-related containers).
+// Real docker daemon probe (installed? daemon running? browser containers).
 export function checkDocker(): Promise<{ installed: boolean; running: boolean; containers: { name: string; image: string; status: string }[] }> {
   return new Promise((resolve) => {
     execFile("docker", ["info", "--format", "{{.ServerVersion}}"], { timeout: 4000 }, (err, stdout) => {
@@ -116,7 +125,7 @@ export function checkDocker(): Promise<{ installed: boolean; running: boolean; c
         (e2, out2) => {
           const containers = (out2 || "")
             .split("\n")
-            .filter((l) => /selenium|seleniarm|playwright|shaft|chrome|firefox|edge/i.test(l))
+            .filter((l) => /playwright|selenium|seleniarm|chrome|chromium|firefox|webkit|edge/i.test(l))
             .map((l) => {
               const [name, image, status] = l.split("\t")
               return { name: name || "", image: image || "", status: status || "" }

@@ -1,21 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
+import { SETTINGS_PATH } from "@/lib/hub-properties"
 import * as fs from "fs"
 import * as path from "path"
 
 export const dynamic = "force-dynamic"
 
-// SHAFT animated-GIF recording is configured through custom.properties.
-// This endpoint reads / writes that single source of truth so the Test Studio
-// "Enable GIF recording" toggle stays in sync with what SHAFT will actually do
-// on the next run.
-const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
+// GIF capture settings, stored alongside the other run settings so the Test
+// Studio toggle and Data & Config cannot disagree.
+//
+// Note the engine itself does not emit GIFs: Playwright records video, and the
+// Evidence Vault's GIF viewer renders whatever GIF artifacts a run leaves
+// behind. These keys therefore record the intent; a run with no GIF artifact
+// simply has none to show.
+const CUSTOM_PROPS = SETTINGS_PATH
 
-// SHAFT property names for GIF capture.
+// Property names for GIF capture.
 const KEY_ENABLED = "createAnimatedGif"
 const KEY_FRAME_DELAY = "animatedGif.frameDelay" // milliseconds between frames
-const KEY_QUALITY = "animatedGif.quality" // SHAFT compression quality (1 = best)
+const KEY_QUALITY = "animatedGif.quality" // compression quality (1 = best)
 
 function readProps(): Record<string, string> {
   if (!fs.existsSync(CUSTOM_PROPS)) return {}

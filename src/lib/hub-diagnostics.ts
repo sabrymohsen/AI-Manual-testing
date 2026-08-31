@@ -7,85 +7,86 @@
 import * as fs from "fs"
 import * as path from "path"
 import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
-import { stripAnsi, LOG4J_PATH } from "@/lib/hub-logs"
+import * as os from "os"
+import { stripAnsi, RUN_LOG_PATH } from "@/lib/hub-logs"
+import { readProps } from "@/lib/hub-properties"
 import { findTraceForTest, resolveTraceZip, zipEntries, unzipEntry } from "@/lib/hub-traces"
 
-const ENV_XML = path.join(ARTIFACT_ROOT, "allure-results/environment.xml")
+// ---------- Run metadata ----------
+//
+// This read Allure's environment.xml — a Java-run artifact describing the JVM
+// (java.runtime.version, sun.boot.library.path) — and grepped the log for a
+// SHAFT version banner. None of that exists now. The panel reports the runtime
+// that actually executed the test instead: Playwright, the browser project,
+// the Node/OS it ran on, and the settings the run was given.
 
-// ---------- Run metadata (environment.xml + log4j) ----------
-
-function parseEnvironmentXml(): Record<string, string> {
-  if (!fs.existsSync(ENV_XML)) return {}
-  const xml = fs.readFileSync(ENV_XML, "utf8")
-  const out: Record<string, string> = {}
-  const re = /<parameter>\s*<key>([^<]*)<\/key>\s*<value>([^<]*)<\/value>\s*<\/parameter>/g
-  let m: RegExpExecArray | null
-  while ((m = re.exec(xml))) out[m[1].trim()] = m[2].trim()
-  return out
-}
-
-function detectShaftVersion(): string | null {
-  if (!fs.existsSync(LOG4J_PATH)) return null
+function detectPlaywrightVersion(): string | null {
   try {
-    const log = stripAnsi(fs.readFileSync(LOG4J_PATH, "utf8"))
-    const m = log.match(/SHAFT\s*v\.?\s*([0-9][0-9.]+)/i)
-    return m ? m[1] : null
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    return require("@playwright/test/package.json").version || null
   } catch {
     return null
   }
 }
 
-// Curated, human-meaningful subset for the metadata panel + a config snapshot.
+/** Browser project of the most recent run, read from its log header. */
+function detectBrowserFromLog(): string | null {
+  if (!fs.existsSync(RUN_LOG_PATH)) return null
+  try {
+    const log = stripAnsi(fs.readFileSync(RUN_LOG_PATH, "utf8"))
+    const m = log.match(/\[(chromium|firefox|webkit)\]/i) || log.match(/on (chromium|firefox|webkit)\b/i)
+    return m ? m[1].toLowerCase() : null
+  } catch {
+    return null
+  }
+}
+
+// The settings worth showing beside a failure: the ones that change whether a
+// test passes, rather than the whole catalog.
 const CONFIG_KEYS = [
-  "targetBrowserName",
-  "headlessExecution",
-  "executionAddress",
-  "targetOperatingSystem",
-  "setParallel",
-  "threadCount",
-  "retryMaximumNumberOfAttempts",
-  "forceCaptureSupportingEvidenceOnRetry",
-  "defaultElementIdentificationTimeout",
-  "waitForLazyLoadingTimeout",
-  "accessibilityTesting",
-  "createAnimatedGif"
+  "browser",
+  "headless",
+  "workers",
+  "retries",
+  "timeout",
+  "expectTimeout",
+  "navigationTimeout",
+  "actionTimeout",
+  "viewportWidth",
+  "viewportHeight",
+  "baseURL",
+  "trace",
+  "video",
+  "screenshot",
 ]
 
 export function readRunMetadata() {
-  const env = parseEnvironmentXml()
-  const boot = env["sun.boot.library.path"] || ""
-  const osHint =
-    boot.includes("Contents/Home") || boot.includes("/opt/homebrew")
-      ? "macOS"
-      : boot.toLowerCase().includes("windows")
-      ? "Windows"
-      : boot
-      ? "Linux"
-      : env["targetOperatingSystem"] || "—"
+  const saved = readProps()
 
   const system = {
-    shaftVersion: detectShaftVersion(),
-    javaVersion: env["java.runtime.version"] || env["java.specification.version"] || null,
-    javaVendor: env["java.vendor"] || null,
-    os: env["os.name"] || osHint,
-    osVersion: env["os.version"] || null,
-    arch: env["sun.arch.data.model"] ? `${env["sun.arch.data.model"]}-bit` : null,
-    browser: env["targetBrowserName"] || null
+    // Field name kept so the existing panel keeps rendering; it now carries
+    // the engine that actually ran the test.
+    shaftVersion: detectPlaywrightVersion(),
+    javaVersion: process.version,
+    javaVendor: "Node.js",
+    os: process.platform === "darwin" ? "macOS" : process.platform === "win32" ? "Windows" : "Linux",
+    osVersion: os.release(),
+    arch: process.arch,
+    browser: detectBrowserFromLog() || saved["browser"] || null,
   }
 
-  const config: { key: string; value: string }[] = CONFIG_KEYS.filter((k) => env[k] !== undefined).map((k) => ({
-    key: k,
-    value: env[k]
-  }))
+  const config: { key: string; value: string }[] = CONFIG_KEYS.filter(
+    (k) => saved[k] !== undefined && saved[k] !== ""
+  ).map((k) => ({ key: k, value: saved[k] }))
 
-  return { system, config, envAvailable: Object.keys(env).length > 0 }
+  return { system, config, envAvailable: config.length > 0 }
 }
 
 // ---------- Redaction / sensitive-data scan ----------
 
-// The redaction ruleset SHAFT applies to the sanitized handoff. We additionally
-// scan the actual bundle text so the report reflects this specific bundle
-// rather than a generic claim.
+// The redaction ruleset applied to a sanitized handoff. The actual bundle text
+// is scanned as well, so the report reflects this specific bundle rather than a
+// generic claim about what should have been stripped.
 const REDACTION_RULES: { id: string; label: string; category: string; pattern: RegExp }[] = [
   { id: "password", label: "Passwords / credentials", category: "credential", pattern: /(password|passwd|pwd)\s*["']?\s*[=:]\s*["']?\S+/gi },
   { id: "jwt", label: "JWT / bearer tokens", category: "token", pattern: /\b(?:bearer\s+)?eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\b/g },

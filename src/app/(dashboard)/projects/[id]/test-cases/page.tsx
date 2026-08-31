@@ -8,7 +8,9 @@ import { SuiteTree } from "./_components/suite-tree"
 import { FacetBar } from "./_components/facet-bar"
 import { CaseTable } from "./_components/case-table"
 import { DetailPanel } from "./_components/detail-panel"
-import { useMoveCases, type LibraryFilters, type SortKey } from "./_hooks/use-test-library"
+import { useDeleteCases, useMoveCases, type LibraryFilters, type SortKey } from "./_hooks/use-test-library"
+import { useProjectModules } from "@/components/bug-reports/module-select"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ImportModal } from "@/components/test-cases/import-modal"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -17,8 +19,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { FileSpreadsheet, FlaskConical, FolderInput, Plus, Search, Video, X } from "lucide-react"
+import { FileSpreadsheet, FlaskConical, Folder, FolderInput, Plus, Search, Trash2, Video, X } from "lucide-react"
 
 /**
  * Test library.
@@ -40,9 +44,12 @@ export default function TestLibraryPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [draggingIds, setDraggingIds] = useState<string[]>([])
   const [importOpen, setImportOpen] = useState(false)
+  const [pendingDeleteBulk, setPendingDeleteBulk] = useState(false)
 
   const qc = useQueryClient()
   const moveCases = useMoveCases(projectId)
+  const deleteCases = useDeleteCases(projectId)
+  const { modules: projectModules } = useProjectModules(projectId)
 
   const filters: LibraryFilters = useMemo(
     () => ({
@@ -166,7 +173,13 @@ export default function TestLibraryPage() {
             </Button>
             <Button
               size="sm"
-              onClick={() => router.push(`/projects/${projectId}/test-cases/new`)}
+              onClick={() => {
+                const suiteParam =
+                  filters.suite && filters.suite !== "unfiled"
+                    ? `?suite=${encodeURIComponent(filters.suite)}`
+                    : ""
+                router.push(`/projects/${projectId}/test-cases/new${suiteParam}`)
+              }}
               className="h-9 gap-1.5 text-xs font-semibold"
             >
               <Plus className="h-4 w-4" /> New test case
@@ -232,21 +245,52 @@ export default function TestLibraryPage() {
             {selectedIds.length > 0 && (
               <div className="ml-auto flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1">
                 <span className="text-xs font-semibold text-primary">{selectedIds.length} selected</span>
+                
+                {/* Move to Suite Dropdown */}
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2 text-[11px] font-semibold">
+                  <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2 text-[11px] font-semibold transition-colors hover:bg-accent">
                     <FolderInput className="h-3 w-3" /> Move to
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
+                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Select target module / suite
+                    </DropdownMenuLabel>
                     <DropdownMenuItem
                       onClick={() => {
                         moveCases.mutate({ testCaseIds: selectedIds, suiteId: null })
                         setSelectedIds([])
                       }}
+                      className="gap-1.5 text-xs"
                     >
-                      Unfiled
+                      <Folder className="h-3.5 w-3.5 text-muted-foreground" /> — Unfiled —
                     </DropdownMenuItem>
+                    {projectModules.length > 0 && <DropdownMenuSeparator />}
+                    {projectModules.map((m) => (
+                      <DropdownMenuItem
+                        key={m.id}
+                        onClick={() => {
+                          moveCases.mutate({ testCaseIds: selectedIds, suiteId: m.id })
+                          setSelectedIds([])
+                        }}
+                        className="gap-1.5 text-xs"
+                      >
+                        <Folder className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                        <span className="truncate" title={m.path}>{m.path}</span>
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                {/* Bulk Delete Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPendingDeleteBulk(true)}
+                  className="h-7 gap-1 px-2 text-[11px] font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" /> Delete
+                </Button>
+
                 <button
                   onClick={() => setSelectedIds([])}
                   className="rounded p-1 text-muted-foreground hover:text-foreground"
@@ -297,6 +341,24 @@ export default function TestLibraryPage() {
           // Imported rows change counts, suite tallies and the list together.
           qc.invalidateQueries({ queryKey: ["test-library", projectId] })
         }}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteBulk}
+        variant="danger"
+        title={`Delete ${selectedIds.length} test ${selectedIds.length === 1 ? "case" : "cases"}?`}
+        description="This will permanently delete the selected test cases along with their step definitions, test runs, and logs. This action cannot be undone."
+        confirmLabel="Delete test cases"
+        isLoading={deleteCases.isPending}
+        onConfirm={async () => {
+          await deleteCases.mutateAsync(selectedIds)
+          if (activeId && selectedIds.includes(activeId)) {
+            closeCase()
+          }
+          setSelectedIds([])
+          setPendingDeleteBulk(false)
+        }}
+        onCancel={() => setPendingDeleteBulk(false)}
       />
     </div>
   )

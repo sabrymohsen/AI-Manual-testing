@@ -50,7 +50,7 @@ export default function McpAgentConsolePage() {
 
   // Chat message logs
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "agent"; text: string; toolUsed?: string }[]>([
-    { role: "agent", text: "Greetings! I am your SHAFT MCP Agent. Exposing system automation capabilities via MCP. Select one of the quick command buttons or ask me to run tests directly." }
+    { role: "agent", text: "Greetings! I am your MCP Agent. Exposing system automation capabilities via MCP. Select one of the quick command buttons or ask me to run tests directly." }
   ])
   const [chatInput, setChatInput] = useState("")
 

@@ -248,7 +248,7 @@ function PropertiesTab() {
   }
 
   const resetAll = async () => {
-    if (!confirm("Reset ALL properties to their SHAFT defaults? This clears custom.properties overrides.")) return
+    if (!confirm("Reset ALL settings to their defaults? This clears your overrides.")) return
     await fetch("/api/hub/config/properties/reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -273,7 +273,7 @@ function PropertiesTab() {
     await load()
   }
 
-  if (loading) return <LoadingCard label="Loading SHAFT properties..." />
+  if (loading) return <LoadingCard label="Loading run settings..." />
 
   return (
     <div className="space-y-3">
@@ -830,7 +830,7 @@ function LogsTab() {
     return c
   }, [parsed])
 
-  if (loading) return <LoadingCard label="Loading SHAFT engine logs..." />
+  if (loading) return <LoadingCard label="Loading execution logs..." />
 
   return (
     <div className="space-y-3">

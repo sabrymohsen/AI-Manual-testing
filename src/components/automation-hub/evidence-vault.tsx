@@ -600,7 +600,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
                   <MousePointerClick size={9} /> {action} · {loc.strategy} locator
                 </p>
                 <p className="font-mono text-[9px] break-all text-slate-200">
-                  {loc.value || item.pageUrl || "Full-page capture (SHAFT-highlighted element)"}
+                  {loc.value || item.pageUrl || "Full-page capture"}
                 </p>
                 <p className="text-[8px] text-slate-400 font-bold">Click to inspect element details →</p>
               </div>
@@ -643,7 +643,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
             <div className="col-span-2">
               <span className="text-slate-400 uppercase text-[8px] block">Locator value</span>
               <span className="font-mono break-all text-indigo-700">
-                {loc.value || "— (SHAFT captured the element region directly)"}
+                {loc.value || "— (element region captured directly)"}
               </span>
             </div>
             <div className="col-span-2">

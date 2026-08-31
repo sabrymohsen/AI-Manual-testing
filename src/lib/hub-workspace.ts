@@ -58,25 +58,76 @@ export interface RunConfigOptions {
 export function writeConfig(opts: RunConfigOptions): void {
   fs.mkdirSync(TESTS_DIR, { recursive: true })
 
-  const connect = opts.remoteUrl
-    ? `\n      connectOptions: { wsEndpoint: ${JSON.stringify(opts.remoteUrl)} },`
-    : ""
+  // Saved settings from Data & Config → Properties. Read lazily and by require
+  // path rather than a top-level import, because hub-properties imports this
+  // module for WORKSPACE_ROOT and a static cycle would be needless.
+  let saved: Record<string, string> = {}
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    saved = require("@/lib/hub-properties").readProps() as Record<string, string>
+  } catch {
+    // No settings yet, or unreadable — the defaults below still give a valid run.
+  }
+
+  const str = (key: string, fallback: string) => {
+    const v = saved[key]
+    return v === undefined || v === "" ? fallback : v
+  }
+  const num = (key: string, fallback: number) => {
+    const v = Number(saved[key])
+    return Number.isFinite(v) ? v : fallback
+  }
+  const bool = (key: string, fallback: boolean) =>
+    saved[key] === undefined ? fallback : saved[key] === "true"
+
+  const headers = str("extraHTTPHeaders", "")
+    .split(";")
+    .map((pair) => {
+      // Split on the FIRST colon only: a header value may contain colons
+      // (a URL, a timestamp), and splitting on all of them would truncate it.
+      const i = pair.indexOf(":")
+      return i === -1 ? [pair] : [pair.slice(0, i), pair.slice(i + 1)]
+    })
+    .filter((p) => p.length > 1 && p[0].trim())
+    .reduce<Record<string, string>>((acc, [k, v]) => {
+      acc[k.trim()] = (v || "").trim()
+      return acc
+    }, {})
+
+  const optional: string[] = []
+  const push = (line: string) => optional.push(`    ${line}`)
+  if (opts.remoteUrl) push(`connectOptions: { wsEndpoint: ${JSON.stringify(opts.remoteUrl)} },`)
+  if (str("baseURL", "")) push(`baseURL: ${JSON.stringify(str("baseURL", ""))},`)
+  if (str("locale", "")) push(`locale: ${JSON.stringify(str("locale", ""))},`)
+  if (str("timezoneId", "")) push(`timezoneId: ${JSON.stringify(str("timezoneId", ""))},`)
+  if (str("userAgent", "")) push(`userAgent: ${JSON.stringify(str("userAgent", ""))},`)
+  if (Object.keys(headers).length) push(`extraHTTPHeaders: ${JSON.stringify(headers)},`)
+  if (bool("ignoreHTTPSErrors", false)) push(`ignoreHTTPSErrors: true,`)
+  if (num("actionTimeout", 0) > 0) push(`actionTimeout: ${num("actionTimeout", 0)},`)
+  if (num("slowMo", 0) > 0) push(`launchOptions: { slowMo: ${num("slowMo", 0)} },`)
 
   const config = `// Generated per run by src/lib/hub-workspace.ts — edits here are overwritten.
+// Values come from Data & Config → Properties; anything unset uses the default.
 import { defineConfig, devices } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./tests",
   outputDir: "./test-results",
-  fullyParallel: false,
+  fullyParallel: ${bool("fullyParallel", false)},
+  workers: ${num("workers", 1)},
+  retries: ${num("retries", 0)},
   reporter: [["list"], ["json", { outputFile: "./test-results/report.json" }]],
-  timeout: ${opts.timeoutMs ?? 60_000},
+  timeout: ${opts.timeoutMs ?? num("timeout", 60_000)},
+  expect: { timeout: ${num("expectTimeout", 5_000)} },
   use: {
     headless: ${opts.headless},
-    // Always captured: the Evidence Vault and Trace Viewer read these.
-    trace: "on",
-    video: "on",
-    screenshot: "on",${connect}
+    viewport: { width: ${num("viewportWidth", 1280)}, height: ${num("viewportHeight", 720)} },
+    navigationTimeout: ${num("navigationTimeout", 30_000)},
+    // Evidence capture: the Evidence Vault and Trace Viewer read these.
+    trace: ${JSON.stringify(str("trace", "on"))},
+    video: ${JSON.stringify(str("video", "on"))},
+    screenshot: ${JSON.stringify(str("screenshot", "on"))},
+${optional.join("\n")}
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

@@ -16,6 +16,7 @@ import * as fs from "fs"
 import * as path from "path"
 import { harvestEvidence, extractTargetUrl } from "@/lib/hub-evidence"
 import { parseAndStoreAccessibility } from "@/lib/hub-accessibility"
+import { RUN_LOG_PATH } from "@/lib/hub-logs"
 import {
   WORKSPACE_ROOT,
   RESULTS_DIR,
@@ -145,12 +146,31 @@ export async function startScriptRun(
     }
   }
 
+  // Tee to disk as well as the DB: the Evidence Vault's log viewer tails this
+  // file by byte offset, so it can follow a run that is still going.
+  const runLogPath = RUN_LOG_PATH
+  try {
+    fs.mkdirSync(WORKSPACE_ROOT, { recursive: true })
+    fs.writeFileSync(runLogPath, header, "utf8")
+  } catch {
+    // A run must not fail because the log file could not be opened.
+  }
+  const appendRunLog = (chunk: string) => {
+    try {
+      fs.appendFileSync(runLogPath, chunk)
+    } catch {}
+  }
+
   child.stdout.on("data", (d) => {
-    logBuffer += d.toString()
+    const text = d.toString()
+    logBuffer += text
+    appendRunLog(text)
     flushLogs()
   })
   child.stderr.on("data", (d) => {
-    logBuffer += d.toString()
+    const text = d.toString()
+    logBuffer += text
+    appendRunLog(text)
     flushLogs()
   })
 

@@ -5,7 +5,7 @@ import { getActiveSession } from "@/lib/hub-recorder"
 
 export const dynamic = "force-dynamic"
 
-// POST /api/hub/recorder/generate — generate SHAFT Java code from recorded actions.
+// POST /api/hub/recorder/generate — generate Playwright TypeScript code from recorded actions.
 // Accepts an edited actions array (rows may have been deleted in review); falls
 // back to the active session's actions when none are provided.
 export async function POST(request: NextRequest) {

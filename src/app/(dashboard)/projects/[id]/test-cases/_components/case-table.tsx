@@ -2,12 +2,29 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Virtuoso } from "react-virtuoso"
+import { useRouter } from "next/navigation"
 import {
   useCaseBrowse,
+  useMoveCases,
+  useDeleteCases,
   type CaseRow,
   type LibraryFilters,
   type SortKey,
 } from "../_hooks/use-test-library"
+import { useProjectModules, type ProjectModule } from "@/components/bug-reports/module-select"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
 import { STATUS_META, PRIORITY_META, relativeTime } from "./config"
 import { cn } from "@/lib/utils"
 import {
@@ -17,8 +34,14 @@ import {
   Bug,
   ClipboardList,
   CloudUpload,
+  Edit2,
   FlaskConical,
+  Folder,
+  FolderInput,
   Link2,
+  MoreHorizontal,
+  Plus,
+  Trash2,
   Zap,
 } from "lucide-react"
 
@@ -42,6 +65,7 @@ const COL = {
   type: 96,
   lastRun: 140,
   links: 88,
+  actions: 32,
 } as const
 
 const GAP = 12
@@ -60,8 +84,9 @@ export function visibleColumns(width: number) {
   const used = () =>
     COL.select +
     COL.lastRun +
+    COL.actions +
     Array.from(shown).reduce((sum, k) => sum + COL[k], 0) +
-    GAP * (shown.size + 2)
+    GAP * (shown.size + 3)
 
   for (const key of order) {
     if (width - used() >= MIN_TITLE) break
@@ -115,6 +140,12 @@ export function CaseTable({
   onOpen: (id: string) => void
   onDragSelection: (ids: string[]) => void
 }) {
+  const router = useRouter()
+  const moveCases = useMoveCases(projectId)
+  const deleteCases = useDeleteCases(projectId)
+  const { modules: projectModules } = useProjectModules(projectId)
+  const [pendingDeleteCase, setPendingDeleteCase] = useState<CaseRow | null>(null)
+
   const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useCaseBrowse(projectId, filters)
 
@@ -223,6 +254,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
             Links
           </div>
         )}
+        <div style={{ width: COL.actions }} className="shrink-0" />
       </div>
 
       {isLoading ? (
@@ -242,6 +274,19 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
               ? "Try clearing a filter, or pick a different suite."
               : "Create one manually, record a session, or import from a spreadsheet."}
           </p>
+          {filters.suite && filters.suite !== "unfiled" && (
+            <Button
+              size="sm"
+              onClick={() =>
+                router.push(
+                  `/projects/${projectId}/test-cases/new?suite=${encodeURIComponent(filters.suite!)}`
+                )
+              }
+              className="mt-2 h-8 gap-1.5 text-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add test case in this suite
+            </Button>
+          )}
         </div>
       ) : (
         <Virtuoso
@@ -252,12 +297,19 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
           }}
           itemContent={(_, row) => (
             <Row
+              key={row.id}
+              projectId={projectId}
               row={row}
               visible={visible}
               checked={selectedIds.includes(row.id)}
               active={activeId === row.id}
+              projectModules={projectModules}
               onToggle={() => onToggleSelect(row.id)}
               onOpen={() => onOpen(row.id)}
+              onMoveToSuite={(suiteId) =>
+                moveCases.mutate({ testCaseIds: [row.id], suiteId })
+              }
+              onDelete={() => setPendingDeleteCase(row)}
               onDragStart={() =>
                 onDragSelection(selectedIds.includes(row.id) ? selectedIds : [row.id])
               }
@@ -278,29 +330,53 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
           }}
         />
       )}
+
+      <ConfirmDialog
+        open={pendingDeleteCase !== null}
+        variant="danger"
+        title={`Delete "${pendingDeleteCase?.title}"?`}
+        description="This will permanently delete this test case, its steps, execution logs, and attachments. This action cannot be undone."
+        confirmLabel="Delete test case"
+        isLoading={deleteCases.isPending}
+        onConfirm={async () => {
+          if (!pendingDeleteCase) return
+          await deleteCases.mutateAsync([pendingDeleteCase.id])
+          setPendingDeleteCase(null)
+        }}
+        onCancel={() => setPendingDeleteCase(null)}
+      />
     </div>
   )
 }
 
 function Row({
+  projectId,
   row,
   visible,
   checked,
   active,
+  projectModules,
   onToggle,
   onOpen,
+  onMoveToSuite,
+  onDelete,
   onDragStart,
   onDragEnd,
 }: {
+  projectId: string
   row: CaseRow
   visible: Visible
   checked: boolean
   active: boolean
+  projectModules: ProjectModule[]
   onToggle: () => void
   onOpen: () => void
+  onMoveToSuite: (suiteId: string | null) => void
+  onDelete: () => void
   onDragStart: () => void
   onDragEnd: () => void
 }) {
+  const router = useRouter()
   const status = STATUS_META[row.lastStatus]
   const StatusIcon = status.icon
 
@@ -312,7 +388,7 @@ function Row({
       onClick={onOpen}
       style={{ gap: GAP }}
       className={cn(
-        "flex cursor-pointer items-center border-b px-4 py-2.5 text-sm transition-colors",
+        "group flex cursor-pointer items-center border-b px-4 py-2.5 text-sm transition-colors",
         active ? "bg-primary/5" : "hover:bg-accent/40",
         checked && "bg-primary/[0.07]"
       )}
@@ -426,6 +502,64 @@ function Row({
           )}
         </div>
       )}
+
+      {/* Row action menu */}
+      <div
+        style={{ width: COL.actions }}
+        className="flex shrink-0 items-center justify-end"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground group-hover:opacity-100 focus:opacity-100">
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="gap-2 text-xs">
+                <FolderInput className="h-3.5 w-3.5" /> Move to suite
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-64 w-52 overflow-y-auto">
+                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Move test case to
+                </DropdownMenuLabel>
+                <DropdownMenuItem
+                  onClick={() => onMoveToSuite(null)}
+                  className="gap-1.5 text-xs font-medium"
+                >
+                  <Folder className="h-3.5 w-3.5 text-muted-foreground" /> — Unfiled —
+                </DropdownMenuItem>
+                {projectModules.length > 0 && <DropdownMenuSeparator />}
+                {projectModules.map((m) => (
+                  <DropdownMenuItem
+                    key={m.id}
+                    onClick={() => onMoveToSuite(m.id)}
+                    className="gap-1.5 text-xs"
+                  >
+                    <Folder className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                    <span className="truncate" title={m.path}>{m.path}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+
+            <DropdownMenuItem
+              onClick={() => router.push(`/projects/${projectId}/test-cases/${row.id}/edit`)}
+              className="gap-2 text-xs"
+            >
+              <Edit2 className="h-3.5 w-3.5" /> Edit test case
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem
+              onClick={onDelete}
+              className="gap-2 text-xs text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete test case
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </div>
   )
 }

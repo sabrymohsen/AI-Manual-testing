@@ -194,6 +194,24 @@ export function useMoveCases(projectId: string) {
   })
 }
 
+/** Deletes one or more test cases permanently with cascade cleanup. */
+export function useDeleteCases(projectId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      sendJson<{ success: boolean; count: number }>(
+        `/api/projects/${projectId}/test-cases`,
+        "DELETE",
+        { ids }
+      ),
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(`Deleted ${data.count} ${data.count === 1 ? "test case" : "test cases"}`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
 export function useSuiteMutations(projectId: string) {
   const invalidate = useInvalidateLibrary(projectId)
 

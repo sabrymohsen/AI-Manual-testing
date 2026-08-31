@@ -108,7 +108,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "run_test",
     description:
-      "Execute a test script by exact name through the real SHAFT/Maven pipeline. Waits up to ~75 seconds for completion; if still running, returns the executionId so results can be fetched later. Call once per test the user asks to run.",
+      "Execute a test script by exact name through the real Playwright pipeline. Waits up to ~75 seconds for completion; if still running, returns the executionId so results can be fetched later. Call once per test the user asks to run.",
     input_schema: {
       type: "object",
       properties: {
@@ -162,7 +162,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "save_test_script",
     description:
-      "Save a new SHAFT Java test script into the Test Studio library. Use after generating test code for the user. The name must be a valid Java class name matching the public class in the code.",
+      "Save a new Playwright TypeScript test script into the Test Studio library. Use after generating test code for the user. The name must be a valid Java class name matching the public class in the code.",
     input_schema: {
       type: "object",
       properties: {
@@ -456,7 +456,7 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
 
 // ---------- System prompt (kept stable for prompt caching) ----------
 
-const SYSTEM_PROMPT = `You are the QA automation assistant embedded in the SHAFT Automation Hub — a test automation platform where users write and run SHAFT Engine (Java/TestNG/Selenium) tests, record browser flows, and review evidence.
+const SYSTEM_PROMPT = `You are the QA automation assistant embedded in the Automation Hub — a test automation platform where users write and run Playwright (Java/TestNG/Selenium) tests, record browser flows, and review evidence.
 
 You have tools that operate on the REAL system: they run actual Maven/SHAFT test executions, read real execution logs, and write real scripts into the user's library. Use them rather than guessing — never invent test names, results, or log content.
 

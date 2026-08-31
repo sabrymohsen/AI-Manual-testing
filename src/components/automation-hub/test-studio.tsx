@@ -392,7 +392,7 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
       })
     }
 
-    monaco.editor.setModelMarkers(model, "shaft-studio", markers)
+    monaco.editor.setModelMarkers(model, "hub-studio", markers)
   }, [])
 
   const handleEditorMount = (editor: any, monaco: any) => {
@@ -880,7 +880,7 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
                     </button>
                   </div>
                   <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                    Writes <span className="font-mono text-slate-600">createAnimatedGif</span> to SHAFT
+                    Writes <span className="font-mono text-slate-600">createAnimatedGif</span> to the hub
                     custom.properties. The next run stitches step screenshots into an animated GIF in the Evidence Vault.
                   </p>
                   <div className="space-y-1">
@@ -1006,7 +1006,7 @@ export default function TestStudioSection({ selectedTestName, onSelectTest }: Te
               />
             </div>
             <span className="text-[8.5px] uppercase font-black text-slate-300 tracking-widest shrink-0">
-              {selectedScript ? `${selectedScript.type} · Java · SHAFT` : "Studio Editor"}
+              {selectedScript ? `${selectedScript.type} · TypeScript · Playwright` : "Studio Editor"}
             </span>
           </div>
           <div className="bg-slate-900 min-h-[520px]">

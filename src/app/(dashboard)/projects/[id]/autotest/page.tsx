@@ -163,7 +163,7 @@ export default function AutoTestEnginePage() {
 import org.testng.annotations.Test;
 
 public class ${name} extends BaseTest {
-    @Test(description = "Verify custom automated test run using SHAFT Engine")
+    test("custom automated run", async ({ page }) => {
     public void testExecution() {
         navigateTo("https://example.com");
         assertPageTitle("Example Domain");
@@ -275,7 +275,7 @@ public class ${name} extends BaseTest {
             <Play className="text-indigo-650 animate-pulse fill-current h-5 w-5" /> AutoTest Engine
           </h1>
           <p className="text-slate-500 font-medium mt-1">
-            Build, execute, and verify SHAFT Engine automated test classes directly from the manual testing dashboard.
+            Build, execute, and verify Playwright test specs directly from the manual testing dashboard.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -464,7 +464,7 @@ public class ${name} extends BaseTest {
             >
               {running ? (
                 <>
-                  <Loader2 className="animate-spin h-3.5 w-3.5" /> Running SHAFT Engine...
+                  <Loader2 className="animate-spin h-3.5 w-3.5" /> Running Playwright...
                 </>
               ) : (
                 <>
@@ -546,7 +546,7 @@ public class ${name} extends BaseTest {
             ) : (
               <div className="bg-slate-50 border border-dashed p-3 rounded-xl text-center text-slate-400 flex items-center gap-1.5 justify-center">
                 <MousePointerClick size={12} />
-                <span>Click visual zones on the canvas mockup to build SHAFT locator code snippets</span>
+                <span>Click visual zones on the canvas mockup to build Playwright locator snippets</span>
               </div>
             )}
           </div>
@@ -606,7 +606,7 @@ public class ${name} extends BaseTest {
             </div>
             
             <p className="text-slate-500 text-xs">
-              Load one of the predefined SHAFT test structure classes to quickly build your automation suite workflows.
+              Load one of the predefined Playwright specs to quickly build your automation suite workflows.
             </p>
 
             <div className="space-y-2">

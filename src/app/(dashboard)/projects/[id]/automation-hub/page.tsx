@@ -160,7 +160,7 @@ export default function AutomationHubPage() {
   const [diagnoses, setDiagnoses] = useState<DiagnosisItem[]>([])
   const [selectedDiagnosis, setSelectedDiagnosis] = useState<DiagnosisItem | null>(null)
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "doctor"; text: string }[]>([
-    { role: "doctor", text: "Dr. SHAFT AI here. Give me a test script or paste failure logs to diagnose element syncing problems." }
+    { role: "doctor", text: "Test Doctor here. Give me a test spec or paste failure logs to diagnose synchronisation problems." }
   ])
   const [doctorChatInput, setDoctorChatInput] = useState("")
 
@@ -190,7 +190,7 @@ export default function AutomationHubPage() {
   const [mcpApiKey, setMcpApiKey] = useState("••••••••••••••••••••")
   const [mcpPermissionLevel, setMcpPermissionLevel] = useState("Can Execute Tests")
   const [mcpChatMessages, setMcpChatMessages] = useState<{ role: "user" | "agent"; text: string; toolUsed?: string }[]>([
-    { role: "agent", text: "Connected to SHAFT MCP Server client console successfully." }
+    { role: "agent", text: "Connected to the MCP Server client console successfully." }
   ])
   const [mcpChatInput, setMcpChatInput] = useState("")
   const [sendingMcp, setSendingMcp] = useState(false)
@@ -420,7 +420,7 @@ export default function AutomationHubPage() {
       <div className="flex items-center justify-between gap-4 border-b pb-4 flex-wrap">
         <div>
           <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
-            <Layers className="text-indigo-650 animate-pulse h-5.5 w-5.5" /> SHAFT Automation Hub
+            <Layers className="text-indigo-650 animate-pulse h-5.5 w-5.5" /> Automation Hub
           </h1>
           <p className="text-slate-500 mt-1 font-medium">
             Central Command Center. One unified dashboard for executing, recording, diagnosing, and optimizing automation suites.

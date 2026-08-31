@@ -43,6 +43,7 @@ export const createTestCaseSchema = z.object({
   testData: z.any().optional().nullable(),
   tags: z.array(z.string()).optional(),
   assignee: z.string().optional().nullable(),
+  suiteId: z.string().optional().nullable(),
   requirementIds: z.array(z.string()).optional(),
   steps: z.array(
     z.object({

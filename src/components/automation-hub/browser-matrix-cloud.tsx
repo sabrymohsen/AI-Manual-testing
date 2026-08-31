@@ -234,7 +234,7 @@ export default function BrowserMatrixCloudPanel() {
               </button>
             </div>
             <p className="text-[8.5px] text-slate-400 font-medium leading-relaxed">
-              Writes <span className="font-mono">executionAddress=dockerized</span> — SHAFT auto-pulls Selenium/Playwright
+              Writes <span className="font-mono">executionAddress=dockerized</span> — the runner attaches to a containerised browser
               images and manages containers at run time.
             </p>
             {/* Real docker daemon status */}

@@ -1,22 +1,31 @@
 import * as fs from "fs"
 import * as path from "path"
-import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
+import { WORKSPACE_ROOT } from "@/lib/hub-workspace"
 
-// custom.properties is SHAFT's single source of truth for engine configuration.
-// The Data & Config → Properties editor reads/writes this file so the next
-// SHAFT run picks up whatever the user saved in the UI.
-export const CUSTOM_PROPS_PATH = path.join(
-  ARTIFACT_ROOT,
-  "src/main/resources/properties/custom.properties"
-)
+/**
+ * Run settings for the Automation Hub, edited in Data & Config → Properties.
+ *
+ * This was a catalog of SHAFT engine keys written to custom.properties — a file
+ * consumed by a Maven run that could never start, so nothing typed here changed
+ * anything. The catalog is now the Playwright options the runner genuinely
+ * applies: hub-workspace.writeConfig reads this file when it generates the
+ * config for each run, so a value saved here takes effect on the next run.
+ *
+ * Still a .properties file rather than JSON, because the editor, its diff view
+ * and the history table are all built around key=value lines, and the format
+ * costs nothing.
+ */
+export const SETTINGS_PATH = path.join(WORKSPACE_ROOT, "hub-settings.properties")
+
+/** @deprecated old name; kept so existing imports resolve. */
+export const CUSTOM_PROPS_PATH = SETTINGS_PATH
 
 export type PropertyGroup =
   | "Browser"
   | "Execution"
   | "Synchronization"
   | "Evidence"
-  | "Healing"
-  | "AI"
+  | "Network"
   | "Other"
 
 export type PropertyType = "boolean" | "number" | "string" | "enum"
@@ -34,48 +43,44 @@ export interface CatalogProperty {
   max?: number
 }
 
-// Curated catalog of the SHAFT engine properties surfaced in the editor.
-// SHAFT ships these defaults internally (the on-disk default.properties is not
-// part of this repo), so the catalog is the authoritative list of names,
-// groups, types and descriptions. Actual values come from custom.properties.
+/**
+ * Every entry maps to a real Playwright config option. Nothing is listed here
+ * that the runner cannot apply — a settings screen whose switches do nothing is
+ * worse than no settings screen.
+ */
 export const PROPERTY_CATALOG: CatalogProperty[] = [
   // ---- Browser ----
-  { name: "targetBrowserName", group: "Browser", type: "enum", default: "chrome", options: ["chrome", "firefox", "edge", "safari", "webkit"], description: "Browser the engine launches for web tests." },
-  { name: "headlessExecution", group: "Browser", type: "boolean", default: "false", description: "Run the browser without a visible UI window." },
-  { name: "executionAddress", group: "Browser", type: "string", default: "local", description: "Where tests run: 'local', a Selenium Grid host, or 'browserstack'." },
-  { name: "targetOperatingSystem", group: "Browser", type: "enum", default: "Linux-64", options: ["Linux-64", "Windows-64", "Mac-64"], description: "Operating system reported to the driver / grid." },
-  { name: "isMobileExecution", group: "Browser", type: "boolean", default: "false", description: "Route execution through Appium for mobile targets." },
+  { name: "browser", group: "Browser", type: "enum", default: "chromium", options: ["chromium", "firefox", "webkit"], description: "Playwright project used when a run does not name one." },
+  { name: "headless", group: "Browser", type: "boolean", default: "true", description: "Run without a visible browser window. Required on a server." },
+  { name: "viewportWidth", group: "Browser", type: "number", default: "1280", min: 320, max: 3840, description: "Viewport width in pixels." },
+  { name: "viewportHeight", group: "Browser", type: "number", default: "720", min: 240, max: 2160, description: "Viewport height in pixels." },
+  { name: "locale", group: "Browser", type: "string", default: "", description: "Browser locale, e.g. en-GB or ar-EG. Empty uses the system default." },
+  { name: "timezoneId", group: "Browser", type: "string", default: "", description: "Timezone, e.g. Africa/Cairo. Empty uses the system default." },
 
   // ---- Execution ----
-  { name: "setParallel", group: "Execution", type: "enum", default: "NONE", options: ["NONE", "METHODS", "CLASSES", "TESTS"], description: "TestNG parallelization strategy." },
-  { name: "threadCount", group: "Execution", type: "number", default: "1", min: 1, max: 64, description: "Number of parallel threads when setParallel is enabled." },
-  { name: "retryMaximumNumberOfAttempts", group: "Execution", type: "number", default: "0", min: 0, max: 10, description: "Automatic retries for a failing test before it is marked failed." },
-  { name: "maximumPerformanceMode", group: "Execution", type: "boolean", default: "false", description: "Disable animations/waits/logging niceties to run as fast as possible." },
-  { name: "aiEnabledExecution", group: "Execution", type: "boolean", default: "false", description: "Enable AI-assisted execution features globally." },
+  { name: "workers", group: "Execution", type: "number", default: "1", min: 1, max: 16, description: "Parallel workers. One keeps run logs readable and ordered." },
+  { name: "retries", group: "Execution", type: "number", default: "0", min: 0, max: 5, description: "Automatic retries before a test is reported as failed." },
+  { name: "fullyParallel", group: "Execution", type: "boolean", default: "false", description: "Run tests within a file in parallel as well as across files." },
+  { name: "slowMo", group: "Execution", type: "number", default: "0", min: 0, max: 5000, description: "Milliseconds to pause between actions. Useful when watching a run." },
 
   // ---- Synchronization ----
-  { name: "browserNavigationTimeout", group: "Synchronization", type: "number", default: "60", min: 1, max: 600, description: "Seconds to wait for page navigation to complete." },
-  { name: "defaultElementIdentificationTimeout", group: "Synchronization", type: "number", default: "60", min: 1, max: 600, description: "Seconds to wait for an element before failing." },
-  { name: "attemptsBeforeThrowingElementNotFoundException", group: "Synchronization", type: "number", default: "6", min: 1, max: 60, description: "Locate retries before an element-not-found error is thrown." },
-  { name: "waitForLazyLoading", group: "Synchronization", type: "boolean", default: "true", description: "Wait for lazy-loaded / async content to settle before acting." },
+  { name: "timeout", group: "Synchronization", type: "number", default: "60000", min: 1000, max: 600000, description: "Milliseconds a single test may run before it is timed out." },
+  { name: "expectTimeout", group: "Synchronization", type: "number", default: "5000", min: 100, max: 120000, description: "Milliseconds an expect() retries before failing." },
+  { name: "navigationTimeout", group: "Synchronization", type: "number", default: "30000", min: 1000, max: 300000, description: "Milliseconds to wait for a navigation to complete." },
+  { name: "actionTimeout", group: "Synchronization", type: "number", default: "0", min: 0, max: 300000, description: "Milliseconds for a single action. Zero means no separate limit." },
 
   // ---- Evidence ----
-  { name: "evidenceLevel", group: "Evidence", type: "enum", default: "STANDARD", options: ["MINIMAL", "STANDARD", "CUSTOM", "MAXIMUM"], description: "How much evidence (screenshots/logs/attachments) is captured." },
-  { name: "screenshotParams_whenToTakeAScreenshot", group: "Evidence", type: "enum", default: "ValidationPointsOnly", options: ["Always", "Never", "ValidationPointsOnly", "FailuresOnly"], description: "When the engine captures screenshots." },
-  { name: "createAnimatedGif", group: "Evidence", type: "boolean", default: "false", description: "Assemble an animated GIF of the run from screenshots." },
-  { name: "videoParams.recordVideo", group: "Evidence", type: "boolean", default: "false", description: "Record a video of the browser session." },
-  { name: "screenshotParams_highlightElements", group: "Evidence", type: "boolean", default: "true", description: "Draw a highlight box around the acted-on element in screenshots." },
+  { name: "trace", group: "Evidence", type: "enum", default: "on", options: ["on", "off", "retain-on-failure", "on-first-retry"], description: "When a Playwright trace is recorded. The Trace Viewer reads these." },
+  { name: "video", group: "Evidence", type: "enum", default: "on", options: ["on", "off", "retain-on-failure", "on-first-retry"], description: "When the browser session is recorded." },
+  { name: "screenshot", group: "Evidence", type: "enum", default: "on", options: ["on", "off", "only-on-failure"], description: "When screenshots are captured." },
 
-  // ---- Healing ----
-  { name: "selfHealingEnabled", group: "Healing", type: "boolean", default: "false", description: "Allow the engine to auto-repair broken locators at runtime." },
-  { name: "healing.strategy", group: "Healing", type: "enum", default: "shaft-heal", options: ["shaft-heal", "healenium", "none"], description: "Locator self-healing backend." },
-  { name: "healing.minimumTrustPercentage", group: "Healing", type: "number", default: "75", min: 0, max: 100, description: "Confidence threshold before a healed locator is accepted." },
-
-  // ---- AI ----
-  { name: "pilot.enabled", group: "AI", type: "boolean", default: "false", description: "Enable the SHAFT Pilot AI test-authoring assistant." },
-  { name: "ai.model", group: "AI", type: "string", default: "", description: "Model identifier used by AI-powered SHAFT modules." },
-  { name: "ai.apiBaseUrl", group: "AI", type: "string", default: "", description: "Base URL for the AI provider endpoint." },
+  // ---- Network ----
+  { name: "baseURL", group: "Network", type: "string", default: "", description: "Base URL, so a spec can call page.goto(\"/path\")." },
+  { name: "ignoreHTTPSErrors", group: "Network", type: "boolean", default: "false", description: "Continue past invalid TLS certificates. Useful on staging." },
+  { name: "userAgent", group: "Network", type: "string", default: "", description: "Override the browser user agent. Empty uses the browser default." },
+  { name: "extraHTTPHeaders", group: "Network", type: "string", default: "", description: "Extra headers as name: value pairs separated by ';'." },
 ]
+
 
 const CATALOG_BY_NAME = new Map(PROPERTY_CATALOG.map((p) => [p.name, p]))
 
@@ -83,11 +88,11 @@ export function getCatalogProperty(name: string): CatalogProperty | undefined {
   return CATALOG_BY_NAME.get(name)
 }
 
-/** Parse a Java .properties file into a flat key→value map (comments ignored). */
+/** Parse the settings file into a flat key→value map (comments ignored). */
 export function readProps(): Record<string, string> {
-  if (!fs.existsSync(CUSTOM_PROPS_PATH)) return {}
+  if (!fs.existsSync(SETTINGS_PATH)) return {}
   const out: Record<string, string> = {}
-  for (const line of fs.readFileSync(CUSTOM_PROPS_PATH, "utf8").split("\n")) {
+  for (const line of fs.readFileSync(SETTINGS_PATH, "utf8").split("\n")) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("!")) continue
     const eq = trimmed.indexOf("=")
@@ -123,16 +128,16 @@ export function removeProp(body: string, key: string): string {
     .join("\n")
 }
 
-/** Apply a batch of key→value writes to custom.properties on disk. */
+/** Apply a batch of key→value writes to the settings file on disk. */
 export function writeProps(updates: Record<string, string>): void {
-  let content = fs.existsSync(CUSTOM_PROPS_PATH)
-    ? fs.readFileSync(CUSTOM_PROPS_PATH, "utf8")
+  let content = fs.existsSync(SETTINGS_PATH)
+    ? fs.readFileSync(SETTINGS_PATH, "utf8")
     : ""
   for (const [key, value] of Object.entries(updates)) {
     content = upsertProp(content, key, value)
   }
-  fs.mkdirSync(path.dirname(CUSTOM_PROPS_PATH), { recursive: true })
-  fs.writeFileSync(CUSTOM_PROPS_PATH, content, "utf8")
+  fs.mkdirSync(path.dirname(SETTINGS_PATH), { recursive: true })
+  fs.writeFileSync(SETTINGS_PATH, content, "utf8")
 }
 
 /** Validate a value against its catalog entry. Returns an error string or null. */

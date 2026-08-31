@@ -8,12 +8,15 @@ import { prisma } from "@/lib/db"
 import { execFile } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
+import { SETTINGS_PATH } from "@/lib/hub-properties"
 import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
-const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
-export const CLIPS_DIR = path.join(ARTIFACT_ROOT, "target/video-clips")
+// The same settings file Data & Config edits, so the recording switch here and
+// the "video" property there cannot disagree about what the next run will do.
+const CUSTOM_PROPS = SETTINGS_PATH
+export const CLIPS_DIR = path.join(ARTIFACT_ROOT, "video-clips")
 
-// ---------- custom.properties helpers ----------
+// ---------- settings helpers ----------
 
 function readProps(): Record<string, string> {
   const out: Record<string, string> = {}

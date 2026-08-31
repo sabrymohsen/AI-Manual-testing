@@ -1,20 +1,34 @@
 "use client"
 
+import { useCaseDetail, useDeleteCases, useMoveCases } from "../_hooks/use-test-library"
+import { useProjectModules } from "@/components/bug-reports/module-select"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { PRIORITY_META } from "./config"
 import { useState } from "react"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import Link from "next/link"
-import { useCaseDetail } from "../_hooks/use-test-library"
-import { PRIORITY_META } from "./config"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import {
+  ChevronDown,
   ClipboardList,
   Edit2,
   ExternalLink,
+  Folder,
+  FolderInput,
   Link2,
   Loader2,
   Play,
+  Trash2,
   X,
   Zap,
 } from "lucide-react"
@@ -40,9 +54,13 @@ export function DetailPanel({
   onRun: (tc: { id: string; title: string; executionType: string }) => void
 }) {
   const [tab, setTab] = useState<Tab>("details")
+  const [pendingDelete, setPendingDelete] = useState(false)
   // Label the sync section with the connected tracker, not a hardcoded vendor.
   const { name: trackerName } = useProjectIntegration(projectId)
   const { data, isLoading, isError, error } = useCaseDetail(projectId, testCaseId)
+  const deleteCases = useDeleteCases(projectId)
+  const moveCases = useMoveCases(projectId)
+  const { modules: projectModules } = useProjectModules(projectId)
   const tc = data?.testCase
 
   if (!testCaseId) {
@@ -105,6 +123,14 @@ export function DetailPanel({
               <Edit2 className="h-3.5 w-3.5" />
             </Link>
             <button
+              onClick={() => setPendingDelete(true)}
+              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              title="Delete test case"
+              aria-label="Delete test case"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+            <button
               onClick={onClose}
               className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               aria-label="Close panel"
@@ -133,11 +159,38 @@ export function DetailPanel({
             )}
             {tc.executionType}
           </span>
-          {tc.suite && (
-            <span className="truncate rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-              {tc.suite.name}
-            </span>
-          )}
+          
+          {/* Suite Badge with Move Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-full border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+              <Folder className="h-2.5 w-2.5 shrink-0 text-primary/70" />
+              <span className="truncate">{tc.suite?.name ?? "Unfiled"}</span>
+              <ChevronDown className="h-2.5 w-2.5 shrink-0 opacity-60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="max-h-64 w-56 overflow-y-auto">
+              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Move to module / suite
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => moveCases.mutate({ testCaseIds: [tc.id], suiteId: null })}
+                className="gap-1.5 text-xs font-medium"
+              >
+                <Folder className="h-3.5 w-3.5 text-muted-foreground" /> — Unfiled —
+              </DropdownMenuItem>
+              {projectModules.length > 0 && <DropdownMenuSeparator />}
+              {projectModules.map((m) => (
+                <DropdownMenuItem
+                  key={m.id}
+                  onClick={() => moveCases.mutate({ testCaseIds: [tc.id], suiteId: m.id })}
+                  className="gap-1.5 text-xs"
+                >
+                  <Folder className="h-3.5 w-3.5 text-primary/70 shrink-0" />
+                  <span className="truncate" title={m.path}>{m.path}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button
             size="sm"
             onClick={() => onRun(tc)}
@@ -279,6 +332,21 @@ export function DetailPanel({
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete}
+        variant="danger"
+        title={`Delete "${tc.title}"?`}
+        description="This will permanently delete this test case, its steps, execution logs, and attachments. This action cannot be undone."
+        confirmLabel="Delete test case"
+        isLoading={deleteCases.isPending}
+        onConfirm={async () => {
+          await deleteCases.mutateAsync([tc.id])
+          setPendingDelete(false)
+          onClose()
+        }}
+        onCancel={() => setPendingDelete(false)}
+      />
     </div>
   )
 }

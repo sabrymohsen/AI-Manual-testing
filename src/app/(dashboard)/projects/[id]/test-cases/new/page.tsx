@@ -1,13 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { StepBuilder } from "@/components/test-cases/step-builder"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { AssigneeSelect } from "@/components/team/assignee-select"
+import { ModuleSelect } from "@/components/bug-reports/module-select"
 
 interface Step {
   actionDescription: string
@@ -23,11 +24,15 @@ interface Step {
 export default function NewTestCasePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const initialSuiteId = searchParams.get("suite") || ""
+
   const [steps, setSteps] = useState<Step[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [executionType, setExecutionType] = useState<"Manual" | "Automated">("Manual")
   const [assignee, setAssignee] = useState("")
+  const [suiteId, setSuiteId] = useState<string>(initialSuiteId)
 
   const [requirementIds, setRequirementIds] = useState<string[]>([])
 
@@ -43,6 +48,7 @@ export default function NewTestCasePage() {
       preconditions: form.get("preconditions") || null,
       source: "Manual",
       executionType,
+      suiteId: suiteId || null,
       testData: null,
       tags: [],
       assignee: assignee || null,
@@ -60,7 +66,7 @@ export default function NewTestCasePage() {
     })
 
     if (res.ok) {
-      router.push(`/projects/${params.id}/test-cases`)
+      router.push(`/projects/${params.id}/test-cases${suiteId ? `?suite=${encodeURIComponent(suiteId)}` : ""}`)
     } else {
       const data = await res.json()
       setError(data.error || "Failed to create test case")
@@ -73,9 +79,19 @@ export default function NewTestCasePage() {
       <h1 className="text-3xl font-bold">New Test Case</h1>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label htmlFor="title">Title *</Label>
             <Input id="title" name="title" required placeholder="e.g. Login flow validation" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="suite">Module / Suite</Label>
+            <ModuleSelect
+              projectId={params.id as string}
+              value={suiteId}
+              onChange={setSuiteId}
+              placeholder="— Unfiled (No Module) —"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="priority">Priority</Label>
@@ -86,7 +102,7 @@ export default function NewTestCasePage() {
               <option value="Critical">Critical</option>
             </select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label htmlFor="assignee">Assignee</Label>
             <AssigneeSelect
               id="assignee"

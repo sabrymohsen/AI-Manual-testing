@@ -159,7 +159,7 @@ export default function HealCenterPage() {
             <Shield className="text-indigo-650 animate-pulse h-5 w-5" /> Heal Center
           </h1>
           <p className="text-slate-500 font-medium mt-1">
-            Real-time monitoring and auto-recovery for fragile/broken browser element locators using SHAFT Heal.
+            Real-time monitoring and auto-recovery for fragile/broken browser element locators using Locator healing.
           </p>
         </div>
         <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
@@ -403,7 +403,7 @@ export default function HealCenterPage() {
                     onChange={(e) => setStrategy(e.target.value)}
                     className="flex h-8.5 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
                   >
-                    <option value="shaft-heal">SHAFT Heal (Visual + DOM)</option>
+                    <option value="visual-dom">Visual + DOM matching</option>
                     <option value="xpath-levenshtein">Levenshtein Distance Match</option>
                     <option value="dom-sibling-tree">DOM Sibling Tree Matching</option>
                   </select>

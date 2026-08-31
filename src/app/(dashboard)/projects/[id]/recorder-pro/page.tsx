@@ -213,11 +213,11 @@ public class RecordedFlowTest extends BaseTest {
             <Camera className="text-indigo-650 animate-pulse h-5 w-5" /> Test Recorder Pro
           </h1>
           <p className="text-slate-500 font-medium mt-1">
-            Upgraded recording studio to automatically translate browser GUI actions into standard SHAFT Java test codes.
+            Upgraded recording studio to automatically translate browser GUI actions into standard Playwright TypeScript test codes.
           </p>
         </div>
         <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
-          <span>Integrated with: SHAFT Capture</span>
+          <span>Integrated with: Playwright codegen</span>
         </div>
       </div>
 
@@ -332,7 +332,7 @@ public class RecordedFlowTest extends BaseTest {
             {/* Monaco code preview block */}
             <div className="bg-slate-900 border border-slate-850 rounded-2xl overflow-hidden flex flex-col shadow-md">
               <div className="bg-slate-950 p-3.5 border-b border-slate-850 flex items-center justify-between text-xs flex-wrap gap-2 text-slate-300 font-mono">
-                <span className="font-black text-slate-200">Generated SHAFT Java Code Preview</span>
+                <span className="font-black text-slate-200">Generated Playwright Code Preview</span>
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-black flex items-center gap-1">
                   <ShieldCheck size={11} className="fill-current" /> Privacy Redaction Active
                 </span>

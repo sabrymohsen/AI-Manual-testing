@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import {
+  requireProjectOwner,
+  requireProjectMember,
+  requireProjectPermission,
+  unauthorizedResponse,
+  badRequestResponse,
+  notFoundResponse,
+} from "@/lib/api-guards"
 import { z } from "zod"
 import { createTestCaseSchema } from "@/schemas"
 
@@ -78,8 +85,8 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const auth = await requireProjectPermission(params.projectId, "canCreateStories")
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const body = await request.json()
 
@@ -177,8 +184,8 @@ export async function DELETE(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const auth = await requireProjectPermission(params.projectId, "canDeleteStories")
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const fs = require("fs")
   const path = require("path")

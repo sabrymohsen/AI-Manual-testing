@@ -171,7 +171,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
   // Load custom devices from localStorage
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("shaft_custom_devices")
+      const stored = localStorage.getItem("hub_custom_devices")
       if (stored) {
         setCustomDevices(JSON.parse(stored))
       }
@@ -442,7 +442,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
     }
     const updated = [...customDevices, newDev]
     setCustomDevices(updated)
-    localStorage.setItem("shaft_custom_devices", JSON.stringify(updated))
+    localStorage.setItem("hub_custom_devices", JSON.stringify(updated))
     setSelectedDevice(newDev)
     setCustomDeviceModalOpen(false)
     setCustomName("")
@@ -650,7 +650,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 block" />
             </div>
             <span className="font-mono text-[9.5px] text-slate-500 truncate flex-1 text-center">
-              {currentUrl || "SHAFT-managed browser"}
+              {currentUrl || "Recorder browser"}
             </span>
             <div className="flex items-center gap-2 shrink-0">
               {phase === "recording" && (
@@ -709,7 +709,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
                 {phase === "starting" ? (
                   <>
                     <Loader2 size={22} className="animate-spin text-rose-500 mx-auto" />
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Launching SHAFT-managed browser...</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Launching recorder browser...</p>
                   </>
                 ) : (
                   <>
@@ -719,7 +719,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
                     </p>
                     <p className="text-[9.5px] text-slate-400 font-medium max-w-sm mx-auto leading-relaxed">
                       The page streams here live. Click, type, and scroll directly on the view — every interaction is
-                      captured with a Smart Locator and turned into SHAFT Java code in real time.
+                      captured with a Smart Locator and turned into Playwright code in real time.
                     </p>
                   </>
                 )}
@@ -787,7 +787,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-md">
             <div className="bg-slate-950 px-3 py-2.5 flex items-center justify-between border-b border-slate-800">
               <span className="font-mono font-bold text-[9.5px] text-slate-300 uppercase tracking-wider">
-                Generated SHAFT Java {phase === "recording" ? "(live)" : phase === "review" ? "(editable)" : ""}
+                Generated Playwright TypeScript {phase === "recording" ? "(live)" : phase === "review" ? "(editable)" : ""}
               </span>
               {codeEdited && <span className="text-[8px] font-black text-amber-400 uppercase">edited</span>}
             </div>

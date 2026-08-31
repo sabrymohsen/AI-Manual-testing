@@ -1,53 +1,53 @@
 // Auto-Wait Profiler for the Flake Map (Section 7).
-// SHAFT v10 (Playwright-based) synchronises with document-ready + network-idle
-// rather than the legacy jQuery/Angular/XHR engines, and it does not emit a
-// dedicated wait-profiler file. We therefore derive the wait profile from the
-// REAL per-action durations in each shaft-trace.zip, bucketed by SHAFT's actual
-// action categories, and cross-reference the FlakyTest table for context.
+//
+// Playwright emits no wait-profiler file, so the profile is derived from the
+// REAL per-action durations in each run's trace.zip, bucketed by the action
+// categories the trace parser assigns, and cross-referenced with the FlakyTest
+// table. The buckets and the configured timeouts are Playwright's own; they
+// were SHAFT's element-identification and lazy-load settings, which no longer
+// exist and were read from a file nothing wrote.
 
 import { prisma } from "@/lib/db"
 import * as fs from "fs"
 import * as path from "path"
-import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
-import { listTraces, resolveTraceZip, unzipEntry, sanitizeJsonControlChars } from "@/lib/hub-traces"
+import { listTraces, resolveTraceZip } from "@/lib/hub-traces"
+import { parsePlaywrightTrace } from "@/lib/hub-playwright-trace"
+import { readProps } from "@/lib/hub-properties"
 
-const CUSTOM_PROPS = path.join(ARTIFACT_ROOT, "src/main/resources/properties/custom.properties")
-
-// Buckets reflect the wait types SHAFT v10 actually performs.
+// Buckets reflect where a Playwright run actually spends time.
 export type WaitBucket = "navigation" | "elementSync" | "lazyLoad" | "validation" | "other"
 
 export const BUCKET_LABEL: Record<WaitBucket, string> = {
-  navigation: "Navigation / documentReady",
-  elementSync: "Element identification",
-  lazyLoad: "Lazy-load (network-idle)",
-  validation: "Validation sync",
-  other: "Other"
+  navigation: "Navigation",
+  elementSync: "Element interaction",
+  lazyLoad: "Explicit waits",
+  validation: "Assertion retries",
+  other: "Setup / other"
 }
 
 function readWaitConfig() {
-  const out: Record<string, string> = {}
-  if (fs.existsSync(CUSTOM_PROPS)) {
-    for (const line of fs.readFileSync(CUSTOM_PROPS, "utf8").split("\n")) {
-      const t = line.trim()
-      if (!t || t.startsWith("#")) continue
-      const i = t.indexOf("=")
-      if (i > 0) out[t.slice(0, i).trim()] = t.slice(i + 1).trim()
-    }
+  // The timeouts the next run will actually use, from Data & Config.
+  const out = readProps()
+  const ms = (key: string, fallback: number) => {
+    const v = Number(out[key])
+    return Number.isFinite(v) && v > 0 ? v : fallback
   }
   return {
-    elementTimeoutSec: Number(out["defaultElementIdentificationTimeout"]) || 30,
-    lazyLoadTimeoutSec: Number(out["waitForLazyLoadingTimeout"]) || 30,
-    networkIdleQuietMs: Number(out["lazyLoadingNetworkIdleQuietWindowMillis"]) || 500
+    // Kept in seconds: every message below reads better in seconds, and the
+    // element timeout used to be configured that way.
+    elementTimeoutSec: Math.round(ms("actionTimeout", ms("timeout", 60_000)) / 1000),
+    navigationTimeoutSec: Math.round(ms("navigationTimeout", 30_000) / 1000),
+    expectTimeoutSec: Math.round(ms("expectTimeout", 5_000) / 1000),
   }
 }
 
 function bucketFor(action: any): WaitBucket {
   const c = (action.category || "").toLowerCase()
   const name = (action.name || "").toLowerCase()
-  if (c === "browser" || /navigate|open|get\b|goto/.test(name)) return "navigation"
-  if (c === "element") return "elementSync"
-  if (c === "wait" || /lazy|load|idle/.test(name)) return "lazyLoad"
-  if (c === "validation" || c === "assertion" || /assert|verify|validat/.test(name)) return "validation"
+  if (c === "navigation" || /goto|navigate/.test(name)) return "navigation"
+  if (c === "interaction") return "elementSync"
+  if (c === "wait" || /waitfor/.test(name)) return "lazyLoad"
+  if (c === "assertion" || /expect|assert/.test(name)) return "validation"
   return "other"
 }
 
@@ -89,7 +89,7 @@ function buildRecommendations(p: {
   const seconds = (ms: number) => (ms / 1000).toFixed(1)
 
   if (p.avgWaitMs >= 3000) {
-    recs.push(`This test waits ~${seconds(p.avgWaitMs)}s per action on average — consider tightening the ${p.config.elementTimeoutSec}s element timeout.`)
+    recs.push(`This test waits ~${seconds(p.avgWaitMs)}s per action on average — consider tightening the ${p.config.elementTimeoutSec}s action timeout.`)
   }
 
   for (const b of p.unnecessary) {
@@ -98,7 +98,7 @@ function buildRecommendations(p: {
 
   // Element timeout is configured in seconds but observed waits are far lower.
   if (p.maxWaitMs > 0 && p.maxWaitMs < p.config.elementTimeoutSec * 1000 * 0.2) {
-    recs.push(`Longest observed wait is ${p.maxWaitMs}ms but the element timeout is ${p.config.elementTimeoutSec}s — lowering it shortens failure latency without risking stable steps.`)
+    recs.push(`Longest observed wait is ${p.maxWaitMs}ms but the action timeout is ${p.config.elementTimeoutSec}s — lowering it shortens failure latency without risking stable steps.`)
   }
 
   if (p.buckets.elementSync > 0 && p.flakinessScore && p.flakinessScore > 0.3) {
@@ -120,13 +120,15 @@ export async function buildWaitProfiles() {
   for (const t of traces) {
     const zip = resolveTraceZip(t.id)
     if (!zip) continue
-    let trace: any
+    let actions: any[] = []
     try {
-      trace = JSON.parse(sanitizeJsonControlChars(await unzipEntry(zip, "shaft-trace.json")))
+      // Setup steps (browser launch, fixtures) are excluded: they are the same
+      // fixed cost on every test and would swamp the profile of the steps
+      // someone can actually do something about.
+      actions = (await parsePlaywrightTrace(zip)).actions.filter((a) => a.category !== "setup")
     } catch {
       continue
     }
-    const actions: any[] = Array.isArray(trace.actions) ? trace.actions : []
     if (actions.length === 0) continue
 
     const buckets: Record<WaitBucket, number> = { navigation: 0, elementSync: 0, lazyLoad: 0, validation: 0, other: 0 }
@@ -148,7 +150,7 @@ export async function buildWaitProfiles() {
       (b) => bucketCounts[b] > 0 && buckets[b] <= UNNECESSARY_MS
     )
 
-    const simpleClass = String(trace.test?.className || "").split(".").pop() || t.className
+    const simpleClass = t.className
     const fk =
       flaky.find((f) => f.testName.split(".")[0] === simpleClass) ||
       flaky.find((f) => simpleClass && f.testName.toLowerCase().includes(simpleClass.toLowerCase())) ||
@@ -172,8 +174,8 @@ export async function buildWaitProfiles() {
     profiles.push({
       id: t.id,
       testName: simpleClass,
-      methodName: trace.test?.methodName || "",
-      status: trace.test?.status || "unknown",
+      methodName: t.methodName || "",
+      status: t.status || "unknown",
       actionCount: actions.length,
       totalWaitMs: total,
       avgWaitMs,

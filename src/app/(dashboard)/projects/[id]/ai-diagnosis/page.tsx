@@ -53,7 +53,7 @@ export default function AIDiagnosisPage() {
 
   // Chatbot states
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "doctor"; text: string }[]>([
-    { role: "doctor", text: "Hello! I am SHAFT Doctor. Select a failure from your Inbox above or type a question about locator breakdowns to begin." }
+    { role: "doctor", text: "Hello! I am the Test Doctor. Select a failure from your Inbox above or type a question about locator breakdowns to begin." }
   ])
   const [chatInput, setChatInput] = useState("")
   const [chatLoading, setChatLoading] = useState(false)
@@ -94,7 +94,7 @@ export default function AIDiagnosisPage() {
     setChatLoading(true)
 
     setTimeout(() => {
-      let replyText = "I have analyzed your request. According to SHAFT Doctor logs, please check if the target element contains dynamic styles. Try referencing By.xpath() with contains() functions rather than absolute indexes."
+      let replyText = "I have analyzed your request. The trace suggests the target element carries dynamic styling. Prefer a role- or label-based locator over a CSS class or positional index."
       
       const lowercaseMsg = userMsg.toLowerCase()
       if (lowercaseMsg.includes("login") || lowercaseMsg.includes("submit")) {
@@ -134,11 +134,11 @@ export default function AIDiagnosisPage() {
             <Cpu className="text-indigo-650 animate-pulse h-5 w-5" /> AI Diagnosis
           </h1>
           <p className="text-slate-500 font-medium mt-1">
-            Intelligent test failure root-cause analysis, trace evidence triage, and step-by-step fix recommendations powered by SHAFT Doctor.
+            Intelligent test failure root-cause analysis, trace evidence triage, and step-by-step fix recommendations from your Playwright traces.
           </p>
         </div>
         <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
-          <span>Integrated with: target/shaft-doctor/</span>
+          <span>Integrated with: test-results/</span>
         </div>
       </div>
 
@@ -321,7 +321,7 @@ export default function AIDiagnosisPage() {
                   </div>
                 </div>
 
-                {/* Section 3: SHAFT Doctor Diagnosis */}
+                {/* Section 3: Test Doctor Diagnosis */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border bg-indigo-50/20 p-3.5 rounded-2xl items-center border-indigo-100">
                   <div className="md:col-span-2 space-y-1">
                     <span className="text-[10px] uppercase font-black text-indigo-700 tracking-wider block">3. Doctor Primary Cause Diagnosis</span>
@@ -358,7 +358,7 @@ export default function AIDiagnosisPage() {
             <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 border-b pb-2 text-indigo-700">
                 <Bot size={15} />
-                <span className="text-[10px] uppercase font-black tracking-wider">Chat with SHAFT Doctor</span>
+                <span className="text-[10px] uppercase font-black tracking-wider">Chat with the Test Doctor</span>
               </div>
 
               {/* Chat Message Box logs */}

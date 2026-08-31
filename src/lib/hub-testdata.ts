@@ -1,13 +1,19 @@
 // Section 1a — Test Data Manager helpers.
-// SHAFT reads external data-driven inputs from src/test/resources/testDataFiles/.
+//
 // The DB (TestDataFile) is the source of truth; every write is mirrored to disk
-// so the Maven runner and @Test(dataProvider) can pick the JSON up at runtime.
+// so a spec can read its inputs at runtime. Files land next to the specs, in
+// the workspace, so a test reaches them with a relative import:
+//
+//   import users from "../testData/users.json"
+//
+// They previously went to a Maven src/test/resources path for @Test(dataProvider),
+// which no runner has read since the engine moved to Playwright.
 
 import * as fs from "fs"
 import * as path from "path"
-import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
+import { WORKSPACE_ROOT } from "@/lib/hub-workspace"
 
-export const TESTDATA_DIR = path.join(ARTIFACT_ROOT, "src/test/resources/testDataFiles")
+export const TESTDATA_DIR = path.join(WORKSPACE_ROOT, "testData")
 
 // A safe on-disk file name derived from a display name: letters/digits/_/-, .json
 export function toFileName(name: string): string {

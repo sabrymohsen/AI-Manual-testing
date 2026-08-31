@@ -19,8 +19,6 @@ import { parsePlaywrightTrace } from "@/lib/hub-playwright-trace"
 export const TRACES_DIR = RESULTS_DIR
 export const TRACE_ZIP_NAME = "trace.zip"
 
-/** @deprecated name kept so existing imports keep resolving. */
-export const SHAFT_TRACES_DIR = TRACES_DIR
 
 // SHAFT's shaft-trace.json embeds raw newlines inside string values (stack
 // traces, code snippets), which strict JSON.parse rejects. Escape control
@@ -82,8 +80,8 @@ function parseTraceJson(raw: string): any {
 export function resolveTraceZip(traceId: string): string | null {
   const decoded = decodeURIComponent(traceId)
   if (decoded.includes("/") || decoded.includes("\\") || decoded.includes("..")) return null
-  const dir = path.resolve(SHAFT_TRACES_DIR, decoded)
-  if (dir !== path.join(SHAFT_TRACES_DIR, decoded)) return null
+  const dir = path.resolve(TRACES_DIR, decoded)
+  if (dir !== path.join(TRACES_DIR, decoded)) return null
   const zip = path.join(dir, TRACE_ZIP_NAME)
   if (!fs.existsSync(zip)) return null
   return zip
@@ -93,10 +91,10 @@ export function resolveTraceZip(traceId: string): string | null {
 // or "com.ourcompany.tests.LoginFlowTest.testLoginRedirection") to the best
 // trace directory by shared name tokens. Returns the trace id (dir name).
 export function findTraceForTest(testName: string): string | null {
-  if (!fs.existsSync(SHAFT_TRACES_DIR)) return null
+  if (!fs.existsSync(TRACES_DIR)) return null
   const dirs = fs
-    .readdirSync(SHAFT_TRACES_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory() && fs.existsSync(path.join(SHAFT_TRACES_DIR, d.name, TRACE_ZIP_NAME)))
+    .readdirSync(TRACES_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && fs.existsSync(path.join(TRACES_DIR, d.name, TRACE_ZIP_NAME)))
   if (dirs.length === 0) return null
 
   const tokens = testName
@@ -145,12 +143,12 @@ export interface TraceSummary {
 }
 
 export async function listTraces(): Promise<TraceSummary[]> {
-  if (!fs.existsSync(SHAFT_TRACES_DIR)) return []
-  const dirs = fs.readdirSync(SHAFT_TRACES_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())
+  if (!fs.existsSync(TRACES_DIR)) return []
+  const dirs = fs.readdirSync(TRACES_DIR, { withFileTypes: true }).filter((d) => d.isDirectory())
   const out: (TraceSummary & { mtime: number })[] = []
 
   for (const d of dirs) {
-    const zip = path.join(SHAFT_TRACES_DIR, d.name, TRACE_ZIP_NAME)
+    const zip = path.join(TRACES_DIR, d.name, TRACE_ZIP_NAME)
     if (!fs.existsSync(zip)) continue
     const mtime = fs.statSync(zip).mtimeMs
     let summary: TraceSummary & { mtime: number } = {

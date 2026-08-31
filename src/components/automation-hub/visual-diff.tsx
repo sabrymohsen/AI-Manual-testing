@@ -68,7 +68,7 @@ interface IgnoreRegion {
 }
 
 const PROVIDERS = [
-  { id: "shaft-opencv", label: "SHAFT Built-in", note: "OpenCV pixel diff", available: true },
+  { id: "pixelmatch", label: "Built-in", note: "pixelmatch pixel diff", available: true },
   { id: "applitools", label: "Applitools Eyes", note: "not configured", available: false },
   { id: "shutterbug", label: "Selenium Shutterbug", note: "not configured", available: false }
 ]
