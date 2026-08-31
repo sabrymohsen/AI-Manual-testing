@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
+import { authorizeBugsWrite } from "@/lib/bug-reports/guards"
 
 /**
  * File a batch of bugs under one module/service, or clear the module on them.
@@ -31,21 +32,12 @@ export async function POST(request: Request) {
     const { bugIds } = parsed.data
     const requestedSuiteId = parsed.data.suiteId || null
 
-    const bugs = await prisma.bugReport.findMany({
-      where: { id: { in: bugIds } },
-      select: { projectId: true }
-    })
-    const bugProjectIds = Array.from(new Set(bugs.map(b => b.projectId).filter(Boolean) as string[]))
-
-    const userProjects = await prisma.project.findMany({
-      where: { userId: session.user.id },
-      select: { id: true }
-    })
-    const userProjectIds = userProjects.map(p => p.id)
-
-    if (bugProjectIds.some(pid => pid && !userProjectIds.includes(pid))) {
-      return unauthorizedResponse("Access denied to one or more bug reports")
-    }
+    // Authorised through the RBAC engine, not project ownership: an Admin,
+    // a Member or a Global Admin working on the board was previously refused
+    // every bulk action, because only the project creator passed.
+    const access = await authorizeBugsWrite(bugIds, "canEditBoard")
+    if (!access.ok) return access.response
+    const bugProjectIds = access.projectIds
 
     // A suite belongs to exactly one project, so a mixed-project selection can
     // never all be filed under the same module. Refusing beats half-applying.

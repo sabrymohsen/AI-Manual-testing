@@ -82,8 +82,50 @@ const DOC = String.raw`<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>QA Testing Report</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<style>
+/* ── Icons ────────────────────────────────────────────────────────────────
+   Inline, so the report needs no network. It previously linked Font Awesome
+   from a CDN, which meant a downloaded report opened offline — the normal way
+   a report is read after it is forwarded — showed empty boxes where every icon
+   should be.
+
+   Drawn with CSS masks rather than <img>, so each glyph inherits the colour of
+   the text around it exactly as the font-based icons did, and no markup had to
+   change: the existing <i class="fas fa-x"> elements still work.
+   ──────────────────────────────────────────────────────────────────────── */
+.fas{display:inline-block;width:1em;height:1em;vertical-align:-0.125em;background-color:currentColor;
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center;
+  -webkit-mask-size:contain;mask-size:contain;flex:none}
+.fa-ban{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='4.9' y1='4.9' x2='19.1' y2='19.1'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='4.9' y1='4.9' x2='19.1' y2='19.1'/%3E%3C/svg%3E")}
+.fa-bug{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='7' width='8' height='13' rx='4'/%3E%3Cpath d='M8 11H4M20 11h-4M8 16H4.5M20 16h-3.5M9.5 7 8 4M14.5 7 16 4'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='8' y='7' width='8' height='13' rx='4'/%3E%3Cpath d='M8 11H4M20 11h-4M8 16H4.5M20 16h-3.5M9.5 7 8 4M14.5 7 16 4'/%3E%3C/svg%3E")}
+.fa-building{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='2' width='16' height='20' rx='1'/%3E%3Cline x1='9' y1='7' x2='9' y2='7'/%3E%3Cline x1='15' y1='7' x2='15' y2='7'/%3E%3Cline x1='9' y1='12' x2='9' y2='12'/%3E%3Cline x1='15' y1='12' x2='15' y2='12'/%3E%3Cpath d='M10 22v-4h4v4'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='2' width='16' height='20' rx='1'/%3E%3Cline x1='9' y1='7' x2='9' y2='7'/%3E%3Cline x1='15' y1='7' x2='15' y2='7'/%3E%3Cline x1='9' y1='12' x2='9' y2='12'/%3E%3Cline x1='15' y1='12' x2='15' y2='12'/%3E%3Cpath d='M10 22v-4h4v4'/%3E%3C/svg%3E")}
+.fa-calendar-alt{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E")}
+.fa-chart-bar{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='20' x2='12' y2='10'/%3E%3Cline x1='18' y1='20' x2='18' y2='4'/%3E%3Cline x1='6' y1='20' x2='6' y2='16'/%3E%3Cline x1='3' y1='20' x2='21' y2='20'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='20' x2='12' y2='10'/%3E%3Cline x1='18' y1='20' x2='18' y2='4'/%3E%3Cline x1='6' y1='20' x2='6' y2='16'/%3E%3Cline x1='3' y1='20' x2='21' y2='20'/%3E%3C/svg%3E")}
+.fa-chart-pie{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.2 15.9A10 10 0 1 1 8 2.8'/%3E%3Cpath d='M22 12A10 10 0 0 0 12 2v10z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.2 15.9A10 10 0 1 1 8 2.8'/%3E%3Cpath d='M22 12A10 10 0 0 0 12 2v10z'/%3E%3C/svg%3E")}
+.fa-check{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")}
+.fa-check-circle{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='16 9 11 15 8 12'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolyline points='16 9 11 15 8 12'/%3E%3C/svg%3E")}
+.fa-circle-notch{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a9 9 0 1 1-6.2-8.6'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 12a9 9 0 1 1-6.2-8.6'/%3E%3C/svg%3E")}
+.fa-clipboard-check{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='18' rx='2'/%3E%3Cpath d='M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1'/%3E%3Cpolyline points='9 13 11 15 15 11'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='18' rx='2'/%3E%3Cpath d='M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1'/%3E%3Cpolyline points='9 13 11 15 15 11'/%3E%3C/svg%3E")}
+.fa-code-branch{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='6' y1='3' x2='6' y2='15'/%3E%3Ccircle cx='18' cy='6' r='3'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Cpath d='M18 9a9 9 0 0 1-9 9'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='6' y1='3' x2='6' y2='15'/%3E%3Ccircle cx='18' cy='6' r='3'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Cpath d='M18 9a9 9 0 0 1-9 9'/%3E%3C/svg%3E")}
+.fa-cogs{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3.2'/%3E%3Cpath d='M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.2 2.2M16.9 16.9l2.2 2.2M19.1 4.9l-2.2 2.2M7.1 16.9l-2.2 2.2'/%3E%3C/svg%3E")}
+.fa-download{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4'/%3E%3Cpolyline points='7 10 12 15 17 10'/%3E%3Cline x1='12' y1='15' x2='12' y2='3'/%3E%3C/svg%3E")}
+.fa-exclamation-triangle{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/%3E%3Cline x1='12' y1='9' x2='12' y2='13'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'/%3E%3Cline x1='12' y1='9' x2='12' y2='13'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E")}
+.fa-fire{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22a6 6 0 0 0 6-6c0-5-6-10-6-10S6 11 6 16a6 6 0 0 0 6 6z'/%3E%3Cpath d='M12 22a2.6 2.6 0 0 0 2.6-2.6c0-2-2.6-4.4-2.6-4.4s-2.6 2.4-2.6 4.4A2.6 2.6 0 0 0 12 22z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 22a6 6 0 0 0 6-6c0-5-6-10-6-10S6 11 6 16a6 6 0 0 0 6 6z'/%3E%3Cpath d='M12 22a2.6 2.6 0 0 0 2.6-2.6c0-2-2.6-4.4-2.6-4.4s-2.6 2.4-2.6 4.4A2.6 2.6 0 0 0 12 22z'/%3E%3C/svg%3E")}
+.fa-flask{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 2v6.5L4.2 17A2 2 0 0 0 6 20h12a2 2 0 0 0 1.8-3L15 8.5V2'/%3E%3Cline x1='8.5' y1='2' x2='15.5' y2='2'/%3E%3Cline x1='7' y1='15' x2='17' y2='15'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 2v6.5L4.2 17A2 2 0 0 0 6 20h12a2 2 0 0 0 1.8-3L15 8.5V2'/%3E%3Cline x1='8.5' y1='2' x2='15.5' y2='2'/%3E%3Cline x1='7' y1='15' x2='17' y2='15'/%3E%3C/svg%3E")}
+.fa-globe{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='2' y1='12' x2='22' y2='12'/%3E%3Cpath d='M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='2' y1='12' x2='22' y2='12'/%3E%3Cpath d='M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z'/%3E%3C/svg%3E")}
+.fa-info-circle{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='16' x2='12' y2='11'/%3E%3Cline x1='12' y1='8' x2='12.01' y2='8'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='12' y1='16' x2='12' y2='11'/%3E%3Cline x1='12' y1='8' x2='12.01' y2='8'/%3E%3C/svg%3E")}
+.fa-layer-group{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 2 7 12 12 22 7 12 2'/%3E%3Cpolyline points='2 17 12 22 22 17'/%3E%3Cpolyline points='2 12 12 17 22 12'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 2 7 12 12 22 7 12 2'/%3E%3Cpolyline points='2 17 12 22 22 17'/%3E%3Cpolyline points='2 12 12 17 22 12'/%3E%3C/svg%3E")}
+.fa-lightbulb{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3Cpath d='M15.1 14c.2-1 .7-1.7 1.4-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.8.8 1.2 1.5 1.4 2.5'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3Cpath d='M15.1 14c.2-1 .7-1.7 1.4-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.8.8 1.2 1.5 1.4 2.5'/%3E%3C/svg%3E")}
+.fa-list-ul{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='9' y1='6' x2='21' y2='6'/%3E%3Cline x1='9' y1='12' x2='21' y2='12'/%3E%3Cline x1='9' y1='18' x2='21' y2='18'/%3E%3Cline x1='4' y1='6' x2='4.01' y2='6'/%3E%3Cline x1='4' y1='12' x2='4.01' y2='12'/%3E%3Cline x1='4' y1='18' x2='4.01' y2='18'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='9' y1='6' x2='21' y2='6'/%3E%3Cline x1='9' y1='12' x2='21' y2='12'/%3E%3Cline x1='9' y1='18' x2='21' y2='18'/%3E%3Cline x1='4' y1='6' x2='4.01' y2='6'/%3E%3Cline x1='4' y1='12' x2='4.01' y2='12'/%3E%3Cline x1='4' y1='18' x2='4.01' y2='18'/%3E%3C/svg%3E")}
+.fa-pen{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/%3E%3Cpath d='M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'/%3E%3Cpath d='M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z'/%3E%3C/svg%3E")}
+.fa-percent{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='19' y1='5' x2='5' y2='19'/%3E%3Ccircle cx='7' cy='7' r='2.5'/%3E%3Ccircle cx='17' cy='17' r='2.5'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='19' y1='5' x2='5' y2='19'/%3E%3Ccircle cx='7' cy='7' r='2.5'/%3E%3Ccircle cx='17' cy='17' r='2.5'/%3E%3C/svg%3E")}
+.fa-plus{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='5' x2='12' y2='19'/%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='5' x2='12' y2='19'/%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3C/svg%3E")}
+.fa-print{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 6 2 18 2 18 9'/%3E%3Cpath d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'/%3E%3Crect x='6' y='14' width='12' height='8'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 6 2 18 2 18 9'/%3E%3Cpath d='M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2'/%3E%3Crect x='6' y='14' width='12' height='8'/%3E%3C/svg%3E")}
+.fa-table{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cline x1='3' y1='9' x2='21' y2='9'/%3E%3Cline x1='3' y1='15' x2='21' y2='15'/%3E%3Cline x1='9' y1='3' x2='9' y2='21'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cline x1='3' y1='9' x2='21' y2='9'/%3E%3Cline x1='3' y1='15' x2='21' y2='15'/%3E%3Cline x1='9' y1='3' x2='9' y2='21'/%3E%3C/svg%3E")}
+.fa-times-circle{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='15' y1='9' x2='9' y2='15'/%3E%3Cline x1='9' y1='9' x2='15' y2='15'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cline x1='15' y1='9' x2='9' y2='15'/%3E%3Cline x1='9' y1='9' x2='15' y2='15'/%3E%3C/svg%3E")}
+.fa-trash{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 21 6'/%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6'/%3E%3Cpath d='M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='3 6 21 6'/%3E%3Cpath d='M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6'/%3E%3Cpath d='M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E")}
+.fa-user{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E")}
+</style>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; }
 body { background:#f4f7fc; padding:76px 24px 24px; color:#1a2634; }
@@ -118,6 +160,11 @@ body { background:#f4f7fc; padding:76px 24px 24px; color:#1a2634; }
 .card-title { font-size:16px; font-weight:600; color:#1a2634; margin-bottom:14px; display:flex; align-items:center; gap:10px; }
 .card-title i { color:#2a6b8a; font-size:17px; }
 .chart-wrapper { position:relative; height:240px; }
+.chart { width:100%; height:100%; }
+.chart svg { width:100%; height:100%; display:block; overflow:visible; }
+.chart .lg { display:flex; flex-wrap:wrap; gap:6px 14px; justify-content:center; font-size:12px; color:#41586b; }
+.chart .lg i { width:11px; height:11px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:-1px; }
+.chart .empty { display:flex; align-items:center; justify-content:center; height:100%; color:#8a9baa; font-size:13px; }
 .chart-wrapper.tall { height:280px; }
 .table-wrap { overflow-x:auto; }
 table.data { width:100%; border-collapse:collapse; font-size:14px; }
@@ -261,21 +308,21 @@ table.edit input.num { width:64px; min-width:64px; text-align:center; }
 
   <div class="chart-grid">
     <div class="card"><div class="card-title"><i class="fas fa-chart-pie"></i> Test Execution Results</div>
-      <div class="chart-wrapper"><canvas id="resultsPie"></canvas></div></div>
+      <div class="chart-wrapper"><div id="resultsPie" class="chart"></div></div></div>
     <div class="card"><div class="card-title"><i class="fas fa-exclamation-triangle"></i> Defects by Severity</div>
-      <div class="chart-wrapper"><canvas id="severityBar"></canvas></div></div>
+      <div class="chart-wrapper"><div id="severityBar" class="chart"></div></div></div>
   </div>
 
   <div class="chart-grid">
     <div class="card"><div class="card-title"><i class="fas fa-chart-bar"></i> Results by Module</div>
-      <div class="chart-wrapper tall"><canvas id="serviceBar"></canvas></div></div>
+      <div class="chart-wrapper tall"><div id="serviceBar" class="chart"></div></div></div>
     <div class="card"><div class="card-title"><i class="fas fa-circle-notch"></i> Defect Status Breakdown</div>
-      <div class="chart-wrapper tall"><canvas id="statusPie"></canvas></div></div>
+      <div class="chart-wrapper tall"><div id="statusPie" class="chart"></div></div></div>
   </div>
 
   <div class="card section">
     <div class="card-title"><i class="fas fa-bug"></i> Defects by Module</div>
-    <div class="chart-wrapper tall"><canvas id="moduleDefectBar"></canvas></div>
+    <div class="chart-wrapper tall"><div id="moduleDefectBar" class="chart"></div></div>
   </div>
 
   <div class="card section">
@@ -336,7 +383,6 @@ function defectsOf(moduleName) {
   return defects.filter(function (d) { return (d.module || UNFILED) === moduleName; });
 }
 
-var charts = {};
 var editMode = false;
 
 /* ---------- helpers ---------- */
@@ -615,86 +661,246 @@ function orderedKeys(counts, canonical) {
   return keys;
 }
 
-function renderCharts() {
-  if (typeof Chart === 'undefined') return;
-  var t = totals();
-  ['resultsPie', 'severityBar', 'serviceBar', 'statusPie', 'moduleDefectBar'].forEach(function (id) {
-    if (charts[id]) { charts[id].destroy(); charts[id] = null; }
+
+/* ── Charts ────────────────────────────────────────────────────────────────
+   Drawn as inline SVG rather than pulled from a CDN. The report is meant to be
+   downloaded, edited offline and forwarded; loading Chart.js over the network
+   meant that on the machine it was actually read on, the charts were blank.
+
+   SVG rather than canvas so the Print button produces a PDF with sharp charts
+   at any zoom, and so a chart survives being saved into the edited copy.
+   Values are exposed through <title>, which browsers show natively on hover —
+   the tooltips are not lost with the library.
+   ──────────────────────────────────────────────────────────────────────── */
+var SVGNS = 'http://www.w3.org/2000/svg';
+
+function svgEl(name, attrs) {
+  var el = document.createElementNS(SVGNS, name);
+  for (var k in attrs) if (attrs[k] !== undefined && attrs[k] !== null) el.setAttribute(k, String(attrs[k]));
+  return el;
+}
+
+function chartHost(id) {
+  var host = document.getElementById(id);
+  if (host) host.innerHTML = '';
+  return host;
+}
+
+function emptyChart(host, message) {
+  var d = document.createElement('div');
+  d.className = 'empty';
+  d.textContent = message || 'No data yet';
+  host.appendChild(d);
+}
+
+/** Shared colour swatch legend, drawn as HTML so it wraps like text. */
+function legendFor(host, items, place) {
+  var lg = document.createElement('div');
+  lg.className = 'lg';
+  lg.style.margin = place === 'top' ? '0 0 8px' : '8px 0 0';
+  items.forEach(function (it) {
+    var span = document.createElement('span');
+    var sw = document.createElement('i');
+    sw.style.background = it.color;
+    span.appendChild(sw);
+    span.appendChild(document.createTextNode(it.label));
+    lg.appendChild(span);
+  });
+  if (place === 'top') host.appendChild(lg); else host.appendChild(lg);
+  return lg;
+}
+
+/** Pie / doughnut. 'donut' is the inner radius as a fraction of the outer. */
+function renderPie(id, items, donut) {
+  var host = chartHost(id);
+  if (!host) return;
+  items = (items || []).filter(function (i) { return num(i.value) > 0; });
+  var total = items.reduce(function (a, i) { return a + num(i.value); }, 0);
+  if (total <= 0) { emptyChart(host, 'Nothing to chart yet'); return; }
+
+  var box = document.createElement('div');
+  box.style.cssText = 'flex:1;min-height:0';
+  host.style.cssText = 'display:flex;flex-direction:column;height:100%';
+  host.appendChild(box);
+
+  var size = 100, cx = 50, cy = 50, r = 44, ri = donut ? r * donut : 0;
+  var svg = svgEl('svg', { viewBox: '0 0 ' + size + ' ' + size, preserveAspectRatio: 'xMidYMid meet' });
+
+  var angle = -Math.PI / 2; // start at 12 o'clock
+  items.forEach(function (it) {
+    var frac = num(it.value) / total;
+    var end = angle + frac * Math.PI * 2;
+    // A full-circle slice cannot be drawn as an arc (start === end), so it is
+    // rendered as a ring/disc instead of silently disappearing.
+    var node;
+    if (frac >= 0.9999) {
+      node = svgEl('circle', { cx: cx, cy: cy, r: (r + ri) / 2, fill: 'none',
+        stroke: it.color, 'stroke-width': r - ri });
+      if (!donut) node = svgEl('circle', { cx: cx, cy: cy, r: r, fill: it.color });
+    } else {
+      var large = end - angle > Math.PI ? 1 : 0;
+      var x1 = cx + r * Math.cos(angle), y1 = cy + r * Math.sin(angle);
+      var x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+      var d;
+      if (ri > 0) {
+        var xi2 = cx + ri * Math.cos(end), yi2 = cy + ri * Math.sin(end);
+        var xi1 = cx + ri * Math.cos(angle), yi1 = cy + ri * Math.sin(angle);
+        d = 'M' + x1 + ' ' + y1 + 'A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 +
+            'L' + xi2 + ' ' + yi2 + 'A' + ri + ' ' + ri + ' 0 ' + large + ' 0 ' + xi1 + ' ' + yi1 + 'Z';
+      } else {
+        d = 'M' + cx + ' ' + cy + 'L' + x1 + ' ' + y1 +
+            'A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2 + ' ' + y2 + 'Z';
+      }
+      node = svgEl('path', { d: d, fill: it.color, stroke: '#fff', 'stroke-width': 1 });
+    }
+    var title = svgEl('title');
+    title.textContent = it.label + ': ' + num(it.value) + ' (' + Math.round(frac * 100) + '%)';
+    node.appendChild(title);
+    svg.appendChild(node);
+    angle = end;
   });
 
-  charts.resultsPie = new Chart(document.getElementById('resultsPie'), {
-    type: 'doughnut',
-    data: { labels: ['Passed', 'Failed', 'Blocked', 'Not executed'],
-      datasets: [{ data: [t.passed, t.failed, t.blocked, t.notRun],
-        backgroundColor: ['#2a9d6e', '#d9534f', '#f0ad4e', '#c4ccd3'], borderColor: '#fff', borderWidth: 2 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, padding: 14 } } } }
+  box.appendChild(svg);
+  legendFor(host, items, 'bottom');
+}
+
+/**
+ * Bars. 'series' is [{label, color, data:[]}]; several series draw grouped, or
+ * stacked when 'stacked' is set. One series with 'colors' paints per bar.
+ */
+function renderBars(id, labels, series, opts) {
+  opts = opts || {};
+  var host = chartHost(id);
+  if (!host) return;
+  labels = labels || [];
+  var hasData = labels.length > 0 && series.some(function (s) {
+    return (s.data || []).some(function (v) { return num(v) > 0; });
   });
+  if (!hasData) { emptyChart(host, 'Nothing to chart yet'); return; }
+
+  host.style.cssText = 'display:flex;flex-direction:column;height:100%';
+  if (opts.legend && series.length > 1) legendFor(host, series, 'top');
+  var box = document.createElement('div');
+  box.style.cssText = 'flex:1;min-height:0';
+  host.appendChild(box);
+
+  // Aspect close to the cards these sit in, and scaled with 'meet' below so
+  // nothing is distorted: stretching the SVG to fill the width also stretches
+  // the axis labels, which reads as a rendering fault.
+  var W = 400, H = 180, padL = 26, padR = 6, padB = 30, padT = 8;
+  var plotW = W - padL - padR, plotH = H - padT - padB;
+
+  var maxVal = 0;
+  labels.forEach(function (_, i) {
+    if (opts.stacked) {
+      var sum = series.reduce(function (a, s) { return a + num((s.data || [])[i]); }, 0);
+      if (sum > maxVal) maxVal = sum;
+    } else {
+      series.forEach(function (s) { var v = num((s.data || [])[i]); if (v > maxVal) maxVal = v; });
+    }
+  });
+  if (maxVal <= 0) maxVal = 1;
+  // Round the axis up to a whole number of ticks so labels stay integers —
+  // defect counts have no meaningful halves.
+  var ticks = Math.min(5, Math.max(2, maxVal));
+  var step = Math.ceil(maxVal / ticks);
+  var top = step * ticks;
+
+  var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'xMidYMid meet' });
+
+  for (var t = 0; t <= ticks; t++) {
+    var val = step * t;
+    var y = padT + plotH - (val / top) * plotH;
+    svg.appendChild(svgEl('line', { x1: padL, y1: y, x2: W - padR, y2: y, stroke: '#eef2f6', 'stroke-width': 1 }));
+    var lbl = svgEl('text', { x: padL - 5, y: y + 3, 'text-anchor': 'end', 'font-size': 8, fill: '#8a9baa' });
+    lbl.textContent = String(val);
+    svg.appendChild(lbl);
+  }
+
+  var slot = plotW / labels.length;
+  // Capped, so one or two categories give normal-looking bars instead of a
+  // slab the width of the card.
+  var groupW = Math.min(slot * 0.68, opts.stacked ? 56 : 26 * series.length);
+  var barW = opts.stacked ? groupW : groupW / series.length;
+
+  labels.forEach(function (label, i) {
+    var x0 = padL + slot * i + (slot - groupW) / 2;
+    var stackY = padT + plotH;
+
+    series.forEach(function (s, si) {
+      var v = num((s.data || [])[i]);
+      if (v <= 0) return;
+      var h = (v / top) * plotH;
+      var x = opts.stacked ? x0 : x0 + barW * si;
+      var y = opts.stacked ? (stackY - h) : (padT + plotH - h);
+      if (opts.stacked) stackY -= h;
+      var color = (opts.colors && opts.colors[i]) || s.color;
+      var rect = svgEl('rect', { x: x, y: y, width: Math.max(barW - 1, 1), height: Math.max(h, 0.5),
+        fill: color, rx: 2 });
+      var title = svgEl('title');
+      title.textContent = (series.length > 1 ? s.label + ' — ' : '') + label + ': ' + v;
+      rect.appendChild(title);
+      svg.appendChild(rect);
+    });
+
+    var short = label.length > 12 ? label.slice(0, 11) + '…' : label;
+    var tx = svgEl('text', { x: padL + slot * i + slot / 2, y: H - padB + 12,
+      'text-anchor': 'middle', 'font-size': 8, fill: '#5b6f80' });
+    tx.textContent = short;
+    var full = svgEl('title');
+    full.textContent = label;
+    tx.appendChild(full);
+    svg.appendChild(tx);
+  });
+
+  svg.appendChild(svgEl('line', { x1: padL, y1: padT + plotH, x2: W - padR, y2: padT + plotH,
+    stroke: '#d6dee6', 'stroke-width': 1 }));
+
+  box.appendChild(svg);
+}
+
+function renderCharts() {
+  var t = totals();
+
+  renderPie('resultsPie', [
+    { label: 'Passed', value: t.passed, color: '#2a9d6e' },
+    { label: 'Failed', value: t.failed, color: '#d9534f' },
+    { label: 'Blocked', value: t.blocked, color: '#f0ad4e' },
+    { label: 'Not executed', value: t.notRun, color: '#c4ccd3' }
+  ], 0.62);
 
   var sev = countBy(defects, 'severity');
   var sevLabels = orderedKeys(sev, PRIORITY);
-  charts.severityBar = new Chart(document.getElementById('severityBar'), {
-    type: 'bar',
-    data: { labels: sevLabels,
-      datasets: [{ label: 'Defects', data: sevLabels.map(function (l) { return sev[l]; }),
-        backgroundColor: sevLabels.map(function (l) { return PRIORITY_COLORS[l] || '#8a9baa'; }),
-        borderRadius: 6, barPercentage: 0.6 }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef2f6' } }, x: { grid: { display: false } } } }
-  });
+  renderBars('severityBar', sevLabels,
+    [{ label: 'Defects', color: '#8a9baa', data: sevLabels.map(function (l) { return sev[l]; }) }],
+    { colors: sevLabels.map(function (l) { return PRIORITY_COLORS[l] || '#8a9baa'; }) });
 
   var top = services.slice().sort(function (a, b) { return num(b.total) - num(a.total); }).slice(0, 12);
-  charts.serviceBar = new Chart(document.getElementById('serviceBar'), {
-    type: 'bar',
-    data: { labels: top.map(function (s) { var n = s.name || '—'; return n.length > 18 ? n.slice(0, 16) + '…' : n; }),
-      datasets: [
-        { label: 'Passed', data: top.map(function (s) { return num(s.passed); }), backgroundColor: '#2a9d6e', borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Failed', data: top.map(function (s) { return num(s.failed); }), backgroundColor: '#d9534f', borderRadius: 4, barPercentage: 0.7 },
-        { label: 'Blocked', data: top.map(function (s) { return num(s.blocked); }), backgroundColor: '#f0ad4e', borderRadius: 4, barPercentage: 0.7 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { boxWidth: 14, padding: 12 } } },
-      scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-        y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef2f6' } } } }
-  });
+  renderBars('serviceBar', top.map(function (s) { return s.name || '—'; }), [
+    { label: 'Passed', color: '#2a9d6e', data: top.map(function (s) { return num(s.passed); }) },
+    { label: 'Failed', color: '#d9534f', data: top.map(function (s) { return num(s.failed); }) },
+    { label: 'Blocked', color: '#f0ad4e', data: top.map(function (s) { return num(s.blocked); }) }
+  ], { legend: true });
 
   // Defects per module, split by severity. Stacked rather than grouped because
   // the question is "which module carries the most defect weight", and the
   // severity split answers "and how bad are they" inside the same bar.
   var modules = moduleNames().filter(function (m) { return defectsOf(m).length > 0; });
-  charts.moduleDefectBar = new Chart(document.getElementById('moduleDefectBar'), {
-    type: 'bar',
-    data: {
-      labels: modules.map(function (m) { return m.length > 22 ? m.slice(0, 20) + '…' : m; }),
-      datasets: PRIORITY.map(function (p) {
-        return {
-          label: p,
-          data: modules.map(function (m) {
-            return defectsOf(m).filter(function (d) { return d.severity === p; }).length;
-          }),
-          backgroundColor: PRIORITY_COLORS[p],
-          borderRadius: 3,
-          barPercentage: 0.7
-        };
+  renderBars('moduleDefectBar', modules, PRIORITY.map(function (pr) {
+    return {
+      label: pr,
+      color: PRIORITY_COLORS[pr],
+      data: modules.map(function (m) {
+        return defectsOf(m).filter(function (d) { return d.severity === pr; }).length;
       })
-    },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'top', labels: { boxWidth: 14, padding: 12 } },
-        tooltip: { callbacks: { title: function (items) { return modules[items[0].dataIndex]; } } } },
-      scales: { x: { stacked: true, grid: { display: false }, ticks: { font: { size: 10 } } },
-        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 }, grid: { color: '#eef2f6' } } } }
-  });
+    };
+  }), { stacked: true, legend: true });
 
   var st = countBy(defects, 'status');
   var stLabels = orderedKeys(st, BUG_STATUS);
-  charts.statusPie = new Chart(document.getElementById('statusPie'), {
-    type: 'pie',
-    data: { labels: stLabels.map(label),
-      datasets: [{ data: stLabels.map(function (l) { return st[l]; }),
-        backgroundColor: stLabels.map(function (l) { return STATUS_COLORS[l] || '#8a9baa'; }),
-        borderColor: '#fff', borderWidth: 2 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 14, padding: 12 } } } }
-  });
+  renderPie('statusPie', stLabels.map(function (l) {
+    return { label: label(l), value: st[l], color: STATUS_COLORS[l] || '#8a9baa' };
+  }), 0);
 }
 
 function renderDashboard() {

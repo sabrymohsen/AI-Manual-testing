@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
+import { authorizeBugsWrite } from "@/lib/bug-reports/guards"
 import { buildAssigneeNameMap, assigneeName } from "@/lib/bug-reports/assignees"
 
 const bulkExportSchema = z.object({
@@ -22,22 +23,15 @@ export async function POST(request: Request) {
 
     const { bugIds } = parsed.data
 
-    // Verify ownership of all bug reports
-    const bugs = await prisma.bugReport.findMany({
-      where: { id: { in: bugIds } },
-      select: { projectId: true }
-    })
-    const bugProjectIds = Array.from(new Set(bugs.map(b => b.projectId).filter(Boolean) as string[]))
+    // Authorised through the RBAC engine, not project ownership: an Admin,
 
-    const userProjects = await prisma.project.findMany({
-      where: { userId: session.user.id },
-      select: { id: true }
-    })
-    const userProjectIds = userProjects.map(p => p.id)
+    // a Member or a Global Admin working on the board was previously refused
 
-    if (bugProjectIds.some(pid => pid && !userProjectIds.includes(pid))) {
-      return unauthorizedResponse("Access denied to one or more bug reports")
-    }
+    // every bulk action, because only the project creator passed.
+
+    const access = await authorizeBugsWrite(bugIds, "canAccessReports")
+
+    if (!access.ok) return access.response
 
     const bugReports = await prisma.bugReport.findMany({
       where: { id: { in: bugIds } },
@@ -52,7 +46,7 @@ export async function POST(request: Request) {
     // assignedTo holds the tracker's user id, which is meaningless in an export.
     // One map per project involved, then every bug reads its name from there.
     const nameMaps = new Map<string, Map<string, string>>()
-    for (const pid of bugProjectIds) {
+    for (const pid of access.projectIds) {
       nameMaps.set(pid, await buildAssigneeNameMap(pid))
     }
 

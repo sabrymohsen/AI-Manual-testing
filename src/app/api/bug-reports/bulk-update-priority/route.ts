@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
+import { authorizeBugsWrite } from "@/lib/bug-reports/guards"
 
 const bulkUpdatePrioritySchema = z.object({
   bugIds: z.array(z.string()).min(1),
@@ -22,22 +23,15 @@ export async function POST(request: Request) {
 
     const { bugIds, priority } = parsed.data
 
-    // Verify ownership of all bug reports
-    const bugs = await prisma.bugReport.findMany({
-      where: { id: { in: bugIds } },
-      select: { projectId: true }
-    })
-    const bugProjectIds = Array.from(new Set(bugs.map(b => b.projectId).filter(Boolean) as string[]))
+    // Authorised through the RBAC engine, not project ownership: an Admin,
 
-    const userProjects = await prisma.project.findMany({
-      where: { userId: session.user.id },
-      select: { id: true }
-    })
-    const userProjectIds = userProjects.map(p => p.id)
+    // a Member or a Global Admin working on the board was previously refused
 
-    if (bugProjectIds.some(pid => pid && !userProjectIds.includes(pid))) {
-      return unauthorizedResponse("Access denied to one or more bug reports")
-    }
+    // every bulk action, because only the project creator passed.
+
+    const access = await authorizeBugsWrite(bugIds, "canEditBoard")
+
+    if (!access.ok) return access.response
 
     await prisma.$transaction(async (tx) => {
       await tx.bugReport.updateMany({
