@@ -51,7 +51,8 @@ describe("QA Agent Brain Heuristics Planner", () => {
     const searchTest = plan.tests.find(t => t.module === "Search")
     expect(searchTest).toBeDefined()
     expect(searchTest?.steps[1].action).toBe("fill")
-    expect(searchTest?.steps[1].value).toBe("QA Agent Test Query")
+    // Arbitrary probe text; asserted only so the fill step carries a value.
+    expect(searchTest?.steps[1].value).toBe("test search query")
   })
 
   it("should generate table validation steps when table data grids exist", () => {

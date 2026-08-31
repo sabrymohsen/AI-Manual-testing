@@ -83,7 +83,10 @@ describe("step-executor", () => {
     await executeStep(mockPage as unknown as Page, step)
 
     expect(mockPage.locator).toHaveBeenCalledWith("button.submit")
-    expect(mockLocator.waitFor).toHaveBeenCalledWith({ state: "visible", timeout: 10000 })
+    // "attached", not "visible": resolveActionable waits for the element to be
+    // in the DOM and only then prefers a visible match, so that radios,
+    // switches and overlay-styled controls stay clickable via smartClick.
+    expect(mockLocator.waitFor).toHaveBeenCalledWith({ state: "attached", timeout: 10000 })
     expect(mockLocator.click).toHaveBeenCalled()
   })
 
@@ -307,11 +310,19 @@ describe("step-executor", () => {
     it("should attempt context recovery (Layer 2) and succeed when primary and fallbacks fail directly but container is found", async () => {
       mockLocator.waitFor.mockRejectedValueOnce(new Error("Timeout waiting for primary element"))
       
-      const mockHealedLocator = {
+      // Must behave like a real Locator: the click path runs through
+      // resolveActionable, which calls .first() and .filter({visible:true})
+      // before acting. A stub with only waitFor/click throws inside Layer 2,
+      // which swallows the error and moves on — making the healing look like a
+      // failure when it actually reached the right element.
+      const mockHealedLocator: any = {
         waitFor: vi.fn().mockResolvedValue(undefined),
         click: vi.fn().mockResolvedValue(undefined),
         evaluate: vi.fn().mockResolvedValue(false),
+        count: vi.fn().mockResolvedValue(1),
       }
+      mockHealedLocator.first = vi.fn(() => mockHealedLocator)
+      mockHealedLocator.filter = vi.fn(() => mockHealedLocator)
 
       const mockContainer = {
         count: vi.fn().mockResolvedValue(1),

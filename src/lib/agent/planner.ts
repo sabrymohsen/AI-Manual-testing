@@ -404,6 +404,32 @@ export function generateTestPlan(scanInput: any): QAAgentPlan {
     })
   }
 
+  // Every scenario must open a page before acting on it.
+  //
+  // The smoke and authentication scenarios above already start with open_url,
+  // but the ones derived from a scanned page — dashboard, forms, tables,
+  // search, dropdowns, modals — began by clicking or asserting against a page
+  // the run had never navigated to. Executed standalone they failed on their
+  // first step, which read as a broken application rather than a plan that
+  // never opened anything.
+  //
+  // Prepended here rather than in each block so a scenario added later cannot
+  // forget it. The URL is taken from the scan those scenarios were derived
+  // from; with no URL to navigate to, the scenario is left as it was.
+  const navigationUrl = targetUrl || (scanResult as any)?.url || ""
+  if (navigationUrl) {
+    for (const test of tests) {
+      if (test.steps?.[0]?.action === "open_url") continue
+      test.steps.unshift({
+        action: "open_url",
+        target: navigationUrl,
+        targetType: "url",
+        targetValue: navigationUrl,
+        expected: `${pageName} is open before the scenario acts on it.`
+      } as QAAgentTest["steps"][number])
+    }
+  }
+
   return {
     title: "Free Rule-Based QA Test Plan",
     mode: "Free Rule-Based Mode",

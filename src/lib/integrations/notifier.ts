@@ -92,7 +92,36 @@ async function legacyNotify(testRunId: string): Promise<void> {
       const url = `https://${adoOrg}/${projectKey.trim()}/_apis/wit/workitems/${type}?api-version=6.0`
       const authHeader = Buffer.from(`:${token.trim()}`).toString("base64")
 
-      let htmlDescription = `<p><strong>Test Case:</strong> ${testRun.testCase?.title || "N/A"}</p><p><strong>Status:</strong> ${testRun.status}</p>`
+      // Steps and their errors, the same as the Jira branch above. Without them
+      // the work item said only which test failed, not what went wrong or how
+      // to reproduce it — the two things the developer picking it up needs.
+      // System.Description is an HTML field, so anything from the run is
+      // escaped: an assertion message containing markup would otherwise break
+      // the rendering, or worse be interpreted.
+      const esc = (v: unknown) =>
+        String(v ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+
+      let htmlDescription =
+        `<p><strong>Test Case:</strong> ${esc(testRun.testCase?.title || "N/A")}</p>` +
+        `<p><strong>Status:</strong> ${esc(testRun.status)}</p>` +
+        `<p><strong>Report:</strong> <a href="${esc(
+          `${APP_URL}/projects/${testRun.projectId}/test-runs/${testRun.id}/report`
+        )}">View run</a></p>`
+
+      if ((testRun.stepResults || []).length > 0) {
+        htmlDescription += `<p><strong>Steps:</strong></p><ul>`
+        for (const r of testRun.stepResults || []) {
+          htmlDescription += `<li>Step ${esc(r.stepNumber)}: ${esc(r.actionDescription)} &rarr; ${esc(r.status)}`
+          if (r.errorDetails) htmlDescription += `<br/><em>Error: ${esc(r.errorDetails)}</em>`
+          htmlDescription += `</li>`
+        }
+        htmlDescription += `</ul>`
+      }
+
       const res = await fetch(url, {
         method: "POST",
         headers: { Authorization: `Basic ${authHeader}`, "Content-Type": "application/json-patch+json", Accept: "application/json" },

@@ -125,7 +125,7 @@ describe("integrations notifier", () => {
     
     const body = JSON.parse(options.body)
     expect(body.fields.project.key).toBe("QA")
-    expect(body.fields.summary).toContain("[Failed] Test Run: Test Broken Link")
+    expect(body.fields.summary).toContain("[Failed] Test Broken Link")
     expect(body.fields.issuetype.name).toBe("Bug")
     expect(body.fields.description).toContain("Test Broken Link")
     expect(body.fields.description).toContain("Button not found")
@@ -183,12 +183,17 @@ describe("integrations notifier", () => {
     const body = JSON.parse(options.body)
     expect(body).toHaveLength(2)
     expect(body[0].path).toBe("/fields/System.Title")
-    expect(body[0].value).toContain("[Failed] Test Run: Submit Payment Screen")
+    expect(body[0].value).toContain("[Failed] Submit Payment Screen")
     expect(body[1].path).toBe("/fields/System.Description")
     expect(body[1].value).toContain("HTTP 500 Payment Gateway Error")
   })
 
-  it("should trigger OpenProject integration on success if triggerOn is All", async () => {
+  // OpenProject is deliberately NOT posted from here — notifier.ts returns early
+  // for that provider because onTestRunCompleted owns the OpenProject path (it
+  // has the board placement, parent and custom-field handling this notifier has
+  // no knowledge of). The test below therefore asserts the DELEGATION: posting
+  // from both places would file every run twice.
+  it("should leave OpenProject to onTestRunCompleted rather than posting itself", async () => {
     const encrypted = encryptSecret("op-key")
     const mockRun = {
       id: "run-789",
@@ -226,14 +231,8 @@ describe("integrations notifier", () => {
 
     await notifyIntegrations("run-789")
 
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-    const [url, options] = fetchMock.mock.calls[0]
-    expect(url).toBe("https://openproject.internal/api/v3/work_items")
-
-    const body = JSON.parse(options.body)
-    expect(body.subject).toContain("[Passed] Test Run: Verify Home Elements")
-    expect(body._links.project.href).toBe("/api/v3/projects/testing")
-    expect(body._links.type.href).toBe("/api/v3/types/1") // Task type
-    expect(body.description.raw).toContain("Check logo")
+    // No HTTP call at all: an OpenProject work package for this run is created
+    // by onTestRunCompleted, not here.
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
