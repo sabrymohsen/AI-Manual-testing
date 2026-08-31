@@ -93,9 +93,19 @@ export async function resolveProvider(projectId?: string): Promise<ResolvedProvi
     if (own) return own
   }
 
-  const rows = await prisma.aiProviderConfig
-    .findMany({ where: { enabled: true }, orderBy: { isDefault: "desc" } })
-    .catch(() => [])
+  // Wrapped whole: `.catch()` alone only covers a rejected query, not the table
+  // being absent from the client at all — a database that has not been pushed
+  // yet, or a caller that stubs @/lib/db. Provider resolution must degrade to
+  // the env fallbacks in those cases, not throw and take the feature down.
+  let rows: Array<{ provider: string; apiKey: string; model: string }> = []
+  try {
+    rows = await prisma.aiProviderConfig.findMany({
+      where: { enabled: true },
+      orderBy: { isDefault: "desc" },
+    })
+  } catch {
+    rows = []
+  }
 
   for (const row of rows) {
     const meta = PROVIDER_CATALOG[row.provider as AiProvider]
