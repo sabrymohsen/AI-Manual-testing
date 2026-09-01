@@ -114,6 +114,12 @@ interface Props {
   disabled?: boolean
   /** Skip fetching until the containing panel is actually open. */
   enabled?: boolean
+  /**
+   * Already-loaded modules. Pass these when the caller needs the list for its
+   * own purposes too — the create-bug form needs the names to prefix a title —
+   * so the endpoint is read once per dialog instead of once per consumer.
+   */
+  modules?: ProjectModule[]
 }
 
 export function ModuleSelect({
@@ -123,9 +129,12 @@ export function ModuleSelect({
   className,
   placeholder = "— Unfiled —",
   disabled,
-  enabled = true
+  enabled = true,
+  modules: providedModules
 }: Props) {
-  const { modules, loading } = useProjectModules(projectId, enabled)
+  const fetched = useProjectModules(projectId, enabled && !providedModules)
+  const modules = providedModules ?? fetched.modules
+  const loading = providedModules ? false : fetched.loading
 
   return (
     <select

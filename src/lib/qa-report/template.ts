@@ -55,7 +55,10 @@ export interface QaReportDefect {
   module: string
   /** The linked test case, when there is one. Narrower than the module. */
   area: string
+  /** Display name. The report is read by people, not by the tracker. */
   assignedTo: string
+  /** The tracker user id the bug stores; used by the editor, unused by the page. */
+  assignedToId?: string
   reportedOn: string
 }
 

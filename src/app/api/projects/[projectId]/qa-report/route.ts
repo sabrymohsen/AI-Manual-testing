@@ -165,7 +165,12 @@ export async function GET(
     // even though it points at no test case.
     module: b.suite?.name || UNFILED_LABEL,
     area: b.testCase?.title || "",
+    // Two values, on purpose: the NAME is what the document shows, the ID is
+    // what the bug stores and what an edit has to send back. Resolving one from
+    // the other in the browser would need the team pool and a reverse lookup
+    // that breaks the moment two people share a first name.
     assignedTo: assigneeName(b.assignedTo, assigneeNames),
+    assignedToId: b.assignedTo || "",
     reportedOn: b.createdAt.toISOString().slice(0, 10)
   }))
 

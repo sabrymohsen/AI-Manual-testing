@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ModuleSelect } from "@/components/bug-reports/module-select"
+import { ModuleSelect, useProjectModules } from "@/components/bug-reports/module-select"
+import { applyModulePrefix } from "@/lib/bug-reports/title-prefix"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -98,6 +99,12 @@ export function CreateBugModal({
   const [source, setSource] = useState("")
   // Module/service this defect belongs to (a TestSuite id); "" = Unfiled.
   const [suiteId, setSuiteId] = useState("")
+  /**
+   * Loaded here rather than inside ModuleSelect because the title prefix needs
+   * the NAMES: the one being applied, and all of them, so an existing prefix is
+   * only rewritten when it is a module's and not something like "[iOS 17]".
+   */
+  const { modules: projectModules } = useProjectModules(projectId, open)
   const [expected, setExpected] = useState("")
   const [actual, setActual] = useState("")
   const [steps, setSteps] = useState<CreateBugStep[]>([])
@@ -279,6 +286,21 @@ export function CreateBugModal({
     }
   }
 
+  const moduleNames = projectModules.map(m => m.name)
+  const moduleNameFor = (id: string) => projectModules.find(m => m.id === id)?.name ?? null
+
+  /**
+   * Choose a module, and carry the title with it.
+   *
+   * The team writes titles as "[Module] what went wrong", so the prefix follows
+   * the choice instead of being retyped. Re-picking swaps the old prefix rather
+   * than stacking a second one, and Unfiled removes it.
+   */
+  const chooseModule = (id: string) => {
+    setSuiteId(id)
+    setTitle(current => applyModulePrefix(current, moduleNameFor(id), moduleNames))
+  }
+
   // AI Assist: draft the whole bug from a plain-language prompt + picture.
   const handleGenerateWithAI = async () => {
     // The prompt box is the intended input, but fall back to whatever the
@@ -309,7 +331,9 @@ export function CreateBugModal({
 
       if (res.ok) {
         const { draft } = await res.json()
-        if (draft.title) setTitle(draft.title)
+        // The model writes the sentence; the module is ours to stamp on, so a
+        // draft lands already matching the team's title convention.
+        if (draft.title) setTitle(applyModulePrefix(draft.title, moduleNameFor(suiteId), moduleNames))
         // Fall back to the tester's own words when the model returned no prose.
         if (draft.description) setDesc(draft.description)
         else if (!desc.trim() && promptText) setDesc(promptText)
@@ -686,9 +710,17 @@ export function CreateBugModal({
 
           <div className="space-y-1.5">
             <Label className="text-muted-foreground font-bold">Module / Service</Label>
-            <ModuleSelect projectId={projectId} value={suiteId} onChange={setSuiteId} enabled={open} />
+            <ModuleSelect
+              projectId={projectId}
+              value={suiteId}
+              onChange={chooseModule}
+              enabled={open}
+              modules={projectModules}
+            />
             <p className="text-[10px] text-muted-foreground font-medium">
-              Groups this defect in the QA report. Left empty, it inherits the linked test case's module.
+              Groups this defect in the QA report, and prefixes the title as
+              <span className="font-bold"> [Module]</span>. Left empty, it inherits the linked test
+              case&apos;s module.
             </p>
           </div>
 

@@ -122,6 +122,21 @@ export default function QaReportModal({
   const [savedDefects, setSavedDefects] = useState<string[]>([])
   const [defectError, setDefectError] = useState<string | null>(null)
 
+  /**
+   * Edits the server never received, keyed by bug id.
+   *
+   * A REFUSED save (the status workflow forbidding a step, a name that is not a
+   * module) is an answer: the value is wrong, so the cell goes back and nothing
+   * is queued. A save that never arrived — the network dropped, the server
+   * errored — is not an answer, and throwing the edit away would lose work the
+   * reviewer just did. Those are kept here and retried by "Save all".
+   */
+  const [pendingDefects, setPendingDefects] = useState<Record<string, Partial<QaReportDefect>>>({})
+  const [retrying, setRetrying] = useState(false)
+
+  /** The project's assignable people: the bug stores an id, the report shows a name. */
+  const [team, setTeam] = useState<Array<{ id: string; name: string }>>([])
+
   useEffect(() => {
     if (!open) return
     setError(null)
@@ -129,6 +144,7 @@ export default function QaReportModal({
     setDefectError(null)
     setSavedModules({})
     setSavedDefects([])
+    setPendingDefects({})
     committedDefects.current = {}
     setTab("details")
     setLoading(true)
@@ -156,6 +172,19 @@ export default function QaReportModal({
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
+
+    // Same pool the Bug Reports page assigns from, and the same value: the
+    // tracker's own user id, which is what bug sync sends as the assignee.
+    fetch(`/api/projects/${projectId}/team`)
+      .then(res => (res.ok ? res.json() : { members: [] }))
+      .then(body =>
+        setTeam(
+          (body.members || [])
+            .filter((m: any) => m.active)
+            .map((m: any) => ({ id: m.externalId || m.id, name: m.name }))
+        )
+      )
+      .catch(() => setTeam([]))
   }, [open, projectId])
 
   if (!open) return null
@@ -290,6 +319,8 @@ export default function QaReportModal({
     if (patch.severity !== undefined) payload.severity = patch.severity
     if (patch.priority !== undefined) payload.priority = patch.priority
     if (patch.status !== undefined) payload.status = patch.status
+    // The bug stores the tracker's user id; the report shows the person's name.
+    if (patch.assignedToId !== undefined) payload.assignedTo = patch.assignedToId || null
     if (patch.module !== undefined) {
       const suiteId = suiteIdForModule(patch.module)
       if (suiteId === null) {
@@ -317,17 +348,58 @@ export default function QaReportModal({
         body: JSON.stringify(payload)
       })
       const body = await res.json().catch(() => ({}))
-      // The status workflow can refuse a step (and can demand a resolution the
-      // report has nowhere to ask for). Say why, and put the cell back.
-      if (!res.ok) throw new Error(body.error || "Could not save this change to the defect")
+
+      if (!res.ok) {
+        // 4xx is the server's considered answer — the status workflow refusing
+        // a step, or a value this user may not set. The edit is wrong, so the
+        // cell goes back and there is nothing to retry.
+        if (res.status < 500) {
+          setDefectError(body.error || "That change was refused")
+          revertDefect(id, patch)
+          setPendingDefects(prev => {
+            const next = { ...prev }
+            delete next[id]
+            return next
+          })
+          return
+        }
+        // 5xx never reached a decision. Keep the edit and let Save all retry it.
+        throw new Error(body.error || "The server could not be reached")
+      }
+
       committedDefects.current[id] = { ...(committedDefects.current[id] || defect), ...patch }
       setSavedDefects(prev => (prev.includes(id) ? prev : [...prev, id]))
+      setPendingDefects(prev => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
       onDefectsChanged?.()
     } catch (err: any) {
-      setDefectError(err.message)
-      revertDefect(id, patch)
+      // Reached only for a transport failure or a 5xx: the edit stays on screen
+      // and is queued, because the reviewer's change was never judged.
+      setDefectError(`${err.message} — kept here; use “Save all” to retry.`)
+      setPendingDefects(prev => ({ ...prev, [id]: { ...(prev[id] || {}), ...patch } }))
     } finally {
       setSavingDefect(null)
+    }
+  }
+
+  /** Retry every edit that never reached the server. */
+  const retryPending = async () => {
+    if (!data) return
+    setRetrying(true)
+    setDefectError(null)
+    try {
+      for (const [id, patch] of Object.entries(pendingDefects)) {
+        const defect = data.defects.find(d => d.id === id)
+        if (!defect) continue
+        // Sequential on purpose: a flaky connection recovers better from one
+        // request at a time than from twenty fired at once.
+        await persistDefect(defect, patch)
+      }
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -709,12 +781,33 @@ export default function QaReportModal({
                                 className="h-8 text-[11px]"
                               />
                             </td>
-                            <td className="px-2 py-1.5 min-w-[120px]">
-                              <Input
-                                value={b.assignedTo}
-                                onChange={e => patchDefect(i, { assignedTo: e.target.value })}
-                                className="h-8 text-[11px]"
-                              />
+                            <td className="px-2 py-1.5 min-w-[150px]">
+                              <select
+                                value={b.assignedToId || ""}
+                                onChange={e => {
+                                  const id = e.target.value
+                                  const member = team.find(m => m.id === id)
+                                  editDefect(i, {
+                                    assignedToId: id,
+                                    // Keep the document readable in the same
+                                    // click: the report shows people, not ids.
+                                    assignedTo: member?.name || ""
+                                  })
+                                }}
+                                className="h-8 w-full px-2 rounded-md border text-[11px] bg-background outline-none"
+                              >
+                                <option value="">Unassigned</option>
+                                {/* A bug assigned to someone no longer in the pool keeps its
+                                    row rather than silently reading as unassigned. */}
+                                {b.assignedToId && !team.some(m => m.id === b.assignedToId) && (
+                                  <option value={b.assignedToId}>{b.assignedTo || b.assignedToId}</option>
+                                )}
+                                {team.map(m => (
+                                  <option key={m.id} value={m.id}>
+                                    {m.name}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td className="px-2 py-1.5">
                               <Button
@@ -741,15 +834,34 @@ export default function QaReportModal({
                     </table>
                   </div>
                   <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
-                    Editing a defect&apos;s title, module, severity, priority or status saves it to the
-                    bug, so the Bug Reports page behind this dialog shows the same values. ID, test
-                    case and assignee stay in this report only — as does removing a row: the bug
-                    itself is untouched.
+                    Editing a defect&apos;s title, module, severity, priority, status or assignee
+                    saves it to the bug, so the Bug Reports page behind this dialog shows the same
+                    values. The ID and test case stay in this report only — as does removing a row:
+                    the bug itself is untouched.
                   </p>
                   {defectError && (
                     <p className="text-[10px] text-rose-700 font-semibold flex items-center gap-1.5">
                       <AlertTriangle className="h-3 w-3 shrink-0" /> {defectError}
                     </p>
+                  )}
+                  {Object.keys(pendingDefects).length > 0 && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 border border-amber-100">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                      <span className="text-[10px] font-semibold text-amber-800 flex-1">
+                        {Object.keys(pendingDefects).length} change
+                        {Object.keys(pendingDefects).length === 1 ? "" : "s"} did not reach the
+                        server. They are still on screen and not yet saved to the bugs.
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={retryPending}
+                        disabled={retrying}
+                        className="h-7 text-[10px] font-bold shrink-0"
+                      >
+                        {retrying ? "Saving…" : "Save all"}
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
