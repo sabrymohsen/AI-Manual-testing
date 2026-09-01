@@ -151,6 +151,10 @@ export async function GET(
 
   // ── Defects ───────────────────────────────────────────────────────────────
   const defects = bugs.map(b => ({
+    // The bug behind the row. The report editor writes an edited module,
+    // severity, priority or status back to this bug, so the Bug Reports page
+    // and the report cannot disagree about a defect they both describe.
+    id: b.id,
     key: b.bugKey || "",
     title: b.title,
     severity: b.severity,

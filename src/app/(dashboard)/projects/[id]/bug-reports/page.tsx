@@ -3283,8 +3283,16 @@ export default function ProjectBugReportsPage() {
         onClose={() => setShowQaReportModal(false)}
         // A module named in the report is created in the project, so the filter
         // and the drawer's picker on this page have to learn about it without a
-        // reload.
-        onModulesChanged={refreshModules}
+        // reload. A rename reaches the bugs filed under it, so the list is
+        // reloaded too.
+        onModulesChanged={() => {
+          refreshModules()
+          loadBugsList()
+        }}
+        // A defect re-filed, re-prioritised or moved through its workflow in the
+        // report is saved to the bug itself — the list behind this dialog would
+        // otherwise go on showing the values it loaded.
+        onDefectsChanged={loadBugsList}
       />
 
       {/* 8. Manual Create Bug Modal */}

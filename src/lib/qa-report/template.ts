@@ -39,6 +39,13 @@ export interface QaReportService {
 }
 
 export interface QaReportDefect {
+  /**
+   * The bug this row came from, or undefined for a row typed into the report.
+   *
+   * Present so an edit made here can be written back to that bug instead of
+   * living only in the downloaded file.
+   */
+  id?: string
   key: string
   title: string
   severity: string

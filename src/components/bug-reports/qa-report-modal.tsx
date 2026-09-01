@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -56,11 +56,17 @@ interface Props {
   open: boolean
   onClose: () => void
   /**
-   * Called after a module added here is created in the project, so the page
-   * behind the modal can refresh its module filter and pickers without a
-   * reload.
+   * Called after a module added or renamed here is written to the project, so
+   * the page behind the modal can refresh its module filter and pickers
+   * without a reload.
    */
   onModulesChanged?: () => void
+  /**
+   * Called after a defect edited here is written back to its bug, so the list
+   * and board behind the modal show the new module, severity, priority or
+   * status without a reload.
+   */
+  onDefectsChanged?: () => void
 }
 
 const emptyService: QaReportService = {
@@ -73,7 +79,13 @@ const emptyService: QaReportService = {
   remarks: ""
 }
 
-export default function QaReportModal({ projectId, open, onClose, onModulesChanged }: Props) {
+export default function QaReportModal({
+  projectId,
+  open,
+  onClose,
+  onModulesChanged,
+  onDefectsChanged
+}: Props) {
   const [data, setData] = useState<QaReportData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -89,12 +101,35 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
   const [savedModules, setSavedModules] = useState<Record<number, string>>({})
   const [savingModule, setSavingModule] = useState<number | null>(null)
   const [moduleError, setModuleError] = useState<string | null>(null)
+  /**
+   * The module name a row had when it was focused, so a committed rename knows
+   * what it renamed. Defect rows name their module as text, and after a rename
+   * they would otherwise keep pointing at a name the project no longer uses.
+   */
+  const moduleNameOnFocus = useRef<string | null>(null)
+
+  /**
+   * The last values written to each bug, keyed by bug id.
+   *
+   * A defect edited here is saved to the bug itself, and a rejected save — a
+   * status the workflow forbids, a project the user may only read — has to put
+   * the cell back to what the server actually holds. Keyed by id rather than
+   * row index so removing a row from the report cannot slide these onto the
+   * wrong defect.
+   */
+  const committedDefects = useRef<Record<string, QaReportDefect>>({})
+  const [savingDefect, setSavingDefect] = useState<string | null>(null)
+  const [savedDefects, setSavedDefects] = useState<string[]>([])
+  const [defectError, setDefectError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
     setError(null)
     setModuleError(null)
+    setDefectError(null)
     setSavedModules({})
+    setSavedDefects([])
+    committedDefects.current = {}
     setTab("details")
     setLoading(true)
     fetch(`/api/projects/${projectId}/qa-report`)
@@ -111,6 +146,13 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
           if (svc.suiteId) seeded[i] = svc.suiteId
         })
         setSavedModules(seeded)
+        // What the server holds for each defect right now — the value a
+        // rejected edit falls back to.
+        const committed: Record<string, QaReportDefect> = {}
+        payload.defects.forEach(d => {
+          if (d.id) committed[d.id] = { ...d }
+        })
+        committedDefects.current = committed
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
@@ -171,12 +213,129 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
       if (!res.ok) throw new Error(body.error || "Could not save the module")
       const id = body.suite?.id || savedId
       if (id) setSavedModules(prev => ({ ...prev, [index]: id }))
+
+      // A rename moves the module the defects are already filed under. Their
+      // rows name it as text, so without this the report would keep printing
+      // the old name under a heading that no longer exists — the bugs
+      // themselves need no update, they point at the suite, not its name.
+      const before = moduleNameOnFocus.current
+      if (before && before !== trimmed) {
+        setData(d =>
+          d
+            ? { ...d, defects: d.defects.map(b => (b.module === before ? { ...b, module: trimmed } : b)) }
+            : d
+        )
+        for (const committed of Object.values(committedDefects.current)) {
+          if (committed.module === before) committed.module = trimmed
+        }
+      }
       onModulesChanged?.()
     } catch (err: any) {
       setModuleError(err.message)
     } finally {
       setSavingModule(null)
     }
+  }
+
+  /**
+   * The project module a defect row's module name refers to.
+   *
+   * Returns "" for Unfiled — the value that clears a bug's module — and null
+   * when the name belongs to no module the project knows about, which is the
+   * one case a defect cannot be filed against.
+   */
+  const suiteIdForModule = (name: string): string | null => {
+    const trimmed = (name || "").trim()
+    if (!trimmed || trimmed === UNFILED) return ""
+    const index = (data?.services || []).findIndex(
+      svc => svc.name.trim().toLowerCase() === trimmed.toLowerCase()
+    )
+    if (index < 0) return null
+    return savedModules[index] || data?.services[index].suiteId || null
+  }
+
+  /** Put the fields an edit touched back to what the server holds. */
+  const revertDefect = (id: string, patch: Partial<QaReportDefect>) => {
+    const committed = committedDefects.current[id]
+    if (!committed) return
+    const restore: Partial<QaReportDefect> = {}
+    for (const key of Object.keys(patch) as (keyof QaReportDefect)[]) {
+      ;(restore as any)[key] = committed[key]
+    }
+    setData(d => (d ? { ...d, defects: d.defects.map(b => (b.id === id ? { ...b, ...restore } : b)) } : d)
+    )
+  }
+
+  /**
+   * Write a defect edit back to the bug it came from.
+   *
+   * The report used to be a dead end: re-filing a defect under another module
+   * or downgrading its severity here changed the downloaded file and nothing
+   * else, so the Bug Reports page went on showing the old values and the two
+   * views of the same defect disagreed. Module, severity, priority and status
+   * are the fields the bug owns, so they are saved to it.
+   *
+   * The id, the linked test case and the assignee are deliberately not: the
+   * first two are not the report's to rename, and the assignee is shown as a
+   * tracker user's name, which is not the id the bug stores.
+   */
+  const persistDefect = async (defect: QaReportDefect, patch: Partial<QaReportDefect>) => {
+    const id = defect.id
+    // A defect typed into the report has no bug behind it — it stays in the
+    // document only.
+    if (!id) return
+
+    const payload: Record<string, any> = {}
+    if (patch.title !== undefined) payload.title = patch.title.trim()
+    if (patch.severity !== undefined) payload.severity = patch.severity
+    if (patch.priority !== undefined) payload.priority = patch.priority
+    if (patch.status !== undefined) payload.status = patch.status
+    if (patch.module !== undefined) {
+      const suiteId = suiteIdForModule(patch.module)
+      if (suiteId === null) {
+        setDefectError(
+          `"${patch.module}" is not a module of this project yet — name it on the Modules tab first.`
+        )
+        revertDefect(id, patch)
+        return
+      }
+      payload.suiteId = suiteId
+    }
+    if (!Object.keys(payload).length) return
+    if (!payload.title && patch.title !== undefined) {
+      setDefectError("A defect needs a title.")
+      revertDefect(id, patch)
+      return
+    }
+
+    setSavingDefect(id)
+    setDefectError(null)
+    try {
+      const res = await fetch(`/api/bug-reports/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      const body = await res.json().catch(() => ({}))
+      // The status workflow can refuse a step (and can demand a resolution the
+      // report has nowhere to ask for). Say why, and put the cell back.
+      if (!res.ok) throw new Error(body.error || "Could not save this change to the defect")
+      committedDefects.current[id] = { ...(committedDefects.current[id] || defect), ...patch }
+      setSavedDefects(prev => (prev.includes(id) ? prev : [...prev, id]))
+      onDefectsChanged?.()
+    } catch (err: any) {
+      setDefectError(err.message)
+      revertDefect(id, patch)
+    } finally {
+      setSavingDefect(null)
+    }
+  }
+
+  /** Edit a defect row and save the change to its bug in the same click. */
+  const editDefect = (i: number, patch: Partial<QaReportDefect>) => {
+    const defect = data?.defects[i]
+    patchDefect(i, patch)
+    if (defect) persistDefect(defect, patch)
   }
 
   const handleDownload = () => {
@@ -366,6 +525,10 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
                                 <Input
                                   value={s.name}
                                   onChange={e => patchService(i, { name: e.target.value })}
+                                  // What the row was called before the edit, so
+                                  // a rename can carry the defect rows filed
+                                  // under the old name with it.
+                                  onFocus={e => { moduleNameOnFocus.current = e.target.value }}
                                   // Committed on blur or Enter, not on every
                                   // keystroke — otherwise a module would be
                                   // created for each letter typed.
@@ -455,8 +618,10 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
                   </Button>
                   <p className="text-[10px] text-muted-foreground font-medium mt-2 leading-relaxed">
                     Naming a module saves it to the project, so it appears on the Bug Reports page
-                    and defects can be filed against it. Removing a row here only takes it out of
-                    this report — the module and everything filed under it stay.
+                    and defects can be filed against it; renaming one renames it there too. Counts,
+                    status and remarks are the report&apos;s own — the counts come from the test
+                    library. Removing a row here only takes it out of this report — the module and
+                    everything filed under it stay.
                   </p>
                   {moduleError && (
                     <p className="text-[10px] text-rose-700 font-semibold mt-1.5 flex items-center gap-1.5">
@@ -490,27 +655,52 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
                               />
                             </td>
                             <td className="px-2 py-1.5 min-w-[240px]">
-                              <Input
-                                value={b.title}
-                                onChange={e => patchDefect(i, { title: e.target.value })}
-                                className="h-8 text-[11px]"
-                              />
+                              <div className="flex items-center gap-1.5">
+                                <Input
+                                  value={b.title}
+                                  onChange={e => patchDefect(i, { title: e.target.value })}
+                                  // Saved when the typing stops, not per
+                                  // keystroke — a title is written back one
+                                  // request at a time, not one per letter.
+                                  onBlur={e => {
+                                    const next = e.target.value
+                                    const current = b.id ? committedDefects.current[b.id]?.title : undefined
+                                    if (b.id && next.trim() !== (current || "").trim()) {
+                                      persistDefect(b, { title: next })
+                                    }
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter") (e.target as HTMLInputElement).blur()
+                                  }}
+                                  className="h-8 text-[11px]"
+                                />
+                                {savingDefect === b.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
+                                ) : b.id && savedDefects.includes(b.id) ? (
+                                  <span
+                                    title="Saved to the bug — the Bug Reports page behind this dialog shows the new values"
+                                    className="shrink-0 text-emerald-600"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </span>
+                                ) : null}
+                              </div>
                             </td>
                             <td className="px-2 py-1.5 w-40">
                               {cellSelect(
                                 b.module || UNFILED,
                                 moduleOptions(b.module),
-                                v => patchDefect(i, { module: v })
+                                v => editDefect(i, { module: v })
                               )}
                             </td>
                             <td className="px-2 py-1.5 w-28">
-                              {cellSelect(b.severity, PRIORITY, v => patchDefect(i, { severity: v }))}
+                              {cellSelect(b.severity, PRIORITY, v => editDefect(i, { severity: v }))}
                             </td>
                             <td className="px-2 py-1.5 w-28">
-                              {cellSelect(b.priority, PRIORITY, v => patchDefect(i, { priority: v }))}
+                              {cellSelect(b.priority, PRIORITY, v => editDefect(i, { priority: v }))}
                             </td>
                             <td className="px-2 py-1.5 w-36">
-                              {cellSelect(b.status, BUG_STATUS, v => patchDefect(i, { status: v }))}
+                              {cellSelect(b.status, BUG_STATUS, v => editDefect(i, { status: v }))}
                             </td>
                             <td className="px-2 py-1.5 min-w-[140px]">
                               <Input
@@ -550,9 +740,17 @@ export default function QaReportModal({ projectId, open, onClose, onModulesChang
                       </tbody>
                     </table>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium">
-                    Removing a defect here only leaves it out of this report — the bug itself is untouched.
+                  <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
+                    Editing a defect&apos;s title, module, severity, priority or status saves it to the
+                    bug, so the Bug Reports page behind this dialog shows the same values. ID, test
+                    case and assignee stay in this report only — as does removing a row: the bug
+                    itself is untouched.
                   </p>
+                  {defectError && (
+                    <p className="text-[10px] text-rose-700 font-semibold flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3 shrink-0" /> {defectError}
+                    </p>
+                  )}
                 </div>
               )}
             </>
