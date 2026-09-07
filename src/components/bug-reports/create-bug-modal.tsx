@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { ModuleSelect, useProjectModules } from "@/components/bug-reports/module-select"
 import { applyModulePrefix } from "@/lib/bug-reports/title-prefix"
+import { encodeImageForAi } from "@/lib/images/encode-for-ai"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -122,7 +123,10 @@ export function CreateBugModal({
   // text the tester wrote by hand.
   const [aiPrompt, setAiPrompt] = useState("")
   const [aiImage, setAiImage] = useState<File | null>(null)
-  const [aiNotice, setAiNotice] = useState<{ kind: "ai" | "template"; text: string } | null>(null)
+  const [aiNotice, setAiNotice] = useState<{
+    kind: "ai" | "template" | "degraded"
+    text: string
+  } | null>(null)
 
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null)
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -263,18 +267,6 @@ export function CreateBugModal({
     }
   }, [open, parent, projectId])
 
-  // Read a File as raw base64 (no data: prefix)
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        const result = reader.result as string
-        resolve(result.split(",")[1] || "")
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-
   /** Paste a screenshot straight into the AI prompt box. */
   const handleAiPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const file = Array.from(e.clipboardData?.items || [])
@@ -319,8 +311,13 @@ export function CreateBugModal({
       let imageBase64: string | null = null
       let imageMimeType: string | null = null
       if (image) {
-        imageBase64 = await fileToBase64(image)
-        imageMimeType = image.type || null
+        // Downscaled for the trip to the model only — the same File is still
+        // attached to the bug at full resolution below. A raw Retina PNG is
+        // megabytes of base64 uploaded inside the draft's own timeout, which
+        // is how a screenshot turned a draft into a template.
+        const encoded = await encodeImageForAi(image)
+        imageBase64 = encoded.base64
+        imageMimeType = encoded.mimeType
       }
 
       const res = await fetch(`/api/projects/${projectId}/ai-generate-bug`, {
@@ -352,7 +349,14 @@ export function CreateBugModal({
                 kind: "template",
                 text: `Drafted from a template — ${draft.fallbackReason || "no AI provider is configured"}, so this is a best-effort guess. Review every field.`,
               }
-            : { kind: "ai", text: "Draft ready — review and edit before saving." }
+            : draft.degradedReason
+              ? {
+                  // A real draft, written without the picture. The tester is
+                  // the only one who can tell whether anything was lost with it.
+                  kind: "degraded",
+                  text: `Draft ready, but ${draft.degradedReason}. Check it against your screenshot before saving.`,
+                }
+              : { kind: "ai", text: "Draft ready — review and edit before saving." }
         )
         if (Array.isArray(draft.steps) && draft.steps.length > 0) {
           setSteps(
@@ -616,12 +620,14 @@ export function CreateBugModal({
               Everything stays editable before you save.
             </p>
 
-            {/* Say which engine answered: a rule-based draft means no AI provider
-                is configured, and the tester should know the difference. */}
+            {/* Say which engine answered, and on what evidence: a rule-based
+                draft means no AI provider produced one, and a degraded draft
+                means the model never saw the attached screenshot. Green is only
+                for a draft that had everything. */}
             {aiNotice && (
               <p
                 className={`text-[10px] font-bold ${
-                  aiNotice.kind === "template" ? "text-amber-700" : "text-emerald-700"
+                  aiNotice.kind === "ai" ? "text-emerald-700" : "text-amber-700"
                 }`}
               >
                 {aiNotice.text}

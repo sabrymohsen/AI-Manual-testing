@@ -62,17 +62,65 @@ export interface BugDraft {
    * modal, which is why this kept coming back as a production mystery.
    */
   fallbackReason?: string
+  /**
+   * Set when a real model answered, but not from all the evidence: the call
+   * carrying the screenshot ran out of clock and the retry went text-only.
+   *
+   * Without this the degraded draft is indistinguishable from a full one, and
+   * a tester whose defect was only legible in the picture — the error text, the
+   * broken layout — trusts a report that never saw it.
+   */
+  degradedReason?: string
 }
 
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
 
 /**
  * How long the tester waits on the configured provider before we give up and
- * draft from the template. Deliberately well under the 120s library default:
- * this runs behind a spinner in a modal, and a draft that arrives after two
- * minutes has already lost to typing the bug by hand.
+ * draft from the template. Still under the 120s library default — this runs
+ * behind a spinner in a modal, and a draft that arrives after two minutes has
+ * already lost to typing the bug by hand — but no longer a flat 45s, which was
+ * aborting Kimi calls that would have landed at sixty.
+ *
+ * Tunable per deployment, because the right number is a property of the route
+ * to the provider: a key minted on the Moonshot .cn console, reached from a US
+ * region, needs materially more room than a local Ollama. Read per call rather
+ * than at module scope so a change in the environment does not need a rebuild.
  */
-const DRAFT_TIMEOUT_MS = 45_000
+const DEFAULT_DRAFT_TIMEOUT_MS = 90_000
+
+export function draftTimeoutMs(): number {
+  const configured = Number(process.env.AI_DRAFT_TIMEOUT_MS)
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : DEFAULT_DRAFT_TIMEOUT_MS
+}
+
+/**
+ * Output ceiling for a draft. The 4000-token default is a generic chat budget;
+ * a bug report is a title, a short paragraph, up to six steps and two results.
+ * Left roomy all the same, because Arabic notes tokenize far heavier than
+ * English and a truncated reply is not partial JSON — it is no draft at all.
+ */
+const DRAFT_MAX_TOKENS = 1500
+
+/**
+ * Did this call die on the clock rather than on an answer?
+ *
+ * `AbortSignal.timeout` surfaces as a TimeoutError DOMException, the Anthropic
+ * SDK raises its own APIConnectionTimeoutError, and axios reports ECONNABORTED
+ * — all the same event to us, and the only failure worth a second, lighter try.
+ */
+function isTimeout(err: any): boolean {
+  const name = String(err?.name || "")
+  const message = String(err?.message || "")
+  return (
+    name === "TimeoutError" ||
+    name === "AbortError" ||
+    name === "APIConnectionTimeoutError" ||
+    /timeout|timed out|aborted|ETIMEDOUT|ECONNABORTED/i.test(message)
+  )
+}
 
 export function buildPrompt(input: BugDraftInput, hasImage: boolean): string {
   const urlContext = input.appUrl ? `\nApplication under test: ${input.appUrl}` : ""
@@ -199,7 +247,11 @@ async function callHuggingFace(input: BugDraftInput): Promise<string> {
 
 const VALID_LEVELS = ["Low", "Medium", "High", "Critical"] as const
 
-function normalize(raw: any, provider: BugDraft["provider"]): BugDraft {
+function normalize(
+  raw: any,
+  provider: BugDraft["provider"],
+  degradedReason?: string
+): BugDraft {
   const level = (v: any): BugDraft["severity"] =>
     VALID_LEVELS.includes(v) ? v : "Medium"
 
@@ -223,6 +275,7 @@ function normalize(raw: any, provider: BugDraft["provider"]): BugDraft {
     expectedResult: String(raw?.expectedResult || raw?.expected || "").substring(0, 2000),
     actualResult: String(raw?.actualResult || raw?.actual || "").substring(0, 2000),
     provider,
+    ...(degradedReason ? { degradedReason } : {}),
   }
 }
 
@@ -303,34 +356,72 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   const resolved = await resolveProvider(input.projectId || undefined).catch(() => null)
   if (resolved) {
     reason = `the configured provider (${resolved.provider}) returned no usable draft`
-    try {
-      const out = await chatWithConfiguredProvider({
-        prompt: buildPrompt(input, hasImage),
-        imageBase64: input.imageBase64 || undefined,
+
+    const ask = (withImage: boolean) =>
+      chatWithConfiguredProvider({
+        prompt: buildPrompt(input, withImage),
+        imageBase64: withImage ? input.imageBase64 || undefined : undefined,
         // Was dropped here, so every screenshot went up labelled image/png.
         // A JPEG or WebP paste is then a 400 from the provider and the whole
         // draft silently degrades to the template.
-        imageMediaType: input.imageMimeType || undefined,
+        imageMediaType: withImage ? input.imageMimeType || undefined : undefined,
+        // The prompt has always asked for JSON; this makes the provider enforce
+        // it. Without it a chatty model prefaces the object with a sentence and
+        // the draft is thrown away for being unparsable.
+        json: true,
+        maxTokens: DRAFT_MAX_TOKENS,
         command: "generate-bug-report",
         projectId: input.projectId || undefined,
         // A tester is watching a spinner. The 120s default is a batch-job
         // timeout, and spending all of it before falling through to two more
         // stages is how a draft took minutes to come back as a template.
-        timeoutMs: DRAFT_TIMEOUT_MS,
+        timeoutMs: draftTimeoutMs(),
       })
-      const parsed = parseJson(out)
-      if (parsed) return normalize(parsed, "provider")
-      reason = `${resolved.provider} (${resolved.model}) replied with something that was not JSON`
-      console.warn(
-        "[generate-bug-report] provider returned unparsable output:",
-        out.slice(0, 300)
-      )
-    } catch (err) {
-      reason = `${resolved.provider} failed: ${(err as any)?.message || "unknown error"}`
-      console.warn(
-        "[generate-bug-report] configured provider failed, trying Ollama:",
-        (err as any)?.message
-      )
+
+    // Ask twice at most, and only when there is a screenshot to drop. The
+    // picture is the expensive half of the request — megabytes of base64
+    // uploaded before a token is generated — so a call that ran out of clock
+    // with it attached is worth one more try without it. A text-only draft
+    // that misses what was on screen still beats the template.
+    for (let attempt = 0; attempt < (hasImage ? 2 : 1); attempt++) {
+      const withImage = hasImage && attempt === 0
+      try {
+        const out = await ask(withImage)
+        const parsed = parseJson(out)
+        if (parsed) {
+          // A draft off the second, text-only ask is a real draft, but it was
+          // written without the picture the tester attached. Say so.
+          const degraded =
+            hasImage && !withImage
+              ? "the screenshot timed out, so this was drafted from your note alone"
+              : undefined
+          return normalize(parsed, "provider", degraded)
+        }
+        reason = `${resolved.provider} (${resolved.model}) replied with something that was not JSON`
+        console.warn(
+          "[generate-bug-report] provider returned unparsable output:",
+          out.slice(0, 300)
+        )
+        // Prose instead of JSON is not something dropping the screenshot fixes.
+        break
+      } catch (err) {
+        const message = (err as any)?.message || "unknown error"
+        reason = withImage
+          ? `${resolved.provider} failed: ${message}`
+          : `${resolved.provider} failed${hasImage ? ", with and without the screenshot" : ""}: ${message}`
+        if (withImage && isTimeout(err)) {
+          console.warn(
+            "[generate-bug-report] provider timed out with the screenshot attached, retrying text-only:",
+            message
+          )
+          continue
+        }
+        console.warn(
+          "[generate-bug-report] configured provider failed, trying Ollama:",
+          message
+        )
+        break
+      }
     }
   }
 
