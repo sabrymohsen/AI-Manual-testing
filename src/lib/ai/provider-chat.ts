@@ -166,7 +166,15 @@ async function callAnthropic(
   resolved: ResolvedProvider,
   opts: ChatOptions
 ): Promise<string> {
-  const client = new Anthropic({ apiKey: resolved.apiKey })
+  // The SDK defaults to a 10-minute timeout and two silent retries, so a
+  // hanging Anthropic call could hold a request for half an hour while the
+  // caller's own timeout was ignored entirely. Honour opts.timeoutMs here the
+  // way the OpenAI-compatible branch does.
+  const client = new Anthropic({
+    apiKey: resolved.apiKey,
+    timeout: opts.timeoutMs ?? 120_000,
+    maxRetries: 1,
+  })
   const content: Anthropic.MessageParam["content"] = opts.imageBase64
     ? [
         {

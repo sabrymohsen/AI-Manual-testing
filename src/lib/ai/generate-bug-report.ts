@@ -66,6 +66,14 @@ export interface BugDraft {
 
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
 
+/**
+ * How long the tester waits on the configured provider before we give up and
+ * draft from the template. Deliberately well under the 120s library default:
+ * this runs behind a spinner in a modal, and a draft that arrives after two
+ * minutes has already lost to typing the bug by hand.
+ */
+const DRAFT_TIMEOUT_MS = 45_000
+
 export function buildPrompt(input: BugDraftInput, hasImage: boolean): string {
   const urlContext = input.appUrl ? `\nApplication under test: ${input.appUrl}` : ""
   // Kept next to the note rather than at the top: the screenshot instruction and
@@ -104,13 +112,18 @@ Every field must be filled with real content. 2 to 6 reproduction steps.
 Output valid JSON only.`
 }
 
-async function callOllama(input: BugDraftInput, hasImage: boolean): Promise<string> {
+async function callOllama(
+  input: BugDraftInput,
+  hasImage: boolean,
+  installed: string[]
+): Promise<string> {
   const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434"
 
   // Pick a model: a vision model when we have an image and one is installed,
   // otherwise a small/fast TEXT model. Installed names carry a tag (e.g.
   // "llama3.2:latest"), so match by prefix rather than exact equality.
-  const installed = await getOllamaModels()
+  // The installed list is probed once by the caller and handed down, so a
+  // draft costs one /api/tags round trip rather than one per attempt.
   const isVision = (m: string) => VISION_MODEL_HINTS.some((h) => m.toLowerCase().includes(h))
   const configured = process.env.OLLAMA_MODEL || "llama3.2"
   const matchesConfigured = (m: string) => m === configured || m.split(":")[0] === configured
@@ -300,6 +313,10 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
         imageMediaType: input.imageMimeType || undefined,
         command: "generate-bug-report",
         projectId: input.projectId || undefined,
+        // A tester is watching a spinner. The 120s default is a batch-job
+        // timeout, and spending all of it before falling through to two more
+        // stages is how a draft took minutes to come back as a template.
+        timeoutMs: DRAFT_TIMEOUT_MS,
       })
       const parsed = parseJson(out)
       if (parsed) return normalize(parsed, "provider")
@@ -317,22 +334,35 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
     }
   }
 
-  // 2. Ollama (local, free)
-  try {
-    const out = await callOllama(input, hasImage)
-    const parsed = parseJson(out)
-    if (parsed) return normalize(parsed, "ollama")
-  } catch (err) {
-    console.warn("[generate-bug-report] Ollama unavailable, trying Hugging Face:", (err as any)?.message)
+  // 2. Ollama (local, free) — only when the daemon actually answers.
+  //
+  // /api/tags gives a definitive yes/no in 5s. Without that probe a deployed
+  // box, which has no Ollama and never will, still entered a call carrying a
+  // 180s timeout on every single draft.
+  const installed = await getOllamaModels()
+  if (installed.length > 0) {
+    try {
+      const out = await callOllama(input, hasImage, installed)
+      const parsed = parseJson(out)
+      if (parsed) return normalize(parsed, "ollama")
+    } catch (err) {
+      console.warn("[generate-bug-report] Ollama unavailable, trying Hugging Face:", (err as any)?.message)
+    }
   }
 
-  // 3. Hugging Face (free tier, text only)
-  try {
-    const out = await callHuggingFace(input)
-    const parsed = parseJson(out)
-    if (parsed) return normalize(parsed, "huggingface")
-  } catch (err) {
-    console.warn("[generate-bug-report] Hugging Face unavailable, using rule-based draft:", (err as any)?.message)
+  // 3. Hugging Face — only with a token.
+  //
+  // The anonymous free tier this was written against is gone, so with no token
+  // the stage cannot succeed; all it could still do was spend another 120s
+  // finding that out while the tester waited.
+  if (process.env.HUGGINGFACE_API_TOKEN) {
+    try {
+      const out = await callHuggingFace(input)
+      const parsed = parseJson(out)
+      if (parsed) return normalize(parsed, "huggingface")
+    } catch (err) {
+      console.warn("[generate-bug-report] Hugging Face unavailable, using rule-based draft:", (err as any)?.message)
+    }
   }
 
   // 4. Deterministic fallback — always succeeds.
