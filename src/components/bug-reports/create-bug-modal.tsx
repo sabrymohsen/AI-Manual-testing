@@ -343,11 +343,14 @@ export function CreateBugModal({
         if (draft.actualResult) setActual(draft.actualResult)
         // Carry the AI picture into the bug as evidence, unless one is attached.
         if (aiImage && !screenshotFile) setScreenshotFile(aiImage)
+        // Say why the template answered, not just that it did. "No provider is
+        // configured" was printed even when one was configured and had just
+        // failed, which sent people to the hub to re-enter a key that was fine.
         setAiNotice(
           draft.provider === "rule-based"
             ? {
                 kind: "template",
-                text: "Drafted from a template — no AI provider is configured, so this is a best-effort guess. Review every field.",
+                text: `Drafted from a template — ${draft.fallbackReason || "no AI provider is configured"}, so this is a best-effort guess. Review every field.`,
               }
             : { kind: "ai", text: "Draft ready — review and edit before saving." }
         )

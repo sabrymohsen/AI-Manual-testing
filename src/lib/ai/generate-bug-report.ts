@@ -2,7 +2,7 @@ import axios from "axios"
 import { getOllamaModels } from "@/lib/ai/test-case-generator"
 import {
   chatWithConfiguredProvider,
-  hasConfiguredProvider,
+  resolveProvider,
 } from "@/lib/ai/provider-chat"
 import {
   BUG_REPORT_CRAFT,
@@ -52,6 +52,16 @@ export interface BugDraft {
   expectedResult: string
   actualResult: string
   provider: "provider" | "ollama" | "huggingface" | "rule-based"
+  /**
+   * Why the draft fell back to the template, when it did.
+   *
+   * "rule-based" is reached four different ways and only one of them is
+   * "nothing is configured", but the tester was told that one every time. A
+   * provider that 401s, that is pointed at an unreachable local daemon, or
+   * that answers with prose instead of JSON all looked identical from the
+   * modal, which is why this kept coming back as a production mystery.
+   */
+  fallbackReason?: string
 }
 
 const VISION_MODEL_HINTS = ["llava", "vision", "bakllava", "moondream"]
@@ -222,7 +232,7 @@ function isArabic(text: string): boolean {
 }
 
 /** Deterministic fallback so the feature works with no AI provider at all. */
-export function ruleBasedDraft(input: BugDraftInput): BugDraft {
+export function ruleBasedDraft(input: BugDraftInput, fallbackReason?: string): BugDraft {
   const desc = (input.description || "").trim()
   const firstLine = desc.split(/\n|\. |؟/)[0]?.trim() || "Reported defect"
   const title = firstLine.substring(0, 120)
@@ -256,31 +266,55 @@ export function ruleBasedDraft(input: BugDraftInput): BugDraft {
       : "The described action should complete without error.",
     actualResult: desc.substring(0, 1000),
     provider: "rule-based",
+    fallbackReason: fallbackReason || "no AI provider is configured",
   }
 }
 
 export async function generateBugReportDraft(input: BugDraftInput): Promise<BugDraft> {
   const hasImage = !!input.imageBase64
 
+  // Why the tester ended up with a template, in their words. Only read once
+  // every provider below has failed. It stays at "not configured" unless a
+  // provider was actually resolved, because when nothing is set up the Ollama
+  // and HuggingFace failures underneath are expected, not the story.
+  let reason = "no AI provider is configured"
+
   // 1. The workspace's configured provider (Section 11). Without this the draft
   // only ever tried a local Ollama and a HuggingFace token, so a deployed box
   // always landed on the rule-based template no matter what the hub said.
-  try {
-    if (await hasConfiguredProvider(input.projectId || undefined)) {
+  //
+  // Resolved here rather than asked via hasConfiguredProvider(): the same
+  // lookup then serves both the decision and the error message, instead of
+  // costing a second query and still leaving us unable to name the provider
+  // that let the tester down.
+  const resolved = await resolveProvider(input.projectId || undefined).catch(() => null)
+  if (resolved) {
+    reason = `the configured provider (${resolved.provider}) returned no usable draft`
+    try {
       const out = await chatWithConfiguredProvider({
         prompt: buildPrompt(input, hasImage),
         imageBase64: input.imageBase64 || undefined,
+        // Was dropped here, so every screenshot went up labelled image/png.
+        // A JPEG or WebP paste is then a 400 from the provider and the whole
+        // draft silently degrades to the template.
+        imageMediaType: input.imageMimeType || undefined,
         command: "generate-bug-report",
         projectId: input.projectId || undefined,
       })
       const parsed = parseJson(out)
       if (parsed) return normalize(parsed, "provider")
+      reason = `${resolved.provider} (${resolved.model}) replied with something that was not JSON`
+      console.warn(
+        "[generate-bug-report] provider returned unparsable output:",
+        out.slice(0, 300)
+      )
+    } catch (err) {
+      reason = `${resolved.provider} failed: ${(err as any)?.message || "unknown error"}`
+      console.warn(
+        "[generate-bug-report] configured provider failed, trying Ollama:",
+        (err as any)?.message
+      )
     }
-  } catch (err) {
-    console.warn(
-      "[generate-bug-report] configured provider failed, trying Ollama:",
-      (err as any)?.message
-    )
   }
 
   // 2. Ollama (local, free)
@@ -302,5 +336,5 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   }
 
   // 4. Deterministic fallback — always succeeds.
-  return ruleBasedDraft(input)
+  return ruleBasedDraft(input, reason)
 }

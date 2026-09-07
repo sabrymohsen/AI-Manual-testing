@@ -6,6 +6,7 @@ vi.mock("@/lib/ai/test-case-generator", () => ({ getOllamaModels: vi.fn(async ()
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: vi.fn(),
   hasConfiguredProvider: vi.fn(async () => false),
+  resolveProvider: vi.fn(async () => null),
 }))
 
 import { ruleBasedDraft } from "@/lib/ai/generate-bug-report"
