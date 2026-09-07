@@ -205,11 +205,26 @@ async function callAnthropic(
     opts.command
   )
 
-  return res.content
+  const text = res.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("\n")
     .trim()
+
+  if (!text) {
+    throw new Error(
+      res.stop_reason === "max_tokens"
+        ? `Anthropic (${resolved.model}) reached its ${opts.maxTokens ?? 4000}-token ceiling before writing any answer`
+        : `Anthropic (${resolved.model}) returned an empty reply`
+    )
+  }
+  if (res.stop_reason === "max_tokens") {
+    console.warn(
+      `[provider-chat] Anthropic (${resolved.model}) hit its token ceiling; the reply is cut off`
+    )
+  }
+
+  return text
 }
 
 async function callOpenAiCompatible(
@@ -265,7 +280,32 @@ async function callOpenAiCompatible(
     opts.command
   )
 
-  return String(data.choices?.[0]?.message?.content || "").trim()
+  const choice = data.choices?.[0]
+  const content = String(choice?.message?.content || "").trim()
+  const limit = opts.maxTokens ?? 4000
+
+  // An empty reply is a failure, and callers that fall back to a template need
+  // to be able to say which one. Handing back "" made a reasoning model that
+  // spent its whole budget thinking — kimi-k2.7, k3: they emit reasoning before
+  // a character of content — indistinguishable from a chatty model answering in
+  // prose, and the tester was told the wrong thing about both.
+  if (!content) {
+    throw new Error(
+      choice?.finish_reason === "length"
+        ? `${resolved.provider} (${resolved.model}) reached its ${limit}-token ceiling before writing any answer`
+        : `${resolved.provider} (${resolved.model}) returned an empty reply`
+    )
+  }
+
+  // Truncated but not empty: the caller can usually salvage it, so return it
+  // and put the real reason in the logs rather than leaving a "bad JSON" trail.
+  if (choice?.finish_reason === "length") {
+    console.warn(
+      `[provider-chat] ${resolved.provider} (${resolved.model}) hit the ${limit}-token ceiling; the reply is cut off`
+    )
+  }
+
+  return content
 }
 
 /**

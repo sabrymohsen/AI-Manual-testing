@@ -53,7 +53,7 @@ describe("how long a tester waits for an AI bug draft", () => {
     else process.env.AI_DRAFT_TIMEOUT_MS = had
   })
 
-  it("bounds the reply, and makes the provider enforce the JSON the prompt asks for", async () => {
+  it("makes the provider enforce the JSON the prompt asks for", async () => {
     resolve.mockResolvedValue({ provider: "Kimi", apiKey: "k", model: "kimi-k2" })
     chat.mockResolvedValue(OK_JSON)
     ollamaModels.mockResolvedValue([])
@@ -62,9 +62,10 @@ describe("how long a tester waits for an AI bug draft", () => {
 
     const call = chat.mock.calls[0][0]
     expect(call.json).toBe(true)
-    // A bug report is not a 4000-token chat answer, and every token is time
-    // spent inside the tester's timeout.
-    expect(call.maxTokens).toBeLessThanOrEqual(2000)
+    // The output ceiling is a backstop, not a budget to economise in: it was
+    // squeezed to 1500 here to buy time and it truncated real Arabic drafts
+    // instead. Time is bounded by the timeout; see bug-draft-truncated-reply.
+    expect(call.maxTokens).toBeGreaterThanOrEqual(4000)
   })
 
   describe("when the screenshot is what ran out the clock", () => {

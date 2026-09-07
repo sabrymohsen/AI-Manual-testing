@@ -97,12 +97,32 @@ export function draftTimeoutMs(): number {
 }
 
 /**
- * Output ceiling for a draft. The 4000-token default is a generic chat budget;
- * a bug report is a title, a short paragraph, up to six steps and two results.
- * Left roomy all the same, because Arabic notes tokenize far heavier than
- * English and a truncated reply is not partial JSON — it is no draft at all.
+ * Output ceiling for a draft.
+ *
+ * Counted in English this looks generous for a title, a paragraph, six steps
+ * and two results — which is exactly how a 1500 ceiling got shipped, and how
+ * production then started reporting drafts that "replied with something that
+ * was not JSON". Two things break that arithmetic:
+ *
+ *   - Arabic tokenizes several times heavier than English. A real Arabic draft
+ *     from this app measured past 1500 tokens on its own.
+ *   - A reasoning model (kimi-k2.7, k3) spends tokens thinking before it emits
+ *     a character of content. Cut it off mid-thought and `content` comes back
+ *     empty — a reply that is not short, but absent.
+ *
+ * So the ceiling is back to the library default and tunable, and it is a
+ * backstop against a runaway reply rather than a budget to economise in. The
+ * time a draft costs is bounded by AI_DRAFT_TIMEOUT_MS, which is the honest
+ * lever; a truncated reply spends the time AND throws the draft away.
  */
-const DRAFT_MAX_TOKENS = 1500
+const DEFAULT_DRAFT_MAX_TOKENS = 4000
+
+export function draftMaxTokens(): number {
+  const configured = Number(process.env.AI_DRAFT_MAX_TOKENS)
+  return Number.isFinite(configured) && configured > 0
+    ? configured
+    : DEFAULT_DRAFT_MAX_TOKENS
+}
 
 /**
  * Did this call die on the clock rather than on an answer?
@@ -279,17 +299,81 @@ function normalize(
   }
 }
 
-function parseJson(text: string): any | null {
+/**
+ * Close a JSON object that stopped mid-sentence.
+ *
+ * A reply cut off at the token ceiling is not garbage — it is most of a bug
+ * report with its lid missing, and throwing it away costs the tester every
+ * field the model did finish. So walk it, shut whatever is still open, and let
+ * JSON.parse have the last word on whether the result is usable.
+ *
+ * Deliberately conservative: it only ever appends closers and drops a dangling
+ * key, never invents content.
+ */
+export function repairTruncatedJson(text: string): string | null {
+  const start = text.indexOf("{")
+  if (start < 0) return null
+
+  const closers: string[] = []
+  let inString = false
+  let escaped = false
+
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (ch === "\\") escaped = true
+      else if (ch === '"') inString = false
+      continue
+    }
+    if (ch === '"') inString = true
+    else if (ch === "{") closers.push("}")
+    else if (ch === "[") closers.push("]")
+    else if (ch === "}" || ch === "]") closers.pop()
+  }
+
+  let out = text.slice(start)
+  // Cut off inside a string value: end the string before closing anything.
+  if (inString) {
+    if (escaped) out = out.slice(0, -1) // a lone trailing backslash escapes our own quote
+    out += '"'
+  }
+  out = out.trimEnd()
+  // A key whose value never arrived ("severity":) takes the key with it.
+  out = out.replace(/,?\s*"(?:[^"\\]|\\.)*"\s*:\s*$/, "")
+  // A trailing comma is legal in the tester's head and nowhere else.
+  out = out.replace(/,\s*$/, "")
+
+  return out + closers.reverse().join("")
+}
+
+export interface ParsedDraft {
+  data: any | null
+  /** The reply was cut short and had to be closed to parse at all. */
+  repaired: boolean
+}
+
+function parseJson(text: string): ParsedDraft {
   let jsonText = text
   const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (codeBlock) jsonText = codeBlock[1].trim()
   const objMatch = jsonText.match(/\{[\s\S]*\}/)
   if (objMatch) jsonText = objMatch[0]
   try {
-    return JSON.parse(jsonText)
+    return { data: JSON.parse(jsonText), repaired: false }
   } catch {
-    return null
+    // Fall through to the salvage attempt.
   }
+
+  const repaired = repairTruncatedJson(text)
+  if (repaired) {
+    try {
+      return { data: JSON.parse(repaired), repaired: true }
+    } catch {
+      // Not truncation — genuinely not JSON.
+    }
+  }
+  return { data: null, repaired: false }
 }
 
 /** Arabic (and Persian/Urdu) script, so the fallback does not answer in English. */
@@ -369,7 +453,7 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
         // it. Without it a chatty model prefaces the object with a sentence and
         // the draft is thrown away for being unparsable.
         json: true,
-        maxTokens: DRAFT_MAX_TOKENS,
+        maxTokens: draftMaxTokens(),
         command: "generate-bug-report",
         projectId: input.projectId || undefined,
         // A tester is watching a spinner. The 120s default is a batch-job
@@ -387,15 +471,17 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
       const withImage = hasImage && attempt === 0
       try {
         const out = await ask(withImage)
-        const parsed = parseJson(out)
-        if (parsed) {
-          // A draft off the second, text-only ask is a real draft, but it was
-          // written without the picture the tester attached. Say so.
+        const { data, repaired } = parseJson(out)
+        if (data) {
+          // Both ways a real draft can still be less than the tester asked for.
+          // Either is worth saying out loud; neither is worth a template.
           const degraded =
             hasImage && !withImage
               ? "the screenshot timed out, so this was drafted from your note alone"
-              : undefined
-          return normalize(parsed, "provider", degraded)
+              : repaired
+                ? `${resolved.provider} ran out of room mid-reply, so the last fields may be short`
+                : undefined
+          return normalize(data, "provider", degraded)
         }
         reason = `${resolved.provider} (${resolved.model}) replied with something that was not JSON`
         console.warn(
@@ -434,8 +520,14 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   if (installed.length > 0) {
     try {
       const out = await callOllama(input, hasImage, installed)
-      const parsed = parseJson(out)
-      if (parsed) return normalize(parsed, "ollama")
+      const { data, repaired } = parseJson(out)
+      if (data) {
+        return normalize(
+          data,
+          "ollama",
+          repaired ? "the local model ran out of room mid-reply, so the last fields may be short" : undefined
+        )
+      }
     } catch (err) {
       console.warn("[generate-bug-report] Ollama unavailable, trying Hugging Face:", (err as any)?.message)
     }
@@ -449,8 +541,14 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   if (process.env.HUGGINGFACE_API_TOKEN) {
     try {
       const out = await callHuggingFace(input)
-      const parsed = parseJson(out)
-      if (parsed) return normalize(parsed, "huggingface")
+      const { data, repaired } = parseJson(out)
+      if (data) {
+        return normalize(
+          data,
+          "huggingface",
+          repaired ? "the model ran out of room mid-reply, so the last fields may be short" : undefined
+        )
+      }
     } catch (err) {
       console.warn("[generate-bug-report] Hugging Face unavailable, using rule-based draft:", (err as any)?.message)
     }
