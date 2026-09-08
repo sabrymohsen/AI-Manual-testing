@@ -48,6 +48,9 @@ storage/recordings/*
 # Generated per run by the Automation Hub: the Playwright workspace (specs,
 # config, traces, video). Runtime output, and traces run to tens of MB.
 storage/hub-workspace/
+# One directory per Story Agent run (screenshots, DOM snapshots, run artifacts).
+# Runtime output only.
+storage/story-agent-runs/
 # Runtime persistence marker — must never be committed or baked into an image,
 # or a wiped volume would still look persistent. See src/lib/storage-health.ts
 storage/.storage-marker.json
