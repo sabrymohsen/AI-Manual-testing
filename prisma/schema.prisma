@@ -419,6 +419,10 @@ model Project {
   // ── Generic cross-entity links ──
   entityLinks EntityLink[]
 
+  // ── Visual tests (whole-site, URL list, flow checkpoints) ──
+  visualTests    VisualTest[]
+  visualTestRuns VisualTestRun[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -447,6 +451,7 @@ model ProjectCredential {
   testCases          TestCase[]
   recordingSessions  RecordingSession[]
   manualTestSessions ManualTestSession[]
+  visualTests        VisualTest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -515,6 +520,7 @@ model TestCase {
   manualSessionCases ManualSessionCase[]
   requirements       TestCaseRequirement[]
   bugReports         BugReport[]
+  visualTest         VisualTest?
   scrumTaskLinks     TaskTestCase[]
 
   createdAt DateTime @default(now())
@@ -570,6 +576,7 @@ model TestSuite {
 
   testCases  TestCase[]
   bugReports BugReport[]
+  visualTests VisualTest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -656,6 +663,7 @@ model TestRun {
   bugReports    BugReport[]
   attachments   Attachment[]
   visualResults VisualComparisonResult[]
+  visualTestRuns VisualTestRun[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -901,6 +909,7 @@ model BugReport {
   recordedTestCase   RecordedTestCase?       @relation(fields: [recordedTestCaseId], references: [id], onDelete: SetNull)
   visualIssues       VisualDifferenceIssue[]
   occurrences        BugOccurrence[]
+  visualScreens      VisualScreen[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1027,6 +1036,9 @@ model RecordingSession {
   keepBrowserOpen           Boolean                @default(true)
   // "Studio" (Recorder Studio) or "LiveQA" (Live QA Session)
   kind                      String                 @default("Studio")
+  // Who started it. Sessions belong to one person: "resume my session" and the
+  // one-open-session limit are per user and per kind, not per project.
+  startedById               String?
   startedAt                 DateTime               @default(now())
   finishedAt                DateTime?
   createdAt                 DateTime               @default(now())
@@ -1039,6 +1051,7 @@ model RecordingSession {
   bugReports        BugReport[]
 
   @@index([projectId, status])
+  @@index([projectId, kind, startedById, status])
 }
 
 model SessionScreenshot {
@@ -3341,4 +3354,302 @@ model EntityLink {
   @@index([projectId])
   @@index([sourceId, sourceType])
   @@index([targetId, targetType])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Visual tests
+//
+//  Screenshot every page of a site (FullWebsite: from its sitemap; UrlList: from
+//  a list someone typed or uploaded) on each browser/screen size, compare each
+//  screenshot with the last APPROVED one for the same page + environment, and
+//  hand the differences to a person to accept or reject. Flow tests reuse the
+//  same machinery for "Visually check this screen" steps inside a test case.
+//
+//  A baseline only ever changes when a person accepts a screen (or a first run
+//  records a page nobody has seen before). That is the whole point: a
+//  comparison against "whatever the last run saw" would silently approve every
+//  regression one run after it shipped.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum VisualTestType {
+  FullWebsite
+  UrlList
+  Flow
+}
+
+enum VisualMatchLevel {
+  // Every pixel that a person would see as different.
+  Strict
+  // Strict, but text that is expected to change between runs (dates, numbers,
+  // prices, emails, links, form values) is masked before comparing.
+  Dynamic
+  // Compare lightness only — a colour/theme change is not a difference.
+  IgnoreColors
+}
+
+enum VisualCaptureType {
+  FullPage
+  Viewport
+}
+
+enum VisualRunStatus {
+  Queued
+  Running
+  Completed
+  Failed
+  Cancelled
+}
+
+enum VisualOutcome {
+  Passed
+  Unresolved
+  Failed
+}
+
+enum VisualScreenStatus {
+  // First time this page + environment was seen; the image became the baseline.
+  New
+  Passed
+  // Differs from the baseline and is waiting for a person.
+  Unresolved
+  Accepted
+  Rejected
+  // The page could not be captured (HTTP error, timeout, crash).
+  Error
+  // The page was in the last run but is no longer in the sitemap/list.
+  Removed
+}
+
+enum VisualScreenDiffState {
+  Added
+  Existing
+  Removed
+}
+
+model VisualTest {
+  id        String  @id @default(uuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  name       String
+  type       VisualTestType
+  // Site root for FullWebsite, first page for UrlList, start page for Flow.
+  startUrl   String
+  // Explicit sitemap; when null a FullWebsite test looks in robots.txt, then /sitemap.xml.
+  sitemapUrl String?
+  maxUrls    Int      @default(100)
+  // Path prefixes ("/blog/") left out now AND for pages the sitemap adds later.
+  excludedFolders String[] @default([])
+
+  // Flow tests belong to exactly one test case.
+  testCaseId String?   @unique
+  testCase   TestCase? @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  // The module (TestSuite) bugs filed from this test land in.
+  suiteId String?
+  suite   TestSuite? @relation(fields: [suiteId], references: [id], onDelete: SetNull)
+
+  // Sign in with this login before capturing pages.
+  credentialId String?
+  credential   ProjectCredential? @relation(fields: [credentialId], references: [id], onDelete: SetNull)
+
+  // [{ key, name, browser: "chromium"|"firefox"|"webkit", width, height, device? }]
+  environments        Json
+  matchLevel          VisualMatchLevel  @default(Strict)
+  captureType         VisualCaptureType @default(FullPage)
+  waitBeforeCaptureMs Int               @default(0)
+  // JavaScript run in the page just before each screenshot (close a banner, freeze a carousel).
+  beforeCaptureScript String?
+  // Accepting a change also accepts the identical change on other screens.
+  autoMaintenance     Boolean           @default(true)
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pages     VisualTestPage[]
+  runs      VisualTestRun[]
+  screens   VisualScreen[]
+  baselines VisualScreenBaseline[]
+  regions   VisualTestRegion[]
+
+  @@index([projectId])
+  @@index([suiteId])
+}
+
+model VisualTestPage {
+  id           String     @id @default(uuid())
+  visualTestId String
+  visualTest   VisualTest @relation(fields: [visualTestId], references: [id], onDelete: Cascade)
+
+  url    String
+  // Normalised URL: the identity a page keeps across runs.
+  urlKey String
+  // First path segment ("/blog/"), "/" for the root — what exclusions work on.
+  folder String
+  // sitemap | crawl | list | file | manual
+  source String   @default("manual")
+  excluded Boolean @default(false)
+  // Set when a FullWebsite run no longer finds the page in the sitemap.
+  removedAt DateTime?
+
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  screens VisualScreen[]
+
+  @@unique([visualTestId, urlKey])
+  @@index([visualTestId, excluded])
+}
+
+model VisualTestRun {
+  id           String     @id @default(uuid())
+  visualTestId String
+  visualTest   VisualTest @relation(fields: [visualTestId], references: [id], onDelete: Cascade)
+  projectId    String
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Flow checkpoints: the functional test run whose steps produced the screens.
+  testRunId String?
+  testRun   TestRun? @relation(fields: [testRunId], references: [id], onDelete: SetNull)
+
+  status  VisualRunStatus @default(Queued)
+  // Null until the run has screens to judge; recomputed on every accept/reject.
+  outcome VisualOutcome?
+
+  // Settings as they were when the run started, so editing the test later does
+  // not rewrite what an old run claims it checked.
+  environments Json
+  matchLevel   VisualMatchLevel
+  captureType  VisualCaptureType
+
+  totalScreens    Int @default(0)
+  doneScreens     Int @default(0)
+  passedCount     Int @default(0)
+  unresolvedCount Int @default(0)
+  failedCount     Int @default(0)
+  newCount        Int @default(0)
+  addedPages      Int @default(0)
+  removedPages    Int @default(0)
+
+  error         String?
+  triggeredById String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  screens VisualScreen[]
+
+  @@index([visualTestId, createdAt])
+  @@index([projectId, createdAt])
+  @@index([testRunId])
+}
+
+model VisualScreen {
+  id           String        @id @default(uuid())
+  runId        String
+  run          VisualTestRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  // Denormalised so "every unresolved screen of this test" is one indexed query.
+  visualTestId String
+  visualTest   VisualTest    @relation(fields: [visualTestId], references: [id], onDelete: Cascade)
+  pageId       String?
+  page         VisualTestPage? @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  // Page URL, or the checkpoint's name for a flow.
+  name      String
+  // urlKey for pages, "step:<testStepId>" for flow checkpoints.
+  screenKey String
+  url       String?
+  stepId    String?
+
+  envKey   String
+  envName  String
+  browser  String
+  viewport String
+
+  status    VisualScreenStatus
+  diffState VisualScreenDiffState @default(Existing)
+
+  httpStatus   Int?
+  errorMessage String?
+  loadMs       Int?
+
+  actualImagePath   String?
+  // The approved image this screen was compared with (null for New).
+  baselineImagePath String?
+  diffImagePath     String?
+  width             Int?
+  height            Int?
+  mismatchPercent   Float?
+  // [{ x, y, width, height, pixels, hashBase, hashActual }]
+  diffRegions       Json?
+  // Text boxes masked by the Dynamic match level: [{ x, y, width, height }]
+  dynamicRects      Json?
+
+  resolvedById     String?
+  resolvedAt       DateTime?
+  // True when auto-maintenance, not a person, accepted/rejected this screen.
+  resolvedByAuto   Boolean   @default(false)
+  // The screen a person resolved that caused this one to be resolved.
+  autoFromScreenId String?
+
+  bugReportId String?
+  bugReport   BugReport? @relation(fields: [bugReportId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([runId])
+  @@index([visualTestId, status])
+  @@index([visualTestId, screenKey, envKey])
+  @@index([autoFromScreenId])
+}
+
+model VisualScreenBaseline {
+  id           String     @id @default(uuid())
+  visualTestId String
+  visualTest   VisualTest @relation(fields: [visualTestId], references: [id], onDelete: Cascade)
+
+  screenKey    String
+  envKey       String
+  imagePath    String
+  width        Int
+  height       Int
+  dynamicRects Json?
+
+  // The screen whose image this is. Undo restores the previous pair.
+  sourceScreenId         String?
+  previousImagePath      String?
+  previousWidth          Int?
+  previousHeight         Int?
+  previousDynamicRects   Json?
+  previousSourceScreenId String?
+
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([visualTestId, screenKey, envKey])
+}
+
+// Areas left out of the comparison (a rotating banner, an ad, a clock).
+model VisualTestRegion {
+  id           String     @id @default(uuid())
+  visualTestId String
+  visualTest   VisualTest @relation(fields: [visualTestId], references: [id], onDelete: Cascade)
+
+  // null = every screen of the test / every environment.
+  screenKey String?
+  envKey    String?
+
+  x      Int
+  y      Int
+  width  Int
+  height Int
+  note   String?
+
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([visualTestId])
 }

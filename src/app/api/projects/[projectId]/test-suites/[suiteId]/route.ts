@@ -80,9 +80,11 @@ export async function GET(
   if (!existing) return notFoundResponse("Suite not found")
 
   const subtree = await subtreeIds(params.projectId, params.suiteId)
-  const [cases, bugs] = await Promise.all([
+  const [cases, bugs, visualTests] = await Promise.all([
     prisma.testCase.count({ where: { suiteId: { in: subtree } } }),
     prisma.bugReport.count({ where: { suiteId: { in: subtree } } }),
+    // Visual tests name a module for the bugs they file (VisualTest.suiteId, SET NULL).
+    prisma.visualTest.count({ where: { suiteId: { in: subtree } } }),
   ])
 
   return NextResponse.json({
@@ -92,6 +94,7 @@ export async function GET(
     suitesRemoved: subtree.length,
     casesUnfiled: cases,
     bugsUnfiled: bugs,
+    visualTestsUnfiled: visualTests,
   })
 }
 
@@ -152,9 +155,9 @@ export async function PATCH(
 /**
  * DELETE — removes the suite and its descendant suites (FK cascade).
  *
- * Neither test cases nor bugs are deleted: TestCase.suiteId and
- * BugReport.suiteId are both ON DELETE SET NULL, so everything in the removed
- * subtree falls back to "Unfiled". The response reports how many of each, so
+ * Neither test cases, bugs nor visual tests are deleted: TestCase.suiteId,
+ * BugReport.suiteId and VisualTest.suiteId are all ON DELETE SET NULL, so
+ * everything in the removed subtree falls back to "Unfiled". The response reports how many of each, so
  * the UI can say so plainly.
  */
 export async function DELETE(
@@ -174,9 +177,10 @@ export async function DELETE(
 
   // Counted BEFORE the delete: afterwards the rows point at nothing and there
   // is no way to say what was affected.
-  const [unfiledCases, unfiledBugs] = await Promise.all([
+  const [unfiledCases, unfiledBugs, unfiledVisualTests] = await Promise.all([
     prisma.testCase.count({ where: { suiteId: { in: subtree } } }),
     prisma.bugReport.count({ where: { suiteId: { in: subtree } } }),
+    prisma.visualTest.count({ where: { suiteId: { in: subtree } } }),
   ])
 
   await prisma.testSuite.delete({ where: { id: params.suiteId } })
@@ -186,5 +190,6 @@ export async function DELETE(
     suitesRemoved: subtree.length,
     casesUnfiled: unfiledCases,
     bugsUnfiled: unfiledBugs,
+    visualTestsUnfiled: unfiledVisualTests,
   })
 }

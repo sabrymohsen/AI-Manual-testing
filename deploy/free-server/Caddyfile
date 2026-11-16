@@ -1,0 +1,15 @@
+{$APP_HOST} {
+	encode gzip
+	request_body {
+		max_size 500MB
+	}
+	reverse_proxy web:3000
+}
+
+{$RT_HOST} {
+	reverse_proxy socket:3001
+}
+
+{$REC_HOST} {
+	reverse_proxy recorder:3847
+}

@@ -1,0 +1,116 @@
+# Full stack on one free VM (Oracle Cloud Always Free, or any Ubuntu box).
+# Public hosts come from .env (APP_HOST / RT_HOST / REC_HOST); Caddy gets free
+# HTTPS certificates for them automatically.
+name: qa-engine
+
+x-backend: &backend
+  build:
+    context: ../..
+    dockerfile: Dockerfile.worker
+  image: qa-engine-backend
+  restart: unless-stopped
+  env_file: .env
+  environment: &backend-env
+    DATABASE_URL: postgresql://qa:${POSTGRES_PASSWORD}@postgres:5432/qa
+    REDIS_URL: redis://redis:6379
+    STORAGE_ROOT: /data
+    SOCKET_INTERNAL_URL: http://socket:3001
+    RECORDER_WORKER_URL: https://${REC_HOST}
+    NEXTAUTH_URL: https://${APP_HOST}
+    APP_URL: https://${APP_HOST}
+    NEXT_PUBLIC_APP_URL: https://${APP_HOST}
+    PLAYWRIGHT_HEADLESS: "true"
+  volumes:
+    - storage:/data
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: qa
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa -d qa"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 20
+
+  web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+        NEXT_PUBLIC_SOCKET_URL: https://${RT_HOST}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *backend-env
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    volumes:
+      - storage:/data
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  worker:
+    <<: *backend
+    command: ["npm", "run", "workers"]
+    depends_on:
+      web: { condition: service_started }
+
+  recorder:
+    <<: *backend
+    command: ["npm", "run", "recorder-worker"]
+    environment:
+      <<: *backend-env
+      PORT: "3847"
+      RECORDER_WORKER_HOST: 0.0.0.0
+    depends_on:
+      web: { condition: service_started }
+
+  socket:
+    <<: *backend
+    command: ["npx", "tsx", "socket-server.ts"]
+    environment:
+      <<: *backend-env
+      SOCKET_PORT: "3001"
+    depends_on:
+      web: { condition: service_started }
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      APP_HOST: ${APP_HOST}
+      RT_HOST: ${RT_HOST}
+      REC_HOST: ${REC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    depends_on: [web, socket, recorder]
+
+volumes:
+  pgdata:
+  redisdata:
+  storage:
+  caddydata:

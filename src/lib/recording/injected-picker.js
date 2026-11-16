@@ -39,8 +39,9 @@ export const INJECTED_PICKER_SCRIPT = `(function() {
   }
 
   function generateCssSelector(element) {
-    var testId = element.getAttribute("data-testid") || element.getAttribute("data-test") || element.getAttribute("data-qa");
-    if (testId && !isDynamicValue(testId)) return '[data-testid="' + testId + '"]';
+    var tAttr = ["data-testid", "data-test", "data-qa"].find(function (n) { return element.getAttribute(n); });
+    var testId = tAttr ? element.getAttribute(tAttr) : null;
+    if (testId && !isDynamicValue(testId)) return '[' + tAttr + '="' + testId + '"]';
     var id = element.id;
     if (id && !isDynamicValue(id)) return '#' + id;
     var name = element.getAttribute("name");
@@ -51,8 +52,9 @@ export const INJECTED_PICKER_SCRIPT = `(function() {
     while (curr && curr.nodeType === Node.ELEMENT_NODE) {
       var tagName = curr.tagName.toLowerCase();
       if (tagName === "body" || tagName === "html") { path.unshift(tagName); break; }
-      var cTestId = curr.getAttribute("data-testid") || curr.getAttribute("data-test");
-      if (cTestId && !isDynamicValue(cTestId)) { path.unshift('[data-testid="' + cTestId + '"]'); break; }
+      var cAttr = curr.getAttribute("data-testid") ? "data-testid" : curr.getAttribute("data-test") ? "data-test" : null;
+      var cTestId = cAttr ? curr.getAttribute(cAttr) : null;
+      if (cTestId && !isDynamicValue(cTestId)) { path.unshift('[' + cAttr + '="' + cTestId + '"]'); break; }
       var cId = curr.id;
       if (cId && !isDynamicValue(cId)) { path.unshift('#' + cId); break; }
       var stableClasses = getStableClasses(curr);
@@ -151,8 +153,9 @@ export const INJECTED_PICKER_SCRIPT = `(function() {
       if (isPasswordInput && ["value", "placeholder", "aria-label", "title"].includes(attr.name)) attributes[attr.name] = "";
       else attributes[attr.name] = attr.value;
     }
-    var testId = element.getAttribute("data-testid") || element.getAttribute("data-test") || element.getAttribute("data-qa");
-    var testIdSelector = testId && !isDynamicValue(testId) ? '[data-testid="' + testId + '"]' : undefined;
+    var testIdAttr = ["data-testid", "data-test", "data-qa"].find(function (n) { return element.getAttribute(n); });
+    var testId = testIdAttr ? element.getAttribute(testIdAttr) : null;
+    var testIdSelector = testId && !isDynamicValue(testId) ? '[' + testIdAttr + '="' + testId + '"]' : undefined;
     var id = element.id;
     var idSelector = id && !isDynamicValue(id) ? '#' + id : undefined;
     var placeholder = isPasswordInput ? undefined : element.getAttribute("placeholder");
@@ -172,8 +175,13 @@ export const INJECTED_PICKER_SCRIPT = `(function() {
       else if (tagName === "a") derivedRole = "link";
       else if (tagName === "input" && attributes["type"] === "checkbox") derivedRole = "checkbox";
       else if (tagName === "input" && attributes["type"] === "radio") derivedRole = "radio";
+      else if (tagName === "input" && attributes["type"] === "search") derivedRole = "searchbox";
+      else if (tagName === "input" && attributes["type"] === "number") derivedRole = "spinbutton";
+      else if (tagName === "input" && attributes["type"] === "range") derivedRole = "slider";
+      else if (tagName === "input" && (attributes["type"] === "reset" || attributes["type"] === "image")) derivedRole = "button";
+      else if (tagName === "input" && ["hidden", "file", "color", "date", "datetime-local", "month", "time", "week", "password"].includes(attributes["type"])) derivedRole = null;
       else if (tagName === "input" || tagName === "textarea") derivedRole = "textbox";
-      else if (tagName === "select") derivedRole = "combobox";
+      else if (tagName === "select") derivedRole = element.multiple || Number(attributes["size"]) > 1 ? "listbox" : "combobox";
       else if (["h1","h2","h3","h4","h5","h6"].includes(tagName)) derivedRole = "heading";
     }
     if (derivedRole) {

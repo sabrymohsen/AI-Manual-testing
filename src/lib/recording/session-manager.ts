@@ -37,6 +37,10 @@ export interface ActiveSession {
   // QA) sessions start OFF so the tester can freely explore, then toggle step
   // recording on/off per scenario via setStepRecording().
   stepRecording: boolean
+  // True while Validate replays the steps in a second tab of this context. The
+  // recorder script runs there too, so without this the replay's own clicks
+  // and typing were saved as new steps — every Validate doubled the test.
+  replaying?: boolean
   activeFileChooser?: any
   onFileChooser?: (fileChooser: any) => void
 }
@@ -191,6 +195,34 @@ function maskSensitiveInput(fieldName: string | null, value: string | null): str
   return value
 }
 
+/**
+ * Backup locators for a recorded step, in the format the step executor's
+ * healing layer reads (`{ fallbackLocators: ["css=#id", "label=Email", …] }`).
+ * Without them one stale or mis-derived primary locator fails the whole
+ * replay even when the step also captured a working id or test id.
+ */
+export function buildLocatorCandidates(a: any): { fallbackLocators: string[] } | null {
+  const primary = a?.targetType && a?.targetValue ? `${a.targetType === "test_id" ? "testid" : a.targetType}=${a.targetValue}` : null
+  const out: string[] = []
+  const add = (s: string | null | undefined) => {
+    if (!s || s.length > 500 || s === primary || out.includes(s)) return
+    out.push(s)
+  }
+  if (a?.testIdSelector) add(`css=${a.testIdSelector}`)
+  if (a?.idSelector) add(`css=${String(a.idSelector).startsWith("#") ? a.idSelector : "#" + a.idSelector}`)
+  if (a?.roleSelector && typeof a.roleSelector === "string" && a.roleSelector.includes(":")) {
+    const i = a.roleSelector.indexOf(":")
+    const role = a.roleSelector.slice(0, i)
+    const name = a.roleSelector.slice(i + 1)
+    if (role && name && !name.includes('"')) add(`role=${role}, name: "${name}"`)
+  }
+  if (a?.labelSelector) add(`label=${a.labelSelector}`)
+  if (a?.placeholderSelector) add(`placeholder=${a.placeholderSelector}`)
+  if (a?.cssSelector) add(`css=${a.cssSelector}`)
+  if (a?.xpathSelector) add(`xpath=${a.xpathSelector}`)
+  return out.length ? { fallbackLocators: out } : null
+}
+
 export async function startSession(
   projectId: string,
   userId: string,
@@ -221,15 +253,20 @@ export async function startSession(
     }
   }
 
+  const kind = sessionMode === "Workstation" ? "LiveQA" : "Studio"
   const existingActive = await prisma.recordingSession.findFirst({
     where: {
       projectId,
+      kind,
+      startedById: userId,
       status: { in: ["Starting", "Active", "Paused", "Saving"] },
     },
   })
   if (existingActive) {
     throw new Error(
-      "This project already has an active recording session. Finish or cancel it before starting a new one."
+      kind === "LiveQA"
+        ? "You already have a Live QA session open in this project. End it before starting a new one."
+        : "You already have a Recorder Studio session open in this project. Finish or cancel it before starting a new one."
     )
   }
 
@@ -256,7 +293,8 @@ export async function startSession(
       currentUrl: options.startUrl,
       recordingMode: options.recordingMode || "Fast",
       connectionStatus: "Reconnecting",
-      kind: sessionMode === "Workstation" ? "LiveQA" : "Studio",
+      kind,
+      startedById: userId,
     },
   })
 
@@ -409,6 +447,11 @@ export async function startSession(
 
   // 6. Expose action listener callback
   await context.exposeFunction("qaRecordAction", async (actionData: any) => {
+    // The injected recorder sends its own candidates (primary + fallbacks +
+    // container context); build them server-side only when it didn't.
+    if (actionData && typeof actionData === "object" && !actionData.locatorCandidates?.fallbackLocators?.length) {
+      actionData.locatorCandidates = buildLocatorCandidates(actionData)
+    }
     console.log(`[BACKEND RECORDER CALLBACK] Received action: ${actionData.actionType} for session: ${sessionId}`)
     try {
       const activeSess = activeSessions.get(sessionId)
@@ -648,7 +691,7 @@ export async function startSession(
       // Step recording gate: when off (Live QA before the tester hits Start, or
       // after Stop), interactions still drive the live page but are NOT saved as
       // steps. The tester explores freely, then records only the scenario.
-      if (!activeSess.stepRecording) {
+      if (!activeSess.stepRecording || activeSess.replaying) {
         return {
           success: true,
           skipped: true,
@@ -725,6 +768,7 @@ export async function startSession(
               screenshotAfter: screenshotPath || lastStep.screenshotAfter,
               attributes: actionData.attributes || {},
               alternativeLocators: actionData.alternativeLocators || {},
+              locatorCandidates: actionData.locatorCandidates ?? undefined,
             }
           })
           return { success: true, consoleErrorsCount: activeSess.consoleErrors.length, networkErrorsCount: activeSess.networkErrors.length }
@@ -755,6 +799,7 @@ export async function startSession(
           reliabilityScore: actionData.reliabilityScore || 0,
           attributes: actionData.attributes || {},
           alternativeLocators: actionData.alternativeLocators || {},
+          locatorCandidates: actionData.locatorCandidates ?? undefined,
           screenshotAfter: screenshotPath,
           assertionType: actionData.assertionType || null,
           assertionValue: actionData.assertionValue || null,
@@ -1320,98 +1365,104 @@ export async function validateRecordedFlow(
   if (options.replay !== false) {
     try {
       const context = activeSess.page.context()
+      // The context already injects the recorder into every page; adding it
+      // again here ran it twice. Its events are ignored while replaying.
+      activeSess.replaying = true
       replayPage = await context.newPage()
-      await replayPage.addInitScript(INJECTED_RECORDER_SCRIPT)
     } catch (err) {
       console.warn("[validateRecordedFlow] Could not create replay page, falling back to locator-only validation", err)
     }
   }
 
-  for (const step of steps) {
-    let status = "Passed"
-    let message = "Step validated successfully"
-    let screenshotPath: string | null = null
-    let suggestedFix: string | null = null
+  try {
+    for (const step of steps) {
+      let status = "Passed"
+      let message = "Step validated successfully"
+      let screenshotPath: string | null = null
+      let suggestedFix: string | null = null
 
-    const isUrlAction = ["open_url", "wait_for_url", "assert_url"].includes(step.actionType)
-    const isCustomAction = step.actionType === "custom_instruction"
+      const isUrlAction = ["open_url", "wait_for_url", "assert_url"].includes(step.actionType)
+      const isCustomAction = step.actionType === "custom_instruction"
 
-    if (replayPage && !isCustomAction) {
-      try {
-        await executeStep(replayPage, {
-          actionType: step.actionType,
-          targetType: step.targetType,
-          targetValue: step.targetValue,
-          inputValue: step.inputValue,
-          timeoutMs: 10000,
-          locatorCandidates: step.locatorCandidates,
-        })
-        message = "Replay executed successfully"
-      } catch (err: any) {
-        status = "Failed"
-        message = err.message || "Replay execution failed"
-        suggestedFix = step.recommendedSelector
-          ? `Try validating locator "${step.recommendedSelector}" or add a data-testid`
-          : "Add a stronger locator such as data-testid or role+name"
+      if (replayPage && !isCustomAction) {
         try {
-          screenshotPath = await saveRecordingScreenshot(
-            sessionId,
-            activeSess.currentTestCaseId,
-            step.stepNumber,
-            await replayPage.screenshot({ type: "png" })
-          )
-        } catch {
-          // ignore screenshot errors
-        }
-      }
-    } else if (!isUrlAction && !isCustomAction) {
-      const selector = step.recommendedSelector || step.cssSelector
-      if (!selector) {
-        status = "Failed"
-        message = "No locator configured for this action"
-        suggestedFix = "Pick element again or add data-testid on the target element"
-      } else {
-        try {
-          const element = await activeSess.page.$(selector)
-          if (!element) {
-            status = "Failed"
-            message = `Element with locator '${selector}' not found on active page`
-            suggestedFix = "Re-record this step or validate locator with fallback healing"
-          }
+          await executeStep(replayPage, {
+            actionType: step.actionType,
+            targetType: step.targetType,
+            targetValue: step.targetValue,
+            inputValue: step.inputValue,
+            timeoutMs: 10000,
+            locatorCandidates: step.locatorCandidates,
+          })
+          message = "Replay executed successfully"
         } catch (err: any) {
           status = "Failed"
-          message = `Error resolving locator: ${err.message || err}`
+          message = err.message || "Replay execution failed"
+          suggestedFix = step.recommendedSelector
+            ? `Try validating locator "${step.recommendedSelector}" or add a data-testid`
+            : "Add a stronger locator such as data-testid or role+name"
+          try {
+            screenshotPath = await saveRecordingScreenshot(
+              sessionId,
+              activeSess.currentTestCaseId,
+              step.stepNumber,
+              await replayPage.screenshot({ type: "png" })
+            )
+          } catch {
+            // ignore screenshot errors
+          }
+        }
+      } else if (!isUrlAction && !isCustomAction) {
+        const selector = step.recommendedSelector || step.cssSelector
+        if (!selector) {
+          status = "Failed"
+          message = "No locator configured for this action"
+          suggestedFix = "Pick element again or add data-testid on the target element"
+        } else {
+          try {
+            const element = await activeSess.page.$(selector)
+            if (!element) {
+              status = "Failed"
+              message = `Element with locator '${selector}' not found on active page`
+              suggestedFix = "Re-record this step or validate locator with fallback healing"
+            }
+          } catch (err: any) {
+            status = "Failed"
+            message = `Error resolving locator: ${err.message || err}`
+          }
         }
       }
-    }
 
-    if (status === "Failed") {
-      overallSuccess = false
-    }
+      if (status === "Failed") {
+        overallSuccess = false
+      }
 
-    await prisma.recordedStep.update({
-      where: { id: step.id },
-      data: {
+      await prisma.recordedStep.update({
+        where: { id: step.id },
+        data: {
+          validationStatus: status,
+          validationMessage: message,
+        },
+      })
+
+      reportSteps.push({
+        stepId: step.id,
+        stepNumber: step.stepNumber,
         validationStatus: status,
         validationMessage: message,
-      },
-    })
+        screenshotPath,
+        suggestedFix,
+      })
+    }
 
-    reportSteps.push({
-      stepId: step.id,
-      stepNumber: step.stepNumber,
-      validationStatus: status,
-      validationMessage: message,
-      screenshotPath,
-      suggestedFix,
-    })
-  }
-
-  if (replayPage) {
-    try {
-      await replayPage.close()
-    } catch {
-      // ignore
+  } finally {
+    activeSess.replaying = false
+    if (replayPage) {
+      try {
+        await replayPage.close()
+      } catch {
+        // ignore
+      }
     }
   }
 

@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AssertionBuilder } from "./assertion-builder"
-import { Trash2, Plus, ChevronUp, ChevronDown, RefreshCw, CheckCircle, AlertTriangle } from "lucide-react"
+import { Trash2, Plus, ChevronUp, ChevronDown, RefreshCw, CheckCircle, AlertTriangle, MessageSquareText, SlidersHorizontal } from "lucide-react"
+import { PlainEnglishEditor, isPlainStep } from "@/components/plain-english/plain-english-editor"
 
 interface Step {
   actionDescription: string
@@ -16,6 +17,9 @@ interface Step {
   inputValue: string
   timeoutMs: number
   assertions: any[]
+  // Carried untouched so saving keeps recorder data and the plain-English flag.
+  actionMetadata?: any
+  [key: string]: any
 }
 
 interface StepBuilderProps {
@@ -43,6 +47,14 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
   const [locators, setLocators] = useState<Locator[]>([])
   const [validatingIdx, setValidatingIdx] = useState<number | null>(null)
   const [validationResults, setValidationResults] = useState<Record<number, { valid: boolean; message: string }>>({})
+  // Plain English for a new test case, or when every step already is; detailed otherwise.
+  const [mode, setMode] = useState<"plain" | "detailed">(() => (steps.length === 0 || steps.every(isPlainStep) ? "plain" : "detailed"))
+  const [modeTouched, setModeTouched] = useState(false)
+  // Steps usually arrive after the form has rendered (the edit page fetches them), so decide again once they do.
+  useEffect(() => {
+    if (!modeTouched && steps.length > 0) setMode(steps.every(isPlainStep) ? "plain" : "detailed")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps.length > 0])
 
   useEffect(() => {
     if (projectId) {
@@ -145,13 +157,57 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
     }
   }
 
+  const modeToggle = (
+    <div className="inline-flex rounded-lg border bg-muted/40 p-0.5 text-xs">
+      {([
+        ["plain", "Plain English", MessageSquareText],
+        ["detailed", "Detailed fields", SlidersHorizontal],
+      ] as const).map(([m, label, Icon]) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => {
+            setMode(m)
+            setModeTouched(true)
+          }}
+          className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium ${mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+        >
+          <Icon className="h-3.5 w-3.5" /> {label}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (mode === "plain") {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-lg font-semibold">Test Steps</h3>
+          {modeToggle}
+        </div>
+        <PlainEnglishEditor
+          steps={steps}
+          onChange={onChange}
+          projectId={projectId}
+          onEditDetailed={() => {
+            setMode("detailed")
+            setModeTouched(true)
+          }}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-lg font-semibold">Test Steps</h3>
-        <Button type="button" variant="outline" size="sm" onClick={addStep}>
-          <Plus className="h-4 w-4 mr-1" /> Add Step
-        </Button>
+        <div className="flex items-center gap-2">
+          {modeToggle}
+          <Button type="button" variant="outline" size="sm" onClick={addStep}>
+            <Plus className="h-4 w-4 mr-1" /> Add Step
+          </Button>
+        </div>
       </div>
 
       {steps.length === 0 && (
@@ -161,6 +217,11 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
       <div className="space-y-4">
         {steps.map((step, index) => (
           <div key={index} className="border rounded-lg p-4 space-y-3 bg-card/45">
+            {isPlainStep(step) && (
+              <p className="rounded-md bg-indigo-50 px-2 py-1 text-[11px] text-indigo-800">
+                Written in plain English — it runs from its description. Edit it in the Plain English view; the fields below are a summary.
+              </p>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Step {index + 1}</span>
               <div className="flex gap-1">

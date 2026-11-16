@@ -324,6 +324,7 @@ export default function DashboardLayout({
     { href: "/team-chat", label: "Team Chat", icon: MessageSquare },
     { href: "/live-qa-session", label: "Live QA Session", icon: FlaskConical },
     { href: "/recorder-studio", label: "Recorder Studio", icon: Video },
+    { href: "/visual-tests", label: "Visual Tests", icon: Camera },
     { href: "/bug-reports", label: "Bug Reports", icon: Bug },
   ]
 
@@ -338,6 +339,7 @@ export default function DashboardLayout({
     if (basePath === "/team-chat") return `/projects/${activeProjectId}/team-chat`
     if (basePath === "/live-qa-session") return `/projects/${activeProjectId}/live-qa-session`
     if (basePath === "/recorder-studio") return `/projects/${activeProjectId}/recorder-studio`
+    if (basePath === "/visual-tests") return `/projects/${activeProjectId}/visual-tests`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
     if (basePath === "/brds") return `/projects/${activeProjectId}/brds`
     if (basePath.startsWith("/board")) {

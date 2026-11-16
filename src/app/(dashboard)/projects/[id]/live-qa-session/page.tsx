@@ -137,6 +137,18 @@ export default function LiveQASessionPage() {
   const [showElementDrawer, setShowElementDrawer] = useState(false)
   const [showEndConfirm, setShowEndConfirm] = useState(false)
   const [showCompletionModal, setShowCompletionModal] = useState(false)
+  // Snapshot taken before the session state is cleared, so the summary shows
+  // what the session actually produced (it used to read the cleared state and
+  // always said 0 / 0 / 0).
+  const [completionSummary, setCompletionSummary] = useState<{
+    sessionId: string
+    steps: number
+    shots: number
+    videos: number
+    consoleErrors: number
+    networkErrors: number
+    testCases: { id: string; title: string }[]
+  } | null>(null)
   const [endingSession, setEndingSession] = useState(false)
   const [copiedCode, setCopiedCode] = useState(false)
 
@@ -737,9 +749,23 @@ export default function LiveQASessionPage() {
       } catch {}
     }
     const action = finish ? "finish" : "cancel"
+    const endedSessionId = sessionId
+    const snapshot = {
+      steps: recordedSteps.filter((s: any) => s.actionType !== "open_url").length,
+      shots: screenshots.length,
+      videos: recordings.length,
+      consoleErrors: consoleErrors.length,
+      networkErrors: networkErrors.length,
+    }
     try {
       const res = await fetch(`/api/recording/${sessionId}/${action}`, { method: "POST" })
       if (res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setCompletionSummary({
+          sessionId: endedSessionId,
+          ...snapshot,
+          testCases: Array.isArray(body.testCases) ? body.testCases : [],
+        })
         setSessionId(null)
         setSessionStatus("Inactive")
         setRecordedSteps([])
@@ -2192,34 +2218,61 @@ export default function LiveQASessionPage() {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-xl font-black text-foreground">Live QA Session Completed!</h2>
+              <h2 className="text-xl font-black text-foreground">Live QA session completed</h2>
               <p className="text-xs text-muted-foreground font-normal">
-                Your session has been saved and converted into a test case in your project library.
+                {completionSummary?.testCases.length
+                  ? `The recorded scenario was saved as ${completionSummary.testCases.length === 1 ? "a test case" : `${completionSummary.testCases.length} test cases`} in your library.`
+                  : "No scenario steps were recorded, so no test case was created. Your screenshots, videos and bugs are kept in the session report."}
               </p>
             </div>
 
             <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-muted/40 border text-xs">
               <div className="space-y-0.5">
-                <span className="font-black text-lg text-indigo-600">{recordedSteps.length}</span>
+                <span className="font-black text-lg text-indigo-600">{completionSummary?.steps ?? 0}</span>
                 <span className="block text-[10px] font-bold text-muted-foreground uppercase">Steps</span>
               </div>
               <div className="space-y-0.5">
-                <span className="font-black text-lg text-emerald-600">{screenshots.length}</span>
+                <span className="font-black text-lg text-emerald-600">{completionSummary?.shots ?? 0}</span>
                 <span className="block text-[10px] font-bold text-muted-foreground uppercase">Shots</span>
               </div>
               <div className="space-y-0.5">
-                <span className="font-black text-lg text-purple-600">{recordings.length}</span>
+                <span className="font-black text-lg text-purple-600">{completionSummary?.videos ?? 0}</span>
                 <span className="block text-[10px] font-bold text-muted-foreground uppercase">Videos</span>
               </div>
             </div>
+            {!!completionSummary && completionSummary.consoleErrors + completionSummary.networkErrors > 0 && (
+              <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
+                The app logged {completionSummary.consoleErrors} console error(s) and {completionSummary.networkErrors} failed request(s) during the session.
+              </p>
+            )}
 
             <div className="flex flex-col gap-2 pt-2">
-              <Button
-                onClick={() => router.push(`/projects/${projectId}/test-cases`)}
-                className="w-full h-10 font-extrabold text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl"
-              >
-                View in Test Case Library
-              </Button>
+              {completionSummary?.sessionId && (
+                <Button
+                  onClick={() => router.push(`/projects/${projectId}/live-qa-history?session=${completionSummary.sessionId}`)}
+                  className="w-full h-10 font-extrabold text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl"
+                >
+                  Open session report
+                </Button>
+              )}
+              {completionSummary?.testCases.length === 1 && (
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/projects/${projectId}/test-cases/${completionSummary.testCases[0].id}`)}
+                  className="w-full h-10 font-bold text-xs rounded-xl"
+                >
+                  Open the test case
+                </Button>
+              )}
+              {(completionSummary?.testCases.length ?? 0) > 1 && (
+                <Button
+                  variant="outline"
+                  onClick={() => router.push(`/projects/${projectId}/test-cases`)}
+                  className="w-full h-10 font-bold text-xs rounded-xl"
+                >
+                  View in Test Case Library
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => setShowCompletionModal(false)}

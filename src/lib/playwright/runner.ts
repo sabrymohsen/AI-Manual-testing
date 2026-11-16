@@ -9,6 +9,9 @@ import { handleLogin } from "./login-handler"
 import { notifyIntegrations } from "@/lib/integrations/notifier"
 import { recalcFromTestRun } from "@/lib/test-cases/rollup"
 import { isCancelSignalSet, publishTestRunEvent } from "@/lib/queue"
+import { setPlainEnglishContext, isPlainEnglishStep } from "@/lib/plain-english/interpreter"
+import { loadRunVariables } from "@/lib/plain-english/variables"
+import { finishFlowCheckpoints } from "@/lib/visual-tests/checkpoint"
 
 interface RunOptions {
   testRunId: string
@@ -135,8 +138,12 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
         keyVersion: testRun.credential.keyVersion,
       })
 
+      // A test that types the password itself (a recorded masked step, or a
+      // plain-English step using {password} / ***) signs in on its own.
       const hasRecordedLoginSteps = testRun.testCase.steps.some(
-        (s) => s.inputValue === "***MASKED***"
+        (s) =>
+          s.inputValue === "***MASKED***" ||
+          (isPlainEnglishStep(s) && /\{password\}|\*\*\*/.test(s.actionDescription || ""))
       )
 
       if (!hasRecordedLoginSteps) {
@@ -168,6 +175,24 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
 
     let hasFailed = false
     let isCancelled = false
+
+    // Plain-English steps share variables, tabs and dialog handling across the
+    // run. Only set up when the test has such steps, so other runs are untouched.
+    if (page && testRun.testCase.steps.some(s => isPlainEnglishStep(s))) {
+      const variables = await loadRunVariables({
+        projectId: testRun.projectId,
+        environment: testRun.project?.environment ?? null,
+        testCaseTestData: testRun.testCase.testData,
+        credential: testRun.credential && decryptedPassword ? { username: testRun.credential.username, password: decryptedPassword } : null,
+      }).catch(() => ({}))
+      setPlainEnglishContext(page, {
+        projectId: testRun.projectId,
+        testCaseId: testRun.testCase.id,
+        testRunId,
+        steps: testRun.testCase.steps,
+        variables,
+      })
+    }
 
     // Execute steps
     for (const step of testRun.testCase.steps) {
@@ -292,7 +317,7 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
             actualResult = healMsg
             console.log(`[runner.ts] ${healMsg}`)
           } else {
-            actualResult = "Step completed successfully"
+            actualResult = stepToExecute.actionMetadata?.plainEnglishNote || "Step completed successfully"
           }
 
           // Push healing attempts/resolution log if any
@@ -452,6 +477,9 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
 
     const totalDuration = Date.now() - startTime
 
+    // Close the visual run holding this run's "Visually check this screen" screenshots, if any.
+    await finishFlowCheckpoints(testRunId, isCancelled).catch(err => console.warn("[runner.ts] closing visual checkpoints failed:", err?.message))
+
     if (isCancelled) {
       await prisma.testRun.update({
         where: { id: testRunId },
@@ -505,6 +533,8 @@ export async function runTestCase({ testRunId, headless = true }: RunOptions) {
     if (decryptedPassword) {
       decryptedPassword = ""
     }
+    // A crashed run must not leave its checkpoint run stuck "Capturing" (no-op when already closed).
+    await finishFlowCheckpoints(testRunId).catch(() => {})
     if (context) await context.close()
     if (browser) await browser.close()
   }

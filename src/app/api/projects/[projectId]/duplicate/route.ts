@@ -101,7 +101,15 @@ export async function POST(
                 targetValue: step.targetValue,
                 inputValue: step.inputValue,
                 timeoutMs: step.timeoutMs,
-                assertions: step.assertions || undefined
+                assertions: step.assertions || undefined,
+                // Without these a cloned plain-English step would run as a
+                // no-op, and recorded steps would lose their fallback locators.
+                actionMetadata: step.actionMetadata ?? undefined,
+                locatorCandidates: step.locatorCandidates ?? undefined,
+                componentType: step.componentType,
+                groupId: step.groupId,
+                selectedOptionText: step.selectedOptionText,
+                selectedOptionValue: step.selectedOptionValue,
               }))
             }
           }

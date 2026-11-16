@@ -207,6 +207,19 @@ export const qaAgentQueue = new Queue(AGENT_RUN_QUEUE_NAME, {
   },
 })
 
+export const VISUAL_TEST_QUEUE_NAME = "visual-test-queue"
+
+// Whole-site / URL-list screenshot runs. One attempt: a retried run would
+// capture every page again and double the screens.
+export const visualTestQueue = new Queue(VISUAL_TEST_QUEUE_NAME, {
+  connection: conn,
+  defaultJobOptions: {
+    attempts: 1,
+    removeOnComplete: 100,
+    removeOnFail: 50,
+  },
+})
+
 // Every queue shares the connection-reporting policy above. BullMQ Queue
 // objects had no 'error' listener, so a missing Redis surfaced as an unhandled
 // error event per reconnect, per queue.
@@ -217,6 +230,7 @@ for (const q of [
   autonomousAgentQueue,
   agentBrainQueue,
   qaAgentQueue,
+  visualTestQueue,
   queueEvents,
 ]) {
   superviseConnection(q)
@@ -327,6 +341,31 @@ export async function addVisualCheckJob(runId: string): Promise<string> {
     jobId: runId,
   })
   return job.id!
+}
+
+export async function addVisualTestRunJob(runId: string): Promise<string> {
+  const job = await enqueue(() => visualTestQueue.add("execute-visual-test-run", { runId }, { jobId: runId }))
+  return job.id!
+}
+
+export async function setVisualTestCancelSignal(runId: string): Promise<void> {
+  await redisClient.set(`visual-test:cancel:${runId}`, "true", "EX", 6 * 3600)
+}
+
+export async function isVisualTestCancelSignalSet(runId: string): Promise<boolean> {
+  try {
+    return (await redisClient.get(`visual-test:cancel:${runId}`)) === "true"
+  } catch {
+    return false
+  }
+}
+
+export async function cancelVisualTestRunJob(runId: string): Promise<void> {
+  const job = await visualTestQueue.getJob(runId).catch(() => null)
+  // A job still waiting can simply be removed; a running one sees the signal
+  // between pages.
+  if (job && (await job.getState().catch(() => "")) !== "active") await job.remove().catch(() => {})
+  await setVisualTestCancelSignal(runId)
 }
 
 // 3. Real-Time Pub/Sub Events Helpers

@@ -234,9 +234,14 @@ export async function GET(
     })
     if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 })
 
+    // Only this person's own session of the requested kind (Live QA by
+    // default — this endpoint backs the Live QA page).
+    const kind = searchParams.get("kind") === "Studio" ? "Studio" : "LiveQA"
     const session = await prisma.recordingSession.findFirst({
       where: {
         projectId,
+        kind,
+        startedById: auth.session!.user.id,
         status: { in: ["Starting", "Active", "Paused", "Saving"] },
       },
       orderBy: { startedAt: "desc" },
@@ -735,16 +740,25 @@ export async function POST(
           data: { status: "Finished", finishedAt: new Date(), connectionStatus: "BrowserClosed" },
         })
 
-        // Auto-convert recorded session cases into permanent TestCase library records
+        // Convert drafts into library test cases — but only drafts with real
+        // steps. A draft holding just its opening "Open URL" step (every Live
+        // QA session where step recording was never switched on) would become
+        // a useless one-step test case.
         const recCases = await prisma.recordedTestCase.findMany({
-          where: { sessionId },
-          select: { id: true }
+          where: { sessionId, status: { not: "Discarded" } },
+          select: {
+            id: true,
+            _count: { select: { steps: { where: { includeInFinalTestCase: true, actionType: { not: "open_url" } } } } },
+          },
         })
+        const testCases: { id: string; title: string }[] = []
         for (const c of recCases) {
-          await saveRecordedCaseAsTestCase(c.id).catch(() => {})
+          if (c._count.steps === 0) continue
+          const tc = await saveRecordedCaseAsTestCase(c.id).catch(() => null)
+          if (tc) testCases.push({ id: tc.id, title: tc.title })
         }
 
-        return NextResponse.json({ success: true })
+        return NextResponse.json({ success: true, testCases })
       } catch (err) {
         return workerErrorResponse(err)
       }

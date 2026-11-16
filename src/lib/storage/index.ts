@@ -19,6 +19,7 @@ export type StorageDir =
   | "visual-checks/diff"
   | "visual-checks/crops"
   | "visual-checks/reports"
+  | "visual-tests"
 
 async function ensureDir(dir: string): Promise<void> {
   try {

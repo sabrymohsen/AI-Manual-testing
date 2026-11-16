@@ -27,9 +27,10 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
   }
 
   function generateCssSelector(element) {
-    const testId = element.getAttribute("data-testid") || element.getAttribute("data-test") || element.getAttribute("data-qa");
+    const tAttr = ["data-testid", "data-test", "data-qa"].find((n) => element.getAttribute(n));
+    const testId = tAttr ? element.getAttribute(tAttr) : null;
     if (testId && !isDynamicValue(testId)) {
-      return '[data-testid="' + testId + '"]';
+      return '[' + tAttr + '="' + testId + '"]';
     }
     const id = element.id;
     if (id && !isDynamicValue(id)) {
@@ -48,9 +49,10 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         path.unshift(tagName);
         break;
       }
-      const cTestId = curr.getAttribute("data-testid") || curr.getAttribute("data-test");
+      const cAttr = curr.getAttribute("data-testid") ? "data-testid" : curr.getAttribute("data-test") ? "data-test" : null;
+      const cTestId = cAttr ? curr.getAttribute(cAttr) : null;
       if (cTestId && !isDynamicValue(cTestId)) {
-        path.unshift('[data-testid="' + cTestId + '"]');
+        path.unshift('[' + cAttr + '="' + cTestId + '"]');
         break;
       }
       const cId = curr.id;
@@ -76,9 +78,10 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
   }
 
   function generateXPath(element) {
-    const testId = element.getAttribute("data-testid") || element.getAttribute("data-test");
+    const tAttr = ["data-testid", "data-test", "data-qa"].find((n) => element.getAttribute(n));
+    const testId = tAttr ? element.getAttribute(tAttr) : null;
     if (testId && !isDynamicValue(testId)) {
-      return "//*[@data-testid='" + testId + "']";
+      return "//*[@" + tAttr + "='" + testId + "']";
     }
     const id = element.id;
     if (id && !isDynamicValue(id)) {
@@ -287,8 +290,9 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
       }
     }
 
-    const testId = element.getAttribute("data-testid") || element.getAttribute("data-test") || element.getAttribute("data-qa");
-    const testIdSelector = testId && !isDynamicValue(testId) ? '[data-testid="' + testId + '"]' : undefined;
+    const testIdAttr = ["data-testid", "data-test", "data-qa"].find((n) => element.getAttribute(n));
+    const testId = testIdAttr ? element.getAttribute(testIdAttr) : null;
+    const testIdSelector = testId && !isDynamicValue(testId) ? '[' + testIdAttr + '="' + testId + '"]' : undefined;
 
     const id = element.id;
     const idSelector = id && !isDynamicValue(id) ? '#' + id : undefined;
@@ -325,10 +329,20 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
         derivedRole = "checkbox";
       } else if (tagName === "input" && attributes["type"] === "radio") {
         derivedRole = "radio";
+      } else if (tagName === "input" && attributes["type"] === "search") {
+        derivedRole = "searchbox";
+      } else if (tagName === "input" && attributes["type"] === "number") {
+        derivedRole = "spinbutton";
+      } else if (tagName === "input" && attributes["type"] === "range") {
+        derivedRole = "slider";
+      } else if (tagName === "input" && (attributes["type"] === "reset" || attributes["type"] === "image")) {
+        derivedRole = "button";
+      } else if (tagName === "input" && ["hidden", "file", "color", "date", "datetime-local", "month", "time", "week", "password"].includes(attributes["type"])) {
+        derivedRole = null; // no ARIA role Playwright's getByRole would match
       } else if (tagName === "input" || tagName === "textarea") {
         derivedRole = "textbox";
       } else if (tagName === "select") {
-        derivedRole = "combobox";
+        derivedRole = element.multiple || Number(attributes["size"]) > 1 ? "listbox" : "combobox";
       } else if (tagName === "h1" || tagName === "h2" || tagName === "h3" || tagName === "h4" || tagName === "h5" || tagName === "h6") {
         derivedRole = "heading";
       }
@@ -2530,9 +2544,21 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     }
   }
 
+  function storageUsable() {
+    // Opaque origins (about:blank, data:, sandboxed iframes) throw on any
+    // sessionStorage access. That isn't the tested app's error, and logging it
+    // put fake "JS errors" into every session's console log and bug report.
+    try {
+      return !!window.sessionStorage && (window.sessionStorage.getItem("__qa_probe"), true);
+    } catch (e) {
+      return false;
+    }
+  }
+
   function processQueue() {
     const ctx = getContextInfo();
     if (currentQueuePromise) return currentQueuePromise;
+    if (!storageUsable()) return Promise.resolve();
 
     const promise = (async () => {
       try {

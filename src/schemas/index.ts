@@ -55,6 +55,16 @@ export const createTestCaseSchema = z.object({
       inputValue: z.string().optional().nullable(),
       timeoutMs: z.number().int().positive().optional(),
       assertions: z.any().optional().nullable(),
+      // Carried through an edit so saving a test case does not wipe what the
+      // recorder captured (fallback locators, component info) or mark a
+      // plain-English step as a structured one. Zod strips unknown keys, so
+      // anything not listed here was silently dropped on every save.
+      actionMetadata: z.any().optional().nullable(),
+      locatorCandidates: z.any().optional().nullable(),
+      componentType: z.string().optional().nullable(),
+      groupId: z.string().optional().nullable(),
+      selectedOptionText: z.string().optional().nullable(),
+      selectedOptionValue: z.string().optional().nullable(),
     })
   ).optional(),
 })

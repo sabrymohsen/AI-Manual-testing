@@ -11,8 +11,12 @@ export async function GET(
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const session = await prisma.recordingSession.findFirst({
+    // Only this person's own Recorder Studio session — never a Live QA
+    // session, and never a teammate's.
     where: {
       projectId: params.projectId,
+      kind: "Studio",
+      startedById: auth.session!.user.id,
       status: { in: ["Starting", "Active", "Paused", "Saving"] },
     },
     orderBy: { startedAt: "desc" },

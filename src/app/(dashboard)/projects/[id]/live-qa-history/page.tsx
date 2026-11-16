@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { Button } from "@/components/ui/button"
 import {
@@ -79,6 +79,14 @@ export default function LiveQAHistoryPage() {
   const [detail, setDetail] = useState<SessionDetail | null>(null)
   const [detailLoading, setDetailLoading] = useState(false)
   const [lightbox, setLightbox] = useState<string | null>(null)
+  // ?session=<id> opens that session's report straight away (the link the
+  // Live QA page offers when a session is completed).
+  const searchParams = useSearchParams()
+  const linkedSession = searchParams?.get("session")
+  useEffect(() => {
+    if (linkedSession) openSession(linkedSession)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkedSession])
 
   useEffect(() => {
     setLoading(true)

@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation"
 import { useTestRunProgress } from "@/lib/hooks/use-test-run-progress"
 import { StepResultItem } from "@/components/test-runs/step-result"
+import { TestRunCheckpoints } from "@/components/visual-tests/test-run-checkpoints"
 
 export default function TestRunDetailPage() {
   const params = useParams()
@@ -41,6 +42,12 @@ export default function TestRunDetailPage() {
           {progress.status}
         </span>
       </div>
+
+      <TestRunCheckpoints
+        projectId={params.id as string}
+        testRunId={params.runId as string}
+        live={progress.status === "Running" || progress.status === "Queued"}
+      />
 
       <div className="space-y-3">
         {progress.stepResults.map((step) => (

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<title>QA Engine</title>
+<style>
+  :root { --bg:#ffffff; --fg:#0f172a; --muted:#64748b; --card:#f8fafc; --border:#e2e8f0; --accent:#4f46e5; --accent-fg:#fff; --err:#dc2626; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0b0f17; --fg:#e2e8f0; --muted:#94a3b8; --card:#111827; --border:#1f2937; --accent:#6366f1; --err:#f87171; } }
+  * { box-sizing: border-box; }
+  body { margin:0; height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--fg);
+         font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .card { width:min(640px, calc(100vw - 32px)); padding:28px; border:1px solid var(--border); border-radius:14px; background:var(--card); }
+  h1 { font-size:18px; margin:0 0 4px; display:flex; align-items:center; gap:10px; }
+  p { margin:0; color:var(--muted); }
+  .spin { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:s 0.8s linear infinite; }
+  @keyframes s { to { transform:rotate(360deg) } }
+  .failed .spin { display:none; }
+  .failed h1 { color:var(--err); }
+  pre { margin:16px 0 0; height:260px; overflow:auto; padding:12px; border-radius:8px; border:1px solid var(--border);
+        background:var(--bg); font:11px/1.5 ui-monospace, Menlo, monospace; white-space:pre-wrap; word-break:break-all; }
+  .actions { display:none; gap:8px; justify-content:flex-end; margin-top:16px; }
+  .failed .actions { display:flex; }
+  button { font:inherit; padding:8px 16px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-fg); }
+</style>
+</head>
+<body>
+  <div class="card" id="card">
+    <h1><span class="spin"></span><span id="title">Starting QA Engine on this computer…</span></h1>
+    <p id="sub">The first start takes a minute or two while the app compiles.</p>
+    <pre id="log"></pre>
+    <div class="actions">
+      <button id="folder">Choose project folder…</button>
+      <button id="server">Use another server…</button>
+      <button id="retry" class="primary">Try again</button>
+    </div>
+  </div>
+  <script src="starting.js"></script>
+</body>
+</html>

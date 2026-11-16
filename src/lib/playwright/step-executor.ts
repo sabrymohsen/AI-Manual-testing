@@ -1,8 +1,10 @@
 import { Page, Locator } from "playwright"
 import { prisma } from "@/lib/db"
+import { executePlainEnglishStep, isPlainEnglishStep } from "@/lib/plain-english/interpreter"
 
 interface Step {
   id?: string
+  actionDescription?: string
   executionMode?: string
   actionType: string
   targetType: string
@@ -991,6 +993,14 @@ async function waitForDomStable(page: Page, timeout: number): Promise<void> {
 }
 
 export async function executeStep(page: Page, step: Step): Promise<void> {
+  // A step written in plain English runs from its sentence, through the
+  // deterministic grammar — the structured fields are only a summary of it.
+  if (isPlainEnglishStep(step)) {
+    const result = await executePlainEnglishStep(page, step)
+    if (result.note) step.actionMetadata = { ...(step.actionMetadata || {}), plainEnglishNote: result.note }
+    return
+  }
+
   const { actionType, targetType, targetValue, inputValue, timeoutMs } = step
   const timeout = Math.max(timeoutMs || 0, 10000)
 

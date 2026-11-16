@@ -141,7 +141,11 @@ async function applyInput(
             await page.setViewportSize({ width: w, height: h })
             // Re-bound the screencast to the new viewport, otherwise a resize
             // leaves frames scaled for the previous one.
-            if (sessionId) await restreamAtViewport(sessionId, page)
+            if (sessionId) {
+              await restreamAtViewport(sessionId, page)
+              const s = sessionStreams.get(sessionId)
+              if (s) broadcastJson(s, { type: "viewport", width: w, height: h })
+            }
           }
         }
         break
@@ -482,6 +486,11 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
 
   ws.send(JSON.stringify({ type: "mode", mode: "streaming" }))
   ws.send(JSON.stringify({ type: "dsf", dsf: stream.dsf || 1 }))
+  // The remote viewport in CSS px. Frames are capped (CSS scale, or smaller
+  // under RECORDER_STREAM_MAX_EDGE), so clients map clicks by this size, never
+  // by the frame's pixel size.
+  const vp = activeSess.page.viewportSize()
+  if (vp) ws.send(JSON.stringify({ type: "viewport", width: vp.width, height: vp.height }))
   ws.send(JSON.stringify({ type: "url", url: activeSess.page.url() }))
 
   ws.on("message", async (data, isBinary) => {

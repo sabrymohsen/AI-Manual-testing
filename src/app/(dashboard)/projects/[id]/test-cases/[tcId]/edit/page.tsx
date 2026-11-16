@@ -40,6 +40,13 @@ export default function EditTestCasePage() {
             inputValue: s.inputValue || "",
             timeoutMs: s.timeoutMs,
             assertions: s.assertions || [],
+            // Round-trip what the form does not edit, so saving keeps it.
+            actionMetadata: s.actionMetadata ?? null,
+            locatorCandidates: s.locatorCandidates ?? null,
+            componentType: s.componentType ?? null,
+            groupId: s.groupId ?? null,
+            selectedOptionText: s.selectedOptionText ?? null,
+            selectedOptionValue: s.selectedOptionValue ?? null,
           }))
         )
       })

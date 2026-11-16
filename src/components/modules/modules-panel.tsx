@@ -72,6 +72,7 @@ interface DeleteImpact {
   suitesRemoved: number
   casesUnfiled: number
   bugsUnfiled: number
+  visualTestsUnfiled?: number
 }
 
 interface Props {
@@ -880,11 +881,12 @@ export function ModulesPanel({ projectId }: Props) {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 text-center">
+            <div className={`grid ${deleteTarget.visualTestsUnfiled ? "grid-cols-4" : "grid-cols-3"} gap-2 text-center`}>
               {[
                 { label: "Modules removed", value: deleteTarget.suitesRemoved },
                 { label: "Cases unfiled", value: deleteTarget.casesUnfiled },
                 { label: "Bugs unfiled", value: deleteTarget.bugsUnfiled },
+                ...(deleteTarget.visualTestsUnfiled ? [{ label: "Visual tests unfiled", value: deleteTarget.visualTestsUnfiled }] : []),
               ].map(c => (
                 <div key={c.label} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
                   <div className="text-[8px] uppercase tracking-wider font-extrabold text-muted-foreground/60">

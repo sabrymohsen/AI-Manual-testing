@@ -51,6 +51,11 @@ storage/hub-workspace/
 # One directory per Story Agent run (screenshots, DOM snapshots, run artifacts).
 # Runtime output only.
 storage/story-agent-runs/
+# Visual test screenshots, baselines and diffs. Runtime output only.
+storage/visual-tests/
+# Local agent tooling state
+.claude-flow/
+.swarm/
 # Runtime persistence marker — must never be committed or baked into an image,
 # or a wiped volume would still look persistent. See src/lib/storage-health.ts
 storage/.storage-marker.json

@@ -33,16 +33,17 @@ export function LiveBrowserView({
   const modeRef = useRef(mode)
   modeRef.current = mode
 
-  const streamDsfRef = useRef(1)
-  const frameDsfRef = useRef(1)
+  // Remote viewport in CSS px, from the worker. Clicks map to it: frames are
+  // sized for display (CSS scale, possibly capped smaller), so their pixel
+  // size says nothing about page coordinates.
+  const remoteViewportRef = useRef<{ width: number; height: number } | null>(null)
   const lastObjectUrlRef = useRef<string | null>(null)
   const frameBusyRef = useRef(false)
   const lastMoveSentRef = useRef(0)
   const lastPasteSentRef = useRef(0)
   const inputQueueRef = useRef<Promise<unknown>>(Promise.resolve())
 
-  function paint(src: string, dsf: number) {
-    frameDsfRef.current = dsf
+  function paint(src: string) {
     if (imgRef.current) imgRef.current.src = src
     if (!hasFrameRef.current) {
       hasFrameRef.current = true
@@ -54,7 +55,7 @@ export function LiveBrowserView({
     const url = URL.createObjectURL(blob)
     if (lastObjectUrlRef.current) URL.revokeObjectURL(lastObjectUrlRef.current)
     lastObjectUrlRef.current = url
-    paint(url, streamDsfRef.current)
+    paint(url)
   }
 
   async function fetchLiveFrame() {
@@ -64,7 +65,7 @@ export function LiveBrowserView({
       const res = await fetch(`/api/recording/${sessionId}/frame`)
       if (res.ok) {
         const data = await res.json()
-        if (data.frame) paint(data.frame, 1) // polling frames are CSS px
+        if (data.frame) paint(data.frame) // polling frames are CSS px
       }
     } catch {
       // transient — next poll retries
@@ -138,8 +139,8 @@ export function LiveBrowserView({
                   cancelled = true
                   setMode("polling")
                 }
-              } else if (msg.type === "dsf" && msg.dsf) {
-                streamDsfRef.current = Number(msg.dsf) || 1
+              } else if (msg.type === "viewport" && msg.width && msg.height) {
+                remoteViewportRef.current = { width: Number(msg.width), height: Number(msg.height) }
               }
             } catch {}
           } else {
@@ -209,10 +210,11 @@ export function LiveBrowserView({
     if (!img || !img.naturalWidth) return null
     const rect = img.getBoundingClientRect()
     if (rect.width === 0 || rect.height === 0) return null
-    const dsf = frameDsfRef.current || 1
+    // Older workers don't send the viewport; their frames are CSS px.
+    const vp = remoteViewportRef.current || { width: img.naturalWidth, height: img.naturalHeight }
     return {
-      x: Math.round(((e.clientX - rect.left) / rect.width) * (img.naturalWidth / dsf)),
-      y: Math.round(((e.clientY - rect.top) / rect.height) * (img.naturalHeight / dsf)),
+      x: Math.round(((e.clientX - rect.left) / rect.width) * vp.width),
+      y: Math.round(((e.clientY - rect.top) / rect.height) * vp.height),
     }
   }
 

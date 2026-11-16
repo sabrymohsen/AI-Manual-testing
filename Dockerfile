@@ -17,6 +17,10 @@ COPY . .
 # for build and runtime, or issued tokens won't verify.
 ARG NEXTAUTH_SECRET
 ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+# Inlined into the client bundle; the browser connects to the socket server here.
+# Unset = the code's localhost default (Railway builds don't pass it).
+ARG NEXT_PUBLIC_SOCKET_URL
+ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
 RUN npx prisma generate
 RUN npm run build
 
