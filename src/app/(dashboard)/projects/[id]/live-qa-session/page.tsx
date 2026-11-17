@@ -215,6 +215,22 @@ export default function LiveQASessionPage() {
   const lastMoveSentRef = useRef(0)
   const lastPasteSentRef = useRef(0)
   const frameDsfRef = useRef(1)
+  // Live view stream quality. "sharp" = Retina-resolution frames at high JPEG
+  // quality (best when the worker runs on this machine or a fast link);
+  // "fast" = the bandwidth-saving profile for slow connections. Remembered per
+  // viewer; null until the worker reports its default.
+  const [streamQuality, setStreamQuality] = useState<"sharp" | "balanced" | "fast" | null>(null)
+  const preferredQualityRef = useRef<string | null>(null)
+  useEffect(() => {
+    try { preferredQualityRef.current = localStorage.getItem("qa.liveQuality") } catch {}
+  }, [])
+  const changeStreamQuality = (q: "sharp" | "balanced" | "fast") => {
+    setStreamQuality(q)
+    try { localStorage.setItem("qa.liveQuality", q) } catch {}
+    preferredQualityRef.current = q
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "quality", profile: q }))
+  }
   // The remote viewport size this client last asked for (CSS px). Pointer
   // coordinates are scaled into it, so frame resolution never affects clicks.
   const remoteViewportRef = useRef<{ width: number; height: number } | null>(null)
@@ -391,6 +407,10 @@ export default function LiveQASessionPage() {
 
         ws.onopen = () => {
           if (isMounted) setStreamMode("streaming")
+          const pref = preferredQualityRef.current
+          if (pref === "sharp" || pref === "balanced" || pref === "fast") {
+            ws.send(JSON.stringify({ type: "quality", profile: pref }))
+          }
         }
 
         ws.onmessage = (event) => {
@@ -418,6 +438,8 @@ export default function LiveQASessionPage() {
               const msg = JSON.parse(event.data)
               if (msg.type === "url" && msg.url) {
                 setLiveUrl(msg.url)
+              } else if (msg.type === "quality" && msg.profile) {
+                setStreamQuality(msg.profile)
               } else if (msg.type === "file_chooser_requested") {
                 setShowFileChooserModal(true)
               }
@@ -1700,6 +1722,20 @@ export default function LiveQASessionPage() {
                       <ZoomIn size={12} />
                     </button>
                   </div>
+
+                  {/* Stream quality */}
+                  {streamMode === "streaming" && streamQuality && (
+                    <select
+                      value={streamQuality}
+                      onChange={(e) => changeStreamQuality(e.target.value as "sharp" | "balanced" | "fast")}
+                      title="Live view quality. Sharp: crisp text, needs a fast connection (best in the desktop app). Fast: lower quality for slow connections."
+                      className="h-6 shrink-0 rounded-md border border-slate-700 bg-slate-900 px-1.5 text-[10px] font-bold text-slate-200 focus:outline-none"
+                    >
+                      <option value="sharp">Sharp</option>
+                      <option value="balanced">Balanced</option>
+                      <option value="fast">Fast</option>
+                    </select>
+                  )}
 
                   {/* Stream Mode Indicator */}
                   <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">

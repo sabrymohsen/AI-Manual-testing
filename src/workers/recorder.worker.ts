@@ -231,16 +231,46 @@ const STREAM_MAX_EDGE = Math.min(
 )
 
 /**
- * Screencast bounds for a page: the viewport's CSS size, never above the
- * configured ceiling. CDP scales frames to fit these bounds and preserves the
+ * Stream quality profiles. "fast" is the WAN-tuned default described above;
+ * "sharp" sends device-resolution frames (2x on Retina) at high JPEG quality
+ * and full frame rate — right when the worker runs on the tester's own machine
+ * (desktop app) or on a fast link. The viewer can switch per session.
+ */
+type StreamProfileName = "sharp" | "balanced" | "fast"
+interface StreamProfile { quality: number; everyNthFrame: number; deviceScale: boolean; maxEdge: number }
+const STREAM_PROFILES: Record<StreamProfileName, StreamProfile> = {
+  sharp: { quality: 90, everyNthFrame: 1, deviceScale: true, maxEdge: 3840 },
+  balanced: { quality: 75, everyNthFrame: 1, deviceScale: false, maxEdge: 2400 },
+  fast: { quality: STREAM_QUALITY, everyNthFrame: STREAM_EVERY_NTH_FRAME, deviceScale: false, maxEdge: STREAM_MAX_EDGE },
+}
+function isProfileName(v: unknown): v is StreamProfileName {
+  return v === "sharp" || v === "balanced" || v === "fast"
+}
+const DEFAULT_STREAM_PROFILE: StreamProfileName = isProfileName(process.env.RECORDER_STREAM_PROFILE)
+  ? process.env.RECORDER_STREAM_PROFILE
+  : "fast"
+
+function streamParams(page: Page, stream: { profile: StreamProfileName; dsf: number } | undefined) {
+  const prof = STREAM_PROFILES[stream?.profile || DEFAULT_STREAM_PROFILE]
+  return {
+    format: "jpeg" as const,
+    quality: prof.quality,
+    everyNthFrame: prof.everyNthFrame,
+    ...screencastBounds(page, prof.deviceScale ? stream?.dsf || 1 : 1, prof.maxEdge),
+  }
+}
+
+/**
+ * Screencast bounds for a page: the viewport's CSS size (times the device
+ * scale for the sharp profile), never above the configured ceiling. CDP scales frames to fit these bounds and preserves the
  * aspect ratio, so the client's coordinate mapping (which scales by the
  * displayed rect) stays exact at any bound.
  */
-function screencastBounds(page: Page): { maxWidth: number; maxHeight: number } {
+function screencastBounds(page: Page, dsf = 1, maxEdge = STREAM_MAX_EDGE): { maxWidth: number; maxHeight: number } {
   const vp = page.viewportSize()
-  const w = vp?.width || STREAM_MAX_EDGE
-  const h = vp?.height || STREAM_MAX_EDGE
-  const scale = Math.min(1, STREAM_MAX_EDGE / Math.max(w, h))
+  const w = (vp?.width || maxEdge) * dsf
+  const h = (vp?.height || maxEdge) * dsf
+  const scale = Math.min(1, maxEdge / Math.max(w, h))
   return {
     maxWidth: Math.max(240, Math.round(w * scale)),
     maxHeight: Math.max(240, Math.round(h * scale)),
@@ -274,6 +304,7 @@ interface SessionStream {
   // Remote devicePixelRatio — frames arrive at CSS px × dsf; the client needs
   // it to map mouse coordinates back to CSS pixels.
   dsf: number
+  profile: StreamProfileName
 }
 
 const sessionStreams = new Map<string, SessionStream>()
@@ -308,7 +339,7 @@ function teardownStream(sessionId: string) {
 async function ensureGenericScreencast(sessionId: string, page: Page): Promise<void> {
   let stream = sessionStreams.get(sessionId)
   if (!stream) {
-    stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1 }
+    stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1, profile: DEFAULT_STREAM_PROFILE }
     sessionStreams.set(sessionId, stream)
   }
   if (stream.cdp || stream.timer || stream.starting) {
@@ -331,13 +362,14 @@ async function ensureGenericScreencast(sessionId: string, page: Page): Promise<v
       }
       isCapturing = true
       try {
+        const prof = STREAM_PROFILES[currentStream.profile || DEFAULT_STREAM_PROFILE]
         const buf = await page.screenshot({
           type: "jpeg",
-          quality: STREAM_QUALITY,
-          // CSS scale: a live frame only has to match what the view displays,
-          // and the client maps clicks by the displayed rect, not by frame
-          // pixels. Device scale quadrupled the pixels for no visible gain.
-          scale: "css"
+          quality: prof.quality,
+          // CSS scale keeps WAN frames small; the sharp profile sends device
+          // pixels so text stays crisp on Retina screens. Clicks map by the
+          // viewport size, so either works.
+          scale: prof.deviceScale ? "device" : "css",
         })
         for (const ws of currentStream.viewers) {
           if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
@@ -412,18 +444,10 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       }
     })
     await cdp.send("Page.enable")
-    await cdp.send("Page.startScreencast", {
-      format: "jpeg",
-      // CDP only honours `quality` for jpeg — it is ignored for png, which is
-      // why RECORDER_STREAM_QUALITY had no effect while this was png.
-      quality: STREAM_QUALITY,
-      // Bounded to the viewport's CSS size: the 2x capture is downscaled back to
-      // one pixel per displayed pixel instead of shipping 4x the pixels over the
-      // WAN. Re-issued on resize so the bounds track the viewport.
-      ...screencastBounds(page),
-      everyNthFrame: STREAM_EVERY_NTH_FRAME,
-    })
     stream.dsf = await page.evaluate(() => window.devicePixelRatio).catch(() => 1)
+    // JPEG (CDP ignores `quality` for png). Bounds, quality and frame rate come
+    // from the stream's profile and are re-issued on resize or profile change.
+    await cdp.send("Page.startScreencast", streamParams(page, stream))
     stream.cdp = cdp
     page.once("close", () => teardownStream(sessionId))
   })()
@@ -444,12 +468,7 @@ async function restreamAtViewport(sessionId: string, page: Page): Promise<void> 
   const stream = sessionStreams.get(sessionId)
   if (!stream?.cdp) return
   await stream.cdp
-    .send("Page.startScreencast", {
-      format: "jpeg",
-      quality: STREAM_QUALITY,
-      ...screencastBounds(page),
-      everyNthFrame: STREAM_EVERY_NTH_FRAME,
-    })
+    .send("Page.startScreencast", streamParams(page, stream))
     .catch(() => {
       // Session tearing down mid-resize — the next viewer restarts it.
     })
@@ -464,7 +483,7 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
 
   let stream = sessionStreams.get(sessionId)
   if (!stream) {
-    stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1 }
+    stream = { cdp: null, viewers: new Set(), starting: null, dsf: 1, profile: DEFAULT_STREAM_PROFILE }
     sessionStreams.set(sessionId, stream)
   }
   stream.viewers.add(ws)
@@ -486,6 +505,7 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
 
   ws.send(JSON.stringify({ type: "mode", mode: "streaming" }))
   ws.send(JSON.stringify({ type: "dsf", dsf: stream.dsf || 1 }))
+  ws.send(JSON.stringify({ type: "quality", profile: stream.profile }))
   // The remote viewport in CSS px. Frames are capped (CSS scale, or smaller
   // under RECORDER_STREAM_MAX_EDGE), so clients map clicks by this size, never
   // by the frame's pixel size.
@@ -498,6 +518,16 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
     try {
       const payload = JSON.parse(data.toString())
       const sess = activeSessions.get(sessionId)
+      if (payload?.type === "quality") {
+        // Viewer picked a stream quality (Sharp / Balanced / Fast).
+        const cur = sessionStreams.get(sessionId)
+        if (cur && sess && isProfileName(payload.profile) && cur.profile !== payload.profile) {
+          cur.profile = payload.profile
+          await restreamAtViewport(sessionId, sess.page)
+          broadcastJson(cur, { type: "quality", profile: cur.profile })
+        }
+        return
+      }
       if (sess) await applyInput(sess.page, payload, sessionId)
     } catch {
       // malformed message — ignore

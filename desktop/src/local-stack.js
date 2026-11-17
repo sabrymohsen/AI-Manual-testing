@@ -165,6 +165,9 @@ async function start(repo, onLog) {
     PATH,
     FORCE_COLOR: "0",
     SOCKET_PORT: String(SOCKET_PORT),
+    // Everything runs on this machine, so the live view has no bandwidth to
+    // save: stream Retina-resolution frames at high quality by default.
+    RECORDER_STREAM_PROFILE: process.env.RECORDER_STREAM_PROFILE || "sharp",
     SOCKET_INTERNAL_URL: `http://localhost:${SOCKET_PORT}`,
     NEXT_PUBLIC_SOCKET_URL: `http://localhost:${SOCKET_PORT}`,
     // Electron sets these for itself; don't leak them into node children.
