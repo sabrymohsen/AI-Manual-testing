@@ -15,7 +15,7 @@ export default function RedirectToTelemetryDetail() {
 
   return (
     <div className="flex items-center justify-center min-h-[400px]">
-      <p className="text-slate-500 font-semibold text-sm animate-pulse">Redirecting to Telemetry Dashboard...</p>
+      <p className="text-muted-foreground font-semibold text-sm animate-pulse">Redirecting to Telemetry Dashboard...</p>
     </div>
   )
 }

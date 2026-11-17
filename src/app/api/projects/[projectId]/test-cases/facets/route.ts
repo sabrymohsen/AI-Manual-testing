@@ -13,7 +13,8 @@ import { handleLibraryError } from "@/lib/test-cases/errors"
  * Returns:
  *   total, byStatus, byPriority, byExecutionType,
  *   orphans  — cases covering no user story
- *   broken   — never executed, or failed with no bug filed
+ *   broken   — failed on its last run with no open bug tracking it
+ *              (never-run cases already have their own "not run" count)
  *   bySuite  — [{ suiteId, count }], suiteId null = unfiled
  */
 export async function GET(_request: Request, { params }: { params: { projectId: string } }) {
@@ -36,7 +37,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
     prisma.testCase.count({
       where: {
         ...where,
-        OR: [{ lastStatus: "NotExecuted" }, { AND: [{ lastStatus: "Failed" }, { openBugCount: 0 }] }],
+        lastStatus: "Failed", openBugCount: 0,
       },
     }),
   ])

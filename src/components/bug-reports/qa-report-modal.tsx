@@ -473,12 +473,12 @@ export default function QaReportModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-card w-full max-w-6xl max-h-[90vh] rounded-2xl shadow-xl flex flex-col overflow-hidden">
+      <div className="bg-card w-full max-w-6xl max-h-[90vh] rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div className="space-y-0.5">
-            <h2 className="text-base font-extrabold text-slate-800 flex items-center gap-2">
-              <FileBarChart className="h-4 w-4 text-indigo-600" /> QA Testing Report
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+              <FileBarChart className="h-4 w-4 text-primary" /> QA Testing Report
             </h2>
             <p className="text-[11px] text-muted-foreground font-medium">
               Pre-filled from this project. Review, adjust, then download a standalone HTML report
@@ -491,7 +491,7 @@ export default function QaReportModal({
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 px-6 pt-3 border-b bg-slate-50/50">
+        <div className="flex items-center gap-1 px-6 pt-3 border-b bg-muted/50">
           {([
             ["details", "Report details"],
             ["modules", `Modules (${data?.services.length || 0})`],
@@ -502,8 +502,8 @@ export default function QaReportModal({
               onClick={() => setTab(key as typeof tab)}
               className={`px-3 py-2 text-[11px] font-bold rounded-t-lg transition-colors ${
                 tab === key
-                  ? "bg-card text-slate-800 border border-b-0"
-                  : "text-muted-foreground hover:text-slate-700"
+                  ? "bg-card text-foreground border border-b-0"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {label}
@@ -542,7 +542,7 @@ export default function QaReportModal({
                       ["fileName", "Download file name"]
                     ] as const).map(([key, label]) => (
                       <div key={key} className="space-y-1">
-                        <label className="text-[10px] uppercase font-extrabold tracking-wider text-muted-foreground/70">
+                        <label className="text-[11px] font-medium text-muted-foreground/70">
                           {label}
                         </label>
                         <Input
@@ -564,12 +564,12 @@ export default function QaReportModal({
                     ].map(c => (
                       <div
                         key={c.label}
-                        className="p-3 rounded-xl border border-slate-100 bg-slate-50/60 text-center space-y-1"
+                        className="p-3 rounded-xl border border-border bg-muted/60 text-center space-y-1"
                       >
-                        <div className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60">
+                        <div className="text-[11px] font-medium text-muted-foreground/60">
                           {c.label}
                         </div>
-                        <div className="text-lg font-extrabold text-slate-800">{c.value}</div>
+                        <div className="text-lg font-semibold text-foreground">{c.value}</div>
                       </div>
                     ))}
                   </div>
@@ -580,10 +580,10 @@ export default function QaReportModal({
                 <div className="space-y-3">
                   <div className="overflow-x-auto border rounded-xl">
                     <table className="w-full text-[11px]">
-                      <thead className="bg-slate-50">
+                      <thead className="bg-muted/50">
                         <tr className="text-left">
                           {["Module / Service", "Total", "Passed", "Failed", "Blocked", "Status", "Remarks", ""].map(h => (
-                            <th key={h} className="px-2 py-2 font-extrabold uppercase tracking-wide text-[9px] text-muted-foreground/70 whitespace-nowrap">
+                            <th key={h} className="px-2 py-2 font-medium text-[11px] text-muted-foreground/70 whitespace-nowrap">
                               {h}
                             </th>
                           ))}
@@ -611,7 +611,7 @@ export default function QaReportModal({
                                   className="h-8 text-[11px]"
                                 />
                                 {savingModule === i ? (
-                                  <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
+                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
                                 ) : savedModules[i] ? (
                                   <span
                                     title="Saved to the project — this module appears on the Bug Reports page and defects can be filed against it"
@@ -684,7 +684,7 @@ export default function QaReportModal({
                     variant="outline"
                     size="sm"
                     onClick={() => setData(d => (d ? { ...d, services: [...d.services, { ...emptyService }] } : d))}
-                    className="h-8 text-[11px] font-bold"
+                    className="h-8 text-[11px] font-semibold"
                   >
                     <Plus className="h-3.5 w-3.5 mr-1.5" /> Add module
                   </Button>
@@ -707,10 +707,10 @@ export default function QaReportModal({
                 <div className="space-y-3">
                   <div className="overflow-x-auto border rounded-xl">
                     <table className="w-full text-[11px]">
-                      <thead className="bg-slate-50">
+                      <thead className="bg-muted/50">
                         <tr className="text-left">
                           {["ID", "Title", "Module", "Severity", "Priority", "Status", "Test case", "Assignee", ""].map(h => (
-                            <th key={h} className="px-2 py-2 font-extrabold uppercase tracking-wide text-[9px] text-muted-foreground/70 whitespace-nowrap">
+                            <th key={h} className="px-2 py-2 font-medium text-[11px] text-muted-foreground/70 whitespace-nowrap">
                               {h}
                             </th>
                           ))}
@@ -747,7 +747,7 @@ export default function QaReportModal({
                                   className="h-8 text-[11px]"
                                 />
                                 {savingDefect === b.id ? (
-                                  <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
+                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
                                 ) : b.id && savedDefects.includes(b.id) ? (
                                   <span
                                     title="Saved to the bug — the Bug Reports page behind this dialog shows the new values"
@@ -857,7 +857,7 @@ export default function QaReportModal({
                         variant="outline"
                         onClick={retryPending}
                         disabled={retrying}
-                        className="h-7 text-[10px] font-bold shrink-0"
+                        className="h-7 text-[10px] font-semibold shrink-0"
                       >
                         {retrying ? "Saving…" : "Save all"}
                       </Button>
@@ -870,19 +870,19 @@ export default function QaReportModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 px-6 py-4 border-t bg-slate-50/60">
+        <div className="flex items-center justify-between gap-3 px-6 py-4 border-t bg-muted/60">
           <span className="text-[10px] text-muted-foreground font-semibold">
             Defects are grouped by module in the report. The downloaded file keeps its own Edit, Download and Print buttons.
           </span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-[11px] font-bold">
+            <Button variant="outline" size="sm" onClick={onClose} className="h-8 text-[11px] font-semibold">
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={handleDownload}
               disabled={loading || !!error || !data}
-              className="h-8 text-[11px] font-bold"
+              className="h-8 text-[11px] font-semibold"
             >
               <Download className="h-3.5 w-3.5 mr-1.5" /> Download report
             </Button>

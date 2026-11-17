@@ -5,22 +5,30 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
 <title>Custom server</title>
 <style>
-  :root { --bg:#ffffff; --fg:#0f172a; --muted:#64748b; --border:#cbd5e1; --accent:#4f46e5; --danger:#dc2626; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0b0f17; --fg:#e2e8f0; --muted:#94a3b8; --border:#334155; --accent:#6366f1; --danger:#f87171; } }
+  :root { --bg:#fbfbfc; --fg:#1b1b1f; --muted:#6b6b76; --card:#ffffff; --border:#e6e6ea; --accent:#5e6ad2; --accent-fg:#fff; --err:#dc2626; --danger:#dc2626; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e0f11; --fg:#ececef; --muted:#9a9aa5; --card:#16171a; --border:#26272b; --accent:#7c86e3; --accent-fg:#fff; --err:#f87171; --danger:#f87171; } }
   * { box-sizing:border-box; }
-  body { margin:0; padding:24px; background:var(--bg); color:var(--fg); font:14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  h1 { font-size:16px; margin:0 0 4px; }
+  body { margin:0; padding:24px; background:var(--bg); color:var(--fg); font: 13px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:15px; font-weight:600; margin:0 0 4px; }
   p { margin:0 0 16px; color:var(--muted); }
-  label { display:block; font-weight:600; margin-bottom:6px; }
-  input { width:100%; font:inherit; padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--fg); }
+  label { display:block; font-weight:500; margin-bottom:6px; }
+  input { width:100%; font:inherit; height:32px; padding:0 10px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--fg); }
   input:focus { outline:2px solid var(--accent); outline-offset:1px; }
   .error { color:var(--danger); min-height:20px; font-size:12px; margin-top:6px; }
   .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-  button { font:inherit; padding:7px 14px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--fg); cursor:pointer; }
+  button { font:inherit; font-weight:500; height:32px; padding:0 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--fg); cursor:pointer; }
   button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+  .brand { display:flex; align-items:center; gap:8px; font-weight:600; font-size:13px; margin-bottom:20px; color:var(--fg); }
+  .mark { width:22px; height:22px; border-radius:6px; background:var(--accent); display:grid; place-items:center; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+  .mark svg { width:13px; height:13px; fill:#fff; }
+  button { transition: background .12s, border-color .12s; }
+  button:hover { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+  button.primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
 </style>
 </head>
 <body>
+  <div class="brand"><span class="mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>QA Engine</div>
   <h1>Connect to a custom server</h1>
   <p>Use this for a self-hosted QA Engine, or <code>http://localhost:3000</code> while developing.</p>
   <form id="form">

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 
 const bodySchema = z.object({
@@ -24,7 +24,7 @@ export async function POST(
       return notFoundResponse("Requirement not found")
     }
 
-    if (requirement.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(requirement.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

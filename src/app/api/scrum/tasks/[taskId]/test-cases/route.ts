@@ -5,7 +5,7 @@ import { requireTaskOwner, logActivity } from "@/lib/scrum/server"
 
 const schema = z.object({ testCaseIds: z.array(z.string()) })
 
-const linkSelect = { testCase: { select: { id: true, title: true, priority: true, executionType: true } } } as const
+const linkSelect = { testCase: { select: { id: true, title: true, priority: true, executionType: true, lastStatus: true, lastRunAt: true } } } as const
 
 // GET linked test cases for a task
 export async function GET(_req: Request, { params }: { params: { taskId: string } }) {

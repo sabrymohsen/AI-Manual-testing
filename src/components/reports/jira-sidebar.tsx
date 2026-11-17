@@ -109,10 +109,10 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
   }
 
   return (
-    <aside className="w-60 shrink-0 border-r border-slate-200 bg-white">
-      <div className="px-4 py-3 border-b border-slate-100">
-        <h2 className="text-sm font-bold text-slate-800">{title}</h2>
-        <p className="text-[10px] text-slate-400 mt-0.5">Analytics & insights</p>
+    <aside className="w-60 shrink-0 border-r border-border bg-card">
+      <div className="px-4 py-3 border-b border-border">
+        <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Analytics & insights</p>
       </div>
       <nav className="py-2">
         {items.map((item) => {
@@ -131,19 +131,19 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
                   "flex w-full items-center gap-2.5 px-4 py-2 text-xs font-semibold transition-colors",
                   isActive
                     ? "bg-blue-50 text-blue-700 border-l-3 border-blue-600"
-                    : "text-slate-600 hover:bg-slate-50"
+                    : "text-muted-foreground hover:bg-muted/50"
                 )}
                 style={isActive ? { borderLeftWidth: "3px", borderLeftColor: "#2563eb", marginLeft: "0" } : { marginLeft: "3px" }}
               >
-                <span className={cn("text-slate-400", isActive && "text-blue-600")}>{item.icon}</span>
+                <span className={cn("text-muted-foreground", isActive && "text-blue-600")}>{item.icon}</span>
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge != null && (
-                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
                     {item.badge}
                   </span>
                 )}
                 {hasChildren && (
-                  isExpanded ? <ChevronDown className="h-3 w-3 text-slate-400" /> : <ChevronRight className="h-3 w-3 text-slate-400" />
+                  isExpanded ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />
                 )}
               </button>
               {hasChildren && isExpanded && (
@@ -156,12 +156,12 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
                         "flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors",
                         activeId === child.id
                           ? "bg-blue-50 text-blue-700"
-                          : "text-slate-500 hover:bg-slate-50"
+                          : "text-muted-foreground hover:bg-muted/50"
                       )}
                     >
                       <span>{child.label}</span>
                       {child.badge != null && (
-                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
                           {child.badge}
                         </span>
                       )}

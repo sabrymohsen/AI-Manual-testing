@@ -322,7 +322,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/test-cases`)}
-          className="flex-1 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold shadow-md shadow-indigo-600/10"
+          className="flex-1 text-[11px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-md shadow-indigo-600/10"
         >
           Create Test Case
         </Button>
@@ -333,7 +333,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/manual-sessions/new`)}
-          className="flex-1 text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold shadow-md shadow-indigo-600/10"
+          className="flex-1 text-[11px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-md shadow-indigo-600/10"
         >
           Start Testing
         </Button>
@@ -344,7 +344,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/test-cases`)} // Redirect to cases list to filter failures
-          className="flex-1 text-[11px] bg-rose-600 hover:bg-rose-700 text-white font-extrabold"
+          className="flex-1 text-[11px] bg-rose-600 hover:bg-rose-700 text-white font-semibold"
         >
           Review Failures
         </Button>
@@ -355,7 +355,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/bug-reports`)}
-          className="flex-1 text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-extrabold"
+          className="flex-1 text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-semibold"
         >
           Review Open Bugs
         </Button>
@@ -376,19 +376,19 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* 1. Header Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-50 flex items-center gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-50 flex items-center gap-2">
             <Folder className="h-6 w-6 text-indigo-650" /> Projects Hub
           </h1>
-          <p className="text-xs text-slate-400 mt-1">Manage QA configurations, testing runs, defect reports, and system requirement details.</p>
+          <p className="text-xs text-muted-foreground mt-1">Manage QA configurations, testing runs, defect reports, and system requirement details.</p>
         </div>
 
         <div className="flex items-center gap-2.5">
           {canCreateProject && (
             <Button
               onClick={() => router.push("/projects/new")}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
+              className="bg-primary hover:bg-primary/90 text-white font-semibold text-xs"
             >
               <Plus className="h-4 w-4 mr-1" /> New Project
             </Button>
@@ -398,7 +398,7 @@ export default function ProjectsPage() {
           <Button
             variant="outline"
             onClick={() => router.push("/dashboard")}
-            className="border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-700 hover:bg-slate-50"
+            className="border-border dark:border-slate-800 font-semibold text-xs text-foreground hover:bg-muted/50"
           >
             Open Dashboard
           </Button>
@@ -408,43 +408,43 @@ export default function ProjectsPage() {
       {/* 2. Unified Summary Metric Cards Row */}
       {summary && (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Projects</span>
-            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">{summary.totalProjects}</h2>
+          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
+            <span className="text-[11px] font-medium text-muted-foreground">Total Projects</span>
+            <h2 className="text-xl font-semibold text-foreground dark:text-slate-100">{summary.totalProjects}</h2>
           </div>
-          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Workspace</span>
-            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 text-indigo-650">{summary.activeProjects}</h2>
+          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
+            <span className="text-[11px] font-medium text-muted-foreground">Active Workspace</span>
+            <h2 className="text-xl font-semibold text-foreground dark:text-slate-100 text-indigo-650">{summary.activeProjects}</h2>
           </div>
           <div
             onClick={() => setHasFailedTests(true)}
-            className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm hover:border-rose-200 hover:shadow-md transition-all cursor-pointer group"
+            className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm hover:border-rose-200 hover:shadow-md transition-all cursor-pointer group"
           >
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-rose-500">Failed Runs</span>
-            <h2 className="text-xl font-black text-rose-500">{summary.projectsWithFailures}</h2>
+            <span className="text-[11px] font-medium text-muted-foreground group-hover:text-rose-500">Failed Runs</span>
+            <h2 className="text-xl font-semibold text-rose-500">{summary.projectsWithFailures}</h2>
           </div>
           <div
             onClick={() => setHasOpenBugs(true)}
-            className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm hover:border-amber-200 hover:shadow-md transition-all cursor-pointer group"
+            className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm hover:border-amber-200 hover:shadow-md transition-all cursor-pointer group"
           >
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider group-hover:text-amber-500">Open Bugs</span>
-            <h2 className="text-xl font-black text-amber-500">{summary.projectsWithOpenBugs}</h2>
+            <span className="text-[11px] font-medium text-muted-foreground group-hover:text-amber-500">Open Bugs</span>
+            <h2 className="text-xl font-semibold text-amber-500">{summary.projectsWithOpenBugs}</h2>
           </div>
-          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg Pass Rate</span>
-            <h2 className="text-xl font-black text-emerald-500">{summary.averagePassRate}%</h2>
+          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
+            <span className="text-[11px] font-medium text-muted-foreground">Avg Pass Rate</span>
+            <h2 className="text-xl font-semibold text-emerald-500">{summary.averagePassRate}%</h2>
           </div>
-          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Avg Coverage</span>
-            <h2 className="text-xl font-black text-indigo-650">{summary.averageCoverage}%</h2>
+          <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
+            <span className="text-[11px] font-medium text-muted-foreground">Avg Coverage</span>
+            <h2 className="text-xl font-semibold text-indigo-650">{summary.averageCoverage}%</h2>
           </div>
         </div>
       )}
 
       {/* 3. Filters and Layout Selector */}
-      <div className="flex flex-col gap-4 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-4 shadow-inner">
+      <div className="flex flex-col gap-4 bg-slate-50 dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4 shadow-inner">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b dark:border-slate-800 pb-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-650 dark:text-slate-300">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-650 dark:text-slate-300">
             <SlidersHorizontal className="h-4 w-4 text-indigo-650" /> Filter Workspaces
           </div>
           
@@ -469,7 +469,7 @@ export default function ProjectsPage() {
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search by name or URL..."
               value={search}
@@ -491,7 +491,7 @@ export default function ProjectsPage() {
               <option value="UAT">UAT</option>
               <option value="Production">Production</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-muted-foreground pointer-events-none" />
           </div>
 
           {/* Test Type filter */}
@@ -508,7 +508,7 @@ export default function ProjectsPage() {
               <option value="Regression">Regression</option>
               <option value="Smoke">Smoke</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-muted-foreground pointer-events-none" />
           </div>
 
           {/* Health Status filter */}
@@ -525,7 +525,7 @@ export default function ProjectsPage() {
               <option value="High Risk">High Risk</option>
               <option value="Not Started">Not Started</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-muted-foreground pointer-events-none" />
           </div>
 
           {/* Setup Completeness */}
@@ -539,7 +539,7 @@ export default function ProjectsPage() {
               <option value="complete">Setup Complete</option>
               <option value="incomplete">Setup Incomplete</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-muted-foreground pointer-events-none" />
           </div>
 
           {/* Archive Status */}
@@ -553,7 +553,7 @@ export default function ProjectsPage() {
               <option value="Archived">Archived projects</option>
               <option value="All">Active & Archived</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-muted-foreground pointer-events-none" />
           </div>
 
           {/* Sorting */}
@@ -572,7 +572,7 @@ export default function ProjectsPage() {
               <option value="Newest">Newest</option>
               <option value="Oldest">Oldest</option>
             </select>
-            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-2.5 top-3 h-3 w-3 text-muted-foreground pointer-events-none" />
           </div>
         </div>
 
@@ -585,7 +585,7 @@ export default function ProjectsPage() {
                 type="checkbox"
                 checked={hasFailedTests}
                 onChange={(e) => setHasFailedTests(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-border text-primary focus:ring-primary"
               />
               Has Failed Tests
             </label>
@@ -595,7 +595,7 @@ export default function ProjectsPage() {
                 type="checkbox"
                 checked={hasOpenBugs}
                 onChange={(e) => setHasOpenBugs(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-border text-primary focus:ring-primary"
               />
               Has Open Bugs
             </label>
@@ -605,7 +605,7 @@ export default function ProjectsPage() {
                 type="checkbox"
                 checked={hasUncoveredRequirements}
                 onChange={(e) => setHasUncoveredRequirements(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-border text-primary focus:ring-primary"
               />
               Has Uncovered Requirements
             </label>
@@ -616,7 +616,7 @@ export default function ProjectsPage() {
             variant="ghost"
             size="sm"
             onClick={handleClearFilters}
-            className="text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50/50 p-0 h-auto"
+            className="text-xs font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-50/50 p-0 h-auto"
           >
             Clear Filters
           </Button>
@@ -627,19 +627,19 @@ export default function ProjectsPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 space-y-4">
           <RefreshCw className="h-10 w-10 text-indigo-650 animate-spin" />
-          <p className="text-sm text-slate-450 font-bold">Querying projects dashboard...</p>
+          <p className="text-sm text-slate-450 font-semibold">Querying projects dashboard...</p>
         </div>
       ) : items.length === 0 ? (
         /* Empty results state */
-        <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-2xl p-6 max-w-md mx-auto space-y-3 shadow-sm">
-          <AlertCircle className="h-10 w-10 text-slate-400 mx-auto" />
-          <h3 className="text-base font-black text-slate-800 dark:text-slate-100">No projects match filters</h3>
-          <p className="text-xs text-slate-400 leading-normal">Try changing search keywords or clearing filter states.</p>
+        <div className="text-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-850 rounded-xl p-6 max-w-md mx-auto space-y-3 shadow-sm">
+          <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto" />
+          <h3 className="text-base font-semibold text-foreground dark:text-slate-100">No projects match filters</h3>
+          <p className="text-xs text-muted-foreground leading-normal">Try changing search keywords or clearing filter states.</p>
           <div className="pt-2">
             <Button
               size="sm"
               onClick={handleClearFilters}
-              className="bg-slate-105 hover:bg-slate-200 text-slate-805 text-xs font-bold"
+              className="bg-slate-105 hover:bg-muted text-slate-805 text-xs font-semibold"
             >
               Clear Filters
             </Button>
@@ -660,7 +660,7 @@ export default function ProjectsPage() {
                 <div className="flex justify-between items-start">
                   {/* Name and health score */}
                   <div className="space-y-1 max-w-[200px]">
-                    <h3 className="font-extrabold text-base text-slate-800 dark:text-slate-50 group-hover:text-indigo-650 transition-colors truncate" title={project.name}>
+                    <h3 className="font-semibold text-base text-foreground dark:text-slate-50 group-hover:text-indigo-650 transition-colors truncate" title={project.name}>
                       <Link href={`/projects/${project.id}`}>{project.name}</Link>
                     </h3>
                     <a
@@ -674,13 +674,13 @@ export default function ProjectsPage() {
                   </div>
                   
                   {/* Health score badge */}
-                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${getHealthStyle(project.metrics.healthStatus)}`}>
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${getHealthStyle(project.metrics.healthStatus)}`}>
                     {project.metrics.healthStatus}
                   </span>
                 </div>
 
                 {/* Env / Browser type Badges */}
-                <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
                   <span className="bg-slate-100 dark:bg-slate-800 text-slate-550 dark:text-slate-350 px-2 py-0.5 rounded">
                     {project.environment}
                   </span>
@@ -699,38 +699,38 @@ export default function ProjectsPage() {
               </div>
 
               {/* Core metrics overview counts grid */}
-              <div className="grid gap-2 grid-cols-5 text-center bg-slate-50/50 dark:bg-slate-850/20 p-2.5 rounded-xl border border-slate-100 dark:border-slate-850">
+              <div className="grid gap-2 grid-cols-5 text-center bg-muted/50 dark:bg-slate-850/20 p-2.5 rounded-xl border border-border dark:border-slate-850">
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">Cases</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-100 text-xs mt-0.5">{project.metrics.testCases}</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">Cases</span>
+                  <span className="font-semibold text-foreground dark:text-slate-100 text-xs mt-0.5">{project.metrics.testCases}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">Runs</span>
-                  <span className="font-extrabold text-slate-800 dark:text-slate-100 text-xs mt-0.5">{project.metrics.testRuns}</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">Runs</span>
+                  <span className="font-semibold text-foreground dark:text-slate-100 text-xs mt-0.5">{project.metrics.testRuns}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">Pass%</span>
-                  <span className="font-bold text-emerald-500 text-xs mt-0.5">{project.metrics.passRate}%</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">Pass%</span>
+                  <span className="font-semibold text-emerald-500 text-xs mt-0.5">{project.metrics.passRate}%</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">Bugs</span>
-                  <span className="font-bold text-rose-500 text-xs mt-0.5">{project.metrics.openBugs}</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">Bugs</span>
+                  <span className="font-semibold text-rose-500 text-xs mt-0.5">{project.metrics.openBugs}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-wide">Cov%</span>
-                  <span className="font-extrabold text-indigo-650 text-xs mt-0.5">{project.metrics.requirementsCoverage}%</span>
+                  <span className="text-[11px] font-medium text-muted-foreground">Cov%</span>
+                  <span className="font-semibold text-indigo-650 text-xs mt-0.5">{project.metrics.requirementsCoverage}%</span>
                 </div>
               </div>
 
               {/* Project Setup progress tracker */}
               <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between items-center text-[10px] font-bold text-slate-450 uppercase tracking-wide">
+                <div className="flex justify-between items-center text-[11px] font-medium text-slate-450">
                   <span>Setup Completeness</span>
                   <span>{project.metrics.setupCompleted} / {project.metrics.setupTotal}</span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                   <div
-                    className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                    className="bg-primary h-full rounded-full transition-all duration-300"
                     style={{ width: `${(project.metrics.setupCompleted / project.metrics.setupTotal) * 100}%` }}
                   />
                 </div>
@@ -751,21 +751,21 @@ export default function ProjectsPage() {
                       e.stopPropagation()
                       setOpenDropdownId(openDropdownId === project.id ? null : project.id)
                     }}
-                    className="h-9 w-9 border-slate-200 dark:border-slate-800"
+                    className="h-9 w-9 border-border dark:border-slate-800"
                   >
-                    <MoreVertical className="h-4 w-4 text-slate-500" />
+                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
                   </Button>
 
                   {openDropdownId === project.id && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)} />
-                      <div className="absolute right-0 bottom-full mb-2 w-48 rounded-xl border border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl py-2 z-20 animate-in fade-in duration-100 text-left">
+                      <div className="absolute right-0 bottom-full mb-2 w-48 rounded-xl border border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-2 z-20 animate-in fade-in duration-100 text-left">
                         <button
                           onClick={() => {
                             setOpenDropdownId(null)
                             router.push(`/projects/${project.id}/edit`)
                           }}
-                          className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-bold"
+                          className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-semibold"
                         >
                           <Edit2 className="h-3.5 w-3.5" /> Edit Details
                         </button>
@@ -775,7 +775,7 @@ export default function ProjectsPage() {
                             setDuplicateProject(project)
                             setCloneName(`${project.name} (Copy)`)
                           }}
-                          className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-bold"
+                          className="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-semibold"
                         >
                           <Copy className="h-3.5 w-3.5" /> Duplicate Project
                         </button>
@@ -785,14 +785,14 @@ export default function ProjectsPage() {
                         {project.status === "Active" ? (
                           <button
                             onClick={() => handleToggleArchiveProject(project, true)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs text-amber-600 dark:text-amber-450 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-bold"
+                            className="flex items-center gap-2 px-4 py-2 text-xs text-amber-600 dark:text-amber-450 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-semibold"
                           >
                             <Archive className="h-3.5 w-3.5" /> Archive Project
                           </button>
                         ) : (
                           <button
                             onClick={() => handleToggleArchiveProject(project, false)}
-                            className="flex items-center gap-2 px-4 py-2 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-bold"
+                            className="flex items-center gap-2 px-4 py-2 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800/80 w-full font-semibold"
                           >
                             <ArchiveRestore className="h-3.5 w-3.5" /> Restore Project
                           </button>
@@ -800,7 +800,7 @@ export default function ProjectsPage() {
                         
                         <button
                           onClick={() => handleTriggerDeleteModal(project)}
-                          className="flex items-center gap-2 px-4 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 w-full font-black"
+                          className="flex items-center gap-2 px-4 py-2 text-xs text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 w-full font-semibold"
                         >
                           <Trash2 className="h-3.5 w-3.5" /> Delete Project
                         </button>
@@ -815,10 +815,10 @@ export default function ProjectsPage() {
         </div>
       ) : (
         /* Table Layout View */
-        <div className="overflow-x-auto bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm min-h-[300px]">
-          <table className="w-full text-xs text-left text-slate-600 dark:text-slate-300">
+        <div className="overflow-x-auto bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 shadow-sm min-h-[300px]">
+          <table className="w-full text-xs text-left text-muted-foreground dark:text-slate-300">
             <thead>
-              <tr className="border-b dark:border-slate-850 text-slate-400 uppercase tracking-wider text-[9px] font-bold">
+              <tr className="border-b dark:border-slate-850 text-muted-foreground text-[11px] font-medium">
                 <th className="py-2.5">Project</th>
                 <th className="py-2.5">Environment</th>
                 <th className="py-2.5">Test Type</th>
@@ -837,11 +837,11 @@ export default function ProjectsPage() {
               {items.map((project) => (
                 <tr
                   key={project.id}
-                  className={`border-b dark:border-slate-850 hover:bg-slate-50/50 dark:hover:bg-slate-850/30 ${
+                  className={`border-b dark:border-slate-850 hover:bg-muted/50 dark:hover:bg-slate-850/30 ${
                     project.status === "Archived" ? "opacity-60" : ""
                   }`}
                 >
-                  <td className="py-3 font-bold text-slate-800 dark:text-slate-200">
+                  <td className="py-3 font-semibold text-foreground dark:text-slate-200">
                     <Link href={`/projects/${project.id}`}>{project.name}</Link>
                   </td>
                   <td className="py-3">{project.environment}</td>
@@ -850,16 +850,16 @@ export default function ProjectsPage() {
                   <td className="py-3 font-semibold">{project.metrics.testCases}</td>
                   <td className="py-3 font-semibold">{project.metrics.testRuns}</td>
                   <td className="py-3">
-                    <span className={`font-bold ${project.metrics.passRate >= 75 ? "text-emerald-500" : "text-amber-500"}`}>{project.metrics.passRate}%</span>
+                    <span className={`font-semibold ${project.metrics.passRate >= 75 ? "text-emerald-500" : "text-amber-500"}`}>{project.metrics.passRate}%</span>
                   </td>
-                  <td className="py-3 font-bold text-rose-500">{project.metrics.openBugs}</td>
+                  <td className="py-3 font-semibold text-rose-500">{project.metrics.openBugs}</td>
                   <td className="py-3 font-semibold">{project.metrics.requirementsCoverage}%</td>
                   <td className="py-3">
-                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black border ${getHealthStyle(project.metrics.healthStatus)}`}>
+                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${getHealthStyle(project.metrics.healthStatus)}`}>
                       {project.metrics.healthStatus}
                     </span>
                   </td>
-                  <td className="py-3 text-slate-400">
+                  <td className="py-3 text-muted-foreground">
                     {new Date(project.lastActivity.lastUpdatedAt).toLocaleDateString()}
                   </td>
                   <td className="py-3 text-right">
@@ -868,7 +868,7 @@ export default function ProjectsPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => router.push(`/projects/${project.id}`)}
-                        className="text-xs font-bold text-indigo-650 hover:underline"
+                        className="text-xs font-semibold text-indigo-650 hover:underline"
                       >
                         Open
                       </Button>
@@ -879,7 +879,7 @@ export default function ProjectsPage() {
                           setDuplicateProject(project)
                           setCloneName(`${project.name} (Copy)`)
                         }}
-                        className="text-xs font-bold text-slate-500"
+                        className="text-xs font-semibold text-muted-foreground"
                       >
                         Clone
                       </Button>
@@ -896,14 +896,14 @@ export default function ProjectsPage() {
       {duplicateProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="fixed inset-0" onClick={() => setDuplicateProject(null)} />
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md shadow-2xl p-6 z-10 animate-in zoom-in-95 duration-200 space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-md shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 z-10 animate-in zoom-in-95 duration-200 space-y-4">
             <div className="flex justify-between items-center border-b dark:border-slate-800 pb-2.5">
-              <h3 className="text-base font-black text-slate-900 dark:text-slate-50 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground dark:text-slate-50 flex items-center gap-2">
                 <Copy className="h-5 w-5 text-indigo-650" /> Duplicate: {duplicateProject.name}
               </h3>
               <button
                 onClick={() => setDuplicateProject(null)}
-                className="text-slate-400 hover:text-slate-650 p-1 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-lg"
+                className="text-muted-foreground hover:text-slate-650 p-1 hover:bg-muted dark:hover:bg-slate-850 rounded-lg"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -911,7 +911,7 @@ export default function ProjectsPage() {
 
             <div className="space-y-4 text-xs">
               <div className="space-y-1.5">
-                <label className="font-bold text-slate-550 block">Duplicate Project Name *</label>
+                <label className="font-semibold text-slate-550 block">Duplicate Project Name *</label>
                 <input
                   type="text"
                   value={cloneName}
@@ -922,19 +922,19 @@ export default function ProjectsPage() {
               </div>
 
               {/* Duplicate options */}
-              <div className="space-y-3.5 border border-slate-100 dark:border-slate-850 p-4 rounded-xl bg-slate-50/30">
-                <span className="font-bold text-[10px] text-slate-400 uppercase tracking-wide">Cloning settings</span>
+              <div className="space-y-3.5 border border-border dark:border-slate-850 p-4 rounded-xl bg-muted/30">
+                <span className="font-medium text-[11px] text-muted-foreground">Cloning settings</span>
                 
                 <label className="flex items-start gap-2.5 cursor-pointer pt-1">
                   <input
                     type="checkbox"
                     checked={cloneTestCases}
                     onChange={(e) => setCloneTestCases(e.target.checked)}
-                    className="rounded border-slate-350 text-indigo-600 focus:ring-indigo-500 mt-0.5"
+                    className="rounded border-slate-350 text-primary focus:ring-primary mt-0.5"
                   />
                   <div>
-                    <span className="font-bold text-slate-700 dark:text-slate-200 block">Copy Test Cases & Steps</span>
-                    <span className="text-[10px] text-slate-400 leading-normal">Copies all manual/automated test definitions and step logs.</span>
+                    <span className="font-semibold text-foreground dark:text-slate-200 block">Copy Test Cases & Steps</span>
+                    <span className="text-[10px] text-muted-foreground leading-normal">Copies all manual/automated test definitions and step logs.</span>
                   </div>
                 </label>
 
@@ -943,11 +943,11 @@ export default function ProjectsPage() {
                     type="checkbox"
                     checked={cloneRequirements}
                     onChange={(e) => setCloneRequirements(e.target.checked)}
-                    className="rounded border-slate-350 text-indigo-600 focus:ring-indigo-500 mt-0.5"
+                    className="rounded border-slate-350 text-primary focus:ring-primary mt-0.5"
                   />
                   <div>
-                    <span className="font-bold text-slate-700 dark:text-slate-200 block">Copy Requirements</span>
-                    <span className="text-[10px] text-slate-400 leading-normal">Copies the functional backlog requirements and links them to cases.</span>
+                    <span className="font-semibold text-foreground dark:text-slate-200 block">Copy Requirements</span>
+                    <span className="text-[10px] text-muted-foreground leading-normal">Copies the functional backlog requirements and links them to cases.</span>
                   </div>
                 </label>
 
@@ -956,11 +956,11 @@ export default function ProjectsPage() {
                     type="checkbox"
                     checked={cloneLocators}
                     onChange={(e) => setCloneLocators(e.target.checked)}
-                    className="rounded border-slate-350 text-indigo-600 focus:ring-indigo-500 mt-0.5"
+                    className="rounded border-slate-350 text-primary focus:ring-primary mt-0.5"
                   />
                   <div>
-                    <span className="font-bold text-slate-700 dark:text-slate-200 block">Copy Element Locators</span>
-                    <span className="text-[10px] text-slate-400 leading-normal">Copies target XPath/CSS selector paths stored for locator picking.</span>
+                    <span className="font-semibold text-foreground dark:text-slate-200 block">Copy Element Locators</span>
+                    <span className="text-[10px] text-muted-foreground leading-normal">Copies target XPath/CSS selector paths stored for locator picking.</span>
                   </div>
                 </label>
               </div>
@@ -971,7 +971,7 @@ export default function ProjectsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setDuplicateProject(null)}
-                className="text-xs font-bold text-slate-600"
+                className="text-xs font-semibold text-muted-foreground"
               >
                 Cancel
               </Button>
@@ -979,7 +979,7 @@ export default function ProjectsPage() {
                 size="sm"
                 onClick={handleDuplicateConfirm}
                 disabled={isDuplicating || !cloneName.trim()}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold"
+                className="bg-primary hover:bg-primary/90 text-white text-xs font-semibold"
               >
                 {isDuplicating ? "Duplicating..." : "Duplicate"}
               </Button>

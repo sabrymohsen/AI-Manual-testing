@@ -69,11 +69,11 @@ export function OpenProjectMapParentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-card border rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-card border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b bg-accent/10">
           <div>
-            <h2 className="font-bold text-lg">Map OpenProject Parent</h2>
+            <h2 className="font-semibold text-lg">Map OpenProject Parent</h2>
             <p className="text-sm text-muted-foreground mt-0.5 font-medium" dir="auto">{groupName}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground">

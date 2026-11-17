@@ -88,14 +88,14 @@ const GROUP_STYLES: Record<string, string> = {
   Evidence: "bg-emerald-50 text-emerald-700 border-emerald-100",
   Healing: "bg-teal-50 text-teal-700 border-teal-100",
   AI: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-100",
-  Other: "bg-slate-100 text-slate-600 border-slate-200"
+  Other: "bg-muted text-muted-foreground border-border"
 }
 
 const LOG_LEVELS = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR"] as const
 type LogLevel = (typeof LOG_LEVELS)[number]
 
 const LEVEL_STYLES: Record<LogLevel, string> = {
-  TRACE: "text-slate-400",
+  TRACE: "text-muted-foreground",
   DEBUG: "text-sky-500",
   INFO: "text-emerald-500",
   WARN: "text-amber-500",
@@ -118,26 +118,26 @@ export default function DataConfigSection() {
       {/* HEADER */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
-            <Settings size={18} className="text-indigo-600" />
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Settings size={18} className="text-primary" />
             Data &amp; Config
           </h2>
-          <p className="text-[11px] text-slate-500 font-semibold">
+          <p className="text-[11px] text-muted-foreground font-semibold">
             Run settings, environment variables and secrets (available to tests as process.env), test data &amp; logs.
           </p>
         </div>
       </div>
 
       {/* SUB-TAB SELECTOR */}
-      <div className="flex items-center gap-1.5 overflow-x-auto bg-slate-100 p-1 border rounded-2xl select-none scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto bg-muted p-1 border rounded-xl select-none scrollbar-none">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight shrink-0 transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-tight shrink-0 transition-all ${
               subTab === t.id
-                ? "bg-white text-indigo-700 shadow-sm border border-indigo-100"
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                ? "bg-card text-primary shadow-sm border border-primary/25"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/50"
             }`}
           >
             <t.icon size={13} />
@@ -278,20 +278,20 @@ function PropertiesTab() {
   return (
     <div className="space-y-3">
       {/* TOOLBAR */}
-      <div className="flex items-center gap-2 flex-wrap bg-white border rounded-2xl p-2.5 shadow-sm">
+      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-2.5 shadow-sm">
         <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search properties..."
-            className="w-full pl-8 pr-3 py-2 text-xs font-semibold border rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none"
+            className="w-full pl-8 pr-3 py-2 text-xs font-semibold border rounded-xl bg-muted/50 focus:bg-card focus:ring-2 focus:ring-indigo-100 outline-none"
           />
         </div>
         <select
           value={group}
           onChange={(e) => setGroup(e.target.value)}
-          className="text-xs font-black border rounded-xl px-3 py-2 bg-white text-slate-700 outline-none"
+          className="text-xs font-semibold border rounded-xl px-3 py-2 bg-card text-foreground outline-none"
         >
           <option value="All">All groups</option>
           {GROUPS.map((g) => (
@@ -314,12 +314,12 @@ function PropertiesTab() {
         <Button
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-xl bg-white border-slate-200 text-slate-600 text-xs font-black gap-1.5"
+          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
         >
           <Upload size={13} /> Import
         </Button>
         <a href="/api/hub/config/properties/export" download>
-          <Button variant="outline" className="rounded-xl bg-white border-slate-200 text-slate-600 text-xs font-black gap-1.5">
+          <Button variant="outline" className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5">
             <Download size={13} /> Export
           </Button>
         </a>
@@ -329,21 +329,21 @@ function PropertiesTab() {
             setShowHistory((s) => !s)
             if (!showHistory) loadHistory()
           }}
-          className="rounded-xl bg-white border-slate-200 text-slate-600 text-xs font-black gap-1.5"
+          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
         >
           <History size={13} /> History
         </Button>
         <Button
           variant="outline"
           onClick={resetAll}
-          className="rounded-xl bg-white border-rose-200 text-rose-600 text-xs font-black gap-1.5"
+          className="rounded-xl bg-card border-rose-200 text-rose-600 text-xs font-semibold gap-1.5"
         >
           <ListRestart size={13} /> Reset all
         </Button>
         <Button
           onClick={save}
           disabled={saving || dirtyCount === 0}
-          className="bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-black gap-1.5 disabled:opacity-40"
+          className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-1.5 disabled:opacity-40"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           Save{dirtyCount > 0 ? ` (${dirtyCount})` : ""}
@@ -351,25 +351,25 @@ function PropertiesTab() {
       </div>
 
       {error && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold p-3 rounded-xl">{error}</div>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold p-3 rounded-xl">{error}</div>
       )}
 
       {showHistory && (
-        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b bg-slate-50 text-xs font-black text-slate-700 flex items-center gap-2">
+        <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
             <History size={13} /> Change History
           </div>
           <div className="max-h-56 overflow-auto divide-y">
             {history.length === 0 ? (
-              <div className="p-4 text-[11px] text-slate-400 font-bold">No changes recorded yet.</div>
+              <div className="p-4 text-[11px] text-muted-foreground font-semibold">No changes recorded yet.</div>
             ) : (
               history.map((h) => (
                 <div key={h.id} className="px-4 py-2 text-[11px] flex items-center gap-2 flex-wrap">
-                  <span className="font-mono font-black text-slate-800">{h.propertyName}</span>
+                  <span className="font-mono font-semibold text-foreground">{h.propertyName}</span>
                   <span className="text-rose-500 line-through font-mono">{h.oldValue || "∅"}</span>
-                  <span className="text-slate-400">→</span>
-                  <span className="text-emerald-600 font-mono font-black">{h.newValue}</span>
-                  <span className="ml-auto text-slate-400 font-semibold">
+                  <span className="text-muted-foreground">→</span>
+                  <span className="text-emerald-600 font-mono font-semibold">{h.newValue}</span>
+                  <span className="ml-auto text-muted-foreground font-semibold">
                     {h.changedBy} · {new Date(h.changedAt).toLocaleString()}
                   </span>
                 </div>
@@ -380,8 +380,8 @@ function PropertiesTab() {
       )}
 
       {/* TABLE */}
-      <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-2.5 border-b bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
+      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+        <div className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-2.5 border-b bg-muted/50 text-[11px] font-medium text-muted-foreground">
           <span>Property</span>
           <span>Value</span>
           <span className="text-right pr-1">Reset</span>
@@ -391,20 +391,20 @@ function PropertiesTab() {
             const val = effectiveValue(r)
             const changed = r.name in dirty && dirty[r.name] !== r.value
             return (
-              <div key={r.name} className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-2.5 items-center hover:bg-slate-50/60">
+              <div key={r.name} className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-2.5 items-center hover:bg-muted/60">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11.5px] font-black text-slate-800 truncate">{r.name}</span>
-                    <span className={`text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded border ${GROUP_STYLES[r.group] || GROUP_STYLES.Other}`}>
+                    <span className="font-mono text-[11.5px] font-semibold text-foreground truncate">{r.name}</span>
+                    <span className={`text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded border ${GROUP_STYLES[r.group] || GROUP_STYLES.Other}`}>
                       {r.group}
                     </span>
                     {(r.isCustom || changed) && (
-                      <span className="text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100">
+                      <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">
                         {changed ? "edited" : "custom"}
                       </span>
                     )}
                   </div>
-                  <p className="text-[10.5px] text-slate-400 font-semibold truncate">{r.description}</p>
+                  <p className="text-[10.5px] text-muted-foreground font-semibold truncate">{r.description}</p>
                 </div>
                 <div>
                   <PropertyInput row={r} value={val} onChange={(v) => setValue(r.name, v)} />
@@ -414,7 +414,7 @@ function PropertiesTab() {
                     <button
                       onClick={() => resetOne(r.name)}
                       title={`Reset to default (${r.default || "∅"})`}
-                      className="text-slate-400 hover:text-indigo-600 p-1"
+                      className="text-muted-foreground hover:text-primary p-1"
                     >
                       <RotateCcw size={14} />
                     </button>
@@ -424,7 +424,7 @@ function PropertiesTab() {
             )
           })}
           {filtered.length === 0 && (
-            <div className="p-8 text-center text-[11px] text-slate-400 font-bold">No properties match your filters.</div>
+            <div className="p-8 text-center text-[11px] text-muted-foreground font-semibold">No properties match your filters.</div>
           )}
         </div>
       </div>
@@ -438,9 +438,9 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
     return (
       <button
         onClick={() => onChange(on ? "false" : "true")}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${on ? "bg-indigo-600" : "bg-slate-300"}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${on ? "bg-primary" : "bg-slate-300"}`}
       >
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
       </button>
     )
   }
@@ -449,7 +449,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-[11.5px] font-black border rounded-lg px-2.5 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100"
+        className="w-full text-[11.5px] font-semibold border rounded-lg px-2.5 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
       >
         {row.options.map((o) => (
           <option key={o} value={o}>
@@ -467,7 +467,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
         min={row.min ?? undefined}
         max={row.max ?? undefined}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-[11.5px] font-black font-mono border rounded-lg px-2.5 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100"
+        className="w-full text-[11.5px] font-semibold font-mono border rounded-lg px-2.5 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
       />
     )
   }
@@ -476,7 +476,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={row.default || "—"}
-      className="w-full text-[11.5px] font-mono border rounded-lg px-2.5 py-1.5 bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100"
+      className="w-full text-[11.5px] font-mono border rounded-lg px-2.5 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
     />
   )
 }
@@ -558,9 +558,9 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap bg-white border rounded-2xl p-2.5 shadow-sm">
-        <div className="flex items-center gap-2 text-xs font-black text-slate-700">
-          {secretsMode ? <ShieldCheck size={15} className="text-fuchsia-600" /> : <Server size={15} className="text-indigo-600" />}
+      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-2.5 shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+          {secretsMode ? <ShieldCheck size={15} className="text-fuchsia-600" /> : <Server size={15} className="text-primary" />}
           {secretsMode ? "Encrypted Secrets (AES-256-GCM)" : "Environment Variables"}
         </div>
         <div className="ml-auto flex items-center gap-2">
@@ -571,52 +571,52 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
                 setShowAudit((s) => !s)
                 if (!showAudit) loadAudit()
               }}
-              className="rounded-xl bg-white border-slate-200 text-slate-600 text-xs font-black gap-1.5"
+              className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
             >
               <History size={13} /> Audit log
             </Button>
           )}
           <Button
             onClick={() => setAdding((a) => !a)}
-            className="bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-black gap-1.5"
+            className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-1.5"
           >
             <Plus size={13} /> Add {secretsMode ? "secret" : "variable"}
           </Button>
         </div>
       </div>
 
-      {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-bold p-3 rounded-xl">{error}</div>}
+      {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold p-3 rounded-xl">{error}</div>}
 
       {adding && (
-        <div className="bg-white border rounded-2xl shadow-sm p-4 space-y-3">
+        <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
             <input
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               placeholder="NAME (e.g. DB_PASSWORD)"
-              className="text-xs font-mono font-black border rounded-xl px-3 py-2 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-100"
+              className="text-xs font-mono font-semibold border rounded-xl px-3 py-2 bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
             />
             <input
               type={secretsMode ? "password" : "text"}
               value={form.value}
               onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))}
               placeholder="value"
-              className="text-xs font-mono border rounded-xl px-3 py-2 bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-100"
+              className="text-xs font-mono border rounded-xl px-3 py-2 bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
             />
             <select
               value={form.scope}
               onChange={(e) => setForm((f) => ({ ...f, scope: e.target.value }))}
-              className="text-xs font-black border rounded-xl px-3 py-2 bg-white outline-none"
+              className="text-xs font-semibold border rounded-xl px-3 py-2 bg-card outline-none"
             >
               <option value="global">Global</option>
               <option value="project">Project</option>
             </select>
           </div>
           <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setAdding(false)} className="rounded-xl text-xs font-black bg-white border-slate-200 text-slate-600">
+            <Button variant="outline" onClick={() => setAdding(false)} className="rounded-xl text-xs font-semibold bg-card border-border text-muted-foreground">
               Cancel
             </Button>
-            <Button onClick={create} className="bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-black">
+            <Button onClick={create} className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold">
               Save
             </Button>
           </div>
@@ -624,19 +624,19 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
       )}
 
       {showAudit && secretsMode && (
-        <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b bg-slate-50 text-xs font-black text-slate-700 flex items-center gap-2">
+        <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+          <div className="px-4 py-2.5 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
             <History size={13} /> Secret Access Audit
           </div>
           <div className="max-h-52 overflow-auto divide-y">
             {audit.length === 0 ? (
-              <div className="p-4 text-[11px] text-slate-400 font-bold">No access recorded yet.</div>
+              <div className="p-4 text-[11px] text-muted-foreground font-semibold">No access recorded yet.</div>
             ) : (
               audit.map((a) => (
                 <div key={a.id} className="px-4 py-2 text-[11px] flex items-center gap-2">
-                  <span className="font-mono font-black text-indigo-600">{a.action}</span>
-                  <span className="text-slate-600 font-semibold truncate">{a.details}</span>
-                  <span className="ml-auto text-slate-400 font-semibold whitespace-nowrap">
+                  <span className="font-mono font-semibold text-primary">{a.action}</span>
+                  <span className="text-muted-foreground font-semibold truncate">{a.details}</span>
+                  <span className="ml-auto text-muted-foreground font-semibold whitespace-nowrap">
                     {a.user} · {new Date(a.createdAt).toLocaleString()}
                   </span>
                 </div>
@@ -646,8 +646,8 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
         </div>
       )}
 
-      <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-2.5 border-b bg-slate-50 text-[10px] font-black uppercase tracking-wider text-slate-500">
+      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+        <div className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-2.5 border-b bg-muted/50 text-[11px] font-medium text-muted-foreground">
           <span>Name</span>
           <span>Value</span>
           <span>Scope</span>
@@ -657,9 +657,9 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
           {rows.map((r) => {
             const shown = revealed[r.id]
             return (
-              <div key={r.id} className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-2.5 items-center hover:bg-slate-50/60">
+              <div key={r.id} className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-2.5 items-center hover:bg-muted/60">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-[11.5px] font-black text-slate-800 truncate">{r.name}</span>
+                  <span className="font-mono text-[11.5px] font-semibold text-foreground truncate">{r.name}</span>
                   {r.liveInProcess ? (
                     <span title="Resolvable from process env" className="text-emerald-500">
                       <CheckCircle2 size={13} />
@@ -670,21 +670,21 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
                     </span>
                   )}
                 </div>
-                <div className="font-mono text-[11.5px] text-slate-600 truncate">
+                <div className="font-mono text-[11.5px] text-muted-foreground truncate">
                   {r.isSecret ? (shown !== undefined ? shown : "••••••••••••") : r.value || <span className="text-slate-300">∅</span>}
                 </div>
                 <div>
-                  <span className="text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-200">
+                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded border bg-muted text-muted-foreground border-border">
                     {r.scope}
                   </span>
                 </div>
                 <div className="text-right flex items-center justify-end gap-1">
                   {r.isSecret && (
-                    <button onClick={() => reveal(r.id)} className="text-slate-400 hover:text-indigo-600 p-1" title={shown !== undefined ? "Hide" : "Reveal"}>
+                    <button onClick={() => reveal(r.id)} className="text-muted-foreground hover:text-primary p-1" title={shown !== undefined ? "Hide" : "Reveal"}>
                       {shown !== undefined ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   )}
-                  <button onClick={() => remove(r.id)} className="text-slate-400 hover:text-rose-600 p-1" title="Delete">
+                  <button onClick={() => remove(r.id)} className="text-muted-foreground hover:text-rose-600 p-1" title="Delete">
                     <Trash2 size={14} />
                   </button>
                 </div>
@@ -692,7 +692,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
             )
           })}
           {rows.length === 0 && (
-            <div className="p-8 text-center text-[11px] text-slate-400 font-bold">
+            <div className="p-8 text-center text-[11px] text-muted-foreground font-semibold">
               No {secretsMode ? "secrets" : "variables"} yet. Click &ldquo;Add&rdquo; to create one.
             </div>
           )}
@@ -834,21 +834,21 @@ function LogsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap bg-white border rounded-2xl p-2.5 shadow-sm">
-        <span className="flex items-center gap-1.5 text-xs font-black text-slate-700">
-          <ScrollText size={15} className="text-indigo-600" /> log4j.log
-          <span className={`ml-1 inline-flex items-center gap-1 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full ${connected ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"}`}>
+      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-2.5 shadow-sm">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <ScrollText size={15} className="text-primary" /> log4j.log
+          <span className={`ml-1 inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full ${connected ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
             {connected ? "live" : "offline"}
           </span>
         </span>
         <div className="relative flex-1 min-w-[160px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter log lines..."
-            className="w-full pl-8 pr-3 py-2 text-xs font-semibold border rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-indigo-100 outline-none"
+            className="w-full pl-8 pr-3 py-2 text-xs font-semibold border rounded-xl bg-muted/50 focus:bg-card focus:ring-2 focus:ring-indigo-100 outline-none"
           />
         </div>
         <div className="flex items-center gap-1">
@@ -856,8 +856,8 @@ function LogsTab() {
             <button
               key={lv}
               onClick={() => setEnabled((e) => ({ ...e, [lv]: !e[lv] }))}
-              className={`text-[9px] font-black uppercase px-2 py-1.5 rounded-lg border transition-colors ${
-                enabled[lv] ? `bg-white ${LEVEL_STYLES[lv]} border-slate-200` : "bg-slate-100 text-slate-300 border-transparent"
+              className={`text-[9px] font-semibold uppercase px-2 py-1.5 rounded-lg border transition-colors ${
+                enabled[lv] ? `bg-card ${LEVEL_STYLES[lv]} border-border` : "bg-muted text-slate-300 border-transparent"
               }`}
             >
               {lv} {counts[lv] > 0 && <span className="opacity-60">{counts[lv]}</span>}
@@ -867,12 +867,12 @@ function LogsTab() {
         <Button
           variant="outline"
           onClick={() => setPaused((p) => !p)}
-          className="rounded-xl bg-white border-slate-200 text-slate-600 text-xs font-black gap-1.5"
+          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
         >
           {paused ? <Play size={13} /> : <Pause size={13} />} {paused ? "Resume" : "Pause"}
         </Button>
         <a href="/api/hub/logs?download=1" download>
-          <Button variant="outline" className="rounded-xl bg-white border-slate-200 text-slate-600 text-xs font-black gap-1.5">
+          <Button variant="outline" className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5">
             <Download size={13} /> Download
           </Button>
         </a>
@@ -885,10 +885,10 @@ function LogsTab() {
           const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
           setAutoScroll(atBottom)
         }}
-        className="bg-slate-950 rounded-2xl border border-slate-800 p-3 font-mono text-[11px] leading-relaxed h-[520px] overflow-auto"
+        className="bg-slate-950 rounded-xl border border-slate-800 p-3 font-mono text-[11px] leading-relaxed h-[520px] overflow-auto"
       >
         {filtered.length === 0 ? (
-          <div className="text-slate-500 font-semibold text-center py-20">No log lines match the current filters.</div>
+          <div className="text-muted-foreground font-semibold text-center py-20">No log lines match the current filters.</div>
         ) : (
           filtered.map((l, i) => (
             <div key={i} className={`whitespace-pre-wrap break-all ${LEVEL_STYLES[l.level]}`}>
@@ -906,9 +906,9 @@ function LogsTab() {
 // ============================================================
 function LoadingCard({ label }: { label: string }) {
   return (
-    <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-white rounded-2xl shadow-sm">
-      <Loader2 className="animate-spin text-indigo-600" size={28} />
-      <span className="font-extrabold text-slate-400 uppercase tracking-widest text-[9.5px]">{label}</span>
+    <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
+      <Loader2 className="animate-spin text-primary" size={28} />
+      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-[9.5px]">{label}</span>
     </div>
   )
 }

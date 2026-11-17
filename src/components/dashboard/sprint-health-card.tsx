@@ -64,7 +64,7 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-slate-100 bg-card shadow-sm p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-card shadow-sm p-5 space-y-4">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-4 w-24" />
@@ -74,10 +74,10 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
 
   if (!sprint) {
     return (
-      <div className="rounded-2xl border border-slate-100 bg-card shadow-sm p-5">
+      <div className="rounded-xl border border-border bg-card shadow-sm p-5">
         <div className="flex items-center gap-2 mb-3">
           <Zap className="h-4 w-4 text-amber-500" />
-          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Sprint Health</span>
+          <span className="text-xs font-medium text-foreground">Sprint Health</span>
         </div>
         <p className="text-xs text-muted-foreground text-center py-4">No active sprint. Start one from the Scrum Board.</p>
       </div>
@@ -97,38 +97,38 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
   const isAtRisk = remainingDays <= 2 && workProgress < 80
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-card shadow-sm p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card shadow-sm p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />
-          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Sprint Health</span>
+          <span className="text-xs font-medium text-foreground">Sprint Health</span>
         </div>
-        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">Active</span>
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Active</span>
       </div>
 
       <div>
-        <h3 className="text-sm font-bold text-slate-800">{sprint.name}</h3>
-        {sprint.goal && <p className="text-[11px] text-slate-500 mt-0.5 italic">{sprint.goal}</p>}
+        <h3 className="text-sm font-semibold text-foreground">{sprint.name}</h3>
+        {sprint.goal && <p className="text-[11px] text-muted-foreground mt-0.5 italic">{sprint.goal}</p>}
       </div>
 
       {/* Time progress */}
       <div className="space-y-1.5">
-        <div className="flex justify-between text-[10px] font-semibold text-slate-500">
+        <div className="flex justify-between text-[10px] font-semibold text-muted-foreground">
           <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> Time</span>
           <span>{elapsedDays}d / {totalDays}d ({remainingDays}d left)</span>
         </div>
-        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div className={cn("h-full rounded-full transition-all", isAtRisk ? "bg-red-500" : "bg-blue-500")} style={{ width: `${timeProgress}%` }} />
         </div>
       </div>
 
       {/* Work progress */}
       <div className="space-y-1.5">
-        <div className="flex justify-between text-[10px] font-semibold text-slate-500">
+        <div className="flex justify-between text-[10px] font-semibold text-muted-foreground">
           <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Story Points</span>
           <span>{sprint.completedPoints} / {sprint.totalPoints} pts</span>
         </div>
-        <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+        <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
           <div className={cn("h-full rounded-full transition-all", isAhead ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${workProgress}%` }} />
         </div>
       </div>
@@ -136,16 +136,16 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
       {/* Stats row */}
       <div className="grid grid-cols-3 gap-3 pt-2 border-t">
         <div className="text-center">
-          <p className="text-lg font-extrabold text-slate-800">{sprint.totalIssues}</p>
-          <p className="text-[9px] font-semibold text-slate-400 uppercase">Issues</p>
+          <p className="text-lg font-semibold text-foreground">{sprint.totalIssues}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">Issues</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-extrabold text-emerald-600">{sprint.completedIssues}</p>
-          <p className="text-[9px] font-semibold text-slate-400 uppercase">Done</p>
+          <p className="text-lg font-semibold text-emerald-600">{sprint.completedIssues}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">Done</p>
         </div>
         <div className="text-center">
-          <p className="text-lg font-extrabold text-slate-800">{remainingDays}</p>
-          <p className="text-[9px] font-semibold text-slate-400 uppercase">Days Left</p>
+          <p className="text-lg font-semibold text-foreground">{remainingDays}</p>
+          <p className="text-[11px] font-medium text-muted-foreground">Days Left</p>
         </div>
       </div>
 

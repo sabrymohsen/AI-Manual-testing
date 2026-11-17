@@ -79,7 +79,7 @@ const ACTIVITY_DOTS: Record<string, string> = {
   SPRINT_STARTED: "bg-orange-500",
   SPRINT_COMPLETED: "bg-emerald-500",
   PROJECT_JOINED: "bg-purple-500",
-  PROFILE_UPDATED: "bg-indigo-500",
+  PROFILE_UPDATED: "bg-primary",
   FILE_UPLOADED: "bg-cyan-500",
   WORK_LOGGED: "bg-amber-500",
   PASSWORD_CHANGED: "bg-slate-500",
@@ -246,7 +246,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
       </div>
     )
   }
@@ -262,7 +262,7 @@ export default function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <h1 className="text-2xl font-bold tracking-tight">My Profile</h1>
+      <h1 className="text-2xl font-semibold tracking-tight">My Profile</h1>
       <p className="mt-1 text-sm text-muted-foreground">Manage your personal information, activity, and security.</p>
 
       {/* Tabs */}
@@ -275,7 +275,7 @@ export default function ProfilePage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
-                active ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-foreground"
+                active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="h-4 w-4" /> {t.label}
@@ -289,20 +289,20 @@ export default function ProfilePage() {
         <div className="mt-6 grid gap-8 md:grid-cols-[260px_1fr]">
           {/* Left: avatar + stats */}
           <div className="space-y-4">
-            <div className="flex flex-col items-center rounded-2xl border bg-card p-6">
+            <div className="flex flex-col items-center rounded-xl border bg-card p-6">
               <div className="relative">
                 {profile.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.avatarUrl} alt="" className="h-28 w-28 rounded-full border object-cover" />
                 ) : (
-                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-3xl font-bold uppercase text-white">
+                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-3xl font-semibold uppercase text-white">
                     {(profile.name || profile.email)[0]}
                   </div>
                 )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-indigo-600 text-white shadow-md transition-colors hover:bg-indigo-700 disabled:opacity-60"
+                  className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-primary text-white shadow-md transition-colors hover:bg-primary/90 disabled:opacity-60"
                   title="Change photo"
                 >
                   {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
@@ -315,9 +315,9 @@ export default function ProfilePage() {
                   onChange={handleAvatarChange}
                 />
               </div>
-              <p className="mt-3 text-base font-bold">{profile.name || profile.email}</p>
+              <p className="mt-3 text-base font-semibold">{profile.name || profile.email}</p>
               {profile.jobTitle && <p className="text-xs text-muted-foreground">{profile.jobTitle}</p>}
-              <span className="mt-2 rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">
+              <span className="mt-2 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                 {profile.role}
               </span>
             </div>
@@ -325,7 +325,7 @@ export default function ProfilePage() {
             {stats && (
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { icon: FolderKanban, label: "Projects", value: stats.projects, color: "text-indigo-600 bg-indigo-50" },
+                  { icon: FolderKanban, label: "Projects", value: stats.projects, color: "text-primary bg-primary/10" },
                   { icon: ClipboardList, label: "Assigned", value: stats.tasksAssigned, color: "text-blue-600 bg-blue-50" },
                   { icon: CheckCircle2, label: "Done", value: stats.tasksCompleted, color: "text-green-600 bg-green-50" },
                 ].map((s) => (
@@ -333,8 +333,8 @@ export default function ProfilePage() {
                     <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${s.color}`}>
                       <s.icon className="h-4 w-4" />
                     </span>
-                    <span className="mt-1.5 text-lg font-bold leading-none">{s.value}</span>
-                    <span className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <span className="mt-1.5 text-lg font-semibold leading-none">{s.value}</span>
+                    <span className="mt-1 text-[11px] font-medium text-muted-foreground">
                       {s.label}
                     </span>
                   </div>
@@ -344,7 +344,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Right: editable form */}
-          <form onSubmit={handleSave} className="space-y-4 rounded-2xl border bg-card p-6">
+          <form onSubmit={handleSave} className="space-y-4 rounded-xl border bg-card p-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Full Name</Label>
@@ -367,7 +367,7 @@ export default function ProfilePage() {
                 <select
                   value={form.timezone}
                   onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   {TIMEZONES.map((tz) => (
                     <option key={tz} value={tz}>{tz}</option>
@@ -379,7 +379,7 @@ export default function ProfilePage() {
                 <select
                   value={form.language}
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   {LANGUAGES.map((l) => (
                     <option key={l.value} value={l.value}>{l.label}</option>
@@ -395,7 +395,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => setForm({ ...form, theme: t })}
                       className={`rounded-lg border px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
-                        form.theme === t ? "border-indigo-500 bg-indigo-50 text-indigo-700" : "text-muted-foreground hover:bg-muted"
+                        form.theme === t ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
                       }`}
                     >
                       {t}
@@ -419,7 +419,7 @@ export default function ProfilePage() {
               />
             </div>
             <div className="flex justify-end">
-              <Button type="submit" disabled={saving} className="bg-indigo-600 text-white hover:bg-indigo-700">
+              <Button type="submit" disabled={saving} className="bg-primary text-white hover:bg-primary/90">
                 {saving ? (
                   <>
                     <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…
@@ -435,7 +435,7 @@ export default function ProfilePage() {
 
       {/* ── ACTIVITY ── */}
       {tab === "activity" && (
-        <div className="mt-6 rounded-2xl border bg-card p-6">
+        <div className="mt-6 rounded-xl border bg-card p-6">
           {activity.length === 0 ? (
             <div className="py-12 text-center">
               <ActivityIcon className="mx-auto h-10 w-10 text-slate-200" />
@@ -453,10 +453,10 @@ export default function ProfilePage() {
                       ACTIVITY_DOTS[a.type] || "bg-slate-400"
                     }`}
                   />
-                  <p className="text-sm font-medium text-slate-800">{a.description}</p>
+                  <p className="text-sm font-medium text-foreground">{a.description}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {new Date(a.createdAt).toLocaleString()}
-                    {a.project && <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">{a.project.name}</span>}
+                    {a.project && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{a.project.name}</span>}
                   </p>
                 </li>
               ))}
@@ -468,9 +468,9 @@ export default function ProfilePage() {
       {/* ── SECURITY ── */}
       {tab === "security" && (
         <div className="mx-auto mt-6 max-w-md">
-          <form onSubmit={handlePasswordChange} className="space-y-4 rounded-2xl border bg-card p-6">
+          <form onSubmit={handlePasswordChange} className="space-y-4 rounded-xl border bg-card p-6">
             <div>
-              <h3 className="text-sm font-bold">Change password</h3>
+              <h3 className="text-sm font-semibold">Change password</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Use at least 8 characters. You&apos;ll stay signed in on this device.
               </p>
@@ -512,7 +512,7 @@ export default function ProfilePage() {
             <Button
               type="submit"
               disabled={pwSaving || !pw.current || !pw.next || pw.next !== pw.confirm || pw.next.length < 8}
-              className="w-full bg-indigo-600 text-white hover:bg-indigo-700"
+              className="w-full bg-primary text-white hover:bg-primary/90"
             >
               {pwSaving ? (
                 <>

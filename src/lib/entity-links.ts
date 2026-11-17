@@ -200,7 +200,8 @@ export const ENTITY_CONFIG: Record<LinkableEntityType, EntityConfig> = {
   },
   SPRINT: {
     label: "Sprint",
-    model: "sprint",
+    // The Scrum Board's sprints (the old Requirement board is gone).
+    model: "scrumSprint",
     select: { id: true, name: true, status: true },
     searchFields: ["name"],
     toEntity: (r, { projectId }) => ({
@@ -208,13 +209,13 @@ export const ENTITY_CONFIG: Record<LinkableEntityType, EntityConfig> = {
       type: "SPRINT",
       key: "SPRINT",
       label: r.name,
-      url: `/projects/${projectId}/board`,
+      url: `/projects/${projectId}/scrum?view=backlog`,
       meta: r.status ?? null,
     }),
   },
   EPIC: {
     label: "Epic",
-    model: "epic",
+    model: "scrumEpic",
     select: { id: true, title: true },
     searchFields: ["title"],
     toEntity: (r, { projectId }) => ({
@@ -222,7 +223,7 @@ export const ENTITY_CONFIG: Record<LinkableEntityType, EntityConfig> = {
       type: "EPIC",
       key: "EPIC",
       label: r.title,
-      url: `/projects/${projectId}/board?tab=epics`,
+      url: `/projects/${projectId}/scrum?view=backlog&epic=${r.id}`,
       meta: null,
     }),
   },

@@ -34,20 +34,20 @@ export function StepResultItem({
     Passed: <CheckCircle2 className="h-5 w-5 text-green-600" />,
     Failed: <XCircle className="h-5 w-5 text-red-600" />,
     Running: <Clock className="h-5 w-5 text-blue-600 animate-pulse" />,
-    Pending: <Clock className="h-5 w-5 text-gray-400" />,
+    Pending: <Clock className="h-5 w-5 text-muted-foreground" />,
     Warning: <AlertTriangle className="h-5 w-5 text-yellow-600" />,
     Blocked: <XCircle className="h-5 w-5 text-orange-600" />,
-    Skipped: <AlertTriangle className="h-5 w-5 text-gray-400" />,
-    SelfHealed: <Sparkles className="h-5 w-5 text-indigo-600 animate-pulse" />,
-  }[status] || <Clock className="h-5 w-5 text-gray-400" />
+    Skipped: <AlertTriangle className="h-5 w-5 text-muted-foreground" />,
+    SelfHealed: <Sparkles className="h-5 w-5 text-primary animate-pulse" />,
+  }[status] || <Clock className="h-5 w-5 text-muted-foreground" />
 
   const statusColor = {
     Passed: "bg-green-50 border-green-200",
     Failed: "bg-red-50 border-red-200",
     Running: "bg-blue-50 border-blue-200",
-    Pending: "bg-gray-50 border-gray-200",
-    SelfHealed: "bg-indigo-50/70 border-indigo-200 backdrop-blur-sm shadow-sm",
-  }[status] || "bg-gray-50 border-gray-200"
+    Pending: "bg-muted/50 border-border",
+    SelfHealed: "bg-primary/10 border-primary/25 backdrop-blur-sm shadow-sm",
+  }[status] || "bg-muted/50 border-border"
 
   const wasHealed = status === "SelfHealed" || actionMetadata?.wasHealed
 
@@ -92,9 +92,9 @@ export function StepResultItem({
 
           {/* Self Healing Diagnostics Panel */}
           {wasHealed && actionMetadata && (
-            <div className="mt-3 p-3.5 rounded-lg border border-indigo-100 bg-indigo-50/30 backdrop-blur-sm shadow-sm space-y-2.5">
-              <div className="flex items-center gap-2 text-indigo-900 font-semibold text-xs">
-                <Sparkles className="h-4 w-4 text-indigo-600 animate-pulse" />
+            <div className="mt-3 p-3.5 rounded-lg border border-primary/25 bg-primary/10 backdrop-blur-sm shadow-sm space-y-2.5">
+              <div className="flex items-center gap-2 text-primary font-semibold text-xs">
+                <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                 <span>Self-Healing Diagnostics</span>
               </div>
               
@@ -116,7 +116,7 @@ export function StepResultItem({
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs">
                 <div>
                   <span className="text-muted-foreground font-medium">Strategy: </span>
-                  <span className="capitalize font-semibold text-indigo-700 font-mono text-[11px]">
+                  <span className="capitalize font-semibold text-primary font-mono text-[11px]">
                     {(actionMetadata.healingMethod || "fallback_locator").replace(/_/g, " ")}
                   </span>
                 </div>
@@ -164,7 +164,7 @@ export function StepResultItem({
                     href={`/api/files/${actionMetadata.domSnapshotPath}`} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="font-mono text-indigo-700 hover:text-indigo-900 hover:underline break-all"
+                    className="font-mono text-primary hover:text-primary hover:underline break-all"
                   >
                     {actionMetadata.domSnapshotPath.split("/").pop() || "Download DOM Snapshot"}
                   </a>

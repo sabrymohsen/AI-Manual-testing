@@ -5,6 +5,7 @@ const fs = require("fs")
 const net = require("net")
 const os = require("os")
 const path = require("path")
+const crypto = require("crypto")
 const { spawn, execFile } = require("child_process")
 
 const isWin = process.platform === "win32"
@@ -17,8 +18,15 @@ const PATH = [...new Set([...EXTRA_PATH, ...(process.env.PATH || "").split(path.
 // desktop mode runs it on its own port and points the web app at it.
 const SOCKET_PORT = 3101
 
+// The web app runs from a production build (see startWeb), not `next dev`:
+// dev mode compiled every page on first visit — 1–6 s per screen on a busy
+// laptop — where the build answers in tens of milliseconds. The build lives in
+// its own folder so it never collides with a `npm run dev` in a terminal.
+// Set QA_DESKTOP_WEB_MODE=dev to get the old behaviour.
+const BUILD_DIR = ".next-desktop"
+const WEB_PORT = 3000
+
 const SERVICES = [
-  { name: "web", script: "dev", port: 3000 },
   { name: "socket", script: "dev:socket", port: SOCKET_PORT },
   { name: "recorder", script: "recorder-worker", port: 3847 },
   { name: "workers", script: "workers" },
@@ -128,7 +136,7 @@ async function ensureRedis() {
 function startService(repo, env, svc) {
   log(`Starting ${svc.name}…`)
   const npm = isWin ? "npm.cmd" : "npm"
-  const child = spawn(npm, ["run", svc.script], {
+  const child = spawn(npm, ["run", svc.script, ...(svc.args ? ["--", ...svc.args] : [])], {
     cwd: repo,
     env,
     detached: !isWin, // own process group so we can stop npm *and* its children
@@ -140,6 +148,93 @@ function startService(repo, env, svc) {
   child.stderr.on("data", pipe)
   child.on("exit", (code) => log(`${prefix}stopped (exit ${code})`))
   children.push(child)
+}
+
+/**
+ * A fingerprint of the code the build was made from: the commit, plus any
+ * uncommitted edits and new files. A different fingerprint means rebuild.
+ */
+async function codeStamp(repo) {
+  const opts = { cwd: repo, maxBuffer: 256 * 1024 * 1024 }
+  const head = await run("git", ["rev-parse", "HEAD"], opts)
+  if (!head.ok) return null // not a git checkout: can't tell, so always rebuild
+  const watched = ["src", "public", "prisma", "next.config.js", "package.json", "package-lock.json", "tailwind.config.ts", "postcss.config.js", "tsconfig.json"]
+  const diff = await run("git", ["diff", "HEAD", "--", ...watched], opts)
+  const untracked = await run("git", ["ls-files", "--others", "--exclude-standard", "--", ...watched], opts)
+  const hash = crypto.createHash("sha256").update(head.out).update(diff.out)
+  for (const f of untracked.out.split("\n").filter(Boolean)) {
+    try {
+      const st = fs.statSync(path.join(repo, f))
+      hash.update(`${f}:${st.size}:${st.mtimeMs}`)
+    } catch {}
+  }
+  // NEXT_PUBLIC_* values are baked into the build.
+  const envFile = readEnvFile(repo)
+  hash.update(Object.keys(envFile).filter((k) => k.startsWith("NEXT_PUBLIC_")).sort().map((k) => `${k}=${envFile[k]}`).join("\n"))
+  hash.update(`socket:${SOCKET_PORT}`)
+  return hash.digest("hex")
+}
+
+/** Build the web app into BUILD_DIR unless the existing build matches the code. */
+async function ensureWebBuild(repo, env) {
+  const dir = path.join(repo, BUILD_DIR)
+  const stampFile = path.join(dir, "qa-desktop-stamp")
+  const stamp = await codeStamp(repo)
+  let built = null
+  try {
+    built = fs.readFileSync(stampFile, "utf8").trim()
+  } catch {}
+  if (stamp && built === stamp && fs.existsSync(path.join(dir, "BUILD_ID"))) {
+    log("✓ App build is up to date")
+    return true
+  }
+
+  log(fs.existsSync(path.join(dir, "BUILD_ID"))
+    ? "The code changed since the last build — rebuilding so pages open instantly (about 3–5 minutes)…"
+    : "Building the app once so pages open instantly (about 3–5 minutes, only after code changes)…")
+  const started = Date.now()
+  const ok = await new Promise((resolve) => {
+    const npm = isWin ? "npm.cmd" : "npm"
+    const child = spawn(npm, ["run", "build"], { cwd: repo, env: { ...env, NEXT_DIST_DIR: BUILD_DIR }, stdio: ["ignore", "pipe", "pipe"] })
+    let tail = ""
+    const onData = (buf) => {
+      const text = String(buf)
+      tail = (tail + text).slice(-4000)
+      for (const raw of text.split(/\r?\n/)) {
+        const line = raw.replace(/\u001b\[[0-9;]*m/g, "")
+        // Milestones only: a full build log is thousands of lines.
+        if (/Creating an optimized|Compiled|Collecting page data|Generating static pages \(\d+\/\d+\)$|Finalizing|Failed|Error:|error /i.test(line)) log(`[build] ${line.trim()}`)
+      }
+    }
+    child.stdout.on("data", onData)
+    child.stderr.on("data", onData)
+    child.on("error", () => resolve(false))
+    child.on("close", (code) => {
+      if (code !== 0) log(`[build] failed:\n${tail}`)
+      resolve(code === 0)
+    })
+  })
+  if (!ok) return false
+  try {
+    if (stamp) fs.writeFileSync(stampFile, stamp)
+  } catch {}
+  log(`✓ Build finished in ${Math.round((Date.now() - started) / 1000)}s`)
+  return true
+}
+
+/** Production build when possible; `next dev` as the fallback. */
+async function startWeb(repo, env) {
+  if (await isPortOpen(WEB_PORT)) {
+    log(`✓ web already running on :${WEB_PORT}`)
+    return
+  }
+  const mode = (process.env.QA_DESKTOP_WEB_MODE || env.QA_DESKTOP_WEB_MODE || "build").toLowerCase()
+  if (mode !== "dev" && (await ensureWebBuild(repo, env))) {
+    startService(repo, { ...env, NEXT_DIST_DIR: BUILD_DIR }, { name: "web", script: "start", args: ["-p", String(WEB_PORT)] })
+    return
+  }
+  if (mode !== "dev") log("Falling back to development mode (slower page loads) so you can keep working.")
+  startService(repo, env, { name: "web", script: "dev" })
 }
 
 /**
@@ -182,8 +277,10 @@ async function start(repo, onLog) {
     }
     startService(repo, env, svc)
   }
+  // After the others, so the socket server and workers come up while a build runs.
+  await startWeb(repo, env)
 
-  await waitForPort(3000, 180000, "Web app")
+  await waitForPort(WEB_PORT, 180000, "Web app")
   log("✓ QA Engine is up — opening…")
 }
 

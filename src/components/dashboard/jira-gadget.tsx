@@ -18,30 +18,30 @@ export function Gadget({ title, icon, actions, children, className, fullWidth }:
 
   return (
     <div className={cn(
-      "rounded-lg border border-slate-200 bg-white shadow-sm",
+      "rounded-lg border border-border bg-card shadow-sm",
       fullWidth && "col-span-full",
       className
     )}>
       {/* Jira-style gadget header */}
-      <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 bg-slate-50/50">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-muted/50">
         <div className="flex items-center gap-2">
           <GripVertical className="h-3.5 w-3.5 text-slate-300 cursor-grab" />
-          {icon && <span className="text-slate-500">{icon}</span>}
-          <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-700">{title}</h3>
+          {icon && <span className="text-muted-foreground">{icon}</span>}
+          <h3 className="text-[11px] font-medium text-foreground">{title}</h3>
         </div>
         <div className="flex items-center gap-1">
           {actions}
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-muted-foreground"
           >
             <MoreHorizontal className="h-3.5 w-3.5" />
           </button>
           {menuOpen && (
-            <div className="absolute right-2 top-8 z-10 w-32 rounded-md border border-slate-200 bg-white py-1 shadow-lg">
-              <button className="block w-full px-3 py-1 text-left text-[10px] text-slate-600 hover:bg-slate-50">Refresh</button>
-              <button className="block w-full px-3 py-1 text-left text-[10px] text-slate-600 hover:bg-slate-50">Configure</button>
-              <button className="block w-full px-3 py-1 text-left text-[10px] text-red-600 hover:bg-slate-50">Remove</button>
+            <div className="absolute right-2 top-8 z-10 w-32 rounded-md border border-border bg-card py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+              <button className="block w-full px-3 py-1 text-left text-[10px] text-muted-foreground hover:bg-muted/50">Refresh</button>
+              <button className="block w-full px-3 py-1 text-left text-[10px] text-muted-foreground hover:bg-muted/50">Configure</button>
+              <button className="block w-full px-3 py-1 text-left text-[10px] text-red-600 hover:bg-muted/50">Remove</button>
             </div>
           )}
         </div>

@@ -160,22 +160,22 @@ export default function McpAgentConsolePage() {
   ]
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-slate-800">
+    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-foreground">
       
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             <Sparkles className="text-indigo-650 animate-pulse h-5 w-5" /> AI Agent Console
           </h1>
-          <p className="text-slate-500 font-medium mt-1">
+          <p className="text-muted-foreground font-medium mt-1">
             Interact with your SHAFT automation suite using natural language prompts linked via Model Context Protocol (MCP).
           </p>
         </div>
         
         {/* Server Status Indicators */}
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black border uppercase transition-colors ${
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold border uppercase transition-colors ${
             serverOnline 
               ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
               : "bg-rose-50 text-rose-700 border-rose-200"
@@ -187,7 +187,7 @@ export default function McpAgentConsolePage() {
 
       {/* Selector SubTabs Controls */}
       <div className="flex items-center justify-between border-b pb-1.5 flex-wrap gap-3">
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border">
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border">
           {[
             { id: "Chat", label: "Agent Playground Chat", icon: Bot },
             { id: "Config", label: "MCP Client Configurations", icon: Sliders }
@@ -197,8 +197,8 @@ export default function McpAgentConsolePage() {
               onClick={() => setActiveSubTab(tab.id as any)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeSubTab === tab.id
-                  ? "bg-white text-indigo-700 shadow-xs border"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-card text-primary shadow-xs border"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon size={13} />
@@ -210,7 +210,7 @@ export default function McpAgentConsolePage() {
 
       {/* Primary columns row */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-2 text-slate-400 border bg-white rounded-2xl">
+        <div className="py-20 flex flex-col items-center justify-center gap-2 text-muted-foreground border bg-card rounded-xl">
           <Loader2 className="animate-spin" size={24} />
           <span>Starting MCP agent console...</span>
         </div>
@@ -221,11 +221,11 @@ export default function McpAgentConsolePage() {
           <div className="lg:col-span-8 space-y-6">
             
             {activeSubTab === "Chat" ? (
-              <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Conversational Console Terminal</span>
+              <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Conversational Console Terminal</span>
                 
                 {/* Message Log */}
-                <div className="h-96 border rounded-2xl bg-slate-50 p-4 overflow-y-auto space-y-3 text-[11px] font-medium leading-relaxed">
+                <div className="h-96 border rounded-xl bg-muted/50 p-4 overflow-y-auto space-y-3 text-[11px] font-medium leading-relaxed">
                   {chatMessages.map((msg, idx) => (
                     <div key={idx} className={`flex items-start gap-3 max-w-[85%] ${msg.role === "user" ? "ml-auto flex-row-reverse" : ""}`}>
                       <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 select-none ${
@@ -236,12 +236,12 @@ export default function McpAgentConsolePage() {
                       
                       <div className="space-y-1">
                         <div className={`p-3 rounded-2xl ${
-                          msg.role === "user" ? "bg-slate-200 text-slate-800 rounded-tr-none" : "bg-indigo-50 border border-indigo-100 text-indigo-900 rounded-tl-none shadow-3xs"
+                          msg.role === "user" ? "bg-muted text-foreground rounded-tr-none" : "bg-primary/10 border border-primary/25 text-primary rounded-tl-none shadow-3xs"
                         }`}>
                           {msg.text}
                         </div>
                         {msg.toolUsed && (
-                          <span className="text-[9px] font-mono text-slate-450 block font-bold mt-1">
+                          <span className="text-[9px] font-mono text-slate-450 block font-semibold mt-1">
                             Exposed Tool Triggered: {msg.toolUsed}()
                           </span>
                         )}
@@ -249,7 +249,7 @@ export default function McpAgentConsolePage() {
                     </div>
                   ))}
                   {sending && (
-                    <div className="flex items-center gap-2 text-slate-400 italic">
+                    <div className="flex items-center gap-2 text-muted-foreground italic">
                       <Loader2 size={12} className="animate-spin" />
                       <span>Agent is executing command via MCP client protocol...</span>
                     </div>
@@ -263,7 +263,7 @@ export default function McpAgentConsolePage() {
                       key={cmd.label}
                       disabled={sending}
                       onClick={() => handleSendPrompt(cmd.prompt)}
-                      className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border rounded-lg transition-colors"
+                      className="px-2.5 py-1 text-[10px] font-semibold bg-muted hover:bg-muted text-foreground border rounded-lg transition-colors"
                     >
                       {cmd.label}
                     </button>
@@ -273,7 +273,7 @@ export default function McpAgentConsolePage() {
                 {/* Direct input controls */}
                 <div className="pt-2 border-t space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] text-slate-450 font-bold block uppercase">Command Palette:</span>
+                    <span className="text-[11px] text-slate-450 font-medium block">Command Palette:</span>
                     <select
                       onChange={(e) => {
                         const val = e.target.value
@@ -284,7 +284,7 @@ export default function McpAgentConsolePage() {
                           }
                         }
                       }}
-                      className="flex h-8 rounded-xl border border-input bg-background px-3 py-1 text-[10.5px] cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500 w-52"
+                      className="flex h-8 rounded-xl border border-input bg-background px-3 py-1 text-[10.5px] cursor-pointer focus-visible:ring-1 focus-visible:ring-primary w-52"
                     >
                       <option value="">-- Choose MCP Command --</option>
                       {mcpTools.map(t => (
@@ -299,12 +299,12 @@ export default function McpAgentConsolePage() {
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSendPrompt(chatInput)}
                       placeholder="Ask Agent to run login tests or analyze allure failure triage logs..."
-                      className="flex-1 h-9.5 rounded-xl border border-slate-200 px-3 text-xs bg-slate-50/50"
+                      className="flex-1 h-9.5 rounded-xl border border-border px-3 text-xs bg-muted/50"
                     />
                     <Button
                       onClick={() => handleSendPrompt(chatInput)}
                       disabled={sending || !chatInput.trim()}
-                      className="bg-indigo-650 hover:bg-indigo-700 text-white h-9.5 px-4 rounded-xl flex items-center justify-center gap-1.5"
+                      className="bg-indigo-650 hover:bg-primary/90 text-white h-9.5 px-4 rounded-xl flex items-center justify-center gap-1.5"
                     >
                       <Send size={13} /> Send
                     </Button>
@@ -313,26 +313,26 @@ export default function McpAgentConsolePage() {
 
               </div>
             ) : (
-              <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-5">
-                <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">MCP Client Properties Settings</span>
+              <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-5">
+                <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">MCP Client Properties Settings</span>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 block">MCP Server Endpoint URL</label>
+                    <label className="text-[10px] font-semibold text-slate-450 block">MCP Server Endpoint URL</label>
                     <input
                       value={serverUrl}
                       onChange={(e) => setServerUrl(e.target.value)}
                       placeholder="http://localhost:4000"
-                      className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none focus-visible:ring-1 focus-visible:ring-primary"
                     />
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 block">AI LLM Provider Scope</label>
+                    <label className="text-[10px] font-semibold text-slate-450 block">AI LLM Provider Scope</label>
                     <select
                       value={provider}
                       onChange={(e) => setProvider(e.target.value)}
-                      className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-primary"
                     >
                       <option value="Gemini">Google Gemini (Recommended)</option>
                       <option value="OpenAI">OpenAI GPT-4o</option>
@@ -342,25 +342,25 @@ export default function McpAgentConsolePage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 block">API Decryption Key token</label>
+                    <label className="text-[10px] font-semibold text-slate-450 block">API Decryption Key token</label>
                     <div className="relative">
-                      <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <Lock size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <input
                         type="password"
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
                         placeholder="API Token Key"
-                        className="flex h-9 w-full rounded-xl border border-input bg-background pl-8 pr-3 py-1 text-xs select-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                        className="flex h-9 w-full rounded-xl border border-input bg-background pl-8 pr-3 py-1 text-xs select-none focus-visible:ring-1 focus-visible:ring-primary"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-450 block">Agent Permission Capability</label>
+                    <label className="text-[10px] font-semibold text-slate-450 block">Agent Permission Capability</label>
                     <select
                       value={permissionLevel}
                       onChange={(e) => setPermissionLevel(e.target.value)}
-                      className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
+                      className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-primary"
                     >
                       <option value="Read-Only">Read-Only Logs</option>
                       <option value="Can Execute Tests">Execute Test Combinations</option>
@@ -373,7 +373,7 @@ export default function McpAgentConsolePage() {
                   <Button
                     onClick={handleSaveConfig}
                     disabled={saving}
-                    className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl h-9.5 px-4 font-black shadow-xs flex items-center justify-center gap-1.5"
+                    className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 px-4 font-semibold shadow-xs flex items-center justify-center gap-1.5"
                   >
                     {saving ? <Loader2 className="animate-spin" size={13} /> : <Settings size={13} />}
                     Save Configurations
@@ -384,12 +384,12 @@ export default function McpAgentConsolePage() {
             )}
 
             {/* Activity Logs Table */}
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Exposed MCP Activity Audit Log</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Exposed MCP Activity Audit Log</span>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                    <tr className="bg-muted/50 border-b text-[11px] font-medium text-slate-450">
                       <th className="p-3">Action Tool Call</th>
                       <th className="p-3">Status</th>
                       <th className="p-3">Duration (ms)</th>
@@ -399,10 +399,10 @@ export default function McpAgentConsolePage() {
                   </thead>
                   <tbody className="divide-y text-slate-650">
                     {activities.map(act => (
-                      <tr key={act.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-3 font-mono font-bold text-indigo-650">{act.action}()</td>
+                      <tr key={act.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="p-3 font-mono font-semibold text-indigo-650">{act.action}()</td>
                         <td className="p-3">
-                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black border uppercase ${
+                          <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-semibold border uppercase ${
                             act.status === "success" 
                               ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
                               : "bg-rose-50 text-rose-700 border-rose-100"
@@ -410,9 +410,9 @@ export default function McpAgentConsolePage() {
                             {act.status}
                           </span>
                         </td>
-                        <td className="p-3 font-mono font-bold">{act.duration}ms</td>
-                        <td className="p-3 font-medium text-slate-500 max-w-[240px] truncate">{act.result}</td>
-                        <td className="p-3 text-right text-slate-400 font-mono text-[9.5px]">
+                        <td className="p-3 font-mono font-semibold">{act.duration}ms</td>
+                        <td className="p-3 font-medium text-muted-foreground max-w-[240px] truncate">{act.result}</td>
+                        <td className="p-3 text-right text-muted-foreground font-mono text-[9.5px]">
                           {new Date(act.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </td>
                       </tr>
@@ -427,17 +427,17 @@ export default function McpAgentConsolePage() {
           {/* Right Column: Exposed MCP tools list */}
           <div className="lg:col-span-4 space-y-6">
             
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Exposed MCP Tools Palette</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Exposed MCP Tools Palette</span>
               <div className="space-y-3">
                 {mcpTools.map(tool => (
-                  <div key={tool.name} className="p-3 border rounded-xl space-y-1.5 bg-slate-50/50">
+                  <div key={tool.name} className="p-3 border rounded-xl space-y-1.5 bg-muted/50">
                     <div className="flex justify-between items-center text-[10px] border-b pb-1">
-                      <span className="font-mono font-bold text-indigo-700">{tool.name}()</span>
-                      <span className="text-[8px] bg-slate-100 border text-slate-450 font-black px-1.5 py-0.2 rounded uppercase">MCP Tool</span>
+                      <span className="font-mono font-semibold text-primary">{tool.name}()</span>
+                      <span className="text-[11px] bg-muted border text-slate-450 font-medium px-1.5 py-0.2 rounded">MCP Tool</span>
                     </div>
-                    <p className="text-[9.5px] text-slate-500 font-medium leading-relaxed">{tool.desc}</p>
-                    <div className="font-mono text-[8px] bg-slate-100 text-slate-450 p-1 rounded font-bold">
+                    <p className="text-[9.5px] text-muted-foreground font-medium leading-relaxed">{tool.desc}</p>
+                    <div className="font-mono text-[8px] bg-muted text-slate-450 p-1 rounded font-semibold">
                       Args: {tool.args}
                     </div>
                   </div>

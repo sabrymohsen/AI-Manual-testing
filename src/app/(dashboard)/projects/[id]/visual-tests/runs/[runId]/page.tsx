@@ -63,7 +63,7 @@ export default function VisualRunPage() {
 
   if (!data) {
     return (
-      <div className="flex items-center gap-2 p-10 text-sm text-slate-500">
+      <div className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading…
       </div>
     )
@@ -93,16 +93,16 @@ export default function VisualRunPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-5 p-6">
-      <Link href={`/projects/${projectId}/visual-tests/${test.id}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+      <Link href={`/projects/${projectId}/visual-tests/${test.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> {test.name}
       </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-bold text-slate-900">
+          <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold text-foreground">
             {test.name} <RunStatusBadge status={run.status} outcome={run.outcome} newCount={run.newCount} passedCount={run.passedCount} />
           </h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-muted-foreground">
             {TEST_TYPE_LABEL[test.type]} · started {formatDate(run.startedAt || run.createdAt)} · took {formatDuration(run.startedAt, run.completedAt)}
           </p>
         </div>
@@ -116,7 +116,7 @@ export default function VisualRunPage() {
       {/* Whose turn is it — always said in words. */}
       <div
         className={`rounded-lg border px-4 py-3 text-sm ${
-          live ? "border-indigo-200 bg-indigo-50 text-indigo-900" : run.unresolvedCount > 0 ? "border-amber-200 bg-amber-50 text-amber-900" : run.outcome === "Failed" || run.status === "Failed" ? "border-rose-200 bg-rose-50 text-rose-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"
+          live ? "border-primary/25 bg-primary/10 text-primary" : run.unresolvedCount > 0 ? "border-amber-200 bg-amber-50 text-amber-900" : run.outcome === "Failed" || run.status === "Failed" ? "border-rose-200 bg-rose-50 text-rose-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"
         }`}
       >
         {run.status === "Queued" ? (
@@ -130,8 +130,8 @@ export default function VisualRunPage() {
             <p>
               Capturing screenshots: {run.doneScreens} of {run.totalScreens || "?"}. You can leave this page; the run continues.
             </p>
-            <div className="h-2 overflow-hidden rounded-full bg-indigo-100">
-              <div className="h-full bg-indigo-600 transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-primary/15">
+              <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
             </div>
           </div>
         ) : run.status === "Failed" && !run.outcome ? (
@@ -159,7 +159,7 @@ export default function VisualRunPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === key ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             {label}
           </button>
@@ -168,8 +168,8 @@ export default function VisualRunPage() {
 
       {tab === "summary" && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="space-y-3 rounded-xl border bg-white p-5 lg:col-span-1">
-            <h2 className="font-semibold text-slate-900">Screens</h2>
+          <div className="space-y-3 rounded-xl border bg-card p-5 lg:col-span-1">
+            <h2 className="font-semibold text-foreground">Screens</h2>
             {(["Unresolved", "Error", "Rejected", "Passed", "Accepted", "New", "Removed"] as ScreenStatus[]).map(st => (
               <button
                 key={st}
@@ -178,17 +178,17 @@ export default function VisualRunPage() {
                   setStatusFilter(st)
                   setTab("screens")
                 }}
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-50"
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted/50 disabled:opacity-50"
               >
                 <ScreenStatusBadge status={st} />
-                <span className="font-semibold text-slate-800">{countBy(st)}</span>
+                <span className="font-semibold text-foreground">{countBy(st)}</span>
               </button>
             ))}
           </div>
-          <div className="space-y-3 rounded-xl border bg-white p-5 lg:col-span-2">
-            <h2 className="font-semibold text-slate-900">By browser &amp; screen size</h2>
+          <div className="space-y-3 rounded-xl border bg-card p-5 lg:col-span-2">
+            <h2 className="font-semibold text-foreground">By browser &amp; screen size</h2>
             <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase text-slate-500">
+              <thead className="text-left text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="py-2">Environment</th>
                   <th className="py-2">Passed</th>
@@ -202,8 +202,8 @@ export default function VisualRunPage() {
                   return (
                     <tr key={e.key} className="border-t">
                       <td className="py-2">
-                        <button className="text-left hover:text-indigo-700" onClick={() => { setEnvFilter(e.key); setStatusFilter("all"); setTab("screens") }}>
-                          {e.name} <span className="text-xs text-slate-500">{e.width}×{e.height}</span>
+                        <button className="text-left hover:text-primary" onClick={() => { setEnvFilter(e.key); setStatusFilter("all"); setTab("screens") }}>
+                          {e.name} <span className="text-xs text-muted-foreground">{e.width}×{e.height}</span>
                         </button>
                       </td>
                       <td className="py-2 text-emerald-700">{mine.filter(s => ["Passed", "Accepted", "New"].includes(s.status)).length}</td>
@@ -227,7 +227,7 @@ export default function VisualRunPage() {
       {tab === "screens" && (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="h-9 rounded-md border bg-white px-2">
+            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="h-9 rounded-md border bg-card px-2">
               <option value="all">All results</option>
               {(Object.keys(SCREEN_STATUS_META) as ScreenStatus[]).map(st => (
                 <option key={st} value={st}>
@@ -235,7 +235,7 @@ export default function VisualRunPage() {
                 </option>
               ))}
             </select>
-            <select value={envFilter} onChange={e => setEnvFilter(e.target.value)} className="h-9 rounded-md border bg-white px-2">
+            <select value={envFilter} onChange={e => setEnvFilter(e.target.value)} className="h-9 rounded-md border bg-card px-2">
               <option value="all">All browsers &amp; sizes</option>
               {run.environments.map((e: any) => (
                 <option key={e.key} value={e.key}>
@@ -243,20 +243,20 @@ export default function VisualRunPage() {
                 </option>
               ))}
             </select>
-            <span className="text-slate-500">{filtered.length} shown</span>
+            <span className="text-muted-foreground">{filtered.length} shown</span>
           </div>
           {filtered.length === 0 ? (
-            <p className="rounded-xl border border-dashed bg-white p-8 text-center text-sm text-slate-500">{live ? "Screens appear here as they are captured." : "No screens match."}</p>
+            <p className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">{live ? "Screens appear here as they are captured." : "No screens match."}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filtered.map(s => (
-                <Link key={s.id} href={`/projects/${projectId}/visual-tests/screens/${s.id}`} className="group overflow-hidden rounded-xl border bg-white transition hover:border-indigo-400 hover:shadow">
-                  <div className="relative h-44 overflow-hidden bg-slate-100">
+                <Link key={s.id} href={`/projects/${projectId}/visual-tests/screens/${s.id}`} className="group overflow-hidden rounded-xl border bg-card transition hover:border-primary hover:shadow">
+                  <div className="relative h-44 overflow-hidden bg-muted">
                     {s.hasActual ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={`/api/visual-tests/screens/${s.id}/image?kind=${s.hasDiff && s.status === "Unresolved" ? "diff" : "actual"}`} alt="" loading="lazy" className="w-full object-cover object-top" />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-slate-400">
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
                         {s.status === "Removed" ? <MinusCircle className="h-8 w-8" /> : <AlertTriangle className="h-8 w-8" />}
                       </div>
                     )}
@@ -270,10 +270,10 @@ export default function VisualRunPage() {
                     )}
                   </div>
                   <div className="space-y-0.5 p-3">
-                    <p className="truncate text-sm font-medium text-slate-800" title={s.url || s.name}>
+                    <p className="truncate text-sm font-medium text-foreground" title={s.url || s.name}>
                       {s.url ? pathOf(s.url) : s.name}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {s.envName} · {s.viewport}
                       {s.status === "Unresolved" && s.regionCount ? ` · ${s.regionCount} change${s.regionCount === 1 ? "" : "s"}` : ""}
                     </p>
@@ -290,7 +290,7 @@ export default function VisualRunPage() {
           <IssueList title="Pages that did not load" icon={<AlertTriangle className="h-4 w-4 text-rose-600" />} projectId={projectId} rows={errors} detail={s => s.errorMessage} empty="Every page loaded." />
           <IssueList title="Look different — waiting for review" icon={<AlertTriangle className="h-4 w-4 text-amber-600" />} projectId={projectId} rows={unresolved} detail={s => `${s.regionCount} changed area(s), ${(s.mismatchPercent ?? 0).toFixed(2)}% of the page`} empty="Nothing waiting." />
           <IssueList title="New pages (first screenshot recorded)" icon={<PlusCircle className="h-4 w-4 text-sky-600" />} projectId={projectId} rows={added} detail={() => "Recorded as the approved screenshot"} empty="No new pages." />
-          <IssueList title="Removed from the sitemap" icon={<MinusCircle className="h-4 w-4 text-slate-600" />} projectId={projectId} rows={removed} detail={s => (s.status === "Removed" ? "Accept if it was meant to go, reject if it should still exist" : SCREEN_STATUS_META[s.status as ScreenStatus].label)} empty="No pages were removed." />
+          <IssueList title="Removed from the sitemap" icon={<MinusCircle className="h-4 w-4 text-muted-foreground" />} projectId={projectId} rows={removed} detail={s => (s.status === "Removed" ? "Accept if it was meant to go, reject if it should still exist" : SCREEN_STATUS_META[s.status as ScreenStatus].label)} empty="No pages were removed." />
         </div>
       )}
     </div>
@@ -299,27 +299,27 @@ export default function VisualRunPage() {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-lg bg-slate-50 p-3">
-      <p className="text-xs text-slate-500">{label}</p>
-      <p className="mt-1 font-semibold text-slate-900">{value}</p>
+    <div className="rounded-lg bg-muted/50 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-semibold text-foreground">{value}</p>
     </div>
   )
 }
 
 function IssueList({ title, icon, rows, detail, empty, projectId }: { title: string; icon: React.ReactNode; rows: any[]; detail: (_s: any) => string; empty: string; projectId: string }) {
   return (
-    <div className="rounded-xl border bg-white">
-      <div className="flex items-center gap-2 border-b px-4 py-3 font-semibold text-slate-900">
-        {icon} {title} <span className="font-normal text-slate-500">({rows.length})</span>
+    <div className="rounded-xl border bg-card">
+      <div className="flex items-center gap-2 border-b px-4 py-3 font-semibold text-foreground">
+        {icon} {title} <span className="font-normal text-muted-foreground">({rows.length})</span>
       </div>
       {rows.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-slate-500">{empty}</p>
+        <p className="px-4 py-3 text-sm text-muted-foreground">{empty}</p>
       ) : (
         rows.map(s => (
-          <Link key={s.id} href={`/projects/${projectId}/visual-tests/screens/${s.id}`} className="flex items-center gap-3 border-b px-4 py-2 text-sm last:border-0 hover:bg-slate-50">
-            <span className="w-64 truncate font-medium text-slate-800">{s.url ? pathOf(s.url) : s.name}</span>
-            <span className="w-44 text-xs text-slate-500">{s.envName}</span>
-            <span className="flex-1 truncate text-slate-600">{detail(s)}</span>
+          <Link key={s.id} href={`/projects/${projectId}/visual-tests/screens/${s.id}`} className="flex items-center gap-3 border-b px-4 py-2 text-sm last:border-0 hover:bg-muted/50">
+            <span className="w-64 truncate font-medium text-foreground">{s.url ? pathOf(s.url) : s.name}</span>
+            <span className="w-44 text-xs text-muted-foreground">{s.envName}</span>
+            <span className="flex-1 truncate text-muted-foreground">{detail(s)}</span>
             <ScreenStatusBadge status={s.status} auto={s.resolvedByAuto} />
           </Link>
         ))

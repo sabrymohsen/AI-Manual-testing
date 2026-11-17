@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { addVisualCheckJob } from "@/lib/queue"
 
 export async function POST(
@@ -23,7 +23,7 @@ export async function POST(
       return notFoundResponse("Visual mapping not found")
     }
 
-    if (mapping.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(mapping.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

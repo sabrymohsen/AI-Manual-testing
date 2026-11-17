@@ -165,20 +165,20 @@ export default function NewManualSessionPage() {
       <div className="flex items-center gap-4 mb-8">
         <BackButton />
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             New Testing Session
           </h1>
-          <p className="text-slate-500">Configure parameters and select session mode to execute manual qa suite.</p>
+          <p className="text-muted-foreground">Configure parameters and select session mode to execute manual qa suite.</p>
         </div>
       </div>
 
       {/* Mode Tabs switcher */}
-      <div className="flex border-b border-slate-200 mb-8 bg-slate-50 p-1.5 rounded-xl max-w-md">
+      <div className="flex border-b border-border mb-8 bg-muted/50 p-1.5 rounded-xl max-w-md">
         <button
           type="button"
           onClick={() => setSessionType("structured")}
           className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-            sessionType === "structured" ? "bg-white text-blue-600 shadow" : "text-slate-500 hover:text-slate-700"
+            sessionType === "structured" ? "bg-card text-blue-600 shadow" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Layers size={16} /> Structured cases run
@@ -187,7 +187,7 @@ export default function NewManualSessionPage() {
           type="button"
           onClick={() => setSessionType("exploratory")}
           className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-            sessionType === "exploratory" ? "bg-white text-blue-600 shadow" : "text-slate-500 hover:text-slate-700"
+            sessionType === "exploratory" ? "bg-card text-blue-600 shadow" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Compass size={16} /> Exploratory mode
@@ -201,36 +201,36 @@ export default function NewManualSessionPage() {
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-20 bg-slate-50/50 border border-slate-200/50 rounded-2xl">
+        <div className="flex flex-col items-center justify-center p-20 bg-muted/50 border border-border/50 rounded-xl">
           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-slate-500 text-sm">Loading project details configuration...</p>
+          <p className="text-muted-foreground text-sm">Loading project details configuration...</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Left Column: Config settings */}
           <div className="md:col-span-1 space-y-6">
-            <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+            <div className="bg-card border border-border/80 p-6 rounded-xl shadow-sm space-y-4">
+              <h2 className="text-base font-semibold text-foreground border-b pb-3 flex items-center gap-2">
                 <Layers className="text-blue-500" size={18} /> Run Configuration
               </h2>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Session Name</label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Session Name</label>
                 <input
                   type="text"
                   required
                   value={sessionName}
                   onChange={(e) => setSessionName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Environment</label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Environment</label>
                 <select
                   value={environment}
                   onChange={(e) => setEnvironment(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                  className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                 >
                   <option value="Dev">Development</option>
                   <option value="Staging">Staging</option>
@@ -240,11 +240,11 @@ export default function NewManualSessionPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Role / Credentials</label>
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Role / Credentials</label>
                 <select
                   value={selectedCredentialId}
                   onChange={(e) => setSelectedCredentialId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                  className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                 >
                   <option value="">None (Anonymous)</option>
                   {credentials.map((c) => (
@@ -257,11 +257,11 @@ export default function NewManualSessionPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Browser</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Browser</label>
                   <select
                     value={browserType}
                     onChange={(e) => setBrowserType(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none text-slate-800"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none text-foreground"
                   >
                     <option value="Chromium">Chromium</option>
                     <option value="Firefox">Firefox</option>
@@ -270,11 +270,11 @@ export default function NewManualSessionPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Viewport</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Viewport</label>
                   <select
                     value={viewport}
                     onChange={(e) => setViewport(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none text-slate-800"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none text-foreground"
                   >
                     <option value="Desktop">Desktop (1280x800)</option>
                     <option value="Tablet">Tablet (768x1024)</option>
@@ -285,28 +285,28 @@ export default function NewManualSessionPage() {
             </div>
 
             {sessionType === "structured" && (
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm space-y-4">
-                <h2 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+              <div className="bg-card border border-border/80 p-6 rounded-xl shadow-sm space-y-4">
+                <h2 className="text-base font-semibold text-foreground border-b pb-3 flex items-center gap-2">
                   <ShieldCheck className="text-blue-500" size={18} /> Browser / Fail Options
                 </h2>
 
                 <div className="flex items-center justify-between py-1">
-                  <label className="text-sm font-semibold text-slate-700">Keep browser between cases</label>
+                  <label className="text-sm font-semibold text-foreground">Keep browser between cases</label>
                   <input
                     type="checkbox"
                     checked={keepBrowserSession}
                     onChange={(e) => setKeepBrowserSession(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 border-border rounded focus:ring-blue-500"
                   />
                 </div>
 
                 <div className="flex items-center justify-between py-1">
-                  <label className="text-sm font-semibold text-slate-700">Stop session on first failed case</label>
+                  <label className="text-sm font-semibold text-foreground">Stop session on first failed case</label>
                   <input
                     type="checkbox"
                     checked={stopOnFailure}
                     onChange={(e) => setStopOnFailure(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 border-border rounded focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -316,15 +316,15 @@ export default function NewManualSessionPage() {
           {/* Right Column: Mode Panel */}
           <div className="md:col-span-2 space-y-6">
             {sessionType === "structured" ? (
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm">
+              <div className="bg-card border border-border/80 p-6 rounded-xl shadow-sm">
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 border-b pb-4 gap-4">
                   <div>
-                    <h2 className="text-base font-bold text-slate-800">Select Test Cases</h2>
-                    <p className="text-xs text-slate-500">Filtered: {filteredCases.length} / Selected: {selectedCaseIds.length}</p>
+                    <h2 className="text-base font-semibold text-foreground">Select Test Cases</h2>
+                    <p className="text-xs text-muted-foreground">Filtered: {filteredCases.length} / Selected: {selectedCaseIds.length}</p>
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Button type="button" variant="outline" size="sm" onClick={handleSelectAllFiltered} className="text-slate-600 text-xs py-1 px-3.5 h-8 border-slate-200 hover:bg-slate-50 rounded-lg">
+                    <Button type="button" variant="outline" size="sm" onClick={handleSelectAllFiltered} className="text-muted-foreground text-xs py-1 px-3.5 h-8 border-border hover:bg-muted/50 rounded-lg">
                       {filteredCases.every((c) => selectedCaseIds.includes(c.id)) ? "Deselect All Filtered" : "Select All Filtered"}
                     </Button>
                   </div>
@@ -332,21 +332,21 @@ export default function NewManualSessionPage() {
 
                 {/* Filter */}
                 <div className="mb-6">
-                  <label className="block text-[11px] font-semibold uppercase text-slate-400 mb-1 flex items-center gap-1">
+                  <label className="block text-[11px] font-semibold uppercase text-muted-foreground mb-1 flex items-center gap-1">
                     <Filter size={12} /> Search test cases
                   </label>
                   <input
                     value={caseSearch}
                     onChange={(e) => setCaseSearch(e.target.value)}
                     placeholder="Filter by title..."
-                    className="w-full px-2.5 py-1.5 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none text-slate-800"
+                    className="w-full px-2.5 py-1.5 border border-border bg-card rounded-lg text-xs focus:outline-none text-foreground"
                   />
                 </div>
 
                 {/* Checklist */}
-                <div className="border border-slate-200/60 rounded-xl max-h-[350px] overflow-y-auto divide-y divide-slate-100 bg-slate-50/50">
+                <div className="border border-border/60 rounded-xl max-h-[350px] overflow-y-auto divide-y divide-border bg-muted/50">
                   {filteredCases.length === 0 ? (
-                    <div className="p-12 text-center text-slate-500 text-sm">
+                    <div className="p-12 text-center text-muted-foreground text-sm">
                       No test cases match filters.
                     </div>
                   ) : (
@@ -356,23 +356,23 @@ export default function NewManualSessionPage() {
                         <div
                           key={tc.id}
                           onClick={() => handleToggleCase(tc.id)}
-                          className={`p-3.5 flex items-start gap-3.5 cursor-pointer hover:bg-slate-50/80 transition-colors ${
+                          className={`p-3.5 flex items-start gap-3.5 cursor-pointer hover:bg-muted/80 transition-colors ${
                             isSelected ? "bg-blue-50/40" : ""
                           }`}
                         >
                           <div className={`mt-0.5 h-4 w-4 rounded border flex items-center justify-center transition-all ${
-                            isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 bg-white"
+                            isSelected ? "border-blue-600 bg-blue-600 text-white" : "border-border bg-card"
                           }`}>
                             {isSelected && <Check size={12} strokeWidth={3} />}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-0.5 gap-2 flex-wrap">
-                              <span className="font-semibold text-sm text-slate-800">{tc.title}</span>
+                              <span className="font-semibold text-sm text-foreground">{tc.title}</span>
                               <div className="flex items-center gap-1.5">
                                 {tc.executionType === "Automated" && (
                                   <span
                                     title="Automated test — designed for Playwright, not manual step-by-step execution"
-                                    className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-0.5"
+                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-0.5"
                                   >
                                     ⚠ Automated
                                   </span>
@@ -380,7 +380,7 @@ export default function NewManualSessionPage() {
                                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
                                   tc.priority === "Critical" ? "bg-red-100 text-red-700" :
                                   tc.priority === "High" ? "bg-orange-100 text-orange-700" :
-                                  "bg-slate-100 text-slate-600"
+                                  "bg-muted text-muted-foreground"
                                 }`}>
                                   {tc.priority}
                                 </span>
@@ -400,7 +400,7 @@ export default function NewManualSessionPage() {
 
                 <div className="flex items-center justify-end gap-3 mt-8 border-t pt-6">
                   <Link href={`/projects/${projectId}`}>
-                    <Button type="button" variant="outline" className="rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 px-5">
+                    <Button type="button" variant="outline" className="rounded-xl border-border hover:bg-muted/50 text-muted-foreground px-5">
                       Cancel
                     </Button>
                   </Link>
@@ -411,32 +411,32 @@ export default function NewManualSessionPage() {
               </div>
             ) : (
               // Exploratory form UI
-              <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm space-y-6">
-                <h2 className="text-base font-bold text-slate-800 border-b pb-3 flex items-center gap-2">
+              <div className="bg-card border border-border/80 p-6 rounded-xl shadow-sm space-y-6">
+                <h2 className="text-base font-semibold text-foreground border-b pb-3 flex items-center gap-2">
                   <Compass className="text-blue-500" /> Exploratory Mission Config
                 </h2>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Mission Description</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Mission Description</label>
                     <textarea
                       required
                       value={mission}
                       onChange={(e) => setMission(e.target.value)}
                       placeholder="e.g. Explore layout behavior, dashboard widget responsiveness, and notification stability."
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 h-24 resize-none"
+                      className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground h-24 resize-none"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-                        <Clock size={16} className="text-slate-400" /> Session Timebox
+                      <label className="block text-sm font-semibold text-foreground mb-1.5 flex items-center gap-1">
+                        <Clock size={16} className="text-muted-foreground" /> Session Timebox
                       </label>
                       <select
                         value={timebox}
                         onChange={(e) => setTimebox(e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none text-slate-800"
+                        className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none text-foreground"
                       >
                         <option value="15">15 Minutes</option>
                         <option value="30">30 Minutes</option>
@@ -447,13 +447,13 @@ export default function NewManualSessionPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">Areas/Modules to Cover</label>
+                      <label className="block text-sm font-semibold text-foreground mb-1.5">Areas/Modules to Cover</label>
                       <input
                         type="text"
                         value={areasCovered}
                         onChange={(e) => setAreasCovered(e.target.value)}
                         placeholder="e.g. Auth form, search filters, profile"
-                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none text-slate-800"
+                        className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none text-foreground"
                       />
                     </div>
                   </div>
@@ -461,7 +461,7 @@ export default function NewManualSessionPage() {
 
                 <div className="flex items-center justify-end gap-3 mt-8 border-t pt-6">
                   <Link href={`/projects/${projectId}`}>
-                    <Button type="button" variant="outline" className="rounded-xl border-slate-200 hover:bg-slate-50 text-slate-600 px-5">
+                    <Button type="button" variant="outline" className="rounded-xl border-border hover:bg-muted/50 text-muted-foreground px-5">
                       Cancel
                     </Button>
                   </Link>

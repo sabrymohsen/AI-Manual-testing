@@ -634,16 +634,16 @@ export default function RequirementsDashboard() {
     const isSelected = selectedIds.includes(req.id)
     return (
       <Fragment key={req.id}>
-        <tr className={`transition-colors ${isSelected ? "bg-blue-50/40" : "hover:bg-slate-50/50"}`}>
+        <tr className={`transition-colors ${isSelected ? "bg-blue-50/40" : "hover:bg-muted/50"}`}>
           <td className="p-4 w-8">
             <input
               type="checkbox"
               checked={isSelected}
               onChange={() => toggleSelectReq(req.id)}
-              className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+              className="h-3.5 w-3.5 rounded border-border text-blue-600 focus:ring-blue-500 cursor-pointer"
             />
           </td>
-          <td className={`p-4 font-bold text-slate-900 ${viewMode === "tree" ? "pl-8" : ""}`}>
+          <td className={`p-4 font-semibold text-foreground ${viewMode === "tree" ? "pl-8" : ""}`}>
             <button
               onClick={() => toggleExpanded(req.id)}
               className="inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors"
@@ -651,7 +651,7 @@ export default function RequirementsDashboard() {
             >
               <ChevronRight
                 size={14}
-                className={`text-slate-400 transition-transform ${isOpen ? "rotate-90" : ""}`}
+                className={`text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`}
               />
               {req.requirementKey}
             </button>
@@ -660,7 +660,7 @@ export default function RequirementsDashboard() {
           {viewMode === "flat" && (
             <td className="p-4 text-[11px]">
               {req.epic ? (
-                <span className="bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-violet-100">
+                <span className="bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-100">
                   {req.epic.epicKey}
                 </span>
               ) : (
@@ -670,7 +670,7 @@ export default function RequirementsDashboard() {
           )}
           <td className="p-4 text-[11px]">
             {req.feature ? (
-              <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-indigo-100 whitespace-nowrap">
+              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-semibold border border-primary/25 whitespace-nowrap">
                 {req.feature.featureKey} {req.feature.name}
               </span>
             ) : (
@@ -680,24 +680,24 @@ export default function RequirementsDashboard() {
           <td className="p-4">{getPriorityBadge(req.priority)}</td>
           <td className="p-4">{getStatusBadge(req.status)}</td>
           <td className="p-4">
-            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-blue-100">
+            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-blue-100">
               {req.testCases.length} case{req.testCases.length !== 1 && "s"}
             </span>
           </td>
           <td className="p-4">{getCoverageBadge(req.computedCoverage)}</td>
           <td className="p-4">
             {req.openBugsCount > 0 ? (
-              <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">
+              <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-red-100">
                 {req.openBugsCount} active
               </span>
             ) : (
               <span className="text-slate-300">-</span>
             )}
           </td>
-          <td className="p-4 text-slate-400">{req.source}</td>
+          <td className="p-4 text-muted-foreground">{req.source}</td>
           <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
             <Link href={`/projects/${projectId}/requirements/${req.id}`}>
-              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-slate-100 text-slate-500 rounded-lg">
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground rounded-lg">
                 <Eye size={14} />
               </Button>
             </Link>
@@ -705,7 +705,7 @@ export default function RequirementsDashboard() {
               variant="ghost"
               size="sm"
               onClick={() => openLinkTestCasesModal(req)}
-              className="h-7 w-7 p-0 hover:bg-slate-100 text-blue-600 rounded-lg"
+              className="h-7 w-7 p-0 hover:bg-muted text-blue-600 rounded-lg"
               title="Link Test Cases"
             >
               <LinkIcon size={14} />
@@ -727,7 +727,7 @@ export default function RequirementsDashboard() {
                 size="sm"
                 onClick={() => handleSyncStory(req.id)}
                 disabled={syncingReqId === req.id}
-                className={`h-7 w-7 p-0 hover:bg-slate-100 rounded-lg ${
+                className={`h-7 w-7 p-0 hover:bg-muted rounded-lg ${
                   req.openProjectSyncStatus === "Failed" ? "text-red-500" : "text-teal-600"
                 }`}
                 title={req.openProjectSyncStatus === "Failed" ? "Sync failed — retry" : `Sync story to ${trackerName}`}
@@ -739,7 +739,7 @@ export default function RequirementsDashboard() {
               variant="ghost"
               size="sm"
               onClick={() => handleDeleteRequirement(req.id)}
-              className="h-7 w-7 p-0 hover:bg-slate-100 text-red-600 rounded-lg"
+              className="h-7 w-7 p-0 hover:bg-muted text-red-600 rounded-lg"
             >
               <Trash2 size={14} />
             </Button>
@@ -747,16 +747,16 @@ export default function RequirementsDashboard() {
         </tr>
 
         {isOpen && (
-          <tr className="bg-slate-50/60">
+          <tr className="bg-muted/60">
             <td colSpan={colCount} className="px-6 pb-5 pt-1">
-              <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex items-center gap-2 mb-3 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2 mb-3 text-[11px] font-medium text-muted-foreground">
                   <Compass size={13} /> Traceability — Story → Test Cases → Bugs
                 </div>
 
                 {linkedCases.length === 0 ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 border border-dashed border-slate-200 px-3 py-2.5">
-                    <span className="text-xs text-slate-400">No test cases linked to this user story yet.</span>
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 border border-dashed border-border px-3 py-2.5">
+                    <span className="text-xs text-muted-foreground">No test cases linked to this user story yet.</span>
                     <Button
                       variant="outline"
                       size="sm"
@@ -771,18 +771,18 @@ export default function RequirementsDashboard() {
                     {linkedCases.map((c) => {
                       const bugs = c.testCase.bugReports || []
                       return (
-                        <div key={c.testCaseId} className="rounded-lg border border-slate-100 bg-slate-50/40">
+                        <div key={c.testCaseId} className="rounded-lg border border-border bg-muted/40">
                           <div className="flex items-center justify-between gap-3 px-3 py-2">
                             <Link
                               href={`/projects/${projectId}/test-cases?caseId=${c.testCase.id}`}
-                              className="flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-blue-600 truncate"
+                              className="flex items-center gap-2 text-xs font-semibold text-foreground hover:text-blue-600 truncate"
                               title={c.testCase.title}
                             >
                               <FileText size={13} className="text-blue-500 shrink-0" />
                               <span className="truncate">{c.testCase.title}</span>
                             </Link>
                             {bugs.length > 0 ? (
-                              <span className="shrink-0 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-red-100">
+                              <span className="shrink-0 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-red-100">
                                 {bugs.length} bug{bugs.length !== 1 && "s"}
                               </span>
                             ) : (
@@ -790,23 +790,23 @@ export default function RequirementsDashboard() {
                             )}
                           </div>
                           {bugs.length > 0 && (
-                            <div className="border-t border-slate-100 px-3 py-2 space-y-1.5">
+                            <div className="border-t border-border px-3 py-2 space-y-1.5">
                               {bugs.map((bug) => (
                                 <Link
                                   key={bug.id}
                                   href={`/projects/${projectId}/bug-reports?bugId=${bug.id}`}
-                                  className="flex items-center gap-2 text-[11px] text-slate-600 hover:text-red-600"
+                                  className="flex items-center gap-2 text-[11px] text-muted-foreground hover:text-red-600"
                                 >
                                   <AlertTriangle size={11} className="text-red-400 shrink-0" />
-                                  <span className="font-bold text-slate-500">{bug.bugKey || "BUG"}</span>
+                                  <span className="font-semibold text-muted-foreground">{bug.bugKey || "BUG"}</span>
                                   <span className="truncate flex-1" title={bug.title}>{bug.title}</span>
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                     bug.severity === "Critical" ? "bg-red-100 text-red-700" :
                                     bug.severity === "High" ? "bg-orange-100 text-orange-700" :
                                     bug.severity === "Medium" ? "bg-amber-100 text-amber-700" :
-                                    "bg-slate-100 text-slate-500"
+                                    "bg-muted text-muted-foreground"
                                   }`}>{bug.severity}</span>
-                                  <span className="text-[9px] font-semibold text-slate-400 w-16 text-right">{bug.status}</span>
+                                  <span className="text-[9px] font-semibold text-muted-foreground w-16 text-right">{bug.status}</span>
                                 </Link>
                               ))}
                             </div>
@@ -814,7 +814,7 @@ export default function RequirementsDashboard() {
                         </div>
                       )
                     })}
-                    <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400">
+                    <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground">
                       <span>{linkedCases.length} case{linkedCases.length !== 1 && "s"} · {traceBugs.length} bug{traceBugs.length !== 1 && "s"} traced</span>
                       <Button
                         variant="ghost"
@@ -854,10 +854,10 @@ export default function RequirementsDashboard() {
       <>
         {Array.from(byFeature.values()).map(({ feature, items }) => (
           <Fragment key={`feat-${feature.id}`}>
-            <tr className="bg-indigo-50/40 border-y border-indigo-100/60">
+            <tr className="bg-primary/10 border-y border-primary/25">
               <td className="p-2 w-8"></td>
               <td colSpan={colCount - 1} className="p-2 pl-10">
-                <span className="inline-flex items-center gap-2 text-[11px] font-bold text-indigo-700">
+                <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-primary">
                   {feature.featureKey} — {feature.name}
                   <span className="text-[10px] font-semibold text-indigo-400">
                     {items.length} stor{items.length === 1 ? "y" : "ies"}
@@ -884,7 +884,7 @@ export default function RequirementsDashboard() {
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => toggleEpicCollapsed(epic.id)}
-              className="inline-flex items-center gap-1.5 font-bold text-violet-900 hover:text-violet-600 transition-colors"
+              className="inline-flex items-center gap-1.5 font-semibold text-violet-900 hover:text-violet-600 transition-colors"
             >
               <ChevronRight
                 size={15}
@@ -897,7 +897,7 @@ export default function RequirementsDashboard() {
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
               epic.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
               epic.status === "Completed" ? "bg-blue-50 text-blue-700 border-blue-100" :
-              epic.status === "Archived" ? "bg-slate-100 text-slate-500 border-slate-200" :
+              epic.status === "Archived" ? "bg-muted text-muted-foreground border-border" :
               "bg-amber-50 text-amber-700 border-amber-100"
             }`}>{epic.status}</span>
             {getPriorityBadge(epic.priority)}
@@ -908,7 +908,7 @@ export default function RequirementsDashboard() {
               <span className="h-1.5 w-24 rounded-full bg-violet-100 overflow-hidden">
                 <span className="block h-full rounded-full bg-violet-500 transition-all" style={{ width: `${pct}%` }} />
               </span>
-              <span className="text-[10px] font-bold text-violet-600 tabular-nums">{covered}/{stories.length} covered</span>
+              <span className="text-[10px] font-semibold text-violet-600 tabular-nums">{covered}/{stories.length} covered</span>
             </span>
           </div>
         </td>
@@ -946,17 +946,17 @@ export default function RequirementsDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-slate-800">
+    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-foreground">
       
       {/* Header breadcrumb & actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-5 gap-4">
         <div className="flex items-center gap-3">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Requirements Traceability
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Directly trace requirement user stories, test cases, and active bugs.</p>
+            <p className="text-sm text-muted-foreground mt-1">Directly trace requirement user stories, test cases, and active bugs.</p>
           </div>
         </div>
 
@@ -966,34 +966,34 @@ export default function RequirementsDashboard() {
           <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs shadow-sm">
             <Plus size={15} /> Create Story
           </Button>
-          <Button onClick={openCreateEpicModal} variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+          <Button onClick={openCreateEpicModal} variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
             <FolderKanban size={15} className="text-violet-500" /> New Epic
           </Button>
-          <Button onClick={() => setShowImportModal(true)} variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+          <Button onClick={() => setShowImportModal(true)} variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
             <FileSpreadsheet size={15} className="text-blue-500" /> Import Excel
           </Button>
           <Button
             onClick={handleImportStories}
             disabled={importingStories}
             variant="outline"
-            className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs"
+            className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs"
           >
             {importingStories ? <Loader2 size={15} className="animate-spin" /> : <CloudDownload size={15} className="text-teal-500" />}
             {trackerName}
           </Button>
-          <Link href={`/projects/${projectId}/board`}>
-            <Button variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
-              <ListOrdered size={15} className="text-slate-400" /> Board
+          <Link href={`/projects/${projectId}/scrum`}>
+            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+              <ListOrdered size={15} className="text-muted-foreground" /> Scrum Board
             </Button>
           </Link>
           <Link href={`/projects/${projectId}/generate-from-file`}>
-            <Button variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
               <Sparkles size={15} className="text-violet-500" /> Generate
             </Button>
           </Link>
           <Link href={`/projects/${projectId}/coverage-matrix`}>
-            <Button variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
-              <Layers size={15} className="text-indigo-500" /> Matrix
+            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+              <Layers size={15} className="text-primary" /> Matrix
             </Button>
           </Link>
         </div>
@@ -1001,17 +1001,17 @@ export default function RequirementsDashboard() {
 
       {/* Compact stat strip: one grouped row, muted label over larger number */}
       {stats && (
-        <div className="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200/50 grid grid-cols-3 sm:grid-cols-6 divide-x divide-slate-100 overflow-hidden">
+        <div className="bg-card rounded-xl shadow-sm ring-1 ring-border/50 grid grid-cols-3 sm:grid-cols-6 divide-x divide-border overflow-hidden">
           {[
-            { label: "Total Stories", value: stats.total, color: "text-slate-800" },
+            { label: "Total Stories", value: stats.total, color: "text-foreground" },
             { label: "Covered", value: stats.covered, color: "text-emerald-600" },
             { label: "Failed", value: stats.failed, color: "text-red-600" },
             { label: "Blocked", value: stats.blocked, color: "text-orange-600" },
-            { label: "Uncovered", value: stats.uncovered, color: "text-slate-500" },
-            { label: "Coverage", value: `${stats.coveragePercentage}%`, color: "text-indigo-600" }
+            { label: "Uncovered", value: stats.uncovered, color: "text-muted-foreground" },
+            { label: "Coverage", value: `${stats.coveragePercentage}%`, color: "text-primary" }
           ].map((s) => (
             <div key={s.label} className="px-5 py-4">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">{s.label}</span>
+              <span className="text-[11px] font-medium text-muted-foreground block">{s.label}</span>
               <span className={`text-2xl font-semibold mt-0.5 block tabular-nums ${s.color}`}>{s.value}</span>
             </div>
           ))}
@@ -1019,23 +1019,23 @@ export default function RequirementsDashboard() {
       )}
 
       {/* Filters bar */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm flex flex-col gap-4">
+      <div className="bg-card border border-border/60 rounded-xl p-4 shadow-sm flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-grow">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by key, title, description..."
-              className="w-full bg-slate-50 border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+              className="w-full bg-muted/50 border border-border pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
             />
           </div>
           
           <select
             value={epicFilter}
             onChange={(e) => setEpicFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700"
+            className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground"
           >
             <option value="ALL">All Epics</option>
             <option value="NONE">No Epic</option>
@@ -1045,7 +1045,7 @@ export default function RequirementsDashboard() {
           <select
             value={featFilter}
             onChange={(e) => setFeatFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700"
+            className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground"
           >
             <option value="ALL">All Features</option>
             {projectFeatures.map(f => <option key={f.id} value={f.id}>{f.featureKey} — {f.name}</option>)}
@@ -1054,7 +1054,7 @@ export default function RequirementsDashboard() {
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700"
+            className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground"
           >
             <option value="ALL">All Priorities</option>
             <option value="Low">Low</option>
@@ -1066,7 +1066,7 @@ export default function RequirementsDashboard() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700"
+            className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground"
           >
             <option value="ALL">All Statuses</option>
             <option value="Draft">Draft</option>
@@ -1078,7 +1078,7 @@ export default function RequirementsDashboard() {
           <select
             value={coverageFilter}
             onChange={(e) => setCoverageFilter(e.target.value)}
-            className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700"
+            className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground"
           >
             <option value="ALL">All Coverage</option>
             <option value="Covered">Covered</option>
@@ -1090,12 +1090,12 @@ export default function RequirementsDashboard() {
           </select>
 
           {/* Tree/Flat segmented control caps the filter row */}
-          <div className="flex items-center bg-slate-100 rounded-xl p-0.5 shrink-0 self-stretch sm:self-auto">
+          <div className="flex items-center bg-muted rounded-xl p-0.5 shrink-0 self-stretch sm:self-auto">
             <button
               type="button"
               onClick={() => setViewMode("tree")}
               className={`px-3 py-1.5 flex items-center gap-1.5 rounded-[10px] text-xs font-semibold transition-all ${
-                viewMode === "tree" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                viewMode === "tree" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
               title="Group stories under their epics"
             >
@@ -1105,7 +1105,7 @@ export default function RequirementsDashboard() {
               type="button"
               onClick={() => setViewMode("flat")}
               className={`px-3 py-1.5 flex items-center gap-1.5 rounded-[10px] text-xs font-semibold transition-all ${
-                viewMode === "flat" ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                viewMode === "flat" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
               title="Flat list of all stories"
             >
@@ -1114,13 +1114,13 @@ export default function RequirementsDashboard() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500 pt-3 border-t border-slate-100">
-          <span className="text-[10px] uppercase tracking-wider text-slate-400 mr-1">Quick filters</span>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground pt-3 border-t border-border">
+          <span className="text-[11px] text-muted-foreground mr-1">Quick filters</span>
 
           <button
             type="button"
             onClick={() => setCasesFilter(casesFilter === "NO_CASES" ? "ALL" : "NO_CASES")}
-            className={`px-3 py-1 rounded-full border transition-colors ${casesFilter === "NO_CASES" ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-white border-slate-200 hover:bg-slate-50"}`}
+            className={`px-3 py-1 rounded-full border transition-colors ${casesFilter === "NO_CASES" ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-card border-border hover:bg-muted/50"}`}
           >
             No Test Cases
           </button>
@@ -1128,7 +1128,7 @@ export default function RequirementsDashboard() {
           <button
             type="button"
             onClick={() => setBugsFilter(bugsFilter === "WITH_BUGS" ? "ALL" : "WITH_BUGS")}
-            className={`px-3 py-1 rounded-full border transition-colors ${bugsFilter === "WITH_BUGS" ? "bg-red-100 text-red-800 border-red-300" : "bg-white border-slate-200 hover:bg-slate-50"}`}
+            className={`px-3 py-1 rounded-full border transition-colors ${bugsFilter === "WITH_BUGS" ? "bg-red-100 text-red-800 border-red-300" : "bg-card border-border hover:bg-muted/50"}`}
           >
             Has Active Bugs
           </button>
@@ -1136,24 +1136,24 @@ export default function RequirementsDashboard() {
       </div>
 
       {/* Main Grid Table */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-card border border-border/60 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-20">
             <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
-            <p className="text-slate-500 text-sm">Fetching project requirements matrix...</p>
+            <p className="text-muted-foreground text-sm">Fetching project requirements matrix...</p>
           </div>
         ) : filteredRequirements.length === 0 && (viewMode === "flat" || epics.length === 0) ? (
           // Tree mode still renders when epics exist so a freshly created
           // (empty) epic is visible; flat mode has nothing to show.
-          <div className="p-16 text-center text-slate-500 space-y-4">
+          <div className="p-16 text-center text-muted-foreground space-y-4">
             <Layers className="mx-auto text-slate-300 h-12 w-12" />
             <p className="text-sm font-semibold">No requirements found matching filters.</p>
-            <p className="text-xs text-slate-400">Click &quot;Create Requirement&quot; or &quot;Import Excel&quot; to register manual stories.</p>
+            <p className="text-xs text-muted-foreground">Click &quot;Create Requirement&quot; or &quot;Import Excel&quot; to register manual stories.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <thead className="bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground">
                 <tr>
                   <th className="p-4 w-8">
                     <input
@@ -1161,7 +1161,7 @@ export default function RequirementsDashboard() {
                       checked={filteredRequirements.length > 0 && filteredRequirements.every((r) => selectedIds.includes(r.id))}
                       onChange={() => toggleSelectAllVisible(filteredRequirements)}
                       title="Select all visible stories"
-                      className="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      className="h-3.5 w-3.5 rounded border-border text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </th>
                   <th className="p-4">Key</th>
@@ -1177,7 +1177,7 @@ export default function RequirementsDashboard() {
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-border font-medium text-foreground">
                 {viewMode === "flat" ? (
                   filteredRequirements.map(renderStoryRow)
                 ) : (
@@ -1192,7 +1192,7 @@ export default function RequirementsDashboard() {
                             {!collapsedEpicIds.has(epic.id) && renderGroupedStories(stories)}
                             {!collapsedEpicIds.has(epic.id) && stories.length === 0 && (
                               <tr>
-                                <td colSpan={colCount} className="px-10 py-3 text-[11px] text-slate-400 italic">
+                                <td colSpan={colCount} className="px-10 py-3 text-[11px] text-muted-foreground italic">
                                   No user stories in this epic yet — use &quot;+ Story&quot; to add one, or move existing stories here.
                                 </td>
                               </tr>
@@ -1202,32 +1202,32 @@ export default function RequirementsDashboard() {
                       })}
                     {(epicFilter === "ALL" || epicFilter === "NONE") && noEpicStories.length > 0 && (
                       <Fragment key="no-epic">
-                        <tr className="bg-gradient-to-r from-slate-100/90 to-slate-50/40 border-y border-slate-200/70 shadow-[inset_2px_0_0_theme(colors.slate.300)]">
+                        <tr className="bg-gradient-to-r from-slate-100/90 to-slate-50/40 border-y border-border/70 shadow-[inset_2px_0_0_theme(colors.slate.300)]">
                           <td className="p-3 w-8"></td>
                           <td colSpan={colCount - 1} className="p-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               <button
                                 onClick={() => toggleEpicCollapsed("__none__")}
-                                className="inline-flex items-center gap-1.5 font-bold text-slate-500 hover:text-slate-700 transition-colors"
+                                className="inline-flex items-center gap-1.5 font-semibold text-muted-foreground hover:text-foreground transition-colors"
                               >
                                 <ChevronRight
                                   size={15}
-                                  className={`text-slate-400 transition-transform ${collapsedEpicIds.has("__none__") ? "" : "rotate-90"}`}
+                                  className={`text-muted-foreground transition-transform ${collapsedEpicIds.has("__none__") ? "" : "rotate-90"}`}
                                 />
-                                <FolderKanban size={14} className="text-slate-400" />
+                                <FolderKanban size={14} className="text-muted-foreground" />
                                 No Epic
                               </button>
-                              <span className="text-[10px] font-semibold text-slate-400 whitespace-nowrap">
+                              <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
                                 {noEpicStories.length} stor{noEpicStories.length === 1 ? "y" : "ies"} awaiting assignment
                               </span>
                               <span className="inline-flex items-center gap-2">
-                                <span className="h-1.5 w-24 rounded-full bg-slate-200 overflow-hidden">
+                                <span className="h-1.5 w-24 rounded-full bg-muted overflow-hidden">
                                   <span
                                     className="block h-full rounded-full bg-slate-400 transition-all"
                                     style={{ width: `${noEpicStories.length > 0 ? Math.round((epicRollup(noEpicStories).covered / noEpicStories.length) * 100) : 0}%` }}
                                   />
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-500 tabular-nums">
+                                <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
                                   {epicRollup(noEpicStories).covered}/{noEpicStories.length} covered
                                 </span>
                               </span>
@@ -1248,61 +1248,61 @@ export default function RequirementsDashboard() {
       {/* Create Modal Dialog */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-          <form onSubmit={handleCreateRequirement} className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-lg font-bold text-slate-800">Create Requirement</h2>
-              <p className="text-xs text-slate-500 mt-1">Register a new manual traceability target.</p>
+          <form onSubmit={handleCreateRequirement} className="bg-card rounded-xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-border animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border bg-muted/50">
+              <h2 className="text-lg font-semibold text-foreground">Create Requirement</h2>
+              <p className="text-xs text-muted-foreground mt-1">Register a new manual traceability target.</p>
             </div>
             
-            <div className="flex-grow p-6 overflow-y-auto space-y-4 text-slate-700">
+            <div className="flex-grow p-6 overflow-y-auto space-y-4 text-foreground">
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Req Key *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Req Key *</label>
                   <input
                     type="text"
                     required
                     value={newReqKey}
                     onChange={(e) => setNewReqKey(e.target.value)}
                     placeholder="REQ-AUTH-001"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Title *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Title *</label>
                   <input
                     type="text"
                     required
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder="User login validation with token credentials"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Description (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Description (Optional)</label>
                 <textarea
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="Requirement details..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 h-16 resize-none"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 h-16 resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Acceptance Criteria (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Acceptance Criteria (Optional)</label>
                 <textarea
                   value={newCriteria}
                   onChange={(e) => setNewCriteria(e.target.value)}
                   placeholder="GIVEN a user... WHEN credentials are valid... THEN login succeeds"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 h-16 resize-none"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 h-16 resize-none"
                 />
               </div>
 
               {/* Epic → Feature placement (both optional) */}
-              <div className="border border-slate-100 rounded-xl p-4 bg-slate-50/50 space-y-3">
-                <span className="text-xs font-bold text-slate-600 block">Parent Epic / Feature (Optional)</span>
+              <div className="border border-border rounded-xl p-4 bg-muted/50 space-y-3">
+                <span className="text-xs font-semibold text-muted-foreground block">Parent Epic / Feature (Optional)</span>
                 <EpicFeatureSelector
                   projectId={projectId}
                   epicId={newEpicId}
@@ -1314,11 +1314,11 @@ export default function RequirementsDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Priority</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Priority</label>
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -1327,11 +1327,11 @@ export default function RequirementsDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Status</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Status</label>
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
                   >
                     <option value="Draft">Draft</option>
                     <option value="ReadyForTesting">Ready For Testing</option>
@@ -1343,11 +1343,11 @@ export default function RequirementsDashboard() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">External System</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">External System</label>
                   <select
                     value={newExternalSystem}
                     onChange={(e) => setNewExternalSystem(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
                   >
                     <option value="Jira">Jira</option>
                     <option value="AzureDevOps">Azure DevOps</option>
@@ -1357,30 +1357,30 @@ export default function RequirementsDashboard() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">External URL</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">External URL</label>
                   <input
                     type="url"
                     value={newExternalUrl}
                     onChange={(e) => setNewExternalUrl(e.target.value)}
                     placeholder="https://jira-domain.atlassian.net/browse/REQ-1"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none text-slate-800"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none text-foreground"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Figma URL (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Figma URL (Optional)</label>
                 <input
                   type="url"
                   value={newFigmaUrl}
                   onChange={(e) => setNewFigmaUrl(e.target.value)}
                   placeholder="https://figma.com/file/..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none text-slate-800"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none text-foreground"
                 />
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+            <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-end gap-2 shrink-0">
               <Button variant="outline" type="button" onClick={() => { setShowCreateModal(false); setNewEpicId("") }} className="text-xs h-9 rounded-lg">
                 Cancel
               </Button>
@@ -1396,30 +1396,30 @@ export default function RequirementsDashboard() {
       {/* Link Test Cases Modal Dialog — searchable multi-select picker */}
       {showLinkModal && selectedReq && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-slate-100">
-            <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-lg font-bold text-slate-800">Link Test Cases</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Select test cases to associate with <span className="font-bold">{selectedReq.requirementKey}</span> — {selectedCaseIdsToLink.length} selected.
+          <div className="bg-card rounded-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-border">
+            <div className="p-6 border-b border-border bg-muted/50">
+              <h2 className="text-lg font-semibold text-foreground">Link Test Cases</h2>
+              <p className="text-xs text-muted-foreground mt-1">
+                Select test cases to associate with <span className="font-semibold">{selectedReq.requirementKey}</span> — {selectedCaseIdsToLink.length} selected.
               </p>
             </div>
 
             {/* Picker search & filters */}
-            <div className="px-6 pt-4 pb-3 border-b border-slate-100 flex flex-wrap gap-2 items-center shrink-0">
+            <div className="px-6 pt-4 pb-3 border-b border-border flex flex-wrap gap-2 items-center shrink-0">
               <div className="relative flex-grow min-w-[180px]">
-                <Search className="absolute left-3 top-2 h-3.5 w-3.5 text-slate-400" />
+                <Search className="absolute left-3 top-2 h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   type="text"
                   value={linkSearch}
                   onChange={(e) => setLinkSearch(e.target.value)}
                   placeholder="Search test cases by title..."
-                  className="w-full bg-slate-50 border border-slate-200 pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full bg-muted/50 border border-border pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <select
                 value={linkPriorityFilter}
                 onChange={(e) => setLinkPriorityFilter(e.target.value)}
-                className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-[11px] focus:outline-none text-slate-700"
+                className="px-2 py-1.5 border border-border bg-card rounded-lg text-[11px] focus:outline-none text-foreground"
               >
                 <option value="ALL">All Priorities</option>
                 <option value="Low">Low</option>
@@ -1430,7 +1430,7 @@ export default function RequirementsDashboard() {
               <select
                 value={linkExecFilter}
                 onChange={(e) => setLinkExecFilter(e.target.value)}
-                className="px-2 py-1.5 border border-slate-200 bg-white rounded-lg text-[11px] focus:outline-none text-slate-700"
+                className="px-2 py-1.5 border border-border bg-card rounded-lg text-[11px] focus:outline-none text-foreground"
               >
                 <option value="ALL">Manual & Automated</option>
                 <option value="Manual">Manual</option>
@@ -1440,7 +1440,7 @@ export default function RequirementsDashboard() {
                 type="button"
                 onClick={() => setLinkUnlinkedOnly(v => !v)}
                 className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                  linkUnlinkedOnly ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-white border-slate-200 hover:bg-slate-50 text-slate-500"
+                  linkUnlinkedOnly ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-card border-border hover:bg-muted/50 text-muted-foreground"
                 }`}
                 title="Show only test cases not linked to any user story"
               >
@@ -1449,7 +1449,7 @@ export default function RequirementsDashboard() {
             </div>
 
             {/* Select-all row */}
-            <div className="px-6 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] text-slate-500 shrink-0">
+            <div className="px-6 py-2 border-b border-border flex items-center justify-between text-[11px] text-muted-foreground shrink-0">
               <button
                 type="button"
                 onClick={togglePickerSelectAll}
@@ -1463,7 +1463,7 @@ export default function RequirementsDashboard() {
 
             <div className="flex-grow px-6 py-4 overflow-y-auto space-y-2">
               {filteredPickerCases.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-12">
+                <p className="text-xs text-muted-foreground text-center py-12">
                   {availableTestCases.length === 0 ? "No test cases found in this project." : "No test cases match the current filters."}
                 </p>
               ) : (
@@ -1485,34 +1485,34 @@ export default function RequirementsDashboard() {
                           prev.includes(tc.id) ? prev.filter(id => id !== tc.id) : [...prev, tc.id]
                         )
                       }}
-                      className={`p-3 rounded-xl border cursor-pointer hover:bg-slate-50 transition-colors flex items-center gap-3 ${
-                        isChecked ? "bg-blue-50/20 border-blue-200" : "bg-white border-slate-200"
+                      className={`p-3 rounded-xl border cursor-pointer hover:bg-muted/50 transition-colors flex items-center gap-3 ${
+                        isChecked ? "bg-blue-50/20 border-blue-200" : "bg-card border-border"
                       }`}
                     >
                       <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all shrink-0 ${
-                        isChecked ? "border-blue-600 bg-blue-600 text-white" : "border-slate-350 bg-white"
+                        isChecked ? "border-blue-600 bg-blue-600 text-white" : "border-slate-350 bg-card"
                       }`}>
-                        {isChecked && <span className="text-[9px] font-bold">✓</span>}
+                        {isChecked && <span className="text-[9px] font-semibold">✓</span>}
                       </div>
                       <div className="flex-grow min-w-0">
-                        <span className="text-xs font-semibold text-slate-800 block truncate" title={tc.title}>{tc.title}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
+                        <span className="text-xs font-semibold text-foreground block truncate" title={tc.title}>{tc.title}</span>
+                        <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
                           {pathParts.length > 0 ? pathParts.join(" / ") : "Unlinked"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         {getPriorityBadge(tc.priority)}
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-50 text-slate-500 border border-slate-100">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-muted/50 text-muted-foreground border border-border">
                           {tc.executionType}
                         </span>
                         {linkedToThis && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-100">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
                             Linked
                           </span>
                         )}
                         {otherLinks > 0 && (
                           <span
-                            className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-50 text-violet-600 border border-violet-100"
+                            className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-violet-50 text-violet-600 border border-violet-100"
                             title={`Also linked to ${otherLinks} other stor${otherLinks === 1 ? "y" : "ies"}`}
                           >
                             +{otherLinks} stor{otherLinks === 1 ? "y" : "ies"}
@@ -1525,7 +1525,7 @@ export default function RequirementsDashboard() {
               )}
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+            <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-end gap-2 shrink-0">
               <Button variant="outline" type="button" onClick={() => setShowLinkModal(false)} className="text-xs h-9 rounded-lg">
                 Cancel
               </Button>
@@ -1567,57 +1567,57 @@ export default function RequirementsDashboard() {
       {/* Epic Create / Edit Modal */}
       {showEpicModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-          <form onSubmit={handleSaveEpic} className="bg-white rounded-2xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-slate-100 bg-violet-50/50">
-              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <form onSubmit={handleSaveEpic} className="bg-card rounded-xl w-full max-w-lg overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-border animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-border bg-violet-50/50">
+              <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                 <FolderKanban size={18} className="text-violet-600" />
                 {editingEpic ? `Edit Epic ${editingEpic.epicKey}` : "New Epic"}
               </h2>
-              <p className="text-xs text-slate-500 mt-1">Epics group user stories one level above the requirement list.</p>
+              <p className="text-xs text-muted-foreground mt-1">Epics group user stories one level above the requirement list.</p>
             </div>
 
-            <div className="p-6 space-y-4 text-slate-700">
+            <div className="p-6 space-y-4 text-foreground">
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Epic Key</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Epic Key</label>
                   <input
                     type="text"
                     value={epicForm.epicKey}
                     onChange={(e) => setEpicForm({ ...epicForm, epicKey: e.target.value })}
                     placeholder="Auto (EP-1)"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Title *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Title *</label>
                   <input
                     type="text"
                     required
                     value={epicForm.title}
                     onChange={(e) => setEpicForm({ ...epicForm, title: e.target.value })}
                     placeholder="Checkout Revamp"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1.5">Description (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Description (Optional)</label>
                 <textarea
                   value={epicForm.description}
                   onChange={(e) => setEpicForm({ ...epicForm, description: e.target.value })}
                   placeholder="Scope of this epic..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 h-16 resize-none"
+                  className="w-full px-3 py-2 border border-border rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 h-16 resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Priority</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Priority</label>
                   <select
                     value={epicForm.priority}
                     onChange={(e) => setEpicForm({ ...epicForm, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -1626,11 +1626,11 @@ export default function RequirementsDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Status</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Status</label>
                   <select
                     value={epicForm.status}
                     onChange={(e) => setEpicForm({ ...epicForm, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
                   >
                     <option value="Draft">Draft</option>
                     <option value="Active">Active</option>
@@ -1641,7 +1641,7 @@ export default function RequirementsDashboard() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+            <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-end gap-2 shrink-0">
               <Button variant="outline" type="button" onClick={() => setShowEpicModal(false)} className="text-xs h-9 rounded-lg">
                 Cancel
               </Button>
@@ -1659,28 +1659,28 @@ export default function RequirementsDashboard() {
         const affected = requirements.filter((r) => r.epicId === epicToDelete.id)
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden flex flex-col shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
-              <div className="p-6 border-b border-slate-100 bg-red-50/50">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <div className="bg-card rounded-xl w-full max-w-lg overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-border animate-in fade-in zoom-in-95 duration-200">
+              <div className="p-6 border-b border-border bg-red-50/50">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <AlertTriangle size={18} className="text-red-600" />
                   Delete Epic {epicToDelete.epicKey}?
                 </h2>
-                <p className="text-xs text-slate-500 mt-1 truncate" title={epicToDelete.title}>{epicToDelete.title}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate" title={epicToDelete.title}>{epicToDelete.title}</p>
               </div>
 
-              <div className="p-6 space-y-4 text-slate-700">
+              <div className="p-6 space-y-4 text-foreground">
                 {affected.length === 0 ? (
-                  <p className="text-xs text-slate-500">This epic has no linked user stories. It will be permanently deleted.</p>
+                  <p className="text-xs text-muted-foreground">This epic has no linked user stories. It will be permanently deleted.</p>
                 ) : (
                   <>
                     <div>
-                      <p className="text-xs font-semibold text-slate-600 mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground mb-2">
                         This epic has {affected.length} linked user stor{affected.length === 1 ? "y" : "ies"}:
                       </p>
-                      <div className="max-h-32 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/60 p-2 space-y-1">
+                      <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-muted/60 p-2 space-y-1">
                         {affected.map((r) => (
-                          <div key={r.id} className="text-[11px] text-slate-500 truncate">
-                            <span className="font-bold text-slate-600">{r.requirementKey}</span> — {r.title}
+                          <div key={r.id} className="text-[11px] text-muted-foreground truncate">
+                            <span className="font-semibold text-muted-foreground">{r.requirementKey}</span> — {r.title}
                           </div>
                         ))}
                       </div>
@@ -1688,7 +1688,7 @@ export default function RequirementsDashboard() {
 
                     <div className="space-y-2">
                       <label className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        epicDeleteMode === "unlink" ? "border-blue-300 bg-blue-50/40" : "border-slate-200 hover:bg-slate-50"
+                        epicDeleteMode === "unlink" ? "border-blue-300 bg-blue-50/40" : "border-border hover:bg-muted/50"
                       }`}>
                         <input
                           type="radio"
@@ -1698,12 +1698,12 @@ export default function RequirementsDashboard() {
                           className="mt-0.5"
                         />
                         <span className="text-xs">
-                          <span className="font-bold text-slate-700 block">Unlink {affected.length} stor{affected.length === 1 ? "y" : "ies"} — keep them</span>
-                          <span className="text-slate-500">Stories move to the &quot;No Epic&quot; bucket. Nothing else changes.</span>
+                          <span className="font-semibold text-foreground block">Unlink {affected.length} stor{affected.length === 1 ? "y" : "ies"} — keep them</span>
+                          <span className="text-muted-foreground">Stories move to the &quot;No Epic&quot; bucket. Nothing else changes.</span>
                         </span>
                       </label>
                       <label className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
-                        epicDeleteMode === "delete" ? "border-red-300 bg-red-50/40" : "border-slate-200 hover:bg-slate-50"
+                        epicDeleteMode === "delete" ? "border-red-300 bg-red-50/40" : "border-border hover:bg-muted/50"
                       }`}>
                         <input
                           type="radio"
@@ -1713,8 +1713,8 @@ export default function RequirementsDashboard() {
                           className="mt-0.5"
                         />
                         <span className="text-xs">
-                          <span className="font-bold text-red-700 block">Also delete these {affected.length} stor{affected.length === 1 ? "y" : "ies"}</span>
-                          <span className="text-slate-500">Their test-case and bug links are removed. Test cases and bugs themselves are kept.</span>
+                          <span className="font-semibold text-red-700 block">Also delete these {affected.length} stor{affected.length === 1 ? "y" : "ies"}</span>
+                          <span className="text-muted-foreground">Their test-case and bug links are removed. Test cases and bugs themselves are kept.</span>
                         </span>
                       </label>
                     </div>
@@ -1722,7 +1722,7 @@ export default function RequirementsDashboard() {
                 )}
               </div>
 
-              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-2 shrink-0">
+              <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-end gap-2 shrink-0">
                 <Button variant="outline" type="button" onClick={() => { setEpicToDelete(null); setEpicDeleteMode("unlink") }} className="text-xs h-9 rounded-lg">
                   Cancel
                 </Button>
@@ -1744,8 +1744,8 @@ export default function RequirementsDashboard() {
 
       {/* Bulk actions bar */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 px-4 py-2.5 flex items-center gap-3 flex-wrap">
-          <span className="text-xs font-bold whitespace-nowrap">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-slate-700 px-4 py-2.5 flex items-center gap-3 flex-wrap">
+          <span className="text-xs font-semibold whitespace-nowrap">
             {selectedIds.length} stor{selectedIds.length === 1 ? "y" : "ies"} selected
           </span>
 
@@ -1801,7 +1801,7 @@ export default function RequirementsDashboard() {
 
           <button
             onClick={() => setSelectedIds([])}
-            className="text-slate-400 hover:text-white transition-colors"
+            className="text-muted-foreground hover:text-white transition-colors"
             title="Clear selection"
           >
             <X size={14} />

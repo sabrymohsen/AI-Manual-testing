@@ -55,24 +55,24 @@ export function ProjectSelectionGateway({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] py-12 px-4 max-w-xl mx-auto select-none text-xs font-semibold">
-      <div className="w-full p-6 space-y-6 shadow-xl border border-slate-100 bg-card rounded-2xl">
+      <div className="w-full p-6 space-y-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-border bg-card rounded-xl">
         <div className="text-center space-y-2">
-          <div className="mx-auto h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="mx-auto h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
             <Zap className="h-6 w-6 fill-current" />
           </div>
-          <h2 className="text-xl font-extrabold text-slate-800 tracking-tight">{title}</h2>
+          <h2 className="text-xl font-semibold text-foreground tracking-tight">{title}</h2>
           <p className="text-xs text-muted-foreground font-medium max-w-sm mx-auto leading-relaxed">
             {description}
           </p>
         </div>
 
         <div className="space-y-2">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 tracking-wider">Select Project Workspace</span>
+          <span className="text-[11px] font-medium text-muted-foreground/60">Select Project Workspace</span>
           
           {loading ? (
             <div className="space-y-2 animate-pulse">
-              <div className="h-12 bg-slate-50 border rounded-xl" />
-              <div className="h-12 bg-slate-50 border rounded-xl" />
+              <div className="h-12 bg-muted/50 border rounded-xl" />
+              <div className="h-12 bg-muted/50 border rounded-xl" />
             </div>
           ) : projects.length === 0 ? (
             <div className="p-8 border border-dashed rounded-xl text-center space-y-3">
@@ -87,12 +87,12 @@ export function ProjectSelectionGateway({
                 <div 
                   key={proj.id}
                   onClick={() => handleSelect(proj.id)}
-                  className="p-3 border rounded-xl bg-card hover:bg-slate-50 border-slate-100 hover:border-slate-200 cursor-pointer flex items-center justify-between transition-all group"
+                  className="p-3 border rounded-xl bg-card hover:bg-muted/50 border-border hover:border-border cursor-pointer flex items-center justify-between transition-all group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <Folder className="h-4.5 w-4.5 text-indigo-400 fill-indigo-400/5 shrink-0" />
                     <div className="space-y-0.5 min-w-0">
-                      <span className="font-extrabold text-slate-800 truncate block group-hover:text-indigo-600 transition-colors">
+                      <span className="font-semibold text-foreground truncate block group-hover:text-primary transition-colors">
                         {proj.name}
                       </span>
                       <span className="text-[10px] text-muted-foreground truncate block">
@@ -102,10 +102,10 @@ export function ProjectSelectionGateway({
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                       {proj.environment}
                     </span>
-                    <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
+                    <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                   </div>
                 </div>
               ))}

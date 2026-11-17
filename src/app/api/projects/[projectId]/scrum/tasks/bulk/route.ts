@@ -2,6 +2,10 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectPermission } from "@/lib/api-guards"
 import { z } from "zod"
+import { logActivity } from "@/lib/scrum/server"
+
+const STATUSES = ["TODO", "IN_PROGRESS", "DONE", "REVIEW", "TESTING", "DEPLOYED"] as const
+const PRIORITIES = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"] as const
 
 const bulkSchema = z.discriminatedUnion("action", [
   z.object({
@@ -14,11 +18,22 @@ const bulkSchema = z.discriminatedUnion("action", [
     action: z.literal("delete"),
     taskIds: z.array(z.string()).min(1).max(200),
   }),
+  z.object({
+    action: z.literal("update"),
+    taskIds: z.array(z.string()).min(1).max(200),
+    status: z.enum(STATUSES).optional(),
+    priority: z.enum(PRIORITIES).optional(),
+    // null = remove from its epic
+    epicId: z.string().nullable().optional(),
+    // replaces the assignees; [] = unassign
+    assigneeIds: z.array(z.string()).max(20).optional(),
+  }),
 ])
 
 /**
  * POST /api/projects/:projectId/scrum/tasks/bulk
- * Bulk move (to a sprint or the backlog) or bulk delete board tasks.
+ * Bulk move (to a sprint or the backlog), bulk update (status, priority,
+ * epic, assignees) or bulk delete board tasks.
  */
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
   let body: unknown
@@ -45,6 +60,29 @@ export async function POST(request: Request, { params }: { params: { projectId: 
   if (data.action === "delete") {
     const res = await prisma.task.deleteMany({ where })
     return NextResponse.json({ affected: res.count })
+  }
+
+  if (data.action === "update") {
+    if (data.epicId) {
+      const epic = await prisma.scrumEpic.findFirst({ where: { id: data.epicId, projectId: params.projectId } })
+      if (!epic) return NextResponse.json({ error: "Epic not found in this project" }, { status: 400 })
+    }
+    const tasks = await prisma.task.findMany({ where, select: { id: true, status: true, priority: true } })
+    for (const t of tasks) {
+      await prisma.task.update({
+        where: { id: t.id },
+        data: {
+          ...(data.status ? { status: data.status } : {}),
+          ...(data.priority ? { priority: data.priority } : {}),
+          ...(data.epicId !== undefined ? { epicId: data.epicId } : {}),
+          ...(data.assigneeIds ? { assignees: { set: data.assigneeIds.map((id) => ({ id })) } } : {}),
+        },
+      })
+      // Same history the board writes, so burndown and reports see bulk moves.
+      if (data.status && data.status !== t.status) await logActivity(t.id, "moved", `${t.status} → ${data.status}`, auth.session?.user?.id ?? null)
+      if (data.priority && data.priority !== t.priority) await logActivity(t.id, "updated", `Priority ${t.priority} → ${data.priority}`, auth.session?.user?.id ?? null)
+    }
+    return NextResponse.json({ affected: tasks.length })
   }
 
   const sprintId = data.sprintId ?? null

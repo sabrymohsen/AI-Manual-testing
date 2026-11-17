@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse, memberProjectWhere, canUseProject } from "@/lib/api-guards"
 import { encryptSecret } from "@/lib/crypto"
 
 const putBodySchema = z.object({
@@ -23,11 +23,11 @@ export async function PUT(
   }
 
   const existing = await prisma.testDataVariable.findFirst({
-    where: { id: params.variableId, project: { userId: auth.session!.user.id } },
+    where: { id: params.variableId, project: memberProjectWhere(auth.session!.user.id) },
     select: { projectId: true, encryptedValue: true, encryptionIv: true, encryptionAuthTag: true, keyVersion: true }
   })
 
-  if (!existing) {
+  if (!existing || !(await canUseProject(existing.projectId, auth.session!.user.id, "write"))) {
     return notFoundResponse("Not found")
   }
 
@@ -119,10 +119,10 @@ export async function DELETE(
   }
 
   const entity = await prisma.testDataVariable.findFirst({
-    where: { id: params.variableId, project: { userId: auth.session!.user.id } },
+    where: { id: params.variableId, project: memberProjectWhere(auth.session!.user.id) },
     select: { projectId: true }
   })
-  if (!entity) {
+  if (!entity || !(await canUseProject(entity.projectId, auth.session!.user.id, "write"))) {
     return notFoundResponse("Not found")
   }
 

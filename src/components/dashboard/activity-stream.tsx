@@ -19,13 +19,13 @@ interface ActivityItem {
 
 const ACTION_ICONS: Record<string, React.ReactNode> = {
   STATUS_CHANGED: <CheckCircle2 className="h-3.5 w-3.5 text-blue-500" />,
-  COMMENT_ADDED: <MessageSquare className="h-3.5 w-3.5 text-indigo-500" />,
+  COMMENT_ADDED: <MessageSquare className="h-3.5 w-3.5 text-primary" />,
   TASK_CREATED: <FileText className="h-3.5 w-3.5 text-emerald-500" />,
   TASK_ASSIGNED: <UserPlus className="h-3.5 w-3.5 text-violet-500" />,
   BUG_REPORTED: <Bug className="h-3.5 w-3.5 text-rose-500" />,
   SPRINT_STARTED: <Zap className="h-3.5 w-3.5 text-amber-500" />,
   SPRINT_COMPLETED: <Zap className="h-3.5 w-3.5 text-emerald-500" />,
-  WORK_LOGGED: <Activity className="h-3.5 w-3.5 text-slate-500" />,
+  WORK_LOGGED: <Activity className="h-3.5 w-3.5 text-muted-foreground" />,
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -40,7 +40,7 @@ const ACTION_LABELS: Record<string, string> = {
 }
 
 function getIcon(action: string) {
-  return ACTION_ICONS[action] || <GitCommit className="h-3.5 w-3.5 text-slate-400" />
+  return ACTION_ICONS[action] || <GitCommit className="h-3.5 w-3.5 text-muted-foreground" />
 }
 
 function getLabel(action: string) {
@@ -75,10 +75,10 @@ export function ActivityStream({ projectId }: { projectId: string }) {
   }, [projectId])
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-card shadow-sm">
+    <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-2 border-b px-5 py-3">
-        <Activity className="h-4 w-4 text-indigo-600" />
-        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Activity Stream</span>
+        <Activity className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium text-foreground">Activity Stream</span>
       </div>
 
       <div className="max-h-[320px] overflow-y-auto">
@@ -102,32 +102,32 @@ export function ActivityStream({ projectId }: { projectId: string }) {
         ) : (
           <div className="divide-y divide-slate-50">
             {activities.map((item) => (
-              <div key={item.id} className="flex gap-3 px-4 py-3 hover:bg-slate-50/40 transition-colors">
+              <div key={item.id} className="flex gap-3 px-4 py-3 hover:bg-muted/40 transition-colors">
                 <div className="mt-0.5 shrink-0">
                   {item.user?.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.user.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
                   ) : (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-[9px] font-bold text-indigo-600">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
                       {(item.user?.name || "?")[0]?.toUpperCase()}
                     </span>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-slate-700">
+                  <p className="text-xs text-foreground">
                     <span className="font-semibold">{item.user?.name || "Someone"}</span>{" "}
-                    <span className="text-slate-500">{getLabel(item.action)}</span>{" "}
+                    <span className="text-muted-foreground">{getLabel(item.action)}</span>{" "}
                     {item.taskKey && (
-                      <span className="font-mono text-[10px] font-bold text-primary">{item.taskKey}</span>
+                      <span className="font-mono text-[10px] font-semibold text-primary">{item.taskKey}</span>
                     )}
                     {item.taskTitle && !item.taskKey && (
-                      <span className="font-medium text-slate-600">{item.taskTitle}</span>
+                      <span className="font-medium text-muted-foreground">{item.taskTitle}</span>
                     )}
                   </p>
                   {item.details && (
-                    <p className="mt-0.5 truncate text-[11px] text-slate-400">{item.details}</p>
+                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.details}</p>
                   )}
-                  <p className="mt-1 text-[10px] text-slate-400">
+                  <p className="mt-1 text-[10px] text-muted-foreground">
                     {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                   </p>
                 </div>

@@ -2,25 +2,12 @@
 
 import { useState, useRef } from "react"
 import type { ScrumTask } from "@/types/scrum"
-import { PriorityBadge, AvatarStack, overdueDays, STATUS_META } from "@/components/scrum/shared"
-import { MessageSquare, GitBranch, CalendarClock, CheckSquare, FlaskConical, Bug, User, Tag, Hash } from "lucide-react"
+import { AvatarStack, overdueDays, STATUS_META, PriorityIcon, DotLabel, TYPE_DOT } from "@/components/scrum/shared"
+import { TYPE_META } from "@/components/scrum/task/task-detail-config"
+import { MessageSquare, GitBranch, CalendarClock, User, Tag, Hash, Ban } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUpdateTask, useScrumMembers, useBoardColumns } from "@/hooks/scrum/use-scrum"
 import { useCurrentUser } from "@/hooks/scrum/use-scrum"
-
-/**
- * Left accent stripe per issue type. Hues intentionally match TYPE_META in
- * task-detail-config.ts so a card, the drawer, and the Create menu all agree
- * on what colour a Bug (or Story, or Test Case) is.
- */
-const TYPE_COLORS: Record<string, string> = {
-  STORY: "border-l-green-600",
-  BUG: "border-l-red-600",
-  TASK: "border-l-blue-600",
-  TEST_CASE: "border-l-teal-600",
-  SUBTASK: "border-l-sky-600",
-  EPIC: "border-l-purple-600",
-}
 
 export function TaskCard({
   task,
@@ -51,7 +38,8 @@ export function TaskCard({
   const done = task.subtasks.filter((s) => s.completed).length
   const total = task.subtasks.length
   const overdue = overdueDays(task.dueDate, task.status)
-  const typeBorder = TYPE_COLORS[task.type] || "border-l-transparent"
+  const blocked = !!task.signals?.blocked
+  const tests = task.signals?.tests
 
   const isAssignedToMe = currentUser ? task.assignees.some((a) => a.id === currentUser.id) : false
 
@@ -82,16 +70,15 @@ export function TaskCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setQuickAction(null) }}
       className={cn(
-        "relative cursor-pointer select-none rounded-md border border-border bg-card transition-shadow hover:shadow-sm border-l-4",
-        layout === "compact" ? "p-2" : "p-3",
-        typeBorder,
-        dragging && "rotate-1 shadow-lg ring-2 ring-primary/30"
+        "group relative cursor-pointer select-none rounded-[7px] border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-foreground/20",
+        layout === "compact" ? "px-2.5 py-2" : "p-2.5",
+        dragging && "border-primary/40 shadow-lg ring-1 ring-primary/30"
       )}
     >
       {/* Quick-edit hover overlay */}
       {hovered && !dragging && (
         <div
-          className="absolute right-2 top-2 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card/95 px-1 py-0.5 shadow-sm backdrop-blur-sm"
+          className="absolute right-2 top-1.5 z-10 flex items-center gap-0.5 rounded-md border border-border bg-card px-0.5 py-0.5 shadow-sm"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Assignee quick action */}
@@ -227,106 +214,133 @@ export function TaskCard({
         </div>
       )}
 
-      {/* Top row: id + priority */}
-      <div className={cn("flex items-center justify-between", layout === "compact" ? "mb-1" : "mb-2")}>
-        <span className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-primary">
-          {task.key}
+      {/* Row 1: key + assignees */}
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{task.key}</span>
+        {layout === "compact" && <PriorityIcon priority={task.priority} />}
+        <span className="ml-auto flex items-center">
+          {task.assignees.length > 0 && <AvatarStack members={task.assignees} max={layout === "compact" ? 1 : 2} size="sm" />}
         </span>
-        <PriorityBadge priority={task.priority} />
       </div>
 
       {/* Title */}
-      <p className={cn(
-        "text-sm font-medium leading-snug text-foreground",
-        layout === "compact" ? "mb-1 line-clamp-1" : "mb-2 line-clamp-2"
-      )}>
+      <p
+        className={cn(
+          "mt-1.5 text-[13px] font-medium leading-snug text-foreground",
+          layout === "compact" ? "line-clamp-1" : "line-clamp-2"
+        )}
+      >
         {task.title}
       </p>
 
-      {/* Epic tag — detailed only */}
-      {layout === "detailed" && task.epic && (
-        <span
-          className="mb-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
-          style={{ backgroundColor: `${task.epic.color}1a`, color: task.epic.color }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: task.epic.color }} />
-          {task.epic.title}
-        </span>
-      )}
-
-      {/* Subtask progress — detailed only, unless hidden */}
-      {layout === "detailed" && total > 0 && !hideSubtasks && (
-        <div className="mb-2 space-y-1">
-          <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground">
-            <CheckSquare className="h-3 w-3" /> {done}/{total}
+      {layout === "compact" ? (
+        (blocked || overdue !== null || (task.storyPoints != null && !hideEstimations)) && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            {blocked && <BlockedChip />}
+            {overdue !== null && <OverdueChip days={overdue} />}
+            {task.storyPoints != null && !hideEstimations && <PointsChip points={task.storyPoints} />}
           </div>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-primary/10">
-            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(done / total) * 100}%` }} />
+        )
+      ) : (
+        <>
+          {/* Meta row */}
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+            <span
+              className="inline-flex h-5 w-5 items-center justify-center rounded-[5px] border border-border"
+              title={`Priority: ${task.priority.toLowerCase()}`}
+            >
+              <PriorityIcon priority={task.priority} />
+            </span>
+            {task.storyPoints != null && !hideEstimations && <PointsChip points={task.storyPoints} />}
+            <DotLabel dotClass={TYPE_DOT[task.type]}>{TYPE_META[task.type]?.label ?? task.type}</DotLabel>
+            {task.epic && <DotLabel dotColor={task.epic.color} className="max-w-[8.5rem]">{task.epic.title}</DotLabel>}
+            {blocked && <BlockedChip />}
+            {overdue !== null && <OverdueChip days={overdue} />}
+            {task.branchName && (
+              <span className="inline-flex h-5 max-w-[9rem] items-center gap-1 rounded-[5px] border border-border px-1.5 text-[11px] text-muted-foreground">
+                <GitBranch className="h-3 w-3 shrink-0" />
+                <span className="truncate">{task.branchName}</span>
+              </span>
+            )}
+            {task.commentCount > 0 && (
+              <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground" title={`${task.commentCount} comment(s)`}>
+                <MessageSquare className="h-3 w-3" />
+                {task.commentCount}
+              </span>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Meta chips — detailed only */}
-      {layout === "detailed" && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {task.branchName && (
-            <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-              <GitBranch className="h-3 w-3" />
-              {task.branchName}
-            </span>
+          {/* One progress line: test results win over subtasks */}
+          {tests && tests.total > 0 ? (
+            <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted-foreground" title={`${tests.total} executed test case(s)`}>
+              {tests.passed > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  {tests.passed} passed
+                </span>
+              )}
+              {tests.failed > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                  {tests.failed} failed
+                </span>
+              )}
+              {tests.total - tests.passed - tests.failed > 0 && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                  {tests.total - tests.passed - tests.failed} other
+                </span>
+              )}
+              <span className="flex h-[3px] flex-1 overflow-hidden rounded-full bg-muted">
+                <span className="h-full bg-emerald-500" style={{ width: `${(tests.passed / tests.total) * 100}%` }} />
+                <span className="h-full bg-red-500" style={{ width: `${(tests.failed / tests.total) * 100}%` }} />
+                <span className="h-full bg-amber-500" style={{ width: `${((tests.total - tests.passed - tests.failed) / tests.total) * 100}%` }} />
+              </span>
+            </div>
+          ) : (
+            total > 0 &&
+            !hideSubtasks && (
+              <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+                <span>
+                  Subtasks {done}/{total}
+                </span>
+                <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-muted">
+                  <span className="block h-full rounded-full bg-primary" style={{ width: `${(done / total) * 100}%` }} />
+                </span>
+              </div>
+            )
           )}
-          {overdue !== null && (
-            <span className="inline-flex items-center gap-1 rounded bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
-              <CalendarClock className="h-3 w-3" />
-              Overdue {overdue}d
-            </span>
-          )}
-          {task.storyPoints != null && !hideEstimations && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
-              {task.storyPoints}
-            </span>
-          )}
-        </div>
+        </>
       )}
-
-      {/* Footer */}
-      <div className={cn("flex items-center justify-between", layout === "compact" ? "mt-1" : "mt-2")}>
-        {layout === "detailed" ? (
-          <span className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              <MessageSquare className="h-3.5 w-3.5" />
-              {task.commentCount}
-            </span>
-            {!!task.testCaseCount && (
-              <span className="inline-flex items-center gap-0.5 text-emerald-600" title={`${task.testCaseCount} linked test case(s)`}>
-                <FlaskConical className="h-3.5 w-3.5" />
-                {task.testCaseCount}
-              </span>
-            )}
-            {!!task.bugCount && (
-              <span className="inline-flex items-center gap-0.5 text-destructive" title={`${task.bugCount} linked bug(s)`}>
-                <Bug className="h-3.5 w-3.5" />
-                {task.bugCount}
-              </span>
-            )}
-          </span>
-        ) : (
-          <span className="flex items-center gap-1.5">
-            {task.storyPoints != null && !hideEstimations && (
-              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
-                {task.storyPoints}
-              </span>
-            )}
-            {overdue !== null && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-destructive">
-                <CalendarClock className="h-3 w-3" />
-                {overdue}d
-              </span>
-            )}
-          </span>
-        )}
-        {task.assignees.length > 0 && <AvatarStack members={task.assignees} max={layout === "compact" ? 1 : 2} />}
-      </div>
     </div>
+  )
+}
+
+function PointsChip({ points }: { points: number }) {
+  return (
+    <span
+      className="inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] border border-border px-1.5 text-[11px] tabular-nums text-muted-foreground"
+      title={`${points} story point(s)`}
+    >
+      {points}
+    </span>
+  )
+}
+
+function BlockedChip() {
+  return (
+    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 text-[11px] font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
+      <Ban className="h-3 w-3" />
+      Blocked
+    </span>
+  )
+}
+
+function OverdueChip({ days }: { days: number }) {
+  return (
+    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 text-[11px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
+      <CalendarClock className="h-3 w-3" />
+      {days}d overdue
+    </span>
   )
 }

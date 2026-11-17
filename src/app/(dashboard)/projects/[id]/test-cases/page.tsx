@@ -8,7 +8,7 @@ import { SuiteTree } from "./_components/suite-tree"
 import { FacetBar } from "./_components/facet-bar"
 import { CaseTable } from "./_components/case-table"
 import { DetailPanel } from "./_components/detail-panel"
-import { useDeleteCases, useMoveCases, type LibraryFilters, type SortKey } from "./_hooks/use-test-library"
+import { useDeleteCases, useMoveCases, useBulkPriority, useBulkManualRun, exportCasesCsv, type LibraryFilters, type SortKey } from "./_hooks/use-test-library"
 import { useProjectModules } from "@/components/bug-reports/module-select"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { ImportModal } from "@/components/test-cases/import-modal"
@@ -22,7 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { FileSpreadsheet, FlaskConical, Folder, FolderInput, Plus, Search, Trash2, Video, X } from "lucide-react"
+import { Download, FileSpreadsheet, FlaskConical, Folder, FolderInput, Play, Plus, Search, Signal, Trash2, Video, X } from "lucide-react"
 
 /**
  * Test library.
@@ -49,6 +49,8 @@ export default function TestLibraryPage() {
   const qc = useQueryClient()
   const moveCases = useMoveCases(projectId)
   const deleteCases = useDeleteCases(projectId)
+  const bulkPriority = useBulkPriority(projectId)
+  const bulkRun = useBulkManualRun(projectId)
   const { modules: projectModules } = useProjectModules(projectId)
 
   const filters: LibraryFilters = useMemo(
@@ -243,17 +245,51 @@ export default function TestLibraryPage() {
             )}
 
             {selectedIds.length > 0 && (
-              <div className="ml-auto flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-2.5 py-1">
-                <span className="text-xs font-semibold text-primary">{selectedIds.length} selected</span>
-                
+              <div className="ml-auto flex items-center gap-1 rounded-lg border border-border bg-card px-1.5 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                <span className="px-1.5 text-xs font-medium text-foreground">{selectedIds.length} selected</span>
+                <span className="h-4 w-px bg-border" aria-hidden="true" />
+
+                <button
+                  type="button"
+                  disabled={bulkRun.isPending}
+                  onClick={async () => {
+                    const sessionId = await bulkRun.mutateAsync(selectedIds).catch(() => null)
+                    if (sessionId) {
+                      const back = encodeURIComponent(`/projects/${projectId}/test-cases`)
+                      router.push(`/projects/${projectId}/manual-sessions/${sessionId}?returnTo=${back}`)
+                    }
+                  }}
+                  className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                  title="Open one manual run with every selected case"
+                >
+                  <Play className="h-3.5 w-3.5" /> Run
+                </button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">
+                    <Signal className="h-3.5 w-3.5" /> Priority
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    {(["Critical", "High", "Medium", "Low"] as const).map((p) => (
+                      <DropdownMenuItem
+                        key={p}
+                        onClick={() => bulkPriority.mutate({ testCaseIds: selectedIds, priority: p })}
+                        className="text-xs"
+                      >
+                        {p}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 {/* Move to Suite Dropdown */}
                 <DropdownMenu>
-                  <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2 text-[11px] font-semibold transition-colors hover:bg-accent">
-                    <FolderInput className="h-3 w-3" /> Move to
+                  <DropdownMenuTrigger className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-accent">
+                    <FolderInput className="h-3.5 w-3.5" /> Move
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
-                    <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Select target module / suite
+                    <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">
+                      Move to suite
                     </DropdownMenuLabel>
                     <DropdownMenuItem
                       onClick={() => {
@@ -262,7 +298,7 @@ export default function TestLibraryPage() {
                       }}
                       className="gap-1.5 text-xs"
                     >
-                      <Folder className="h-3.5 w-3.5 text-muted-foreground" /> — Unfiled —
+                      <Folder className="h-3.5 w-3.5 text-muted-foreground" /> No suite (Unfiled)
                     </DropdownMenuItem>
                     {projectModules.length > 0 && <DropdownMenuSeparator />}
                     {projectModules.map((m) => (
@@ -281,14 +317,29 @@ export default function TestLibraryPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const n = await exportCasesCsv(selectedIds, `test-cases-${new Date().toISOString().slice(0, 10)}.csv`)
+                      toast.success(`Exported ${n} ${n === 1 ? "case" : "cases"}`)
+                    } catch (e) {
+                      toast.error(e instanceof Error ? e.message : "Export failed")
+                    }
+                  }}
+                  className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  <Download className="h-3.5 w-3.5" /> Export
+                </button>
+
                 {/* Bulk Delete Button */}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setPendingDeleteBulk(true)}
-                  className="h-7 gap-1 px-2 text-[11px] font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  className="h-7 gap-1 px-2 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
                 >
-                  <Trash2 className="h-3 w-3" /> Delete
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
                 </Button>
 
                 <button

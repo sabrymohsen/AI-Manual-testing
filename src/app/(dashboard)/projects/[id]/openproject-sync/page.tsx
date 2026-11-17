@@ -76,15 +76,15 @@ export default function ScopedOpenProjectSyncPage() {
 
       {/* Sync Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">Connection Health</span>
+        <div className="p-4 border rounded-xl bg-card space-y-2 border-border shadow-sm">
+          <span className="text-[11px] font-medium text-muted-foreground/60 block">Connection Health</span>
           <div className="flex items-center gap-2">
             {status?.hasToken ? (
-              <span className="text-emerald-600 font-extrabold text-sm flex items-center gap-1">
+              <span className="text-emerald-600 font-semibold text-sm flex items-center gap-1">
                 <ShieldCheck className="h-4.5 w-4.5" /> Healthy Connection
               </span>
             ) : (
-              <span className="text-amber-500 font-extrabold text-sm flex items-center gap-1">
+              <span className="text-amber-500 font-semibold text-sm flex items-center gap-1">
                 <AlertTriangle className="h-4.5 w-4.5" /> Credentials Required
               </span>
             )}
@@ -94,9 +94,9 @@ export default function ScopedOpenProjectSyncPage() {
           </p>
         </div>
 
-        <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">Project Key mapping</span>
-          <span className="font-extrabold text-slate-800 text-sm block">
+        <div className="p-4 border rounded-xl bg-card space-y-2 border-border shadow-sm">
+          <span className="text-[11px] font-medium text-muted-foreground/60 block">Project Key mapping</span>
+          <span className="font-semibold text-foreground text-sm block">
             {status?.openprojectProjectId || "Not Mapped"}
           </span>
           <p className="text-[10px] text-muted-foreground font-medium">
@@ -104,9 +104,9 @@ export default function ScopedOpenProjectSyncPage() {
           </p>
         </div>
 
-        <div className="p-4 border rounded-xl bg-card space-y-2 border-slate-100 shadow-sm">
-          <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block">Target Server</span>
-          <span className="font-extrabold text-slate-800 text-sm block truncate">
+        <div className="p-4 border rounded-xl bg-card space-y-2 border-border shadow-sm">
+          <span className="text-[11px] font-medium text-muted-foreground/60 block">Target Server</span>
+          <span className="font-semibold text-foreground text-sm block truncate">
             {status?.hostUrl ? status.hostUrl.replace(/^https?:\/\//, "") : "N/A"}
           </span>
           <p className="text-[10px] text-muted-foreground font-medium">

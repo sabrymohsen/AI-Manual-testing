@@ -279,6 +279,7 @@ model User {
 
   notifications  Notification[]
   userActivities UserActivity[]
+  scrumSavedViews ScrumSavedView[] @relation("ScrumSavedViewOwner")
 }
 
 // In-app notification center. Each notification belongs to exactly one user
@@ -426,6 +427,7 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  scrumSavedViews ScrumSavedView[]
   @@index([userId])
   @@index([status])
   @@index([environment])
@@ -2883,6 +2885,8 @@ model ScrumEpic {
 
 model Task {
   id            String          @id @default(cuid())
+  // Per project (src/lib/scrum/task-number.ts); the sequence default only
+  // serves rows created outside the app's own code paths.
   taskNumber    Int             @default(autoincrement())
   title         String
   description   String?         @db.Text
@@ -2891,6 +2895,8 @@ model Task {
   status        TaskStatus      @default(TODO)
   priority      TaskPriority    @default(MEDIUM)
   storyPoints   Float?
+  // When work is planned to start (timeline bars run startDate → dueDate).
+  startDate     DateTime?
   dueDate       DateTime?
   branchName    String?
   progress      Int             @default(0) // 0-100
@@ -2932,6 +2938,7 @@ model Task {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([projectId, taskNumber])
   @@index([projectId])
   @@index([sprintId])
   @@index([epicId])
@@ -3664,4 +3671,23 @@ model VisualTestRegion {
   createdAt   DateTime @default(now())
 
   @@index([visualTestId])
+}
+
+// A named set of Scrum Board filters ("My open bugs", "Unestimated stories").
+// `query` is the board's URL query (filters + view), so a view restores
+// exactly what its author saw. Shared views are listed for the whole project.
+model ScrumSavedView {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("ScrumSavedViewOwner", fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  query     String
+  shared    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([userId])
 }

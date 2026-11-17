@@ -14,6 +14,7 @@ import {
   parseTimeToMinutes,
 } from "./task-detail-config"
 import { PRIORITY_META } from "@/components/scrum/shared"
+import { TaskTrackerPanel } from "./task-tracker-panel"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
@@ -97,6 +98,9 @@ export function TaskDetailsSidebar({
       </div>
       <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
         <WatchersPanel projectId={projectId} task={task} members={members} currentUser={currentUser} />
+      </div>
+      <div className="p-5 rounded-2xl border bg-card/80 shadow-xs">
+        <TaskTrackerPanel taskId={task.id} />
       </div>
     </div>
   )
@@ -448,6 +452,7 @@ function TagInput({
 
 function DatesPanel({ task, onSave }: { task: ScrumTask; onSave: SaveFn }) {
   const [due, setDue] = useState(task.dueDate ? task.dueDate.slice(0, 10) : "")
+  const [startOn, setStartOn] = useState(task.startDate ? task.startDate.slice(0, 10) : "")
   const overdue =
     task.dueDate && task.status !== "DONE" && task.status !== "DEPLOYED" && new Date(task.dueDate) < new Date()
   return (
@@ -461,6 +466,17 @@ function DatesPanel({ task, onSave }: { task: ScrumTask; onSave: SaveFn }) {
         <div className="flex justify-between">
           <span className="text-muted-foreground">Updated</span>
           <span>{format(new Date(task.updatedAt), "MMM d, yyyy")}</span>
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-muted-foreground">Start</span>
+          <Input
+            type="date"
+            value={startOn}
+            max={due || undefined}
+            onChange={(e) => setStartOn(e.target.value)}
+            onBlur={() => onSave({ startDate: startOn ? new Date(startOn).toISOString() : null })}
+            className="h-7 w-36 px-2 text-xs"
+          />
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className={cn("text-muted-foreground", overdue && "text-red-600")}>Due</span>

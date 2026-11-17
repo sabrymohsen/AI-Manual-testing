@@ -85,7 +85,7 @@ export function FacetBar({
       <button
         onClick={() => toggleTrace("orphans")}
         aria-pressed={filters.trace === "orphans"}
-        title="Test cases that cover no user story"
+        title="Test cases not linked to any user story"
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors",
           filters.trace === "orphans"
@@ -94,13 +94,13 @@ export function FacetBar({
         )}
       >
         <ShieldAlert className="h-3 w-3" />
-        {data?.orphans ?? 0} orphans
+        {data?.orphans ?? 0} not linked
       </button>
 
       <button
         onClick={() => toggleTrace("broken")}
         aria-pressed={filters.trace === "broken"}
-        title="Never executed, or failed with no bug filed"
+        title="Failed on the last run, and no open bug tracks the failure"
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors",
           filters.trace === "broken"
@@ -109,7 +109,7 @@ export function FacetBar({
         )}
       >
         <AlertCircle className="h-3 w-3" />
-        {data?.broken ?? 0} broken links
+        {data?.broken ?? 0} failed, no bug
       </button>
     </div>
   )

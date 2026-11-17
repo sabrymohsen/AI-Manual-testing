@@ -158,12 +158,12 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
     return (
       <button
         onClick={openChat}
-        className="fixed bottom-6 right-6 z-40 flex items-center justify-center h-14 w-14 rounded-full bg-indigo-600 text-white hover:bg-indigo-750 hover:scale-105 active:scale-95 transition-all shadow-xl"
+        className="fixed bottom-6 right-6 z-40 flex items-center justify-center h-14 w-14 rounded-full bg-primary text-white hover:bg-indigo-750 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
         title="Open Team Chat"
       >
         <MessageCircle className="h-6 w-6" />
         {totalUnreads > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold h-6 min-w-6 px-1.5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold h-6 min-w-6 px-1.5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
             {totalUnreads}
           </span>
         )}
@@ -174,7 +174,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
   return (
     <div
       className={cn(
-        "fixed right-0 top-0 bottom-0 z-50 flex bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-300 transform",
+        "fixed right-0 top-0 bottom-0 z-50 flex bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 transform",
         activeThreadId ? "w-full sm:w-[700px]" : "w-full sm:w-[380px]",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}
@@ -191,7 +191,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
       {/* Main Area: Feed & Input */}
       <div className="flex-1 flex flex-col h-full bg-white dark:bg-slate-900 min-w-0 relative">
         {/* Active Channel Header */}
-        <div className="h-14 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4">
+        <div className="h-14 border-b border-border dark:border-slate-800 flex items-center justify-between px-4">
           <div className="flex items-center gap-2 min-w-0">
             {/* Sidebar toggle button */}
             <button
@@ -202,7 +202,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
               {showSidebar ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </button>
             <div className="truncate">
-              <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm truncate flex items-center gap-1">
+              <h4 className="font-semibold text-foreground dark:text-slate-200 text-sm truncate flex items-center gap-1">
                 {activeChannel?.type === "DIRECT" ? (
                   <span>@ {activeChannel.otherMember?.name || activeChannel.otherMember?.email}</span>
                 ) : (
@@ -213,7 +213,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
                 )}
               </h4>
               {activeChannel?.description && (
-                <p className="text-[10px] text-slate-400 truncate">{activeChannel.description}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{activeChannel.description}</p>
               )}
             </div>
           </div>
@@ -236,7 +236,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
             socket={socket}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
+          <div className="flex-1 flex items-center justify-center text-muted-foreground dark:text-muted-foreground text-sm">
             Please select a channel to start conversation.
           </div>
         )}

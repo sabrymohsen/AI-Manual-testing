@@ -207,26 +207,26 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-slate-100">
+      <div className="bg-card rounded-xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-border">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="p-6 border-b border-border flex items-center justify-between bg-muted/50">
           <div>
-            <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
               <FileSpreadsheet className="text-blue-600 h-5 w-5" /> Import Requirements
             </h2>
-            <p className="text-xs text-slate-500 mt-1">Upload requirement maps and criteria documents directly.</p>
+            <p className="text-xs text-muted-foreground mt-1">Upload requirement maps and criteria documents directly.</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 font-bold text-lg p-1">&times;</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-muted-foreground font-semibold text-lg p-1">&times;</button>
         </div>
 
         {/* Steps Breadcrumb */}
-        <div className="bg-slate-50 border-b border-slate-100 px-6 py-2.5 flex items-center gap-2 text-xs font-semibold text-slate-400">
-          <span className={step === 1 ? "text-blue-600" : "text-slate-500"}>1. Upload spreadsheet</span>
+        <div className="bg-muted/50 border-b border-border px-6 py-2.5 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <span className={step === 1 ? "text-blue-600" : "text-muted-foreground"}>1. Upload spreadsheet</span>
           <ChevronRight size={14} />
-          <span className={step === 2 ? "text-blue-600" : "text-slate-500"}>2. Map columns</span>
+          <span className={step === 2 ? "text-blue-600" : "text-muted-foreground"}>2. Map columns</span>
           <ChevronRight size={14} />
-          <span className={step === 3 ? "text-blue-600" : "text-slate-500"}>3. Review & save</span>
+          <span className={step === 3 ? "text-blue-600" : "text-muted-foreground"}>3. Review & save</span>
         </div>
 
         {/* Content Area */}
@@ -235,7 +235,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
             <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-start gap-2">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">Import Error</p>
+                <p className="font-semibold">Import Error</p>
                 <p className="mt-0.5">{errorMsg}</p>
               </div>
             </div>
@@ -248,7 +248,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-slate-200 hover:border-blue-500 hover:bg-blue-50/10 rounded-2xl p-12 text-center cursor-pointer transition-all flex flex-col items-center justify-center bg-slate-50/50 group"
+                className="border-2 border-dashed border-border hover:border-blue-500 hover:bg-blue-50/10 rounded-xl p-12 text-center cursor-pointer transition-all flex flex-col items-center justify-center bg-muted/50 group"
               >
                 <input
                   type="file"
@@ -260,8 +260,8 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                 <div className="h-12 w-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-4 transition-transform group-hover:scale-110">
                   <Upload size={24} />
                 </div>
-                <span className="text-sm font-semibold text-slate-700 block">Drag & drop your requirement sheet</span>
-                <span className="text-xs text-slate-400 mt-1 block">Supports XLSX, XLS or CSV files</span>
+                <span className="text-sm font-semibold text-foreground block">Drag & drop your requirement sheet</span>
+                <span className="text-xs text-muted-foreground mt-1 block">Supports XLSX, XLS or CSV files</span>
                 <Button type="button" className="mt-5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs px-4 rounded-lg">
                   Browse file
                 </Button>
@@ -275,29 +275,29 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
               <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-2.5 items-start text-xs text-blue-800">
                 <Settings2 className="shrink-0 text-blue-600 mt-0.5" size={16} />
                 <div>
-                  <p className="font-bold">Match Excel Columns to Requirement Fields</p>
+                  <p className="font-semibold">Match Excel Columns to Requirement Fields</p>
                   <p className="mt-0.5 opacity-90">We guessed mappings based on headers. Review dropdown selections before generating the import preview.</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {SCHEMA_FIELDS.map((field) => (
-                  <div key={field.key} className="border border-slate-150 rounded-xl p-4 bg-slate-50/35 hover:shadow-sm transition-shadow">
+                  <div key={field.key} className="border border-slate-150 rounded-xl p-4 bg-muted/35 hover:shadow-sm transition-shadow">
                     <div className="flex justify-between items-start mb-2">
-                      <Label className="text-xs font-bold text-slate-700">
+                      <Label className="text-xs font-semibold text-foreground">
                         {field.label}
                       </Label>
                       {field.required && (
-                        <span className="text-[10px] uppercase font-bold text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">
+                        <span className="text-[11px] font-medium text-red-600 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">
                           Required
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-slate-400 mb-3">{field.desc}</p>
+                    <p className="text-[11px] text-muted-foreground mb-3">{field.desc}</p>
                     <select
                       value={mapping[field.key as keyof ColumnMapping] || ""}
                       onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 bg-white rounded-lg text-xs focus:outline-none text-slate-700"
+                      className="w-full px-3 py-2 border border-border bg-card rounded-lg text-xs focus:outline-none text-foreground"
                     >
                       <option value="">-- Do Not Import / Skip --</option>
                       {headers.map((h, i) => (
@@ -317,21 +317,21 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
             <div className="space-y-6">
               {/* Summary Stats Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div className="border border-slate-100 p-4 bg-slate-50/50 rounded-xl text-center">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Total Rows parsed</span>
-                  <span className="text-2xl font-bold text-slate-800 mt-1 block">{previewData.summary.totalRows}</span>
+                <div className="border border-border p-4 bg-muted/50 rounded-xl text-center">
+                  <span className="text-[11px] font-medium text-muted-foreground block">Total Rows parsed</span>
+                  <span className="text-2xl font-semibold text-foreground mt-1 block">{previewData.summary.totalRows}</span>
                 </div>
-                <div className="border border-slate-100 p-4 bg-green-50/30 rounded-xl text-center border-green-100/30">
-                  <span className="text-[10px] font-bold text-green-600 block uppercase">Requirements to Create</span>
-                  <span className="text-2xl font-bold text-green-700 mt-1 block">{previewData.summary.createdRequirements}</span>
+                <div className="border border-border p-4 bg-green-50/30 rounded-xl text-center border-green-100/30">
+                  <span className="text-[11px] font-medium text-green-600 block">Requirements to Create</span>
+                  <span className="text-2xl font-semibold text-green-700 mt-1 block">{previewData.summary.createdRequirements}</span>
                 </div>
-                <div className="border border-slate-100 p-4 bg-blue-50/30 rounded-xl text-center border-blue-100/30">
-                  <span className="text-[10px] font-bold text-blue-600 block uppercase">Requirements to Update</span>
-                  <span className="text-2xl font-bold text-blue-700 mt-1 block">{previewData.summary.updatedRequirements}</span>
+                <div className="border border-border p-4 bg-blue-50/30 rounded-xl text-center border-blue-100/30">
+                  <span className="text-[11px] font-medium text-blue-600 block">Requirements to Update</span>
+                  <span className="text-2xl font-semibold text-blue-700 mt-1 block">{previewData.summary.updatedRequirements}</span>
                 </div>
-                <div className="border border-slate-100 p-4 bg-amber-50/30 rounded-xl text-center border-amber-100/30">
-                  <span className="text-[10px] font-bold text-amber-600 block uppercase">Epics / Features to create</span>
-                  <span className="text-2xl font-bold text-amber-700 mt-1 block">
+                <div className="border border-border p-4 bg-amber-50/30 rounded-xl text-center border-amber-100/30">
+                  <span className="text-[11px] font-medium text-amber-600 block">Epics / Features to create</span>
+                  <span className="text-2xl font-semibold text-amber-700 mt-1 block">
                     {(previewData.summary.createdEpics || 0) + (previewData.summary.createdFeatures || 0)}
                   </span>
                 </div>
@@ -340,7 +340,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
               {/* Proposed Hierarchy Changes */}
               {((previewData.newStructures.epics?.length || 0) > 0 || (previewData.newStructures.features?.length || 0) > 0) && (
                 <div className="border border-amber-100 bg-amber-50/15 p-4 rounded-xl space-y-2.5">
-                  <span className="text-xs font-bold text-amber-800 block">Proposed project structure changes:</span>
+                  <span className="text-xs font-semibold text-amber-800 block">Proposed project structure changes:</span>
                   <div className="text-[11px] text-amber-700 space-y-1">
                     {(previewData.newStructures.epics || []).map((e: string, i: number) => (
                       <div key={`ep-${i}`}>• Create Epic: <span className="font-semibold">{e}</span></div>
@@ -354,23 +354,23 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
 
               {/* Rows List Grid */}
               <div className="space-y-3">
-                <span className="text-xs font-bold text-slate-600 block">Data Preview Rows ({previewData.previewRows.length})</span>
-                <div className="border border-slate-100 rounded-xl max-h-[300px] overflow-y-auto divide-y divide-slate-100">
+                <span className="text-xs font-semibold text-muted-foreground block">Data Preview Rows ({previewData.previewRows.length})</span>
+                <div className="border border-border rounded-xl max-h-[300px] overflow-y-auto divide-y divide-border">
                   {previewData.previewRows.map((r: any, idx: number) => (
-                    <div key={idx} className="p-3 bg-white flex items-start gap-4 justify-between text-xs hover:bg-slate-50/50">
+                    <div key={idx} className="p-3 bg-card flex items-start gap-4 justify-between text-xs hover:bg-muted/50">
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-800">{r.requirementKey}</span>
-                          <span className="text-slate-400 text-[10px]">({r.priority})</span>
+                          <span className="font-semibold text-foreground">{r.requirementKey}</span>
+                          <span className="text-muted-foreground text-[10px]">({r.priority})</span>
                         </div>
-                        <p className="font-medium text-slate-700 mt-0.5">{r.title}</p>
+                        <p className="font-medium text-foreground mt-0.5">{r.title}</p>
                         {r.epic && (
                           <span className="text-[10px] text-violet-500 block mt-1 font-semibold">
                             Epic: {r.epic}{r.epicAction === "Create" && " (new)"}
                           </span>
                         )}
                         {r.feature && (
-                          <span className="text-[10px] text-indigo-500 block mt-1 font-semibold">
+                          <span className="text-[10px] text-primary block mt-1 font-semibold">
                             Feature: {r.feature}{r.featureAction === "Create" && " (new)"}
                           </span>
                         )}
@@ -389,14 +389,14 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
         </div>
 
         {/* Footer actions */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0 px-6">
+        <div className="p-4 border-t border-border bg-muted/50 flex items-center justify-between shrink-0 px-6">
           <div>
             {step > 1 && (
               <Button
                 variant="ghost"
                 type="button"
                 onClick={() => setStep((step - 1) as any)}
-                className="text-slate-500 hover:text-slate-800 text-xs font-semibold flex items-center gap-1 hover:bg-slate-100 px-3 py-1.5 rounded-lg"
+                className="text-muted-foreground hover:text-foreground text-xs font-semibold flex items-center gap-1 hover:bg-muted px-3 py-1.5 rounded-lg"
               >
                 <ArrowLeft size={14} /> Back
               </Button>

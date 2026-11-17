@@ -140,18 +140,18 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
 
   if (loading) {
     return (
-      <div className="bg-white border rounded-2xl p-6 flex justify-center shadow-2xs">
-        <Loader2 size={20} className="animate-spin text-indigo-600" />
+      <div className="bg-card border rounded-xl p-6 flex justify-center shadow-2xs">
+        <Loader2 size={20} className="animate-spin text-primary" />
       </div>
     )
   }
 
   if (!data || !data.available) {
     return (
-      <div className="bg-white border rounded-2xl p-6 text-center space-y-2 shadow-2xs">
+      <div className="bg-card border rounded-xl p-6 text-center space-y-2 shadow-2xs">
         <FolderArchive size={22} className="text-slate-300 mx-auto" />
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No diagnostics bundle found</p>
-        <p className="text-[9.5px] text-slate-400 font-medium max-w-md mx-auto">
+        <p className="text-[11px] font-medium text-muted-foreground">No diagnostics bundle found</p>
+        <p className="text-[9.5px] text-muted-foreground font-medium max-w-md mx-auto">
           Every run saves a Playwright <span className="font-mono">trace.zip</span> per test. No matching bundle
           was found for <span className="font-mono">{testName}</span>.
         </p>
@@ -162,17 +162,17 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
   const selectedKind = selectedFile ? previewKind(selectedFile) : "text"
 
   return (
-    <div className="bg-white border rounded-2xl shadow-2xs overflow-hidden">
+    <div className="bg-card border rounded-xl shadow-2xs overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 flex-wrap p-3.5 border-b">
-        <Package size={15} className="text-indigo-600" />
-        <span className="text-[10px] uppercase font-black text-slate-500 tracking-wider">Diagnostics Bundle</span>
-        <span className="font-mono text-[9px] text-slate-400 bg-slate-50 border rounded px-1.5 py-0.5">
+        <Package size={15} className="text-primary" />
+        <span className="text-[11px] font-medium text-muted-foreground">Diagnostics Bundle</span>
+        <span className="font-mono text-[9px] text-muted-foreground bg-muted/50 border rounded px-1.5 py-0.5">
           {data.entries.length} files · {fmtBytes(data.entries.reduce((s, e) => s + e.size, 0))}
         </span>
         <a
           href={`/api/hub/diagnoses/${diagnosisId}/bundle/file?name=__zip__`}
-          className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-[10px] font-black"
+          className="ml-auto inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-[10px] font-semibold"
         >
           <Download size={12} /> Download .zip
         </a>
@@ -188,8 +188,8 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
           <button
             key={t.id}
             onClick={() => setView(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-[10px] font-black transition-all border-b-2 -mb-px ${
-              view === t.id ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-400 hover:text-slate-700"
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-lg text-[10px] font-semibold transition-all border-b-2 -mb-px ${
+              view === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
             <t.icon size={12} /> {t.label}
@@ -211,12 +211,12 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                     key={e.name}
                     onClick={() => setSelectedFile(e.name)}
                     className={`w-full text-left px-2.5 py-2 rounded-xl border flex items-center gap-2 transition-all ${
-                      active ? "bg-indigo-50 border-indigo-200 ring-1 ring-indigo-200" : "bg-white hover:border-slate-300"
+                      active ? "bg-primary/10 border-primary/25 ring-1 ring-primary/30" : "bg-card hover:border-border"
                     }`}
                   >
-                    <Icon size={13} className={active ? "text-indigo-600" : "text-slate-400"} />
-                    <span className="text-[9.5px] font-bold text-slate-700 truncate flex-1">{e.name}</span>
-                    <span className="text-[8px] font-mono text-slate-400">{fmtBytes(e.size)}</span>
+                    <Icon size={13} className={active ? "text-primary" : "text-muted-foreground"} />
+                    <span className="text-[9.5px] font-semibold text-foreground truncate flex-1">{e.name}</span>
+                    <span className="text-[8px] font-mono text-muted-foreground">{fmtBytes(e.size)}</span>
                   </button>
                 )
               })}
@@ -226,10 +226,10 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
             <div className="md:col-span-2">
               {selectedFile && (
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] font-black uppercase text-slate-400 truncate">{selectedFile}</span>
+                  <span className="text-[11px] font-medium text-muted-foreground truncate">{selectedFile}</span>
                   <a
                     href={`/api/hub/diagnoses/${diagnosisId}/bundle/file?name=${encodeURIComponent(selectedFile)}&download=1`}
-                    className="inline-flex items-center gap-1 text-[9px] font-black text-indigo-700 hover:text-indigo-900"
+                    className="inline-flex items-center gap-1 text-[9px] font-semibold text-primary hover:text-primary"
                   >
                     <Download size={10} /> file
                   </a>
@@ -240,7 +240,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                   title={selectedFile || "report"}
                   src={`/api/hub/diagnoses/${diagnosisId}/bundle/file?name=${encodeURIComponent(selectedFile || "")}`}
                   sandbox="allow-same-origin"
-                  className="w-full h-[46vh] rounded-xl border bg-white"
+                  className="w-full h-[46vh] rounded-xl border bg-card"
                 />
               ) : previewLoading ? (
                 <div className="h-[46vh] flex items-center justify-center bg-slate-950 rounded-xl">
@@ -259,7 +259,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
         {view === "redaction" && data.redaction && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Privacy score */}
-            <div className="bg-slate-50 border rounded-2xl p-4 flex flex-col items-center justify-center text-center">
+            <div className="bg-muted/50 border rounded-xl p-4 flex flex-col items-center justify-center text-center">
               <div className="relative h-20 w-20">
                 <svg viewBox="0 0 36 36" className="h-20 w-20 -rotate-90">
                   <circle cx="18" cy="18" r="15" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
@@ -275,12 +275,12 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                   />
                 </svg>
                 <span className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-lg font-black text-slate-800">{data.redaction.privacyScore}</span>
-                  <span className={`text-[7px] font-black uppercase ${privacyBand.color}`}>{privacyBand.label}</span>
+                  <span className="text-lg font-semibold text-foreground">{data.redaction.privacyScore}</span>
+                  <span className={`text-[7px] font-semibold uppercase ${privacyBand.color}`}>{privacyBand.label}</span>
                 </span>
               </div>
-              <p className="text-[9px] uppercase font-black text-slate-400 mt-2">Privacy Score</p>
-              <p className="text-[8.5px] text-slate-400 font-medium mt-1 leading-relaxed">
+              <p className="text-[11px] font-medium text-muted-foreground mt-2">Privacy Score</p>
+              <p className="text-[8.5px] text-muted-foreground font-medium mt-1 leading-relaxed">
                 {data.redaction.totalHits === 0
                   ? "No residual sensitive patterns detected in the sanitized bundle."
                   : `${data.redaction.totalHits} sensitive pattern${data.redaction.totalHits === 1 ? "" : "s"} detected in the bundle.`}
@@ -290,7 +290,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
             {/* Findings */}
             <div className="md:col-span-2 space-y-3">
               <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
                   {data.redaction.totalHits === 0 ? (
                     <ShieldCheck size={12} className="text-emerald-500" />
                   ) : (
@@ -303,7 +303,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                     <div
                       key={f.id}
                       className={`flex items-center gap-2 rounded-xl border p-2.5 ${
-                        f.count > 0 ? "bg-rose-50/50 border-rose-100" : "bg-slate-50 border-slate-100"
+                        f.count > 0 ? "bg-rose-50/50 border-rose-100" : "bg-muted/50 border-border"
                       }`}
                     >
                       {f.count > 0 ? (
@@ -311,12 +311,12 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                       ) : (
                         <ShieldCheck size={12} className="text-emerald-500 shrink-0" />
                       )}
-                      <span className="text-[9.5px] font-bold text-slate-700">{f.label}</span>
+                      <span className="text-[9.5px] font-semibold text-foreground">{f.label}</span>
                       {f.samples.length > 0 && (
-                        <span className="font-mono text-[8.5px] text-slate-400 truncate">{f.samples.join("  ")}</span>
+                        <span className="font-mono text-[8.5px] text-muted-foreground truncate">{f.samples.join("  ")}</span>
                       )}
                       <span
-                        className={`ml-auto font-mono font-black text-[9px] rounded-full px-2 py-0.5 ${
+                        className={`ml-auto font-mono font-semibold text-[9px] rounded-full px-2 py-0.5 ${
                           f.count > 0 ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"
                         }`}
                       >
@@ -328,14 +328,14 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
               </div>
 
               <div>
-                <span className="text-[9px] uppercase font-black text-slate-400 flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
                   <Lock size={11} /> Redaction rules applied
                 </span>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {data.redaction.rules.map((r) => (
                     <span
                       key={r.id}
-                      className="inline-flex items-center gap-1 rounded-full bg-white border text-slate-600 px-2 py-0.5 text-[8.5px] font-black"
+                      className="inline-flex items-center gap-1 rounded-full bg-card border text-muted-foreground px-2 py-0.5 text-[8.5px] font-semibold"
                     >
                       <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> {r.label}
                     </span>
@@ -358,11 +358,11 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                 { icon: Globe, label: "Browser", value: data.metadata.system.browser },
                 { icon: Coffee, label: "JVM Vendor", value: data.metadata.system.javaVendor }
               ].map((m) => (
-                <div key={m.label} className="bg-slate-50 border rounded-xl p-2.5">
-                  <span className="text-[8px] uppercase font-black text-slate-400 flex items-center gap-1">
+                <div key={m.label} className="bg-muted/50 border rounded-xl p-2.5">
+                  <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
                     <m.icon size={9} /> {m.label}
                   </span>
-                  <p className="text-[10px] font-black text-slate-800 mt-1 truncate" title={m.value || undefined}>
+                  <p className="text-[10px] font-semibold text-foreground mt-1 truncate" title={m.value || undefined}>
                     {m.value || "—"}
                   </p>
                 </div>
@@ -370,9 +370,9 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
             </div>
 
             <div>
-              <span className="text-[9px] uppercase font-black text-slate-400">Test configuration snapshot</span>
+              <span className="text-[11px] font-medium text-muted-foreground">Test configuration snapshot</span>
               {data.metadata.config.length === 0 ? (
-                <p className="text-[9px] text-slate-400 italic mt-1.5">
+                <p className="text-[9px] text-muted-foreground italic mt-1.5">
                   No configuration captured (environment.xml unavailable).
                 </p>
               ) : (
@@ -380,9 +380,9 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                   <table className="w-full text-[9.5px]">
                     <tbody>
                       {data.metadata.config.map((c, i) => (
-                        <tr key={c.key} className={i % 2 ? "bg-slate-50/50" : ""}>
-                          <td className="px-3 py-1.5 font-mono text-slate-500 border-r">{c.key}</td>
-                          <td className="px-3 py-1.5 font-mono font-bold text-slate-800">{c.value}</td>
+                        <tr key={c.key} className={i % 2 ? "bg-muted/50" : ""}>
+                          <td className="px-3 py-1.5 font-mono text-muted-foreground border-r">{c.key}</td>
+                          <td className="px-3 py-1.5 font-mono font-semibold text-foreground">{c.value}</td>
                         </tr>
                       ))}
                     </tbody>

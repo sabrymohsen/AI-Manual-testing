@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 
 const bodySchema = z.object({
@@ -37,7 +37,7 @@ export async function POST(
     include: { project: { select: { userId: true } } },
   })
   if (!session) return notFoundResponse("Manual session not found")
-  if (session.project.userId !== auth.session!.user.id) {
+  if (!(await canUseProject(session.projectId, auth.session!.user.id, "write"))) {
     return unauthorizedResponse("Access denied")
   }
 

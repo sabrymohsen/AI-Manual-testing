@@ -98,11 +98,11 @@ function StepInput({
             }
           } else if (e.key === "Escape") setOpen(false)
         }}
-        className="h-9 w-full rounded-md border bg-white px-3 font-mono text-[13px] focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        className="h-9 w-full rounded-md border bg-card px-3 font-mono text-[13px] focus:border-primary focus:outline-none focus:ring-2 focus:ring-indigo-100"
         spellCheck={false}
       />
       {open && suggestions.length > 0 && (
-        <ul className="absolute left-0 right-0 top-10 z-30 max-h-64 overflow-y-auto rounded-md border bg-white py-1 shadow-lg">
+        <ul className="absolute left-0 right-0 top-10 z-30 max-h-64 overflow-y-auto rounded-md border bg-card py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
           {suggestions.map((s, i) => (
             <li key={s}>
               <button
@@ -112,13 +112,13 @@ function StepInput({
                   if (blurTimer.current) clearTimeout(blurTimer.current)
                   pick(s)
                 }}
-                className={`block w-full px-3 py-1.5 text-left font-mono text-xs ${i === active ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50"}`}
+                className={`block w-full px-3 py-1.5 text-left font-mono text-xs ${i === active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/50"}`}
               >
                 {s}
               </button>
             </li>
           ))}
-          <li className="border-t px-3 py-1 text-[10px] text-slate-400">↑↓ to move · Tab to use · replace the quoted words with yours</li>
+          <li className="border-t px-3 py-1 text-[10px] text-muted-foreground">↑↓ to move · Tab to use · replace the quoted words with yours</li>
         </ul>
       )}
     </div>
@@ -130,11 +130,14 @@ export function PlainEnglishEditor({
   onChange,
   projectId,
   onEditDetailed,
+  manual = false,
 }: {
   steps: EditorStep[]
   onChange: (_steps: EditorStep[]) => void
   projectId?: string
   onEditDetailed?: () => void
+  /** A person runs manual steps, so automation-wording warnings don't apply. */
+  manual?: boolean
 }) {
   const [draft, setDraft] = useState("")
   const [openExpected, setOpenExpected] = useState<Set<number>>(new Set())
@@ -234,8 +237,8 @@ export function PlainEnglishEditor({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="mr-auto text-xs text-slate-500">
-          Write each step as a sentence. {steps.length > 0 && (notUnderstood ? <span className="text-amber-700">{notUnderstood} step(s) need rewording.</span> : understood ? <span className="text-emerald-700">All {understood} step(s) understood.</span> : null)}
+        <p className="mr-auto text-xs text-muted-foreground">
+          {manual ? "Write each step the way a tester should do it." : "Write each step as a sentence."} {!manual && steps.length > 0 && (notUnderstood ? <span className="text-amber-700">{notUnderstood} step(s) need rewording.</span> : understood ? <span className="text-emerald-700">All {understood} step(s) understood.</span> : null)}
         </p>
         <Button type="button" size="sm" variant={panel === "paste" ? "default" : "outline"} onClick={() => setPanel(p => (p === "paste" ? null : "paste"))}>
           <ClipboardPaste /> Paste steps
@@ -253,9 +256,9 @@ export function PlainEnglishEditor({
       </div>
 
       {panel === "paste" && (
-        <div className="space-y-2 rounded-lg border bg-slate-50 p-3">
-          <p className="text-xs text-slate-600">One step per line. Numbering and bullets are removed.</p>
-          <textarea value={pasteText} onChange={e => setPasteText(e.target.value)} rows={6} className="w-full rounded-md border bg-white p-2 font-mono text-xs" placeholder={'Go to "https://example.com/login"\nType "demo user" in the "Username" field\nClick "Sign in"'} />
+        <div className="space-y-2 rounded-lg border bg-muted/50 p-3">
+          <p className="text-xs text-muted-foreground">One step per line. Numbering and bullets are removed.</p>
+          <textarea value={pasteText} onChange={e => setPasteText(e.target.value)} rows={6} className="w-full rounded-md border bg-card p-2 font-mono text-xs" placeholder={'Go to "https://example.com/login"\nType "demo user" in the "Username" field\nClick "Sign in"'} />
           <Button
             type="button"
             size="sm"
@@ -272,25 +275,25 @@ export function PlainEnglishEditor({
       )}
 
       {panel === "ai" && (
-        <div className="space-y-2 rounded-lg border border-indigo-200 bg-indigo-50/50 p-3">
-          <p className="text-xs text-slate-600">Describe what to do. The AI reads the page, writes the steps, and each step is checked before you insert it. Runs never call the AI.</p>
-          <textarea value={aiInstruction} onChange={e => setAiInstruction(e.target.value)} rows={3} className="w-full rounded-md border bg-white p-2 text-sm" placeholder="Fill out the contact form as a QA manager working at Acme and submit it" />
-          <input value={aiUrl} onChange={e => setAiUrl(e.target.value)} className="h-8 w-full rounded-md border bg-white px-2 text-xs" placeholder="Page the steps are for (optional, lets the AI use the real labels)" />
+        <div className="space-y-2 rounded-lg border border-primary/25 bg-primary/10 p-3">
+          <p className="text-xs text-muted-foreground">Describe what to do. The AI reads the page, writes the steps, and each step is checked before you insert it. Runs never call the AI.</p>
+          <textarea value={aiInstruction} onChange={e => setAiInstruction(e.target.value)} rows={3} className="w-full rounded-md border bg-card p-2 text-sm" placeholder="Fill out the contact form as a QA manager working at Acme and submit it" />
+          <input value={aiUrl} onChange={e => setAiUrl(e.target.value)} className="h-8 w-full rounded-md border bg-card px-2 text-xs" placeholder="Page the steps are for (optional, lets the AI use the real labels)" />
           <div className="flex items-center gap-2">
             <Button type="button" size="sm" onClick={runAi} disabled={aiBusy || aiInstruction.trim().length < 3}>
               {aiBusy ? <Loader2 className="animate-spin" /> : <Wand2 />} {aiBusy ? "Writing steps…" : "Write steps"}
             </Button>
-            {aiBusy && <span className="text-xs text-slate-500">This can take a minute or two with a reasoning model.</span>}
+            {aiBusy && <span className="text-xs text-muted-foreground">This can take a minute or two with a reasoning model.</span>}
           </div>
           {aiResult && (
-            <div className="space-y-1 rounded-md border bg-white p-2">
+            <div className="space-y-1 rounded-md border bg-card p-2">
               {aiResult.note && <p className="text-xs text-amber-700">{aiResult.note}</p>}
               {aiResult.steps.map((s, i) => (
-                <label key={i} className="flex items-start gap-2 rounded px-1 py-1 text-xs hover:bg-slate-50">
+                <label key={i} className="flex items-start gap-2 rounded px-1 py-1 text-xs hover:bg-muted/50">
                   <input type="checkbox" checked={s.use} onChange={e => setAiResult(r => r && { ...r, steps: r.steps.map((x, j) => (j === i ? { ...x, use: e.target.checked } : x)) })} className="mt-0.5 accent-indigo-600" />
                   <span className="flex-1">
-                    <span className="font-mono text-slate-800">{s.text}</span>
-                    <span className={`block ${s.ok ? "text-slate-500" : "text-amber-700"}`}>{s.ok ? s.meaning : `Not understood: ${s.error}`}</span>
+                    <span className="font-mono text-foreground">{s.text}</span>
+                    <span className={`block ${s.ok ? "text-muted-foreground" : "text-amber-700"}`}>{s.ok ? s.meaning : `Not understood: ${s.error}`}</span>
                   </span>
                 </label>
               ))}
@@ -313,18 +316,18 @@ export function PlainEnglishEditor({
 
       {panel === "data" && (
         <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
-          <p className="text-xs text-slate-600">Describe a person or record. Values are made once, now, and saved as steps — every run uses the same data.</p>
-          <input value={dataDescription} onChange={e => setDataDescription(e.target.value)} className="h-8 w-full rounded-md border bg-white px-2 text-sm" placeholder="A French fashion designer applying for a business account" />
-          <input value={dataNames} onChange={e => setDataNames(e.target.value)} className="h-8 w-full rounded-md border bg-white px-2 text-xs" placeholder="Names to fill (optional): firstName, lastName, email, phone" />
+          <p className="text-xs text-muted-foreground">Describe a person or record. Values are made once, now, and saved as steps — every run uses the same data.</p>
+          <input value={dataDescription} onChange={e => setDataDescription(e.target.value)} className="h-8 w-full rounded-md border bg-card px-2 text-sm" placeholder="A French fashion designer applying for a business account" />
+          <input value={dataNames} onChange={e => setDataNames(e.target.value)} className="h-8 w-full rounded-md border bg-card px-2 text-xs" placeholder="Names to fill (optional): firstName, lastName, email, phone" />
           <Button type="button" size="sm" onClick={runData} disabled={dataBusy || dataDescription.trim().length < 3}>
             {dataBusy ? <Loader2 className="animate-spin" /> : <Wand2 />} {dataBusy ? "Making data…" : "Make data"}
           </Button>
           {dataValues && (
-            <div className="space-y-1 rounded-md border bg-white p-2 font-mono text-xs">
+            <div className="space-y-1 rounded-md border bg-card p-2 font-mono text-xs">
               {Object.entries(dataValues).map(([k, v]) => (
                 <div key={k} className="flex gap-2">
-                  <span className="text-indigo-700">{`{${k}}`}</span>
-                  <span className="truncate text-slate-700">{v}</span>
+                  <span className="text-primary">{`{${k}}`}</span>
+                  <span className="truncate text-foreground">{v}</span>
                 </div>
               ))}
               <Button
@@ -352,11 +355,11 @@ export function PlainEnglishEditor({
           if (!parsed) {
             const sentence = describeStructuredStep(step)
             return (
-              <li key={i} className="flex items-start gap-2 rounded-lg border border-dashed bg-slate-50 p-2">
-                <span className="mt-2 w-6 text-right text-xs text-slate-400">{i + 1}</span>
+              <li key={i} className="flex items-start gap-2 rounded-lg border border-dashed bg-muted/50 p-2">
+                <span className="mt-2 w-6 text-right text-xs text-muted-foreground">{i + 1}</span>
                 <div className="flex-1 text-sm">
-                  <p className="text-slate-700">{step.actionDescription || step.actionType}</p>
-                  <p className="text-xs text-slate-500">Detailed step ({step.actionType})</p>
+                  <p className="text-foreground">{step.actionDescription || step.actionType}</p>
+                  <p className="text-xs text-muted-foreground">Detailed step ({step.actionType})</p>
                 </div>
                 {sentence ? (
                   <Button type="button" size="sm" variant="ghost" onClick={() => onChange(steps.map((s, j) => (j === i ? { ...s, ...newPlainStep(sentence), expectedResult: s.expectedResult, assertions: s.assertions } : s)))}>
@@ -377,9 +380,9 @@ export function PlainEnglishEditor({
           }
           const missing = unsetVariables.get(i)
           return (
-            <li key={i} className="rounded-lg border bg-white p-2">
+            <li key={i} className="rounded-lg border bg-card p-2">
               <div className="flex items-start gap-2">
-                <span className="mt-2 w-6 text-right text-xs text-slate-400">{i + 1}</span>
+                <span className="mt-2 w-6 text-right text-xs text-muted-foreground">{i + 1}</span>
                 <StepInput value={step.actionDescription} onChange={v => setSentence(i, v)} onCommit={v => setSentence(i, v, true)} />
                 <div className="flex">
                   <Button type="button" size="icon" variant="ghost" onClick={() => move(i, i - 1)} disabled={i === 0} aria-label="Move up">
@@ -394,7 +397,7 @@ export function PlainEnglishEditor({
                 </div>
               </div>
               <div className="ml-8 mt-1 space-y-1 text-xs">
-                {parsed.ok ? (
+                {manual && !parsed.ok ? null : parsed.ok ? (
                   <p className="flex items-center gap-1 text-emerald-700">
                     <CheckCircle2 className="h-3.5 w-3.5" /> {parsed.meaning}
                   </p>
@@ -408,7 +411,7 @@ export function PlainEnglishEditor({
                     )}
                   </p>
                 )}
-                {missing && <p className="text-slate-500">Reads {missing.map(m => `{${m}}`).join(", ")} — set it in an earlier step or in the project&apos;s test data.</p>}
+                {missing && <p className="text-muted-foreground">Reads {missing.map(m => `{${m}}`).join(", ")} — set it in an earlier step or in the project&apos;s test data.</p>}
                 {openExpected.has(i) || step.expectedResult ? (
                   <input
                     value={step.expectedResult}
@@ -417,7 +420,7 @@ export function PlainEnglishEditor({
                     className="h-7 w-full rounded border px-2 text-xs"
                   />
                 ) : (
-                  <button type="button" className="text-slate-400 hover:text-slate-700" onClick={() => setOpenExpected(s => new Set(s).add(i))}>
+                  <button type="button" className="text-muted-foreground hover:text-foreground" onClick={() => setOpenExpected(s => new Set(s).add(i))}>
                     + expected result
                   </button>
                 )}
@@ -428,7 +431,7 @@ export function PlainEnglishEditor({
       </ol>
 
       <div className="flex items-center gap-2 rounded-lg border border-dashed p-2">
-        <span className="w-6 text-right text-xs text-slate-400">{steps.length + 1}</span>
+        <span className="w-6 text-right text-xs text-muted-foreground">{steps.length + 1}</span>
         <StepInput
           value={draft}
           onChange={setDraft}
@@ -452,7 +455,7 @@ export function PlainEnglishEditor({
           <Plus /> Add
         </Button>
       </div>
-      {draft.trim() && (
+      {draft.trim() && !manual && (
         <p className="ml-8 text-xs">
           {(() => {
             const p = parseStep(draft)

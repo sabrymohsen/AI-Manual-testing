@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, canUseProject } from "@/lib/api-guards"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -102,7 +102,7 @@ export async function DELETE(
   }
 
   // Verify project ownership
-  if (testCase.project.userId !== session!.user.id) {
+  if (!(await canUseProject(testCase.projectId, session!.user.id, "write"))) {
     return NextResponse.json({ error: "Not authorized to delete this test case" }, { status: 403 })
   }
 

@@ -81,7 +81,7 @@ export function ChatInput({
     editorProps: {
       attributes: {
         // `prose` is a no-op here (no @tailwindcss/typography); composer-body carries the real styles.
-        class: "composer-body min-h-[24px] max-h-[120px] overflow-y-auto outline-none py-1 pr-12 text-sm text-slate-800 dark:text-slate-200",
+        class: "composer-body min-h-[24px] max-h-[120px] overflow-y-auto outline-none py-1 pr-12 text-sm text-foreground dark:text-slate-200",
       },
       handleKeyDown: (view, event) => {
         // Send on Enter (unless Shift is pressed)
@@ -310,15 +310,15 @@ export function ChatInput({
     <div className="relative border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
       {/* Entity (#) picker — tasks, bugs, test cases, BRDs */}
       {showEntities && (
-        <div className="absolute bottom-full left-3 z-50 mb-1 max-h-56 w-80 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-1 shadow-lg">
-          <p className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+        <div className="absolute bottom-full left-3 z-50 mb-1 max-h-56 w-80 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+          <p className="px-3 py-1 text-[11px] font-medium text-muted-foreground">
             Reference an item
           </p>
           {entityLoading && (
-            <p className="px-3 py-2 text-xs text-slate-500">Searching…</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>
           )}
           {!entityLoading && entityResults.length === 0 && (
-            <p className="px-3 py-2 text-xs text-slate-500">No matching items.</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">No matching items.</p>
           )}
           {!entityLoading &&
             entityResults.map((e) => (
@@ -329,8 +329,8 @@ export function ChatInput({
               >
                 <span
                   className={cn(
-                    "shrink-0 rounded border px-1 py-0.5 text-[9px] font-bold",
-                    ENTITY_CHIP[e.type] || "bg-slate-100 text-slate-600 border-slate-200"
+                    "shrink-0 rounded border px-1 py-0.5 text-[9px] font-semibold",
+                    ENTITY_CHIP[e.type] || "bg-muted text-muted-foreground border-border"
                   )}
                 >
                   {e.key}
@@ -343,14 +343,14 @@ export function ChatInput({
 
       {/* Mentions dropdown overlay */}
       {showMentions && filteredMembers.length > 0 && (
-        <div className="absolute bottom-full left-3 z-50 mb-1 max-h-48 w-56 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-1 shadow-lg">
+        <div className="absolute bottom-full left-3 z-50 mb-1 max-h-48 w-56 overflow-y-auto rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
           {filteredMembers.map((member) => (
             <button
               key={member.id}
               onClick={() => insertMention(member)}
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
             >
-              <div className="h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
+              <div className="h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-[10px] font-semibold text-indigo-600 dark:text-indigo-400">
                 {(member.name || member.email).slice(0, 2).toUpperCase()}
               </div>
               <div className="truncate">
@@ -369,12 +369,12 @@ export function ChatInput({
               key={idx}
               className="group relative flex items-center gap-2 rounded-md bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs text-slate-700 dark:text-slate-300 max-w-[180px]"
             >
-              <Paperclip className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+              <Paperclip className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
               <span className="truncate pr-4">{file.name}</span>
               <button
                 type="button"
                 onClick={() => removeAttachment(idx)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-200"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:bg-muted dark:hover:bg-slate-700 hover:text-muted-foreground dark:hover:text-slate-200"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -394,7 +394,7 @@ export function ChatInput({
           title="Attach File"
         >
           {isUploading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-indigo-500" />
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
           ) : (
             <Paperclip className="h-5 w-5" />
           )}
@@ -436,7 +436,7 @@ export function ChatInput({
           <button
             type="button"
             onClick={handleSubmit}
-            className="rounded bg-indigo-600 p-1.5 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+            className="rounded bg-primary p-1.5 text-white hover:bg-primary/90 transition-colors shadow-sm"
             title="Send"
           >
             <Send className="h-4 w-4" />

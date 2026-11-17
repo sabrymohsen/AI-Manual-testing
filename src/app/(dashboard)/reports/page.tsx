@@ -269,7 +269,7 @@ export default function ReportsPage() {
   const visibleCharts = ROLE_CHARTS[role]
 
   return (
-    <div className="min-h-full bg-slate-50">
+    <div className="min-h-full bg-muted/50">
       <DashboardHeader
         projects={projects}
         projectId={projectId}
@@ -297,7 +297,7 @@ export default function ReportsPage() {
       />
 
       {!projectId ? (
-        <div className="p-16 text-center text-sm text-slate-400">
+        <div className="p-16 text-center text-sm text-muted-foreground">
           {projects.length === 0 ? "No projects found. Create a project to see analytics." : "Select a project to begin."}
         </div>
       ) : (

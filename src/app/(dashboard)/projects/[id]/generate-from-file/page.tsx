@@ -204,7 +204,7 @@ export default function GenerateFromFilePage() {
     Boundary: "bg-purple-100 text-purple-700",
     Validation: "bg-amber-100 text-amber-700",
     ErrorHandling: "bg-orange-100 text-orange-700",
-    Permission: "bg-indigo-100 text-indigo-700",
+    Permission: "bg-primary/15 text-primary",
   }
 
   return (
@@ -213,7 +213,7 @@ export default function GenerateFromFilePage() {
       {/* Page Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2.5">
+          <h1 className="text-2xl font-semibold flex items-center gap-2.5">
             <Sparkles className="h-6 w-6 text-violet-500" />
             Test Case Generator from Requirements
           </h1>
@@ -221,13 +221,13 @@ export default function GenerateFromFilePage() {
             Upload Excel, Word, CSV or text files containing user stories and requirements — generate structured test cases instantly.
           </p>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-bold border border-emerald-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200">
               ✓ Free Rule-Based Generation
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold border border-blue-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-semibold border border-blue-200">
               Arabic + English
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-bold border border-violet-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold border border-violet-200">
               No AI API Required
             </span>
           </div>
@@ -248,7 +248,7 @@ export default function GenerateFromFilePage() {
             }`}>
               {idx < stepIndex ? <Check className="h-3.5 w-3.5" /> :
                idx === stepIndex ? <Zap className="h-3.5 w-3.5" /> :
-               <span className="text-[10px] font-bold">{idx + 1}</span>}
+               <span className="text-[10px] font-semibold">{idx + 1}</span>}
               {s.label}
             </div>
             {idx < STEPS.length - 1 && <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />}
@@ -272,7 +272,7 @@ export default function GenerateFromFilePage() {
             onDragOver={e => e.preventDefault()}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-muted-foreground/25 hover:border-violet-400 rounded-2xl p-14 text-center bg-card/40 hover:bg-violet-50/10 dark:hover:bg-violet-950/10 cursor-pointer transition-all group space-y-4"
+            className="border-2 border-dashed border-muted-foreground/25 hover:border-violet-400 rounded-xl p-14 text-center bg-card/40 hover:bg-violet-50/10 dark:hover:bg-violet-950/10 cursor-pointer transition-all group space-y-4"
           >
             <input
               ref={fileInputRef}
@@ -281,11 +281,11 @@ export default function GenerateFromFilePage() {
               className="hidden"
               onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
             />
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-violet-100 dark:bg-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="mx-auto w-16 h-16 rounded-xl bg-violet-100 dark:bg-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
               {isLoading ? <Loader2 className="h-8 w-8 text-violet-500 animate-spin" /> : <Upload className="h-8 w-8 text-violet-500" />}
             </div>
             <div>
-              <h3 className="text-lg font-bold">
+              <h3 className="text-lg font-semibold">
                 {isLoading ? "Parsing your file..." : "Drag & Drop your requirements file"}
               </h3>
               <p className="text-sm text-muted-foreground mt-1.5">
@@ -298,7 +298,7 @@ export default function GenerateFromFilePage() {
                   { icon: <FileSpreadsheet className="h-4 w-4" />, label: ".xlsx / .xls", color: "text-green-600 bg-green-50 border-green-200" },
                   { icon: <FileText className="h-4 w-4" />, label: ".csv", color: "text-blue-600 bg-blue-50 border-blue-200" },
                   { icon: <FileType className="h-4 w-4" />, label: ".docx", color: "text-blue-700 bg-blue-50 border-blue-200" },
-                  { icon: <FileText className="h-4 w-4" />, label: ".txt / .md", color: "text-slate-600 bg-slate-50 border-slate-200" },
+                  { icon: <FileText className="h-4 w-4" />, label: ".txt / .md", color: "text-muted-foreground bg-muted/50 border-border" },
                 ].map(f => (
                   <span key={f.label} className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg border ${f.color}`}>
                     {f.icon} {f.label}
@@ -350,14 +350,14 @@ export default function GenerateFromFilePage() {
           {/* Summary Banner */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: "File", value: parseResult.fileName, sub: parseResult.fileType.toUpperCase(), color: "text-slate-700" },
+              { label: "File", value: parseResult.fileName, sub: parseResult.fileType.toUpperCase(), color: "text-foreground" },
               { label: "Requirements Found", value: parseResult.summary.total, sub: "items extracted", color: "text-violet-600" },
               { label: "With Acceptance Criteria", value: parseResult.summary.withAcceptanceCriteria, sub: "items have criteria", color: "text-blue-600" },
               { label: "Language", value: parseResult.language, sub: `EN:${parseResult.summary.languages.english} AR:${parseResult.summary.languages.arabic}`, color: "text-emerald-600" },
             ].map(card => (
               <div key={card.label} className="border rounded-xl p-4 bg-card text-center">
-                <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide mb-1">{card.label}</div>
-                <div className={`text-xl font-black truncate ${card.color}`}>{card.value}</div>
+                <div className="text-[11px] font-medium text-muted-foreground mb-1">{card.label}</div>
+                <div className={`text-xl font-semibold truncate ${card.color}`}>{card.value}</div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">{card.sub}</div>
               </div>
             ))}
@@ -402,7 +402,7 @@ export default function GenerateFromFilePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         {item.requirementKey && (
-                          <span className="text-[10px] font-bold bg-violet-100 text-violet-700 dark:bg-violet-950/30 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-semibold bg-violet-100 text-violet-700 dark:bg-violet-950/30 px-2 py-0.5 rounded">
                             {item.requirementKey}
                           </span>
                         )}
@@ -411,11 +411,11 @@ export default function GenerateFromFilePage() {
                           <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold border ${
                             item.language === "Arabic" ? "bg-green-50 text-green-700 border-green-200" :
                             item.language === "Mixed" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                            "bg-slate-50 text-slate-600 border-slate-200"
+                            "bg-muted/50 text-muted-foreground border-border"
                           }`}>{item.language}</span>
                         )}
                         {item.priority && (
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${priorityColors[item.priority] || priorityColors.Medium}`}>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${priorityColors[item.priority] || priorityColors.Medium}`}>
                             {item.priority}
                           </span>
                         )}
@@ -465,8 +465,8 @@ export default function GenerateFromFilePage() {
       {/* ─── STEP 3: CONFIGURE ────────────────────────────────────────────────── */}
       {step === "configure" && (
         <div className="space-y-6">
-          <div className="border rounded-2xl bg-card p-6 space-y-6">
-            <h3 className="font-bold text-lg flex items-center gap-2">
+          <div className="border rounded-xl bg-card p-6 space-y-6">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
               <Settings className="h-5 w-5 text-violet-500" /> Generation Settings
             </h3>
 
@@ -487,11 +487,11 @@ export default function GenerateFromFilePage() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm">{m.icon} {m.label}</span>
+                      <span className="font-semibold text-sm">{m.icon} {m.label}</span>
                       {mode === m.key && <Check className="h-4 w-4 text-violet-600" />}
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">{m.desc}</p>
-                    <div className="text-[10px] font-bold text-muted-foreground">
+                    <div className="text-[10px] font-semibold text-muted-foreground">
                       ~{m.key === "conservative" ? "2" : m.key === "balanced" ? "3" : "5"} tests per requirement
                     </div>
                   </div>
@@ -516,7 +516,7 @@ export default function GenerateFromFilePage() {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-sm">{l.icon} {l.label}</span>
+                      <span className="font-semibold text-sm">{l.icon} {l.label}</span>
                       {outputLanguage === l.key && <Check className="h-4 w-4 text-violet-600" />}
                     </div>
                     <p className="text-xs text-muted-foreground">{l.desc}</p>
@@ -560,7 +560,7 @@ export default function GenerateFromFilePage() {
             </div>
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-bold">Generating Test Cases...</h3>
+            <h3 className="text-lg font-semibold">Generating Test Cases...</h3>
             <p className="text-sm text-muted-foreground max-w-md">
               Analyzing {selectedItemIndices.length} requirement{selectedItemIndices.length !== 1 ? "s" : ""} and generating structured test cases with steps and expected results.
             </p>
@@ -574,9 +574,9 @@ export default function GenerateFromFilePage() {
           {/* Stats bar */}
           <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-card border rounded-xl">
             <div className="flex items-center gap-4">
-              <div className="text-3xl font-black text-violet-600">{testCases.length}</div>
+              <div className="text-3xl font-semibold text-violet-600">{testCases.length}</div>
               <div>
-                <div className="font-bold text-sm">Test Cases Generated</div>
+                <div className="font-semibold text-sm">Test Cases Generated</div>
                 <div className="text-xs text-muted-foreground">{selectedCount} selected to save</div>
               </div>
             </div>
@@ -619,15 +619,15 @@ export default function GenerateFromFilePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <span className="font-semibold text-sm" dir={isAr ? "rtl" : "ltr"}>{tc.title}</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${priorityColors[tc.priority] || priorityColors.Medium}`}>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${priorityColors[tc.priority] || priorityColors.Medium}`}>
                           {tc.priority}
                         </span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${typeColors[tc.testType] || "bg-slate-100 text-slate-600"}`}>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-semibold ${typeColors[tc.testType] || "bg-muted text-muted-foreground"}`}>
                           {tc.testType}
                         </span>
-                        {isAr && <span className="text-[9px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-bold border border-green-200">AR</span>}
-                        {isDup && <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-bold border border-amber-200 flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5" /> Possible Duplicate</span>}
-                        {tc.requirementKey && <span className="text-[9px] bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded font-bold border border-violet-200">{tc.requirementKey}</span>}
+                        {isAr && <span className="text-[9px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded font-semibold border border-green-200">AR</span>}
+                        {isDup && <span className="text-[9px] bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded font-semibold border border-amber-200 flex items-center gap-1"><AlertTriangle className="h-2.5 w-2.5" /> Possible Duplicate</span>}
+                        {tc.requirementKey && <span className="text-[9px] bg-violet-50 text-violet-700 px-1.5 py-0.5 rounded font-semibold border border-violet-200">{tc.requirementKey}</span>}
                       </div>
                       {tc.module && (
                         <div className="text-[10px] text-muted-foreground">
@@ -669,7 +669,7 @@ export default function GenerateFromFilePage() {
                         <tbody className="divide-y">
                           {tc.steps.map((s, si) => (
                             <tr key={si} className="hover:bg-accent/10">
-                              <td className="px-3 py-2.5 text-muted-foreground font-mono font-bold">{s.stepNumber}</td>
+                              <td className="px-3 py-2.5 text-muted-foreground font-mono font-semibold">{s.stepNumber}</td>
                               <td className="px-3 py-2.5 text-foreground" dir={isAr ? "rtl" : "ltr"}>{s.actionDescription}</td>
                               <td className="px-3 py-2.5 text-muted-foreground" dir={isAr ? "rtl" : "ltr"}>{s.expectedResult}</td>
                               <td className="px-3 py-2.5 text-muted-foreground/50 italic text-[10px]">
@@ -709,7 +709,7 @@ export default function GenerateFromFilePage() {
             <CheckCircle2 className="h-10 w-10 text-emerald-500" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-2xl font-bold">Test Cases Saved!</h3>
+            <h3 className="text-2xl font-semibold">Test Cases Saved!</h3>
             <p className="text-sm text-muted-foreground">
               <strong>{savedCount}</strong> test case{savedCount !== 1 ? "s" : ""} have been saved to your Test Cases Hub.
             </p>

@@ -52,10 +52,10 @@ export const ENTITY_META: Record<
   TEST_CASE: { label: "Test case", plural: "Test cases", icon: FileText, chip: "bg-violet-50 text-violet-700 border-violet-200" },
   TEST_RUN: { label: "Test run", plural: "Test runs", icon: PlayCircle, chip: "bg-amber-50 text-amber-700 border-amber-200" },
   BRD_DOCUMENT: { label: "BRD", plural: "BRDs", icon: FileSpreadsheet, chip: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  REQUIREMENT: { label: "Requirement", plural: "Requirements", icon: Target, chip: "bg-indigo-50 text-indigo-700 border-indigo-200" },
+  REQUIREMENT: { label: "Requirement", plural: "Requirements", icon: Target, chip: "bg-primary/10 text-primary border-primary/25" },
   SPRINT: { label: "Sprint", plural: "Sprints", icon: Timer, chip: "bg-cyan-50 text-cyan-700 border-cyan-200" },
   EPIC: { label: "Epic", plural: "Epics", icon: Layers, chip: "bg-purple-50 text-purple-700 border-purple-200" },
-  MANUAL_TEST_SESSION: { label: "Manual session", plural: "Manual sessions", icon: PlayCircle, chip: "bg-slate-100 text-slate-700 border-slate-200" },
+  MANUAL_TEST_SESSION: { label: "Manual session", plural: "Manual sessions", icon: PlayCircle, chip: "bg-muted text-foreground border-border" },
 }
 
 type ResolvedEntity = {
@@ -234,11 +234,11 @@ export function LinkedEntities({
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+        <h4 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
           <Link2 className="h-3.5 w-3.5" />
           Linked items
           {total > 0 && (
-            <span className="rounded-full bg-muted px-1.5 text-[10px] font-bold text-muted-foreground">
+            <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
               {total}
             </span>
           )}
@@ -259,7 +259,7 @@ export function LinkedEntities({
             <select
               value={relation}
               onChange={(e) => setRelation(e.target.value)}
-              className="h-8 shrink-0 rounded-md border bg-background px-2 text-xs font-medium outline-none focus:ring-1 focus:ring-indigo-500"
+              className="h-8 shrink-0 rounded-md border bg-background px-2 text-xs font-medium outline-none focus:ring-1 focus:ring-primary"
               aria-label="Relationship"
             >
               {RELATION_LABELS.map((r) => (
@@ -275,7 +275,7 @@ export function LinkedEntities({
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Search tasks, bugs, test cases, BRDs…"
-                className="h-8 w-full rounded-md border bg-background pl-8 pr-2 text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                className="h-8 w-full rounded-md border bg-background pl-8 pr-2 text-xs outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
@@ -302,7 +302,7 @@ export function LinkedEntities({
                   >
                     <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span
-                      className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-bold ${Meta?.chip ?? ""}`}
+                      className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-semibold ${Meta?.chip ?? ""}`}
                     >
                       {r.key}
                     </span>
@@ -328,7 +328,7 @@ export function LinkedEntities({
             const Icon = Meta?.icon ?? Link2
             return (
               <div key={type}>
-                <p className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground/70">
+                <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
                   <Icon className="h-3 w-3" />
                   {Meta?.plural ?? type} ({rows.length})
                 </p>
@@ -342,7 +342,7 @@ export function LinkedEntities({
                         {row.relation}
                       </span>
                       <span
-                        className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-bold ${Meta?.chip ?? ""}`}
+                        className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-semibold ${Meta?.chip ?? ""}`}
                       >
                         {row.entity.key}
                       </span>
@@ -351,7 +351,7 @@ export function LinkedEntities({
                       ) : (
                         <Link
                           href={row.entity.url}
-                          className="truncate font-medium hover:text-indigo-600 hover:underline"
+                          className="truncate font-medium hover:text-primary hover:underline"
                         >
                           {row.entity.label}
                         </Link>
@@ -364,7 +364,7 @@ export function LinkedEntities({
                       {!row.deleted && (
                         <Link
                           href={row.entity.url}
-                          className={`shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-indigo-600 group-hover:opacity-100 ${
+                          className={`shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-primary group-hover:opacity-100 ${
                             row.entity.meta ? "" : "ml-auto"
                           }`}
                           aria-label="Open"

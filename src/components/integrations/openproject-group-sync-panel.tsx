@@ -246,25 +246,25 @@ export function OpenProjectGroupSyncPanel({
     switch (opState) {
       case "not-configured":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <Settings className="h-2.5 w-2.5" /> Not configured
           </span>
         )
       case "ready":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
             <CloudUpload className="h-2.5 w-2.5" /> Ready to sync
           </span>
         )
       case "partial":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
             <CloudUpload className="h-2.5 w-2.5" /> {syncedCount}/{totalCases} synced
           </span>
         )
       case "synced":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
             <CheckCircle2 className="h-2.5 w-2.5" /> Synced
             {relativeTime && <span className="font-normal ml-0.5 opacity-80">· {relativeTime}</span>}
           </span>
@@ -272,7 +272,7 @@ export function OpenProjectGroupSyncPanel({
       case "failed":
         return (
           <span
-            className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 max-w-[160px]"
+            className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 max-w-[160px]"
             title={localModCfg.lastSyncError || undefined}
           >
             <XCircle className="h-2.5 w-2.5 shrink-0" />
@@ -290,7 +290,7 @@ export function OpenProjectGroupSyncPanel({
 
         {/* ── Header row: label + canonical badge ───────────────────── */}
         <div className="flex items-center justify-between gap-2" dir="ltr">
-          <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/50 flex items-center gap-1">
+          <span className="text-[11px] font-medium text-muted-foreground/50 flex items-center gap-1">
             <CloudUpload className="h-3 w-3" /> OpenProject
             {localModCfg.hasOwnConfig && (
               <span className="normal-case font-normal tracking-normal text-muted-foreground/40">(own config)</span>
@@ -325,7 +325,7 @@ export function OpenProjectGroupSyncPanel({
                   className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400 hover:bg-blue-100 max-w-full font-medium group"
                 >
                   <Link2 className="h-2.5 w-2.5 shrink-0" />
-                  <span className="font-bold shrink-0">#{localStatus.parentId}</span>
+                  <span className="font-semibold shrink-0">#{localStatus.parentId}</span>
                   {localStatus.parentSubject && (
                     <span
                       className="truncate max-w-[110px] text-blue-600/80 dark:text-blue-400/80"
@@ -414,7 +414,7 @@ export function OpenProjectGroupSyncPanel({
                 </Button>
 
                 {showMoreMenu && (
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-popover border rounded-xl shadow-xl py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-popover border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100">
                     <button
                       onClick={() => { setShowModuleConfig(true); setShowMoreMenu(false) }}
                       className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left"

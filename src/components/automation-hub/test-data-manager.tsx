@@ -208,28 +208,28 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
       {/* LEFT: file browser */}
-      <div className="lg:col-span-3 bg-white border rounded-2xl shadow-2xs overflow-hidden">
+      <div className="lg:col-span-3 bg-card border rounded-xl shadow-2xs overflow-hidden">
         <div className="p-3 border-b space-y-2.5">
-          <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider block">Test Data Files</span>
+          <span className="text-[11px] font-medium text-muted-foreground block">Test Data Files</span>
           <div className="relative">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search files or values..."
-              className="w-full h-8 rounded-xl border pl-8 pr-2 text-[10px] bg-slate-50 font-semibold"
+              className="w-full h-8 rounded-xl border pl-8 pr-2 text-[10px] bg-muted/50 font-semibold"
             />
           </div>
           <Button
             onClick={() => setWizardOpen(true)}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-8 text-[10px] font-black flex items-center gap-1.5 justify-center"
+            className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl h-8 text-[10px] font-semibold flex items-center gap-1.5 justify-center"
           >
             <Plus size={12} /> New Data Set
           </Button>
         </div>
         <div className="p-2 space-y-1 max-h-[520px] overflow-y-auto">
           {loading ? (
-            <div className="py-10 text-center"><Loader2 size={18} className="animate-spin text-indigo-600 mx-auto" /></div>
+            <div className="py-10 text-center"><Loader2 size={18} className="animate-spin text-primary mx-auto" /></div>
           ) : filtered.length === 0 ? (
             <p className="text-slate-300 italic text-[9px] px-2 py-4 text-center">No data files. Create one to get started.</p>
           ) : (
@@ -238,19 +238,19 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
                 key={f.id}
                 onClick={() => selectFile(f)}
                 className={`w-full text-left p-2.5 rounded-xl border transition-all ${
-                  selectedId === f.id ? "bg-indigo-50/60 border-indigo-200" : "bg-white border-transparent hover:bg-slate-50"
+                  selectedId === f.id ? "bg-primary/10 border-primary/25" : "bg-card border-transparent hover:bg-muted/50"
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  <FileJson size={13} className="text-indigo-500 shrink-0" />
-                  <span className="font-extrabold text-[10px] text-slate-900 truncate">{f.fileName}</span>
+                  <FileJson size={13} className="text-primary shrink-0" />
+                  <span className="font-semibold text-[10px] text-foreground truncate">{f.fileName}</span>
                 </div>
                 <div className="flex gap-1 mt-1.5 flex-wrap">
                   {f.fields.slice(0, 4).map((field) => (
-                    <span key={field} className="text-[7.5px] uppercase font-black bg-slate-100 text-slate-400 border rounded-full px-1.5 py-px">{field}</span>
+                    <span key={field} className="text-[7.5px] uppercase font-semibold bg-muted text-muted-foreground border rounded-full px-1.5 py-px">{field}</span>
                   ))}
                   {f.linkedScriptIds.length > 0 && (
-                    <span className="text-[7.5px] uppercase font-black bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full px-1.5 py-px flex items-center gap-0.5">
+                    <span className="text-[7.5px] uppercase font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full px-1.5 py-px flex items-center gap-0.5">
                       <Link2 size={8} /> {f.linkedScriptIds.length}
                     </span>
                   )}
@@ -262,32 +262,32 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
       </div>
 
       {/* CENTER: JSON editor */}
-      <div className="lg:col-span-5 bg-white border rounded-2xl shadow-2xs overflow-hidden">
+      <div className="lg:col-span-5 bg-card border rounded-xl shadow-2xs overflow-hidden">
         <div className="p-3 border-b flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <FileJson size={13} className="text-indigo-600 shrink-0" />
-            <span className="font-black text-[11px] text-slate-900 truncate">{selected ? selected.fileName : "No file selected"}</span>
+            <FileJson size={13} className="text-primary shrink-0" />
+            <span className="font-semibold text-[11px] text-foreground truncate">{selected ? selected.fileName : "No file selected"}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Button
               onClick={handleSave}
               disabled={!selected || saving || !dirty || Boolean(jsonError)}
               variant="outline"
-              className="rounded-xl h-8 px-3 text-[10px] font-black border-slate-200 text-slate-600 bg-white flex items-center gap-1.5"
+              className="rounded-xl h-8 px-3 text-[10px] font-semibold border-border text-muted-foreground bg-card flex items-center gap-1.5"
             >
               {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save{dirty ? " *" : ""}
             </Button>
             <button
               onClick={handleDelete}
               disabled={!selected}
-              className="p-2 rounded-lg border border-rose-100 text-rose-500 bg-white hover:bg-rose-50 disabled:opacity-40"
+              className="p-2 rounded-lg border border-rose-100 text-rose-500 bg-card hover:bg-rose-50 disabled:opacity-40"
             >
               <Trash2 size={12} />
             </button>
           </div>
         </div>
         {jsonError && (
-          <div className="px-3 py-1.5 bg-rose-50 border-b border-rose-100 text-rose-600 text-[9px] font-bold flex items-center gap-1.5">
+          <div className="px-3 py-1.5 bg-rose-50 border-b border-rose-100 text-rose-600 text-[9px] font-semibold flex items-center gap-1.5">
             <AlertTriangle size={10} /> {jsonError}
           </div>
         )}
@@ -314,27 +314,27 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
       {/* RIGHT: preview + linking */}
       <div className="lg:col-span-4 space-y-4">
         {/* Preview table */}
-        <div className="bg-white border rounded-2xl p-3.5 shadow-2xs space-y-2.5">
-          <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider flex items-center gap-1.5 border-b pb-2">
+        <div className="bg-card border rounded-xl p-3.5 shadow-2xs space-y-2.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2">
             <Table2 size={12} /> Data Preview
           </span>
           {previewRows.fields.length === 0 ? (
-            <p className="text-slate-400 italic text-[10px] py-3 text-center">Valid JSON with objects renders as a table here.</p>
+            <p className="text-muted-foreground italic text-[10px] py-3 text-center">Valid JSON with objects renders as a table here.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-[9px] border-collapse">
                 <thead>
                   <tr>
                     {previewRows.fields.map((f) => (
-                      <th key={f} className="text-left font-black uppercase text-slate-500 border-b px-1.5 py-1 whitespace-nowrap">{f}</th>
+                      <th key={f} className="text-left font-semibold uppercase text-muted-foreground border-b px-1.5 py-1 whitespace-nowrap">{f}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {previewRows.rows.map((row, i) => (
-                    <tr key={i} className="hover:bg-slate-50">
+                    <tr key={i} className="hover:bg-muted/50">
                       {previewRows.fields.map((f) => (
-                        <td key={f} className="border-b px-1.5 py-1 font-mono text-slate-700 truncate max-w-[120px]">
+                        <td key={f} className="border-b px-1.5 py-1 font-mono text-foreground truncate max-w-[120px]">
                           {typeof row?.[f] === "object" ? JSON.stringify(row?.[f]) : String(row?.[f] ?? "")}
                         </td>
                       ))}
@@ -342,15 +342,15 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
                   ))}
                 </tbody>
               </table>
-              <span className="text-[8.5px] font-bold text-slate-400 block pt-1.5">{previewRows.rows.length} record(s)</span>
+              <span className="text-[8.5px] font-semibold text-muted-foreground block pt-1.5">{previewRows.rows.length} record(s)</span>
             </div>
           )}
         </div>
 
         {/* dataProvider mapping preview */}
         {previewRows.fields.length > 0 && (
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2">
-            <span className="text-[9.5px] uppercase font-black text-slate-400 tracking-wider flex items-center gap-1.5">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 space-y-2">
+            <span className="text-[9.5px] uppercase font-semibold text-muted-foreground tracking-wider flex items-center gap-1.5">
               <Wand2 size={11} /> @Test(dataProvider) mapping
             </span>
             <pre className="font-mono text-[9px] leading-relaxed text-slate-200 overflow-x-auto">
@@ -364,18 +364,18 @@ public void test(JsonObject data) {
         )}
 
         {/* Link to scripts */}
-        <div className="bg-white border rounded-2xl p-3.5 shadow-2xs space-y-2.5">
-          <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider flex items-center gap-1.5 border-b pb-2">
+        <div className="bg-card border rounded-xl p-3.5 shadow-2xs space-y-2.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2">
             <Link2 size={12} /> Linked Test Scripts
           </span>
           {!selected ? (
-            <p className="text-slate-400 italic text-[10px] py-2 text-center">Select a data file to link scripts.</p>
+            <p className="text-muted-foreground italic text-[10px] py-2 text-center">Select a data file to link scripts.</p>
           ) : (
             <>
               {linkedScripts.length > 0 && (
                 <div className="flex gap-1.5 flex-wrap">
                   {linkedScripts.map((s) => (
-                    <span key={s.id} className="inline-flex items-center gap-1 text-[8.5px] font-black bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full pl-2 pr-1 py-0.5">
+                    <span key={s.id} className="inline-flex items-center gap-1 text-[8.5px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full pl-2 pr-1 py-0.5">
                       {s.name}
                       <button onClick={() => toggleLink(s.id)} className="text-emerald-400 hover:text-rose-500"><X size={9} /></button>
                     </span>
@@ -390,12 +390,12 @@ public void test(JsonObject data) {
                       key={s.id}
                       onClick={() => toggleLink(s.id)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[9.5px] font-bold text-left ${
-                        linked ? "bg-emerald-50/50 text-emerald-800" : "hover:bg-slate-50 text-slate-600"
+                        linked ? "bg-emerald-50/50 text-emerald-800" : "hover:bg-muted/50 text-muted-foreground"
                       }`}
                     >
-                      {linked ? <CheckCircle2 size={11} className="text-emerald-500" /> : <span className="w-[11px] h-[11px] rounded-full border border-slate-300" />}
+                      {linked ? <CheckCircle2 size={11} className="text-emerald-500" /> : <span className="w-[11px] h-[11px] rounded-full border border-border" />}
                       <span className="truncate">{s.name}</span>
-                      <span className="ml-auto text-[7.5px] uppercase text-slate-400 font-black">{s.type}</span>
+                      <span className="ml-auto text-[7.5px] uppercase text-muted-foreground font-semibold">{s.type}</span>
                     </button>
                   )
                 })}
@@ -409,32 +409,32 @@ public void test(JsonObject data) {
       {/* WIZARD MODAL */}
       {wizardOpen && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 text-left">
-          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4">
             <div className="flex items-center justify-between border-b pb-2.5">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Wand2 size={15} className="text-indigo-600" /> Create Data Set
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Wand2 size={15} className="text-primary" /> Create Data Set
               </h3>
-              <button onClick={() => setWizardOpen(false)} className="text-slate-400 hover:text-slate-600 p-1"><X size={16} /></button>
+              <button onClick={() => setWizardOpen(false)} className="text-muted-foreground hover:text-muted-foreground p-1"><X size={16} /></button>
             </div>
             <label className="space-y-1 block">
-              <span className="text-[9px] font-black uppercase text-slate-500">Data Set Name</span>
+              <span className="text-[11px] font-medium text-muted-foreground">Data Set Name</span>
               <input
                 value={wizardName}
                 onChange={(e) => setWizardName(e.target.value)}
                 placeholder="e.g. loginUsers"
-                className="w-full h-9 rounded-xl border px-3 text-xs bg-slate-50 font-semibold"
+                className="w-full h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold"
               />
-              <span className="text-[8.5px] text-slate-400 font-medium">Saved as <span className="font-mono">{(wizardName.trim() || "name").replace(/[^A-Za-z0-9_-]/g, "_")}.json</span> in testDataFiles/</span>
+              <span className="text-[8.5px] text-muted-foreground font-medium">Saved as <span className="font-mono">{(wizardName.trim() || "name").replace(/[^A-Za-z0-9_-]/g, "_")}.json</span> in testDataFiles/</span>
             </label>
             <div className="space-y-1.5">
-              <span className="text-[9px] font-black uppercase text-slate-500">Fields</span>
+              <span className="text-[11px] font-medium text-muted-foreground">Fields</span>
               {wizardFields.map((f, i) => (
                 <div key={i} className="flex gap-1.5">
                   <input
                     value={f}
                     onChange={(e) => setWizardFields((cur) => cur.map((x, idx) => (idx === i ? e.target.value : x)))}
                     placeholder="field name"
-                    className="flex-1 h-8 rounded-lg border px-2.5 text-[10px] bg-slate-50 font-mono font-semibold"
+                    className="flex-1 h-8 rounded-lg border px-2.5 text-[10px] bg-muted/50 font-mono font-semibold"
                   />
                   <button
                     onClick={() => setWizardFields((cur) => cur.filter((_, idx) => idx !== i))}
@@ -447,19 +447,19 @@ public void test(JsonObject data) {
               <Button
                 onClick={() => setWizardFields((cur) => [...cur, ""])}
                 variant="outline"
-                className="w-full rounded-lg h-7 text-[9px] font-black border-dashed border-slate-300 text-slate-500 bg-white flex items-center gap-1 justify-center"
+                className="w-full rounded-lg h-7 text-[9px] font-semibold border-dashed border-border text-muted-foreground bg-card flex items-center gap-1 justify-center"
               >
                 <Plus size={10} /> Add Field
               </Button>
             </div>
             <div className="flex gap-2 pt-2 border-t">
-              <Button onClick={() => setWizardOpen(false)} variant="outline" className="flex-1 rounded-xl h-9 text-[10px] font-black border-slate-200 text-slate-600 bg-white">
+              <Button onClick={() => setWizardOpen(false)} variant="outline" className="flex-1 rounded-xl h-9 text-[10px] font-semibold border-border text-muted-foreground bg-card">
                 Cancel
               </Button>
               <Button
                 onClick={createDataSet}
                 disabled={!wizardName.trim() || wizardFields.filter((f) => f.trim()).length === 0}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl h-9 text-[10px] font-black"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-xl h-9 text-[10px] font-semibold"
               >
                 Generate Template
               </Button>
@@ -470,7 +470,7 @@ public void test(JsonObject data) {
 
       {/* TOAST */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-black uppercase ${
+        <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-semibold uppercase ${
           toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"
         }`}>
           <span>{toast.text}</span>

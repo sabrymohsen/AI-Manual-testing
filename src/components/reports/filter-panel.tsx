@@ -48,21 +48,21 @@ export function FilterPanel({
   onRoleChange,
   className,
 }: FilterPanelProps) {
-  const selectCls = "w-full h-8 rounded-md border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+  const selectCls = "w-full h-8 rounded-md border border-border bg-card px-2.5 text-[11px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
 
   return (
-    <div className={cn("w-64 shrink-0 border-r border-slate-200 bg-white", className)}>
-      <div className="px-4 py-3 border-b border-slate-100">
+    <div className={cn("w-64 shrink-0 border-r border-border bg-card", className)}>
+      <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 text-slate-400" />
-          <h3 className="text-xs font-bold text-slate-700">Filters</h3>
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+          <h3 className="text-xs font-semibold text-foreground">Filters</h3>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
         {/* Project */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <Folder className="h-3 w-3" /> Project
           </label>
           <select className={selectCls} value={projectId} onChange={(e) => onProjectChange(e.target.value)}>
@@ -74,7 +74,7 @@ export function FilterPanel({
 
         {/* Sprint */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <Timer className="h-3 w-3" /> Sprint
           </label>
           <select
@@ -93,7 +93,7 @@ export function FilterPanel({
 
         {/* Date Range */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <Calendar className="h-3 w-3" /> Date Range
           </label>
           <select className={selectCls} value={preset} onChange={(e) => onPresetChange(e.target.value)}>
@@ -107,14 +107,14 @@ export function FilterPanel({
                 type="date"
                 value={from}
                 onChange={(e) => onFromChange(e.target.value)}
-                className="h-7 flex-1 rounded-md border border-slate-200 px-2 text-[10px]"
+                className="h-7 flex-1 rounded-md border border-border px-2 text-[10px]"
               />
-              <span className="text-slate-400">→</span>
+              <span className="text-muted-foreground">→</span>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => onToChange(e.target.value)}
-                className="h-7 flex-1 rounded-md border border-slate-200 px-2 text-[10px]"
+                className="h-7 flex-1 rounded-md border border-border px-2 text-[10px]"
               />
             </div>
           )}
@@ -122,7 +122,7 @@ export function FilterPanel({
 
         {/* Role */}
         <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
             <User className="h-3 w-3" /> Role View
           </label>
           <select className={selectCls} value={role} onChange={(e) => onRoleChange(e.target.value)}>
@@ -133,7 +133,7 @@ export function FilterPanel({
         </div>
 
         {/* Active filters summary */}
-        <div className="pt-2 border-t border-slate-100">
+        <div className="pt-2 border-t border-border">
           <div className="flex flex-wrap gap-1.5">
             <FilterBadge label={`Project: ${projects.find(p => p.id === projectId)?.name || "All"}`} />
             {sprintId && <FilterBadge label={`Sprint`} onRemove={() => onSprintChange(undefined)} />}

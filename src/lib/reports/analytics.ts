@@ -11,16 +11,15 @@
  */
 import { prisma } from "@/lib/db"
 import { resolveRange } from "./aggregate"
+import { DONE_TASK_STATUSES, IN_FLIGHT_TASK_STATUSES, doneAt, startedAt, statusAt, statusMoves } from "@/lib/scrum/history"
 
 const DAY = 24 * 60 * 60 * 1000
 const TERMINAL = ["Passed", "Failed", "Blocked", "Warning"]
 const OPEN_BUG_STATUSES = ["Open", "InProgress", "ReadyForRetest", "Reopened"]
 const RESOLVED_BUG_STATUSES = ["Resolved", "Closed"]
 
-// Requirement status → kanban band used by burndown / CFD.
+// Requirement coverage status that counts as fully covered (requirements table).
 const DONE_STATUSES = ["Covered"]
-const IN_PROGRESS_STATUSES = ["InTesting", "PartiallyCovered"]
-const TODO_STATUSES = ["ReadyForTesting", "Failed", "Blocked"]
 // Draft / Deprecated fall into "backlog".
 
 function ymd(d: Date): string {
@@ -42,6 +41,35 @@ function eachDay(from: Date, to: Date): string[] {
   return out
 }
 
+
+// Scrum Board data (ScrumSprint / Task). The reports used to read the old
+// Requirement board's Sprint table, which the Scrum Board never writes to, so
+// burndown, velocity and the sprint tables were empty for every team using it.
+const SPRINT_TASK_TYPES = { notIn: ["SUBTASK", "EPIC"] as any }
+const taskHistorySelect = {
+  id: true,
+  status: true,
+  storyPoints: true,
+  createdAt: true,
+  updatedAt: true,
+  activities: { where: { action: "moved" }, select: { action: true, details: true, createdAt: true } },
+} as const
+
+async function findScrumSprint(projectId: string, sprintId?: string | null) {
+  if (sprintId) return prisma.scrumSprint.findFirst({ where: { id: sprintId, projectId } })
+  return (
+    (await prisma.scrumSprint.findFirst({ where: { projectId, status: "ACTIVE" }, orderBy: { startDate: "desc" } })) ??
+    (await prisma.scrumSprint.findFirst({ where: { projectId, status: "COMPLETED" }, orderBy: { endDate: "desc" } })) ??
+    (await prisma.scrumSprint.findFirst({ where: { projectId }, orderBy: { createdAt: "desc" } }))
+  )
+}
+
+/** Story points, or 1 per issue when the sprint has no estimates at all. */
+function weigher(tasks: { storyPoints: number | null }[]) {
+  const usePoints = tasks.some((t) => (t.storyPoints || 0) > 0)
+  return { unit: (usePoints ? "points" : "issues") as "points" | "issues", w: (t: { storyPoints: number | null }) => (usePoints ? t.storyPoints || 0 : 1) }
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────
 
 export interface BurndownPoint {
@@ -54,6 +82,8 @@ export interface BurndownResult {
   sprint: { id: string; name: string; startDate: string | null; endDate: string | null } | null
   totalPoints: number
   points: BurndownPoint[]
+  /** "issues" when no task in the sprint has story points: counts issues instead. */
+  unit?: "points" | "issues"
 }
 
 export interface VelocityRow {
@@ -111,20 +141,18 @@ export interface Paginated<T> {
 // ── Sprint burndown ─────────────────────────────────────────────────────────
 
 export async function getSprintBurndown(projectId: string, sprintId?: string | null): Promise<BurndownResult> {
-  const sprint = sprintId
-    ? await prisma.sprint.findFirst({ where: { id: sprintId, projectId } })
-    : (await prisma.sprint.findFirst({ where: { projectId, status: "Active" }, orderBy: { startDate: "desc" } })) ??
-      (await prisma.sprint.findFirst({ where: { projectId }, orderBy: { startDate: "desc" } }))
-
+  const sprint = await findScrumSprint(projectId, sprintId)
   if (!sprint) return { sprint: null, totalPoints: 0, points: [] }
 
-  const reqs = await prisma.requirement.findMany({
-    where: { sprintId: sprint.id },
-    select: { storyPoints: true, status: true, updatedAt: true },
+  const tasks = await prisma.task.findMany({
+    where: { sprintId: sprint.id, type: SPRINT_TASK_TYPES },
+    select: taskHistorySelect,
   })
-  const totalPoints = reqs.reduce((a, r) => a + (r.storyPoints || 0), 0)
+  const { unit, w } = weigher(tasks)
+  const totalPoints = tasks.reduce((a, t) => a + w(t), 0)
+  const finished = tasks.map((t) => ({ t, at: doneAt(t) }))
 
-  const start = sprint.startDate ?? new Date(Date.now() - 13 * DAY)
+  const start = sprint.startDate ?? sprint.createdAt
   const end = sprint.endDate ?? new Date(start.getTime() + 13 * DAY)
   const days = eachDay(start, end)
   const n = Math.max(days.length, 1)
@@ -132,62 +160,49 @@ export async function getSprintBurndown(projectId: string, sprintId?: string | n
 
   const points: BurndownPoint[] = days.map((date, i) => {
     const dayEnd = new Date(date).getTime() + DAY - 1
-    // Actual remaining = total − points completed on/before this day. Future days
-    // (beyond today) carry a null actual so the line stops at "today".
-    const completedByDay = reqs
-      .filter((r) => DONE_STATUSES.includes(r.status) && r.updatedAt.getTime() <= dayEnd)
-      .reduce((a, r) => a + (r.storyPoints || 0), 0)
+    const completedByDay = finished.filter((f) => f.at !== null && f.at <= dayEnd).reduce((a, f) => a + w(f.t), 0)
     return {
       label: `Day ${i + 1}`,
       date,
-      ideal: Math.round((totalPoints * (n - 1 - i)) / (n - 1 || 1)),
-      actual: new Date(date).getTime() <= now + DAY ? totalPoints - completedByDay : null,
+      ideal: Math.round(((totalPoints * (n - 1 - i)) / (n - 1 || 1)) * 10) / 10,
+      // The actual line stops at today.
+      actual: new Date(date).getTime() <= now ? totalPoints - completedByDay : null,
     }
   })
 
   return {
-    sprint: {
-      id: sprint.id,
-      name: sprint.name,
-      startDate: sprint.startDate?.toISOString() ?? null,
-      endDate: sprint.endDate?.toISOString() ?? null,
-    },
+    sprint: { id: sprint.id, name: sprint.name, startDate: sprint.startDate?.toISOString() ?? null, endDate: sprint.endDate?.toISOString() ?? null },
     totalPoints,
     points,
+    unit,
   }
 }
 
 // ── Velocity ──────────────────────────────────────────────────────────────
 
 export async function getVelocity(projectId: string): Promise<VelocityResult> {
-  const sprints = await prisma.sprint.findMany({
-    where: { projectId },
-    orderBy: [{ startDate: "asc" }, { orderIndex: "asc" }],
+  const sprints = await prisma.scrumSprint.findMany({
+    where: { projectId, status: { in: ["ACTIVE", "COMPLETED"] } },
+    orderBy: [{ startDate: "asc" }, { createdAt: "asc" }],
     select: {
       id: true,
       name: true,
-      requirements: { select: { storyPoints: true, status: true } },
-      velocities: { select: { capacity: true, velocity: true } },
+      status: true,
+      tasks: { where: { type: SPRINT_TASK_TYPES }, select: { storyPoints: true, status: true } },
     },
   })
 
   const rows: VelocityRow[] = sprints.map((s) => {
-    const committed = s.requirements.reduce((a, r) => a + (r.storyPoints || 0), 0)
-    const completed = s.requirements
-      .filter((r) => DONE_STATUSES.includes(r.status))
-      .reduce((a, r) => a + (r.storyPoints || 0), 0)
-    const snap = s.velocities[0]
-    return {
-      sprintId: s.id,
-      name: s.name,
-      committed,
-      completed: snap?.velocity ?? completed,
-      capacity: snap?.capacity ?? committed,
-    }
+    const committed = s.tasks.reduce((a, t) => a + (t.storyPoints || 0), 0)
+    const completed = s.tasks.filter((t) => DONE_TASK_STATUSES.includes(t.status)).reduce((a, t) => a + (t.storyPoints || 0), 0)
+    return { sprintId: s.id, name: s.name, committed, completed, capacity: committed }
   })
 
-  const done = rows.filter((r) => r.completed > 0)
-  const averageVelocity = done.length ? Math.round(done.reduce((a, r) => a + r.completed, 0) / done.length) : 0
+  // Average over finished sprints only (the last 3): the active sprint is
+  // still in progress, and its partial total would understate the team.
+  // No finished sprint yet → 0, which means "not known yet".
+  const finishedRows = rows.filter((_r, i) => sprints[i].status === "COMPLETED").slice(-3)
+  const averageVelocity = finishedRows.length ? Math.round(finishedRows.reduce((a, r) => a + r.completed, 0) / finishedRows.length) : 0
   return { sprints: rows, averageVelocity }
 }
 
@@ -195,28 +210,23 @@ export async function getVelocity(projectId: string): Promise<VelocityResult> {
 
 export async function getCumulativeFlow(projectId: string, from?: string | null, to?: string | null): Promise<CumulativeFlowPoint[]> {
   const range = resolveRange(from, to)
-  const reqs = await prisma.requirement.findMany({
-    where: { projectId },
-    select: { status: true, createdAt: true, updatedAt: true },
+  const tasks = await prisma.task.findMany({
+    where: { projectId, type: SPRINT_TASK_TYPES },
+    select: { ...taskHistorySelect, sprintId: true },
   })
+  const withMoves = tasks.map((t) => ({ t, moves: statusMoves(t) }))
   const days = eachDay(range.from, range.to)
-
-  const band = (status: string): keyof Omit<CumulativeFlowPoint, "date"> => {
-    if (DONE_STATUSES.includes(status)) return "done"
-    if (IN_PROGRESS_STATUSES.includes(status)) return "inProgress"
-    if (TODO_STATUSES.includes(status)) return "todo"
-    return "backlog"
-  }
 
   return days.map((date) => {
     const dayEnd = new Date(date).getTime() + DAY - 1
     const pt: CumulativeFlowPoint = { date, backlog: 0, todo: 0, inProgress: 0, done: 0 }
-    for (const r of reqs) {
-      if (r.createdAt.getTime() > dayEnd) continue // not created yet
-      // Reached its current band only after updatedAt; before that it sat in backlog.
-      const reached = r.updatedAt.getTime() <= dayEnd
-      const b = reached ? band(r.status) : "backlog"
-      pt[b] += 1
+    for (const { t, moves } of withMoves) {
+      const st = statusAt(t, dayEnd, moves)
+      if (!st) continue // not created yet
+      if (DONE_TASK_STATUSES.includes(st)) pt.done += 1
+      else if (IN_FLIGHT_TASK_STATUSES.includes(st)) pt.inProgress += 1
+      else if (t.sprintId) pt.todo += 1
+      else pt.backlog += 1
     }
     return pt
   })
@@ -281,7 +291,10 @@ export async function getTeamPerformance(projectId: string, from?: string | null
   const inRange = { gte: range.from, lte: range.to }
 
   const [reqs, testCases, bugs, runs, teamPool] = await Promise.all([
-    prisma.requirement.findMany({ where: { projectId }, select: { assignee: true, storyPoints: true, status: true } }),
+    prisma.task.findMany({
+      where: { projectId, status: { in: DONE_TASK_STATUSES as any } },
+      select: { storyPoints: true, status: true, assignees: { select: { name: true, email: true } } },
+    }),
     prisma.testCase.findMany({ where: { projectId }, select: { id: true, assignee: true } }),
     prisma.bugReport.findMany({
       where: { projectId, createdAt: inRange },
@@ -305,9 +318,9 @@ export async function getTeamPerformance(projectId: string, from?: string | null
   }
 
   for (const r of reqs) {
-    const name = norm(r.assignee)
-    if (!name) continue
-    if (DONE_STATUSES.includes(r.status)) {
+    for (const a of r.assignees) {
+      const name = norm(a.name || a.email)
+      if (!name) continue
       get(name).storyPoints += r.storyPoints || 0
       get(name).tasksCompleted += 1
     }
@@ -487,34 +500,32 @@ export async function listRequirements(p: ListParams): Promise<Paginated<any>> {
 }
 
 export async function listSprints(projectId: string): Promise<Paginated<any>> {
-  const sprints = await prisma.sprint.findMany({
+  const sprints = await prisma.scrumSprint.findMany({
     where: { projectId },
-    orderBy: [{ startDate: "desc" }, { orderIndex: "asc" }],
+    orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
     select: {
       id: true,
       name: true,
       status: true,
       startDate: true,
       endDate: true,
-      requirements: { select: { storyPoints: true, status: true } },
-      velocities: { select: { velocity: true } },
+      tasks: { where: { type: SPRINT_TASK_TYPES }, select: { storyPoints: true, status: true } },
     },
   })
 
+  const label: Record<string, string> = { PLANNED: "Planned", ACTIVE: "Active", COMPLETED: "Completed" }
   const rows = sprints.map((s) => {
-    const committed = s.requirements.reduce((a, r) => a + (r.storyPoints || 0), 0)
-    const completed = s.requirements
-      .filter((r) => DONE_STATUSES.includes(r.status))
-      .reduce((a, r) => a + (r.storyPoints || 0), 0)
+    const committed = s.tasks.reduce((a, t) => a + (t.storyPoints || 0), 0)
+    const completed = s.tasks.filter((t) => DONE_TASK_STATUSES.includes(t.status)).reduce((a, t) => a + (t.storyPoints || 0), 0)
     return {
       id: s.id,
       name: s.name,
-      status: String(s.status),
+      status: label[s.status] || String(s.status),
       startDate: s.startDate?.toISOString() ?? null,
       endDate: s.endDate?.toISOString() ?? null,
       committed,
       completed,
-      velocity: s.velocities[0]?.velocity ?? completed,
+      velocity: completed,
       progress: committed ? Math.round((completed / committed) * 100) : 0,
     }
   })
@@ -523,23 +534,20 @@ export async function listSprints(projectId: string): Promise<Paginated<any>> {
 
 /** Sprint options for the header dropdown. */
 export async function listSprintOptions(projectId: string) {
-  const sprints = await prisma.sprint.findMany({
+  const sprints = await prisma.scrumSprint.findMany({
     where: { projectId },
-    orderBy: [{ startDate: "desc" }, { orderIndex: "asc" }],
+    orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
     select: { id: true, name: true, status: true, startDate: true, endDate: true },
   })
+  const label: Record<string, string> = { PLANNED: "Planned", ACTIVE: "Active", COMPLETED: "Completed" }
   return sprints.map((s) => ({
     id: s.id,
     name: s.name,
-    status: String(s.status),
+    status: label[s.status] || String(s.status),
     startDate: s.startDate?.toISOString() ?? null,
     endDate: s.endDate?.toISOString() ?? null,
   }))
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  TASK-LEVEL ANALYTICS (Scrum board Task model)
-// ═══════════════════════════════════════════════════════════════════════════
 
 export interface TaskCreatedResolvedPoint {
   date: string
@@ -566,19 +574,17 @@ export interface AverageAgeRow {
 /** Tasks created vs resolved (status=DONE) over a date range. */
 export async function getTaskCreatedResolved(projectId: string, from?: string | null, to?: string | null): Promise<TaskCreatedResolvedPoint[]> {
   const range = resolveRange(from, to)
-  const tasks = await prisma.task.findMany({
-    where: { projectId },
-    select: { status: true, createdAt: true, updatedAt: true },
-  })
+  const tasks = await prisma.task.findMany({ where: { projectId }, select: taskHistorySelect })
+  const rows = tasks.map((t) => ({ created: t.createdAt.getTime(), done: doneAt(t) }))
   const days = eachDay(range.from, range.to)
 
   return days.map((date) => {
     const dayStart = new Date(date).getTime()
     const dayEnd = dayStart + DAY - 1
-    const created = tasks.filter((t) => t.createdAt.getTime() >= dayStart && t.createdAt.getTime() <= dayEnd).length
-    const resolved = tasks.filter((t) => t.status === "DONE" && t.updatedAt.getTime() >= dayStart && t.updatedAt.getTime() <= dayEnd).length
-    const createdSoFar = tasks.filter((t) => t.createdAt.getTime() <= dayEnd).length
-    const resolvedSoFar = tasks.filter((t) => t.status === "DONE" && t.updatedAt.getTime() <= dayEnd).length
+    const created = rows.filter((r) => r.created >= dayStart && r.created <= dayEnd).length
+    const resolved = rows.filter((r) => r.done !== null && r.done >= dayStart && r.done <= dayEnd).length
+    const createdSoFar = rows.filter((r) => r.created <= dayEnd).length
+    const resolvedSoFar = rows.filter((r) => r.done !== null && r.done <= dayEnd).length
     return { date, created, resolved, cumulativeOpen: Math.max(0, createdSoFar - resolvedSoFar) }
   })
 }
@@ -586,33 +592,33 @@ export async function getTaskCreatedResolved(projectId: string, from?: string | 
 /** Control chart: cycle time (days from creation to DONE) for completed tasks. */
 export async function getControlChart(projectId: string, from?: string | null, to?: string | null): Promise<ControlChartPoint[]> {
   const range = resolveRange(from, to)
-  const tasks = await prisma.task.findMany({
-    where: {
-      projectId,
-      status: "DONE",
-      updatedAt: { gte: range.from, lte: range.to },
-    },
-    select: { taskNumber: true, title: true, storyPoints: true, createdAt: true, updatedAt: true },
-    orderBy: { updatedAt: "asc" },
-  })
+  const [project, tasks] = await Promise.all([
+    prisma.project.findUnique({ where: { id: projectId }, select: { boardKey: true } }),
+    prisma.task.findMany({
+      where: { projectId, status: { in: DONE_TASK_STATUSES as any } },
+      select: { ...taskHistorySelect, taskNumber: true, title: true },
+    }),
+  ])
 
-  return tasks.map((t) => {
-    const cycleTimeMs = Math.max(0, t.updatedAt.getTime() - t.createdAt.getTime())
-    return {
-      taskKey: `TASK-${t.taskNumber}`,
+  return tasks
+    .map((t) => ({ t, done: doneAt(t)! }))
+    .filter(({ done }) => done >= range.from.getTime() && done <= range.to.getTime())
+    .sort((a, b) => a.done - b.done)
+    .map(({ t, done }) => ({
+      taskKey: `${project?.boardKey || "TASK"}-${t.taskNumber}`,
       title: t.title,
-      cycleTimeDays: Math.round((cycleTimeMs / DAY) * 10) / 10,
+      // Cycle time: from when work started to done.
+      cycleTimeDays: Math.round((Math.max(0, done - startedAt(t)) / DAY) * 10) / 10,
       storyPoints: t.storyPoints,
-      completedAt: t.updatedAt.toISOString(),
-    }
-  })
+      completedAt: new Date(done).toISOString(),
+    }))
 }
 
 /** Average age of open tasks grouped by status. */
 export async function getAverageAge(projectId: string): Promise<AverageAgeRow[]> {
   const now = Date.now()
   const tasks = await prisma.task.findMany({
-    where: { projectId, status: { not: "DONE" } },
+    where: { projectId, status: { notIn: DONE_TASK_STATUSES as any } },
     select: { status: true, createdAt: true },
   })
 

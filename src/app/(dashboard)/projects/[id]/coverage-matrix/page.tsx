@@ -141,45 +141,45 @@ export default function CoverageMatrixPage() {
   const getRiskBadge = (risk: string) => {
     switch (risk) {
       case "High":
-        return <span className="text-[10px] font-bold bg-red-100 text-red-750 px-2 py-0.5 rounded border border-red-200">High Risk</span>
+        return <span className="text-[10px] font-semibold bg-red-100 text-red-750 px-2 py-0.5 rounded border border-red-200">High Risk</span>
       case "Medium":
-        return <span className="text-[10px] font-bold bg-amber-100 text-amber-750 px-2 py-0.5 rounded border border-amber-255">Medium Risk</span>
+        return <span className="text-[10px] font-semibold bg-amber-100 text-amber-750 px-2 py-0.5 rounded border border-amber-255">Medium Risk</span>
       default:
-        return <span className="text-[10px] font-bold bg-green-100 text-green-750 px-2 py-0.5 rounded border border-green-200">Low Risk</span>
+        return <span className="text-[10px] font-semibold bg-green-100 text-green-750 px-2 py-0.5 rounded border border-green-200">Low Risk</span>
     }
   }
 
   const getCoverageBadge = (cov: string) => {
     switch (cov) {
       case "Covered":
-        return <span className="text-[10px] font-bold bg-green-95 text-green-700 px-2 py-0.5 rounded-full uppercase">Covered</span>
+        return <span className="text-[11px] font-medium bg-green-95 text-green-700 px-2 py-0.5 rounded-full">Covered</span>
       case "PartiallyCovered":
-        return <span className="text-[10px] font-bold bg-yellow-95 text-yellow-750 px-2 py-0.5 rounded-full uppercase">Partial</span>
+        return <span className="text-[11px] font-medium bg-yellow-95 text-yellow-750 px-2 py-0.5 rounded-full">Partial</span>
       case "Uncovered":
-        return <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase">Uncovered</span>
+        return <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Uncovered</span>
       case "Failed":
-        return <span className="text-[10px] font-bold bg-red-95 text-red-700 px-2 py-0.5 rounded-full uppercase">Failed</span>
+        return <span className="text-[11px] font-medium bg-red-95 text-red-700 px-2 py-0.5 rounded-full">Failed</span>
       case "Blocked":
-        return <span className="text-[10px] font-bold bg-orange-95 text-orange-700 px-2 py-0.5 rounded-full uppercase">Blocked</span>
+        return <span className="text-[11px] font-medium bg-orange-95 text-orange-700 px-2 py-0.5 rounded-full">Blocked</span>
       case "NotExecuted":
-        return <span className="text-[10px] font-bold bg-blue-95 text-blue-700 px-2 py-0.5 rounded-full uppercase">Not Executed</span>
+        return <span className="text-[11px] font-medium bg-blue-95 text-blue-700 px-2 py-0.5 rounded-full">Not Executed</span>
       default:
-        return <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase">{cov}</span>
+        return <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{cov}</span>
     }
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-slate-800">
+    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-foreground">
       
       {/* Header breadcrumbs & actions */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-5 gap-4">
         <div className="flex items-center gap-3">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Traceability Matrix
             </h1>
-            <p className="text-sm text-slate-500 mt-1">Multi-dimensional verification mapping (Requirement → Test Cases → Execution Result → Open Bugs).</p>
+            <p className="text-sm text-muted-foreground mt-1">Multi-dimensional verification mapping (Requirement → Test Cases → Execution Result → Open Bugs).</p>
           </div>
         </div>
 
@@ -187,32 +187,32 @@ export default function CoverageMatrixPage() {
           <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs shadow-md">
             <Download size={14} /> Export Excel
           </Button>
-          <Button onClick={handleExportMarkdown} variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
+          <Button onClick={handleExportMarkdown} variant="outline" className="border-border hover:bg-muted/50 text-foreground font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
             <Layers size={14} /> Export Markdown
           </Button>
-          <Button onClick={handleExportJson} variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-700 font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
+          <Button onClick={handleExportJson} variant="outline" className="border-border hover:bg-muted/50 text-foreground font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
             <Download size={14} /> Export JSON
           </Button>
         </div>
       </div>
 
       {/* Filters bar */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row gap-3">
+      <div className="bg-card border border-border/60 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row gap-3">
         <div className="relative flex-grow">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by key, title, module..."
-            className="w-full bg-slate-50 border border-slate-200 pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+            className="w-full bg-muted/50 border border-border pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
           />
         </div>
 
         <select
           value={riskFilter}
           onChange={(e) => setRiskFilter(e.target.value)}
-          className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700 font-semibold"
+          className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground font-semibold"
         >
           <option value="ALL">All Risk Levels</option>
           <option value="High">High Risk</option>
@@ -223,7 +223,7 @@ export default function CoverageMatrixPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none text-slate-700 font-semibold"
+          className="px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none text-foreground font-semibold"
         >
           <option value="ALL">All Coverage Statuses</option>
           <option value="Covered">Covered</option>
@@ -238,7 +238,7 @@ export default function CoverageMatrixPage() {
           type="button"
           onClick={() => setGroupByEpic(v => !v)}
           className={`px-3 py-2 rounded-xl border text-xs font-semibold transition-colors ${
-            groupByEpic ? "bg-violet-600 text-white border-violet-600" : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+            groupByEpic ? "bg-violet-600 text-white border-violet-600" : "bg-card border-border hover:bg-muted/50 text-muted-foreground"
           }`}
           title="Group requirements under their parent epics"
         >
@@ -247,18 +247,18 @@ export default function CoverageMatrixPage() {
       </div>
 
       {/* Matrix Tree List */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-card border border-border/60 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-20">
             <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
-            <p className="text-slate-500 text-sm">Compiling project traceability records...</p>
+            <p className="text-muted-foreground text-sm">Compiling project traceability records...</p>
           </div>
         ) : filteredMatrix.length === 0 ? (
-          <div className="p-16 text-center text-slate-500 italic">No matrix records matched.</div>
+          <div className="p-16 text-center text-muted-foreground italic">No matrix records matched.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <thead className="bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground">
                 <tr>
                   <th className="p-4 w-24">Req Key</th>
                   <th className="p-4 w-48">Requirement Title</th>
@@ -269,7 +269,7 @@ export default function CoverageMatrixPage() {
                   <th className="p-4 w-44">Related Bugs</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              <tbody className="divide-y divide-border font-medium text-foreground">
                 {(groupByEpic
                   ? (() => {
                       // Group rows under epic headers, No-Epic bucket last
@@ -287,12 +287,12 @@ export default function CoverageMatrixPage() {
                       return ordered.flatMap(([key, group]) => {
                         const covered = group.rows.filter((r) => r.coverageStatus === "Covered").length
                         return [
-                          <tr key={`epic-${key}`} className={key === "__none__" ? "bg-slate-50 border-y border-slate-100" : "bg-violet-50/60 border-y border-violet-100/80"}>
+                          <tr key={`epic-${key}`} className={key === "__none__" ? "bg-muted/50 border-y border-border" : "bg-violet-50/60 border-y border-violet-100/80"}>
                             <td colSpan={7} className="px-4 py-2.5">
-                              <span className={`text-xs font-bold ${key === "__none__" ? "text-slate-500" : "text-violet-900"}`}>
+                              <span className={`text-xs font-semibold ${key === "__none__" ? "text-muted-foreground" : "text-violet-900"}`}>
                                 {group.label}
                               </span>
-                              <span className={`ml-3 text-[10px] font-semibold ${key === "__none__" ? "text-slate-400" : "text-violet-500"}`}>
+                              <span className={`ml-3 text-[10px] font-semibold ${key === "__none__" ? "text-muted-foreground" : "text-violet-500"}`}>
                                 {group.rows.length} stor{group.rows.length === 1 ? "y" : "ies"} · {covered}/{group.rows.length} covered
                               </span>
                             </td>
@@ -313,14 +313,14 @@ export default function CoverageMatrixPage() {
 
   function renderMatrixRow(row: MatrixRow) {
     return (
-                  <tr key={row.id} className="hover:bg-slate-50/50 transition-colors align-top">
-                    <td className="p-4 font-bold text-slate-900">{row.requirementKey}</td>
-                    <td className="p-4 font-semibold text-slate-800">
+                  <tr key={row.id} className="hover:bg-muted/50 transition-colors align-top">
+                    <td className="p-4 font-semibold text-foreground">{row.requirementKey}</td>
+                    <td className="p-4 font-semibold text-foreground">
                       <Link href={`/projects/${projectId}/requirements/${row.id}`} className="hover:text-blue-600 hover:underline">
                         {row.title}
                       </Link>
                     </td>
-                    <td className="p-4 text-slate-400">
+                    <td className="p-4 text-muted-foreground">
                       {row.feature || "Unassigned"}
                     </td>
                     <td className="p-4">{getCoverageBadge(row.coverageStatus)}</td>
@@ -332,11 +332,11 @@ export default function CoverageMatrixPage() {
                         <span className="text-slate-450 italic text-[11px]">No test cases linked</span>
                       ) : (
                         row.linkedTestCases.map((tc) => (
-                          <div key={tc.id} className="bg-slate-50 border border-slate-100 p-2 rounded-lg flex items-center justify-between gap-2">
-                            <Link href={`/projects/${projectId}/test-cases/${tc.id}/edit`} className="font-semibold text-slate-700 hover:text-blue-600 truncate max-w-[200px]">
+                          <div key={tc.id} className="bg-muted/50 border border-border p-2 rounded-lg flex items-center justify-between gap-2">
+                            <Link href={`/projects/${projectId}/test-cases/${tc.id}/edit`} className="font-semibold text-foreground hover:text-blue-600 truncate max-w-[200px]">
                               {tc.title}
                             </Link>
-                            <span className="text-[10px] text-slate-400 font-mono">({tc.priority})</span>
+                            <span className="text-[10px] text-muted-foreground font-mono">({tc.priority})</span>
                           </div>
                         ))
                       )}
@@ -345,14 +345,14 @@ export default function CoverageMatrixPage() {
                     {/* Related Bugs list */}
                     <td className="p-4 space-y-2">
                       {row.openBugs.length === 0 ? (
-                        <span className="text-slate-400 italic text-[11px]">-</span>
+                        <span className="text-muted-foreground italic text-[11px]">-</span>
                       ) : (
                         row.openBugs.map((bug) => (
                           <div key={bug.id} className="bg-red-50/20 border border-red-100 p-2 rounded-lg flex items-center justify-between gap-1.5 text-[11px]">
                             <span className="font-semibold text-red-800 truncate max-w-[120px]" title={bug.title}>
                               {bug.title}
                             </span>
-                            <span className="text-[9px] bg-red-100 text-red-700 font-bold px-1 rounded">
+                            <span className="text-[9px] bg-red-100 text-red-700 font-semibold px-1 rounded">
                               {bug.severity}
                             </span>
                           </div>

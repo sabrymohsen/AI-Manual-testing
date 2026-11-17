@@ -27,14 +27,14 @@ interface Invitation {
 const ROLE_BADGE: Record<string, string> = {
   Owner: "bg-purple-100 text-purple-700 border-purple-200",
   Admin: "bg-blue-100 text-blue-700 border-blue-200",
-  Member: "bg-slate-100 text-slate-700 border-slate-200",
-  Viewer: "bg-slate-50 text-slate-500 border-slate-200",
+  Member: "bg-muted text-foreground border-border",
+  Viewer: "bg-muted/50 text-muted-foreground border-border",
 }
 const STATUS_BADGE: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
   ACCEPTED: "bg-green-100 text-green-700",
   DECLINED: "bg-red-100 text-red-700",
-  EXPIRED: "bg-slate-100 text-slate-500",
+  EXPIRED: "bg-muted text-muted-foreground",
 }
 
 function initials(name: string | null, email: string) {
@@ -108,19 +108,19 @@ export default function MembersPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-indigo-600" />
-          <h1 className="text-xl font-bold text-slate-900">Members</h1>
+          <Users className="h-5 w-5 text-primary" />
+          <h1 className="text-xl font-semibold text-foreground">Members</h1>
         </div>
         {can("canInviteMembers") && (
           <button
             onClick={() => setShowInvite(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
           >
             <UserPlus className="h-3.5 w-3.5" /> Invite
           </button>
         )}
       </div>
-      <p className="text-xs text-slate-500 mb-4">Manage project members and their permissions.</p>
+      <p className="text-xs text-muted-foreground mb-4">Manage project members and their permissions.</p>
 
       {!manage && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
@@ -138,14 +138,14 @@ export default function MembersPage() {
       <div className="flex gap-1 border-b mb-4">
         <button
           onClick={() => setTab("members")}
-          className={`px-3 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === "members" ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500"}`}
+          className={`px-3 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === "members" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
         >
           Members ({members.length})
         </button>
         {can("canInviteMembers") && (
           <button
             onClick={() => setTab("invitations")}
-            className={`px-3 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === "invitations" ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500"}`}
+            className={`px-3 py-2 text-xs font-semibold border-b-2 -mb-px ${tab === "invitations" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
           >
             Invitations ({invitations.length})
           </button>
@@ -153,13 +153,13 @@ export default function MembersPage() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-16 text-slate-400">
+        <div className="flex items-center justify-center py-16 text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
         </div>
       ) : tab === "members" ? (
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 text-slate-500">
+            <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="text-left font-semibold px-4 py-2.5">Name</th>
                 <th className="text-left font-semibold px-4 py-2.5">Email</th>
@@ -170,7 +170,7 @@ export default function MembersPage() {
             </thead>
             <tbody className="divide-y">
               {members.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50">
+                <tr key={m.id} className="hover:bg-muted/50">
                   <td className="px-4 py-2.5">
                     <a
                       href={`/users/${m.user.id}`}
@@ -181,39 +181,39 @@ export default function MembersPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.user.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                       ) : (
-                        <div className="h-7 w-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px] font-bold">
+                        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-semibold">
                           {initials(m.user.name, m.user.email)}
                         </div>
                       )}
-                      <span className="font-medium text-slate-800 group-hover/profile:text-indigo-600 group-hover/profile:underline">
+                      <span className="font-medium text-foreground group-hover/profile:text-primary group-hover/profile:underline">
                         {m.user.name || "—"}
                       </span>
                     </a>
                   </td>
-                  <td className="px-4 py-2.5 text-slate-500">{m.user.email}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{m.user.email}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${ROLE_BADGE[m.role] || ROLE_BADGE.Member}`}>
                       {m.role}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-slate-400">
+                  <td className="px-4 py-2.5 text-muted-foreground">
                     {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : "—"}
                   </td>
                   {manage && (
                     <td className="px-4 py-2.5 relative">
                       {!m.isCreator && (
-                        <button onClick={() => setMenuFor(menuFor === m.id ? null : m.id)} className="p-1 rounded hover:bg-slate-200">
-                          <MoreHorizontal className="h-4 w-4 text-slate-500" />
+                        <button onClick={() => setMenuFor(menuFor === m.id ? null : m.id)} className="p-1 rounded hover:bg-muted">
+                          <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
                         </button>
                       )}
                       {menuFor === m.id && (
-                        <div className="absolute right-4 top-9 z-10 w-44 rounded-lg border bg-white shadow-lg py-1">
-                          <div className="px-3 py-1 text-[10px] uppercase font-bold text-slate-400">Change role</div>
+                        <div className="absolute right-4 top-9 z-10 w-44 rounded-lg border bg-card shadow-[0_4px_12px_rgba(0,0,0,0.06)] py-1">
+                          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Change role</div>
                           {PROJECT_ROLES.map((r) => (
                             <button
                               key={r}
                               onClick={() => changeRole(m.userId, r)}
-                              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-50 ${r === m.role ? "text-indigo-600 font-semibold" : "text-slate-700"}`}
+                              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/50 ${r === m.role ? "text-primary font-semibold" : "text-foreground"}`}
                             >
                               <Shield className="h-3 w-3" /> {r}
                               {r === m.role && <Check className="h-3 w-3 ml-auto" />}
@@ -238,7 +238,7 @@ export default function MembersPage() {
       ) : (
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-xs">
-            <thead className="bg-slate-50 text-slate-500">
+            <thead className="bg-muted/50 text-muted-foreground">
               <tr>
                 <th className="text-left font-semibold px-4 py-2.5">Email</th>
                 <th className="text-left font-semibold px-4 py-2.5">Role</th>
@@ -250,19 +250,19 @@ export default function MembersPage() {
             </thead>
             <tbody className="divide-y">
               {invitations.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-slate-400">No invitations yet.</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No invitations yet.</td></tr>
               )}
               {invitations.map((inv) => (
-                <tr key={inv.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-2.5 font-medium text-slate-800">{inv.email}</td>
+                <tr key={inv.id} className="hover:bg-muted/50">
+                  <td className="px-4 py-2.5 font-medium text-foreground">{inv.email}</td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${ROLE_BADGE[inv.role] || ROLE_BADGE.Member}`}>{inv.role}</span>
                   </td>
                   <td className="px-4 py-2.5">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[inv.status] || STATUS_BADGE.PENDING}`}>{inv.status}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-slate-500">{inv.invitedBy?.name || inv.invitedBy?.email || "—"}</td>
-                  <td className="px-4 py-2.5 text-slate-400">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{inv.invitedBy?.name || inv.invitedBy?.email || "—"}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-2.5">
                     {inv.status === "PENDING" && (
                       <button onClick={() => cancelInvite(inv.id)} className="p-1 rounded hover:bg-red-50 text-red-600" title="Cancel invitation">
@@ -326,20 +326,20 @@ function InviteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-slate-900">Invite Member to Project</h2>
-          <button onClick={onClose}><X className="h-4 w-4 text-slate-400" /></button>
+          <h2 className="text-sm font-semibold text-foreground">Invite Member to Project</h2>
+          <button onClick={onClose}><X className="h-4 w-4 text-muted-foreground" /></button>
         </div>
 
         {inviteUrl ? (
           <div className="space-y-3">
-            <p className="text-xs text-slate-600">No account found for that email. Share this invite link (valid 7 days):</p>
-            <div className="flex items-center gap-2 rounded-lg border bg-slate-50 p-2">
-              <input readOnly value={inviteUrl} className="flex-1 bg-transparent text-[11px] text-slate-700 outline-none" />
+            <p className="text-xs text-muted-foreground">No account found for that email. Share this invite link (valid 7 days):</p>
+            <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
+              <input readOnly value={inviteUrl} className="flex-1 bg-transparent text-[11px] text-foreground outline-none" />
               <button
                 onClick={() => { navigator.clipboard.writeText(inviteUrl); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
-                className="inline-flex items-center gap-1 rounded bg-indigo-600 px-2 py-1 text-[10px] font-semibold text-white"
+                className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[10px] font-semibold text-white"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? "Copied" : "Copy"}
               </button>
@@ -349,21 +349,21 @@ function InviteModal({
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="text-[11px] font-semibold text-slate-600">Email or Username</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Email or Username</label>
               <input
                 autoFocus
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="jane@example.com or Jane Smith"
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-xs focus:ring-1 focus:ring-indigo-500 outline-none"
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-xs focus:ring-1 focus:ring-primary outline-none"
               />
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-slate-600">Role</label>
+              <label className="text-[11px] font-semibold text-muted-foreground">Role</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as ProjectRole)}
-                className="mt-1 w-full rounded-lg border px-3 py-2 text-xs cursor-pointer focus:ring-1 focus:ring-indigo-500 outline-none"
+                className="mt-1 w-full rounded-lg border px-3 py-2 text-xs cursor-pointer focus:ring-1 focus:ring-primary outline-none"
               >
                 <option value="Admin">Admin — manage sprints, epics & stories</option>
                 <option value="Member">Member — can work on tasks</option>
@@ -373,11 +373,11 @@ function InviteModal({
             </div>
             {err && <p className="text-[11px] text-red-600">{err}</p>}
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={onClose} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-slate-600">Cancel</button>
+              <button onClick={onClose} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground">Cancel</button>
               <button
                 onClick={submit}
                 disabled={submitting || !value.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {submitting && <Loader2 className="h-3 w-3 animate-spin" />} Send Invitation
               </button>

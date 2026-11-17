@@ -81,8 +81,8 @@ export default function DashboardPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-8 select-none text-xs font-semibold py-8">
         <div className="space-y-2 text-center md:text-left">
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center justify-center md:justify-start gap-2">
-            <Zap className="h-8 w-8 text-indigo-600 fill-current" /> QA Engine Workspaces
+          <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center justify-center md:justify-start gap-2">
+            <Zap className="h-8 w-8 text-primary fill-current" /> QA Engine Workspaces
           </h1>
           <p className="text-sm text-muted-foreground font-medium">
             Select a project workspace scope to view test health, run live sessions, and capture defects.
@@ -91,10 +91,10 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {projectsList.length === 0 ? (
-            <div className="p-8 border border-dashed text-center space-y-4 col-span-2 rounded-2xl bg-card">
+            <div className="p-8 border border-dashed text-center space-y-4 col-span-2 rounded-xl bg-card">
               <FolderOpen className="mx-auto h-12 w-12 text-slate-350" />
               <div className="space-y-1">
-                <h3 className="font-extrabold text-sm text-slate-800">No projects created</h3>
+                <h3 className="font-semibold text-sm text-foreground">No projects created</h3>
                 <p className="text-xs text-muted-foreground font-medium">Get started by creating your first manual testing scope project.</p>
               </div>
               <Button onClick={() => router.push("/projects/new")} className="font-semibold">
@@ -106,18 +106,18 @@ export default function DashboardPage() {
               <div 
                 key={p.id}
                 onClick={() => selectProject(p.id)}
-                className="p-5 border border-slate-100 hover:border-slate-200 hover:shadow-md cursor-pointer transition-all rounded-2xl space-y-4 flex flex-col justify-between group bg-card"
+                className="p-5 border border-border hover:border-border hover:shadow-md cursor-pointer transition-all rounded-xl space-y-4 flex flex-col justify-between group bg-card"
               >
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-sm text-slate-800 group-hover:text-indigo-600 transition-colors">{p.name}</span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 uppercase border border-indigo-100">{p.environment}</span>
+                    <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{p.name}</span>
+                    <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">{p.environment}</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground font-medium leading-relaxed truncate">
                     {p.baseUrl || "No target application URL set"}
                   </p>
                 </div>
-                <div className="flex items-center justify-between text-[10px] border-t pt-3 font-semibold text-indigo-600">
+                <div className="flex items-center justify-between text-[10px] border-t pt-3 font-semibold text-primary">
                   <span>Enter Workspace Scope</span>
                   <Zap className="h-3.5 w-3.5 fill-current opacity-70 group-hover:scale-110 transition-transform" />
                 </div>
@@ -142,14 +142,14 @@ export default function DashboardPage() {
       {/* Monitoring Grid — 4 original KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Pass rate card */}
-        <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Pass Rate</span>
+            <span className="text-[11px] font-medium text-muted-foreground/60">Pass Rate</span>
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-extrabold text-slate-800">{summary?.passRate ?? 0}%</span>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+            <span className="text-2xl font-semibold text-foreground">{summary?.passRate ?? 0}%</span>
+            <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
               <div 
                 className="bg-emerald-500 h-full transition-all" 
                 style={{ width: `${summary?.passRate ?? 0}%` }}
@@ -162,25 +162,25 @@ export default function DashboardPage() {
         {/* User stories by board column. The dashboard previously reported test
             cases, bugs and runs but said nothing about the work itself — how
             much is still to do, and how much is sitting in Testing. */}
-        <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">User Stories</span>
+            <span className="text-[11px] font-medium text-muted-foreground/60">User Stories</span>
             <Layers className="h-4 w-4 text-violet-500" />
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-extrabold text-slate-800">
+            <span className="text-2xl font-semibold text-foreground">
               {scrum.metrics?.stories.total ?? 0} total
             </span>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-              <span className="text-slate-600 font-bold">
+              <span className="text-muted-foreground font-semibold">
                 {scrum.metrics?.stories.byStatus.TODO ?? 0} to do
               </span>
               <span>•</span>
-              <span className="text-amber-600 font-bold">
+              <span className="text-amber-600 font-semibold">
                 {scrum.metrics?.stories.byStatus.TESTING ?? 0} testing
               </span>
               <span>•</span>
-              <span className="text-emerald-600 font-bold">
+              <span className="text-emerald-600 font-semibold">
                 {scrum.metrics?.stories.done ?? 0} done
               </span>
             </div>
@@ -189,7 +189,7 @@ export default function DashboardPage() {
           {/* Full column breakdown, so nothing is hidden behind the headline. */}
           {(scrum.metrics?.stories.total ?? 0) > 0 && (
             <div className="space-y-1.5 pt-0.5">
-              <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
                 {([
                   ["TODO", "bg-slate-400"],
                   ["IN_PROGRESS", "bg-blue-500"],
@@ -226,51 +226,51 @@ export default function DashboardPage() {
         </div>
 
         {/* Test Case Breakdown */}
-        <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Test Cases</span>
-            <FileText className="h-4 w-4 text-indigo-500" />
+            <span className="text-[11px] font-medium text-muted-foreground/60">Test Cases</span>
+            <FileText className="h-4 w-4 text-primary" />
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-extrabold text-slate-800">{caseMetrics.total} total</span>
+            <span className="text-2xl font-semibold text-foreground">{caseMetrics.total} total</span>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-              <span className="text-indigo-600 font-bold">{caseMetrics.manual} manual</span>
+              <span className="text-primary font-semibold">{caseMetrics.manual} manual</span>
               <span>•</span>
-              <span className="text-emerald-600 font-bold">{caseMetrics.automated} auto</span>
+              <span className="text-emerald-600 font-semibold">{caseMetrics.automated} auto</span>
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground font-medium">Suites configured in Cockpit.</p>
         </div>
 
         {/* Open Bugs card */}
-        <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Open Defects</span>
+            <span className="text-[11px] font-medium text-muted-foreground/60">Open Defects</span>
             <Bug className="h-4 w-4 text-rose-500" />
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-extrabold text-rose-600">{bugMetrics.open} bugs</span>
+            <span className="text-2xl font-semibold text-rose-600">{bugMetrics.open} bugs</span>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-              <span className="text-amber-600 font-bold">{bugMetrics.fixed} fixed</span>
+              <span className="text-amber-600 font-semibold">{bugMetrics.fixed} fixed</span>
               <span>•</span>
-              <span className="text-slate-500 font-bold">{bugMetrics.closed} closed</span>
+              <span className="text-muted-foreground font-semibold">{bugMetrics.closed} closed</span>
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground font-medium">Defects awaiting sync maps.</p>
         </div>
 
         {/* Test Runs status */}
-        <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Total runs</span>
-            <Activity className="h-4 w-4 text-slate-500" />
+            <span className="text-[11px] font-medium text-muted-foreground/60">Total runs</span>
+            <Activity className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-extrabold text-slate-800">{runMetrics.total} runs</span>
+            <span className="text-2xl font-semibold text-foreground">{runMetrics.total} runs</span>
             <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
-              <span className="text-emerald-600 font-bold">{runMetrics.passed} passed</span>
+              <span className="text-emerald-600 font-semibold">{runMetrics.passed} passed</span>
               <span>•</span>
-              <span className="text-rose-600 font-bold">{runMetrics.failed} failed</span>
+              <span className="text-rose-600 font-semibold">{runMetrics.failed} failed</span>
             </div>
           </div>
           <p className="text-[10px] text-muted-foreground font-medium">Playwright + manual test runs.</p>
@@ -296,8 +296,8 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Defects */}
-      <div className="p-5 border border-slate-100 shadow-sm space-y-4 rounded-2xl bg-card">
-        <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>
+      <div className="p-5 border border-border shadow-sm space-y-4 rounded-xl bg-card">
+        <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>
         {recentBugs.length === 0 ? (
           <p className="text-muted-foreground italic text-center py-8">No defects recorded in this workspace scope yet.</p>
         ) : (
@@ -306,15 +306,15 @@ export default function DashboardPage() {
               <div 
                 key={bug.id} 
                 onClick={() => router.push(`/projects/${activeProjectId}/bug-reports`)}
-                className="p-2 border rounded-lg border-slate-100 hover:bg-slate-50/50 cursor-pointer flex items-center justify-between transition-colors"
+                className="p-2 border rounded-lg border-border hover:bg-muted/50 cursor-pointer flex items-center justify-between transition-colors"
               >
                 <div className="space-y-0.5 min-w-0">
-                  <span className="font-bold text-slate-700 block truncate">{bug.title}</span>
-                  <span className="text-[10px] text-slate-400 block">{bug.bugKey || "Not synced"} • Severity: {bug.severity}</span>
+                  <span className="font-semibold text-foreground block truncate">{bug.title}</span>
+                  <span className="text-[10px] text-muted-foreground block">{bug.bugKey || "Not synced"} • Severity: {bug.severity}</span>
                 </div>
-                <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded shrink-0 ${
+                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
                   bug.status === "Open" ? "bg-red-50 text-rose-600 border border-red-100" :
-                  bug.status === "Fixed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-slate-100 text-slate-500"
+                  bug.status === "Fixed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-muted text-muted-foreground"
                 }`}>
                   {bug.status}
                 </span>

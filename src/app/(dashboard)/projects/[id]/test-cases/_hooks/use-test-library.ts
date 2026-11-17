@@ -255,3 +255,73 @@ export function useSuiteMutations(projectId: string) {
 
   return { create, update, remove }
 }
+
+/** Sets one priority on many cases. */
+export function useBulkPriority(projectId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  return useMutation({
+    mutationFn: (vars: { testCaseIds: string[]; priority: CasePriority }) =>
+      sendJson<{ success: boolean; count: number }>(`/api/test-cases/bulk-update-priority`, "POST", vars),
+    onSuccess: (data, vars) => {
+      invalidate()
+      toast.success(`Set ${data.count} ${data.count === 1 ? "case" : "cases"} to ${vars.priority}`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+/** Opens one manual run containing every selected case; resolves to the session id. */
+export function useBulkManualRun(projectId: string) {
+  return useMutation({
+    mutationFn: async (testCaseIds: string[]) => {
+      const res = await sendJson<{ sessions?: { id: string; projectId: string }[] }>(`/api/test-cases/bulk-run`, "POST", {
+        testCaseIds,
+        projectId,
+        executionMode: "Manual Session",
+        name: `Manual run — ${testCaseIds.length} ${testCaseIds.length === 1 ? "case" : "cases"}`,
+      })
+      const id = res.sessions?.find((s) => s.projectId === projectId)?.id ?? res.sessions?.[0]?.id
+      if (!id) throw new Error("Could not start the run")
+      return id
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+type ExportedCase = {
+  title: string
+  priority: string
+  preconditions: string
+  steps: { stepNumber: number; actionDescription: string; expectedResult: string }[]
+  requirements: string[]
+}
+
+/** Downloads the selected cases as a CSV that opens cleanly in Excel. */
+export async function exportCasesCsv(testCaseIds: string[], fileName: string) {
+  const data = await sendJson<{ testCases: ExportedCase[] }>(`/api/test-cases/bulk-export`, "POST", { testCaseIds })
+  const cell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`
+  const rows = [["Title", "Priority", "Preconditions", "Step", "Action", "Expected result", "Stories"]]
+  for (const tc of data.testCases) {
+    const steps = tc.steps.length ? tc.steps : [{ stepNumber: "", actionDescription: "", expectedResult: "" } as never]
+    steps.forEach((s: ExportedCase["steps"][number], i: number) =>
+      rows.push([
+        i === 0 ? tc.title : "",
+        i === 0 ? tc.priority : "",
+        i === 0 ? tc.preconditions : "",
+        String(s.stepNumber ?? ""),
+        s.actionDescription,
+        s.expectedResult,
+        i === 0 ? tc.requirements.join(", ") : "",
+      ])
+    )
+  }
+  // BOM so Excel reads UTF-8 (Arabic titles stay readable).
+  const blob = new Blob(["﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = fileName
+  a.click()
+  URL.revokeObjectURL(url)
+  return data.testCases.length
+}

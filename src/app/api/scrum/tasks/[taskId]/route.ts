@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { syncScrumTask } from "@/lib/integrations/core/sync-scrum-task"
 import { z } from "zod"
 import { requireTaskOwner, taskDetailInclude, serializeTask, logActivity } from "@/lib/scrum/server"
 import { notify } from "@/lib/notifications"
@@ -19,6 +20,7 @@ const patchSchema = z.object({
   priority: z.enum(PRIORITIES).optional(),
   storyPoints: z.number().min(0).max(999).optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
+  startDate: z.string().datetime().optional().nullable(),
   branchName: z.string().optional().nullable(),
   progress: z.number().int().min(0).max(100).optional(),
   boardRank: z.number().int().optional(),
@@ -86,6 +88,7 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
   if (d.priority !== undefined) data.priority = d.priority
   if (d.storyPoints !== undefined) data.storyPoints = d.storyPoints
   if (d.dueDate !== undefined) data.dueDate = d.dueDate ? new Date(d.dueDate) : null
+  if (d.startDate !== undefined) data.startDate = d.startDate ? new Date(d.startDate) : null
   if (d.branchName !== undefined) data.branchName = d.branchName
   if (d.progress !== undefined) data.progress = d.progress
   if (d.boardRank !== undefined) data.boardRank = d.boardRank
@@ -160,6 +163,12 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
   }
 
   const fresh = await prisma.task.findUnique({ where: { id: params.taskId }, include: taskDetailInclude })
+  // A task already sent to the tracker follows its edits there. Not awaited:
+  // a slow or unreachable tracker must not hold up the board.
+  syncScrumTask(params.taskId, { createIfMissing: false }).catch((err) =>
+    console.warn(`[scrum] tracker update for task ${params.taskId} failed: ${err?.message || err}`)
+  )
+
   return NextResponse.json({ task: serializeTask(fresh, auth.boardKey) })
 }
 

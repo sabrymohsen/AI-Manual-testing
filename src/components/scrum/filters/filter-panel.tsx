@@ -53,9 +53,9 @@ export function FilterPanel({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-xs font-semibold hover:bg-muted">
-          <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-          Filter
+        <button aria-label="Filter issues" title="Filter issues" className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span className="hidden xl:inline">Filter</span>
           {count > 0 && (
             <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
               {count}

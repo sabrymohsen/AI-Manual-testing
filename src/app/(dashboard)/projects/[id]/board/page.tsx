@@ -1,14 +1,9 @@
-"use client"
+import { redirect } from "next/navigation"
 
-import { useParams } from "next/navigation"
-import ScrumBoard from "@/components/board/scrum-board"
-
-export default function BoardPage() {
-  const params = useParams()
-  const projectId = params.id as string
-  return (
-    <div className="space-y-4">
-      <ScrumBoard projectId={projectId} />
-    </div>
-  )
+// The old Requirement board was retired: its sprints never reached the
+// reports and it duplicated the Scrum Board. Old links and bookmarks land on
+// the Scrum Board instead of a 404.
+export default function OldBoardRedirect({ params, searchParams }: { params: { id: string }; searchParams: Record<string, string | undefined> }) {
+  const view = searchParams.tab === "backlog" || searchParams.tab === "epics" ? "?view=backlog" : ""
+  redirect(`/projects/${params.id}/scrum${view}`)
 }

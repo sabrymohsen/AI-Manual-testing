@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse, canUseProject } from "@/lib/api-guards"
 import { updateEpicSchema } from "@/schemas"
 
 import { createAuditLog } from "@/lib/auth/audit"
@@ -14,7 +14,7 @@ async function loadOwnedEpic(epicId: string, userId: string) {
     }
   })
   if (!epic) return { error: "not_found" as const }
-  if (epic.project.userId !== userId) return { error: "forbidden" as const }
+  if (!(await canUseProject(epic.projectId, userId, "write"))) return { error: "forbidden" as const }
   return { epic }
 }
 

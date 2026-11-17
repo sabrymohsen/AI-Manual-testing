@@ -191,10 +191,10 @@ export default function TestDataPage() {
         <div className="flex items-center gap-4">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Test Data Manager
             </h1>
-            <p className="text-slate-500">
+            <p className="text-muted-foreground">
               Define environments configuration variables and secrets to substitute dynamically in test runs.
             </p>
           </div>
@@ -217,40 +217,40 @@ export default function TestDataPage() {
         {/* Left Side: Create / Edit Form or Live Variable Resolver Playground */}
         <div className="lg:col-span-1 space-y-6">
           {isCreating || editingId ? (
-            <form onSubmit={handleSave} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 pb-3 border-b">
+            <form onSubmit={handleSave} className="bg-card border border-border rounded-xl p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2 pb-3 border-b">
                 <Key className="text-blue-600" size={20} />
                 {isCreating ? "Add New Variable" : "Edit Variable"}
               </h2>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Variable Key</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Variable Key</label>
                   <input
                     type="text"
                     required
                     value={key}
                     onChange={(e) => setKey(e.target.value)}
                     placeholder="e.g. admin.email"
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">Keys should be lowercase and dot-separated.</span>
+                  <span className="text-[10px] text-muted-foreground mt-1 block">Keys should be lowercase and dot-separated.</span>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Variable Value</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Variable Value</label>
                   <input
                     type={isSensitive || dataType === "secret" ? "password" : "text"}
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder={isSensitive ? "••••••••" : "e.g. admin@example.com"}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Data Type</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Data Type</label>
                     <select
                       value={dataType}
                       onChange={(e) => {
@@ -259,18 +259,18 @@ export default function TestDataPage() {
                           setIsSensitive(true)
                         }
                       }}
-                      className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                      className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                     >
                       {DATA_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Environment</label>
+                    <label className="block text-sm font-semibold text-foreground mb-1.5">Environment</label>
                     <select
                       value={environment}
                       onChange={(e) => setEnvironment(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800"
+                      className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                     >
                       {ENVIRONMENTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
@@ -284,26 +284,26 @@ export default function TestDataPage() {
                     checked={isSensitive}
                     disabled={dataType === "secret"}
                     onChange={(e) => setIsSensitive(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 border-border rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="isSensitive" className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                  <label htmlFor="isSensitive" className="text-sm font-medium text-foreground flex items-center gap-1.5">
                     Encrypt & Mask (Sensitive Secret)
                   </label>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Notes / Description</label>
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Notes / Description</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Describe what this test variable is used for..."
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-800 h-16 resize-none"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground h-16 resize-none"
                   />
                 </div>
               </div>
 
               <div className="flex items-center justify-end gap-2 border-t pt-4 mt-6">
-                <Button type="button" variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); }} className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50">
+                <Button type="button" variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); }} className="rounded-xl border-border text-muted-foreground hover:bg-muted/50">
                   Cancel
                 </Button>
                 <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-5 rounded-xl">
@@ -312,22 +312,22 @@ export default function TestDataPage() {
               </div>
             </form>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 pb-2 border-b">
+            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2 pb-2 border-b">
                 <Sparkles className="text-blue-500" size={18} />
                 Variables Resolver Playground
               </h2>
-              <p className="text-xs text-slate-500 mb-4">
+              <p className="text-xs text-muted-foreground mb-4">
                 Test how your test case steps will substitute keys containing brackets e.g. <code>{"{{admin.email}}"}</code>.
               </p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Target Environment Context</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Target Environment Context</label>
                   <select
                     value={resolverEnv}
                     onChange={(e) => setResolverEnv(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none text-slate-800"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-xl text-sm focus:outline-none text-foreground"
                   >
                     {ENVIRONMENTS.filter(o => o.value !== "ALL").map(o => (
                       <option key={o.value} value={o.value}>{o.label}</option>
@@ -336,11 +336,11 @@ export default function TestDataPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1.5">Input Text Template</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Input Text Template</label>
                   <textarea
                     value={resolverInput}
                     onChange={(e) => setResolverInput(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800 h-24"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground h-24"
                   />
                 </div>
 
@@ -349,9 +349,9 @@ export default function TestDataPage() {
                 </Button>
 
                 {resolverOutput && (
-                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                    <span className="block text-[10px] font-semibold text-slate-400 mb-1">RESOLVED OUTCOME:</span>
-                    <p className="text-xs font-mono text-slate-700 break-words">{resolverOutput}</p>
+                  <div className="p-3 bg-muted/50 border border-border rounded-xl">
+                    <span className="block text-[10px] font-semibold text-muted-foreground mb-1">RESOLVED OUTCOME:</span>
+                    <p className="text-xs font-mono text-foreground break-words">{resolverOutput}</p>
                   </div>
                 )}
               </div>
@@ -361,10 +361,10 @@ export default function TestDataPage() {
 
         {/* Right Side: Variables List */}
         <div className="lg:col-span-2">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-slate-200 flex items-center justify-between">
-              <h2 className="font-bold text-slate-800">Project Variables</h2>
-              <span className="text-xs text-slate-400 bg-slate-100 rounded px-2.5 py-0.5 font-semibold">
+          <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-border flex items-center justify-between">
+              <h2 className="font-semibold text-foreground">Project Variables</h2>
+              <span className="text-xs text-muted-foreground bg-muted rounded px-2.5 py-0.5 font-semibold">
                 {variables.length} defined
               </span>
             </div>
@@ -372,13 +372,13 @@ export default function TestDataPage() {
             {loading ? (
               <div className="p-16 text-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                <p className="text-slate-500 text-sm">Loading variables list...</p>
+                <p className="text-muted-foreground text-sm">Loading variables list...</p>
               </div>
             ) : variables.length === 0 ? (
               <div className="p-16 text-center">
                 <Key size={40} className="text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-600 font-medium">No custom variables defined</p>
-                <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1">
+                <p className="text-muted-foreground font-medium">No custom variables defined</p>
+                <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-1">
                   Add custom keys for email addresses, static test inputs, or secret credentials to make tests modular.
                 </p>
               </div>
@@ -386,7 +386,7 @@ export default function TestDataPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase border-b border-slate-200">
+                    <tr className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase border-b border-border">
                       <th className="px-6 py-3">Key / Key Variable</th>
                       <th className="px-6 py-3">Value</th>
                       <th className="px-6 py-3">Environment</th>
@@ -394,25 +394,25 @@ export default function TestDataPage() {
                       <th className="px-6 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                  <tbody className="divide-y divide-border text-sm text-foreground">
                     {variables.map((v) => (
-                      <tr key={v.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-mono font-semibold text-slate-800">
+                      <tr key={v.id} className="hover:bg-muted/50 transition-colors">
+                        <td className="px-6 py-4 font-mono font-semibold text-foreground">
                           {`{{${v.key}}}`}
                         </td>
                         <td className="px-6 py-4 max-w-xs truncate">
                           {v.isSensitive ? (
-                            <span className="flex items-center gap-1.5 text-xs text-slate-400 font-mono italic">
+                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono italic">
                               <ShieldAlert size={14} className="text-amber-500" />
                               Encrypted Secret
                             </span>
                           ) : (
-                            <span className="font-mono text-xs text-slate-600">{v.value || "—"}</span>
+                            <span className="font-mono text-xs text-muted-foreground">{v.value || "—"}</span>
                           )}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                            !v.environment ? "bg-slate-100 text-slate-600" :
+                            !v.environment ? "bg-muted text-muted-foreground" :
                             v.environment === "Production" ? "bg-red-50 text-red-600 border border-red-100" :
                             v.environment === "Staging" ? "bg-amber-50 text-amber-600 border border-amber-100" :
                             "bg-blue-50 text-blue-600 border border-blue-100"
@@ -420,15 +420,15 @@ export default function TestDataPage() {
                             {v.environment || "Global"}
                           </span>
                         </td>
-                        <td className="px-6 py-4 text-xs font-medium text-slate-400 capitalize">
+                        <td className="px-6 py-4 text-xs font-medium text-muted-foreground capitalize">
                           {v.dataType}
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(v)} className="text-slate-600 hover:text-blue-600 hover:bg-blue-50/50 p-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(v)} className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50/50 p-1">
                               <Edit size={14} />
                             </Button>
-                            <Button variant="ghost" size="sm" onClick={() => handleDelete(v.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleDelete(v.id)} className="text-muted-foreground hover:text-red-600 hover:bg-red-50 p-1">
                               <Trash2 size={14} />
                             </Button>
                           </div>

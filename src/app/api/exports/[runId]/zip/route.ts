@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, memberProjectWhere } from "@/lib/api-guards"
 import { generateZipArtifacts } from "@/lib/reports/zip-generator"
 import fs from "node:fs"
 
@@ -14,7 +14,7 @@ export async function GET(
   }
 
   const entity = await prisma.testRun.findFirst({
-    where: { id: params.runId, project: { userId: auth.session!.user.id } },
+    where: { id: params.runId, project: memberProjectWhere(auth.session!.user.id) },
     select: { projectId: true }
   })
   if (!entity) {

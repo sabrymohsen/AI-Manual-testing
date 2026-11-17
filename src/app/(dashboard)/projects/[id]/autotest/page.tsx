@@ -266,22 +266,22 @@ public class ${name} extends BaseTest {
   }
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-slate-800">
+    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-foreground">
       
       {/* Upper header controls */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             <Play className="text-indigo-650 animate-pulse fill-current h-5 w-5" /> AutoTest Engine
           </h1>
-          <p className="text-slate-500 font-medium mt-1">
+          <p className="text-muted-foreground font-medium mt-1">
             Build, execute, and verify Playwright test specs directly from the manual testing dashboard.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             onClick={() => setShowNewModal(true)}
-            className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl h-9 text-xs font-bold flex items-center gap-1.5 shadow-sm"
+            className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
           >
             <Plus size={13} /> New Script
           </Button>
@@ -290,7 +290,7 @@ public class ${name} extends BaseTest {
 
       {/* Main Tab Controller */}
       <div className="flex items-center justify-between border-b pb-1.5 flex-wrap gap-3">
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border">
+        <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border">
           {[
             { id: "Web", label: "Web Automation", icon: Globe },
             { id: "API", label: "API Testing", icon: Layers },
@@ -306,8 +306,8 @@ public class ${name} extends BaseTest {
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 activeTypeTab === tab.id
-                  ? "bg-white text-indigo-700 shadow-xs border"
-                  : "text-slate-500 hover:text-slate-800"
+                  ? "bg-card text-primary shadow-xs border"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon size={13} />
@@ -321,16 +321,16 @@ public class ${name} extends BaseTest {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[580px]">
         
         {/* Left Column: Test Scripts Library */}
-        <div className="lg:col-span-3 border bg-white rounded-2xl p-4 flex flex-col justify-between shadow-2xs space-y-4">
+        <div className="lg:col-span-3 border bg-card rounded-xl p-4 flex flex-col justify-between shadow-2xs space-y-4">
           <div className="space-y-3.5 flex-grow">
-            <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-1.5">Test Library</span>
+            <span className="text-[11px] font-medium text-slate-450 block border-b pb-1.5">Test Library</span>
             {loading ? (
-              <div className="py-12 flex flex-col items-center justify-center gap-2 text-slate-400">
+              <div className="py-12 flex flex-col items-center justify-center gap-2 text-muted-foreground">
                 <Loader2 className="animate-spin" size={20} />
                 <span className="text-[10px]">Loading tests...</span>
               </div>
             ) : filteredScripts.length === 0 ? (
-              <p className="text-slate-400 italic py-8 text-center text-[10px]">No test templates found for this tab.</p>
+              <p className="text-muted-foreground italic py-8 text-center text-[10px]">No test templates found for this tab.</p>
             ) : (
               <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
                 {filteredScripts.map(script => {
@@ -341,19 +341,19 @@ public class ${name} extends BaseTest {
                       onClick={() => selectScript(script)}
                       className={`p-3 rounded-xl border transition-all cursor-pointer ${
                         isSelected 
-                          ? "bg-indigo-50 border-indigo-200 shadow-2xs" 
-                          : "border-slate-100 hover:border-slate-200"
+                          ? "bg-primary/10 border-primary/25 shadow-2xs" 
+                          : "border-border hover:border-border"
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-slate-800 block truncate">{script.name}.java</span>
-                        <span className="text-[8px] bg-slate-100 border text-slate-500 font-bold px-1 py-0.2 rounded">
+                        <span className="font-semibold text-foreground block truncate">{script.name}.java</span>
+                        <span className="text-[8px] bg-muted border text-muted-foreground font-semibold px-1 py-0.2 rounded">
                           {script.type}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap mt-2">
                         {script.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className="text-[8.5px] bg-indigo-50/50 text-indigo-600 font-medium px-1.5 py-0.2 rounded">
+                          <span key={tag} className="text-[8.5px] bg-primary/10 text-primary font-medium px-1.5 py-0.2 rounded">
                             #{tag}
                           </span>
                         ))}
@@ -368,7 +368,7 @@ public class ${name} extends BaseTest {
             <Button
               onClick={handleDeleteScript}
               variant="outline"
-              className="border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl w-full flex items-center justify-center gap-1.5 text-xs h-9 font-bold"
+              className="border-rose-100 text-rose-600 hover:bg-rose-50 rounded-xl w-full flex items-center justify-center gap-1.5 text-xs h-9 font-semibold"
             >
               <Trash2 size={13} /> Delete Script
             </Button>
@@ -376,29 +376,29 @@ public class ${name} extends BaseTest {
         </div>
 
         {/* Center Column: Monaco Code Editor */}
-        <div className="lg:col-span-6 border bg-white rounded-2xl shadow-2xs flex flex-col overflow-hidden">
-          <div className="p-3 border-b flex items-center justify-between bg-slate-50 flex-wrap gap-2">
+        <div className="lg:col-span-6 border bg-card rounded-xl shadow-2xs flex flex-col overflow-hidden">
+          <div className="p-3 border-b flex items-center justify-between bg-muted/50 flex-wrap gap-2">
             <div className="flex items-center gap-3">
-              <Code size={15} className="text-slate-400" />
+              <Code size={15} className="text-muted-foreground" />
               <input
                 value={scriptName}
                 onChange={(e) => setScriptName(e.target.value)}
                 placeholder="Script class name"
-                className="font-mono font-bold text-xs bg-transparent border-none focus:outline-none focus:ring-0 w-44 text-slate-800"
+                className="font-mono font-semibold text-xs bg-transparent border-none focus:outline-none focus:ring-0 w-44 text-foreground"
               />
-              <span className="text-[10px] text-slate-400 font-mono">.java</span>
+              <span className="text-[10px] text-muted-foreground font-mono">.java</span>
             </div>
             <div className="flex items-center gap-2">
               <input
                 value={scriptTags}
                 onChange={(e) => setScriptTags(e.target.value)}
                 placeholder="tags (comma separated)"
-                className="text-[10px] border border-slate-200 rounded-lg px-2 py-1 h-7.5 w-40 font-medium bg-white"
+                className="text-[10px] border border-border rounded-lg px-2 py-1 h-7.5 w-40 font-medium bg-card"
               />
               <Button
                 onClick={handleSaveScript}
                 disabled={saving || !selectedScript}
-                className="bg-slate-800 text-white hover:bg-slate-900 rounded-xl h-7.5 text-[10px] font-bold flex items-center gap-1 shadow-xs"
+                className="bg-slate-800 text-white hover:bg-slate-900 rounded-xl h-7.5 text-[10px] font-semibold flex items-center gap-1 shadow-xs"
               >
                 {saving ? (
                   <Loader2 size={11} className="animate-spin" />
@@ -429,7 +429,7 @@ public class ${name} extends BaseTest {
                 }}
               />
             ) : (
-              <div className="py-24 text-center text-slate-500 flex flex-col items-center justify-center gap-2">
+              <div className="py-24 text-center text-muted-foreground flex flex-col items-center justify-center gap-2">
                 <Terminal size={32} />
                 <p className="font-mono">Create or select a test script class to start coding...</p>
               </div>
@@ -441,14 +441,14 @@ public class ${name} extends BaseTest {
         <div className="lg:col-span-3 space-y-6 flex flex-col justify-between">
           
           {/* Quick Run Controller */}
-          <div className="border bg-white rounded-2xl p-4 shadow-2xs space-y-4">
-            <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-1.5">Runner Console</span>
+          <div className="border bg-card rounded-xl p-4 shadow-2xs space-y-4">
+            <span className="text-[11px] font-medium text-slate-450 block border-b pb-1.5">Runner Console</span>
             <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-400 block">Execution Browser Scope</label>
+              <label className="text-[10px] font-semibold text-muted-foreground block">Execution Browser Scope</label>
               <select
                 value={selectedBrowser}
                 onChange={(e) => setSelectedBrowser(e.target.value)}
-                className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-indigo-500"
+                className="flex h-9 w-full rounded-xl border border-input bg-background px-3 py-1 text-xs select-none cursor-pointer focus-visible:ring-1 focus-visible:ring-primary"
               >
                 <option value="Headless">Headless Chrome</option>
                 <option value="Chrome">Google Chrome</option>
@@ -460,7 +460,7 @@ public class ${name} extends BaseTest {
             <Button
               onClick={handleRunTest}
               disabled={running || !selectedScript}
-              className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl h-10 w-full text-xs font-black shadow-xs flex items-center justify-center gap-1.5"
+              className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-10 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5"
             >
               {running ? (
                 <>
@@ -475,14 +475,14 @@ public class ${name} extends BaseTest {
           </div>
 
           {/* Smart Locators Tool Box */}
-          <div className="border bg-white rounded-2xl p-4 shadow-2xs space-y-4">
+          <div className="border bg-card rounded-xl p-4 shadow-2xs space-y-4">
             <div className="flex items-center gap-1 justify-between border-b pb-1.5">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider">Smart Locators Helper</span>
-              <Sparkles size={11} className="text-indigo-600 animate-bounce" />
+              <span className="text-[11px] font-medium text-slate-450">Smart Locators Helper</span>
+              <Sparkles size={11} className="text-primary animate-bounce" />
             </div>
             
             {/* Simulated Screenshot Node */}
-            <div className="relative w-full aspect-video border rounded-xl overflow-hidden shadow-2xs bg-slate-100 select-none">
+            <div className="relative w-full aspect-video border rounded-xl overflow-hidden shadow-2xs bg-muted select-none">
               <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] flex flex-col justify-between p-2">
                 <div className="flex items-center justify-between border-b bg-white/70 backdrop-blur-xs p-1 rounded-md text-[8px] font-mono">
                   <span>http://mywebportal.com/login</span>
@@ -492,13 +492,13 @@ public class ${name} extends BaseTest {
                 <div className="flex justify-between items-center px-4">
                   <div 
                     onClick={() => triggerLocatorSelect(locatorZones[0])}
-                    className="h-5 w-24 bg-blue-500/25 hover:bg-blue-500/40 border border-blue-500 rounded cursor-pointer flex items-center justify-center text-[7px] text-blue-700 font-bold"
+                    className="h-5 w-24 bg-blue-500/25 hover:bg-blue-500/40 border border-blue-500 rounded cursor-pointer flex items-center justify-center text-[7px] text-blue-700 font-semibold"
                   >
                     search-input
                   </div>
                   <div 
                     onClick={() => triggerLocatorSelect(locatorZones[1])}
-                    className="h-5 w-12 bg-indigo-500/25 hover:bg-indigo-500/40 border border-indigo-500 rounded cursor-pointer flex items-center justify-center text-[7px] text-indigo-700 font-bold"
+                    className="h-5 w-12 bg-primary/25 hover:bg-primary/40 border border-primary rounded cursor-pointer flex items-center justify-center text-[7px] text-primary font-semibold"
                   >
                     submit
                   </div>
@@ -506,14 +506,14 @@ public class ${name} extends BaseTest {
 
                 <div 
                   onClick={() => triggerLocatorSelect(locatorZones[2])}
-                  className="absolute right-2 top-2.5 h-6 w-12 bg-amber-500/25 hover:bg-amber-500/40 border border-amber-500 rounded-md cursor-pointer flex items-center justify-center text-[7px] text-amber-700 font-bold"
+                  className="absolute right-2 top-2.5 h-6 w-12 bg-amber-500/25 hover:bg-amber-500/40 border border-amber-500 rounded-md cursor-pointer flex items-center justify-center text-[7px] text-amber-700 font-semibold"
                 >
                   profile
                 </div>
 
                 <div 
                   onClick={() => triggerLocatorSelect(locatorZones[3])}
-                  className="mx-auto h-8 w-44 bg-purple-500/20 hover:bg-purple-500/35 border border-purple-500 rounded-md cursor-pointer flex items-center justify-center text-[7px] text-purple-700 font-bold"
+                  className="mx-auto h-8 w-44 bg-purple-500/20 hover:bg-purple-500/35 border border-purple-500 rounded-md cursor-pointer flex items-center justify-center text-[7px] text-purple-700 font-semibold"
                 >
                   pricing-card
                 </div>
@@ -521,12 +521,12 @@ public class ${name} extends BaseTest {
             </div>
 
             {selectedLocatorElement ? (
-              <div className="bg-slate-50 border p-2.5 rounded-xl space-y-2">
+              <div className="bg-muted/50 border p-2.5 rounded-xl space-y-2">
                 <div className="flex justify-between items-center text-[9.5px]">
-                  <span className="text-slate-450 font-bold uppercase">Locator for: {selectedLocatorElement}</span>
+                  <span className="text-slate-450 font-semibold uppercase">Locator for: {selectedLocatorElement}</span>
                   <button 
                     onClick={() => handleCopyLocator(generatedLocatorCode)}
-                    className="text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-bold"
+                    className="text-primary hover:text-primary flex items-center gap-1 font-semibold"
                   >
                     {copiedText ? (
                       <>
@@ -539,12 +539,12 @@ public class ${name} extends BaseTest {
                     )}
                   </button>
                 </div>
-                <div className="font-mono text-[9px] text-indigo-650 bg-indigo-50/50 p-1.5 rounded border border-indigo-100 overflow-x-auto whitespace-pre-wrap select-all font-bold">
+                <div className="font-mono text-[9px] text-indigo-650 bg-primary/10 p-1.5 rounded border border-primary/25 overflow-x-auto whitespace-pre-wrap select-all font-semibold">
                   {generatedLocatorCode}
                 </div>
               </div>
             ) : (
-              <div className="bg-slate-50 border border-dashed p-3 rounded-xl text-center text-slate-400 flex items-center gap-1.5 justify-center">
+              <div className="bg-muted/50 border border-dashed p-3 rounded-xl text-center text-muted-foreground flex items-center gap-1.5 justify-center">
                 <MousePointerClick size={12} />
                 <span>Click visual zones on the canvas mockup to build Playwright locator snippets</span>
               </div>
@@ -557,15 +557,15 @@ public class ${name} extends BaseTest {
 
       {/* Terminal logs audit log section */}
       {activeExecution && (
-        <div className="border bg-slate-950 text-slate-200 rounded-2xl shadow-md overflow-hidden font-mono">
+        <div className="border bg-slate-950 text-slate-200 rounded-xl shadow-md overflow-hidden font-mono">
           <div className="bg-slate-900 border-b border-slate-800 p-3.5 flex items-center justify-between flex-wrap gap-2 text-xs">
             <div className="flex items-center gap-3">
-              <Terminal size={14} className="text-slate-400 animate-pulse" />
-              <span className="font-black text-slate-300">JUnit / TestNG Live Execution Logs Console</span>
-              <span className="text-slate-500 font-bold font-mono">Run ID: {activeExecution.id.slice(0, 8)}</span>
+              <Terminal size={14} className="text-muted-foreground animate-pulse" />
+              <span className="font-semibold text-slate-300">JUnit / TestNG Live Execution Logs Console</span>
+              <span className="text-muted-foreground font-semibold font-mono">Run ID: {activeExecution.id.slice(0, 8)}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border ${
+              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
                 activeExecution.status === "Passed" 
                   ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" 
                   : "bg-rose-500/10 text-rose-400 border-rose-500/20"
@@ -584,13 +584,13 @@ public class ${name} extends BaseTest {
                 href={activeExecution.allureLink || "#"}
                 target="_blank"
                 rel="noreferrer"
-                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3 py-1 font-bold text-[10px] transition-colors flex items-center gap-1 shadow-sm"
+                className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-1 font-semibold text-[10px] transition-colors flex items-center gap-1 shadow-sm"
               >
                 Allure Report <ArrowRight size={10} />
               </a>
             </div>
           </div>
-          <div className="p-4 max-h-[320px] overflow-y-auto text-[10.5px] leading-relaxed select-text space-y-1 block whitespace-pre-wrap selection:bg-indigo-500/30 selection:text-white">
+          <div className="p-4 max-h-[320px] overflow-y-auto text-[10.5px] leading-relaxed select-text space-y-1 block whitespace-pre-wrap selection:bg-primary/30 selection:text-white">
             {activeExecution.logOutput}
           </div>
         </div>
@@ -599,13 +599,13 @@ public class ${name} extends BaseTest {
       {/* ---- MODAL: NEW SCRIPT TEMPLATE ---- */}
       {showNewModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4 text-slate-800">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-base font-black text-slate-900">Select Test Template</h3>
-              <button onClick={() => setShowNewModal(false)} className="text-slate-400 hover:text-slate-600 font-bold">Close</button>
+              <h3 className="text-base font-semibold text-foreground">Select Test Template</h3>
+              <button onClick={() => setShowNewModal(false)} className="text-muted-foreground hover:text-muted-foreground font-semibold">Close</button>
             </div>
             
-            <p className="text-slate-500 text-xs">
+            <p className="text-muted-foreground text-xs">
               Load one of the predefined Playwright specs to quickly build your automation suite workflows.
             </p>
 
@@ -619,13 +619,13 @@ public class ${name} extends BaseTest {
                 <div
                   key={tpl.name}
                   onClick={() => handleCreateScript(tpl.type, tpl.name)}
-                  className="p-3 border rounded-xl hover:bg-indigo-50/50 hover:border-indigo-200 transition-all cursor-pointer flex justify-between items-center group"
+                  className="p-3 border rounded-xl hover:bg-primary/10 hover:border-primary/25 transition-all cursor-pointer flex justify-between items-center group"
                 >
                   <div className="space-y-0.5">
-                    <span className="font-extrabold text-slate-900 block group-hover:text-indigo-650">{tpl.name}.java</span>
-                    <span className="text-[10px] text-slate-400 block">{tpl.desc}</span>
+                    <span className="font-semibold text-foreground block group-hover:text-indigo-650">{tpl.name}.java</span>
+                    <span className="text-[10px] text-muted-foreground block">{tpl.desc}</span>
                   </div>
-                  <span className="text-[8px] font-black uppercase text-indigo-500 tracking-wider">Load</span>
+                  <span className="text-[11px] font-medium text-primary">Load</span>
                 </div>
               ))}
             </div>

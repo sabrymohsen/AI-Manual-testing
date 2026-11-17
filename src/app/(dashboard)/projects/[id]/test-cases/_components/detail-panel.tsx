@@ -111,7 +111,7 @@ export function DetailPanel({
       {/* Header */}
       <div className="shrink-0 space-y-2.5 border-b bg-muted/30 px-4 py-3.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-primary">
+          <span className="text-[11px] font-medium text-primary">
             Test case
           </span>
           <div className="flex items-center gap-0.5">
@@ -168,7 +168,7 @@ export function DetailPanel({
               <ChevronDown className="h-2.5 w-2.5 shrink-0 opacity-60" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-64 w-56 overflow-y-auto">
-              <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">
                 Move to module / suite
               </DropdownMenuLabel>
               <DropdownMenuItem
@@ -250,7 +250,7 @@ export function DetailPanel({
                 </div>
               ) : (
                 <p className="rounded-lg border border-dashed p-3 text-center text-xs text-muted-foreground">
-                  No user stories linked — this case counts as an orphan.
+                  Not linked to a user story yet, so coverage reports don’t count it.
                 </p>
               )}
             </Section>
@@ -265,9 +265,11 @@ export function DetailPanel({
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-xs leading-snug">{step.actionDescription}</p>
-                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                          {step.actionType}
-                        </span>
+                        {tc.executionType === "Automated" && step.actionType && step.actionType !== "custom_instruction" && (
+                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                            {String(step.actionType).replace(/_/g, " ").replace(/^\w/, (c: string) => c.toUpperCase())}
+                          </span>
+                        )}
                       </div>
                       {step.expectedResult && (
                         <p className="text-[11px] leading-snug text-emerald-600 dark:text-emerald-400">
@@ -354,7 +356,7 @@ export function DetailPanel({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="text-[11px] font-medium text-muted-foreground">
         {title}
       </span>
       {children}

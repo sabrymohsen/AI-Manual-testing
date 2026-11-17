@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { recalcMany } from "@/lib/test-cases/rollup"
 
 export async function POST(
@@ -27,7 +27,7 @@ export async function POST(
       return notFoundResponse("Manual session not found")
     }
 
-    if (existing.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(existing.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

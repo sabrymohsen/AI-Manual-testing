@@ -163,7 +163,7 @@ export default function ProjectDetailPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as ProjectTab)}
               className={`flex items-center gap-1.5 pb-2.5 px-1.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
-                isActive ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-slate-700"
+                isActive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="h-4.5 w-4.5" />
@@ -177,14 +177,14 @@ export default function ProjectDetailPage() {
         {/* MODULES TAB — the project's test suites, which are also what bugs
             are filed under and what the QA report groups by. */}
         {activeTab === "scope" && (
-          <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
+          <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
             <ModulesPanel projectId={projectId} />
           </div>
         )}
 
         {/* CREDENTIALS TAB */}
         {activeTab === "credentials" && (
-          <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
+          <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
             <CredentialsList 
               projectId={projectId}
               credentials={project.credentials || []}
@@ -196,15 +196,15 @@ export default function ProjectDetailPage() {
         {/* INTEGRATIONS TAB */}
         {activeTab === "integrations" && (
           <div className="space-y-6">
-            <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
-              <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2 mb-4">Project-Management Integration</span>
+            <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
+              <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2 mb-4">Project-Management Integration</span>
               <IntegrationConnectPanel projectId={projectId} />
             </div>
             {/* Advanced OpenProject controls (parent strategy, group/board sync,
                 custom fields) — only relevant when this project uses OpenProject. */}
             {integrationProvider === "OpenProject" && (
-              <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card">
-                <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2 mb-4">OpenProject advanced settings</span>
+              <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
+                <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2 mb-4">OpenProject advanced settings</span>
                 <IntegrationConfig projectId={projectId} />
               </div>
             )}
@@ -226,29 +226,29 @@ export default function ProjectDetailPage() {
         {/* SETTINGS TAB */}
         {activeTab === "settings" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="p-6 border border-slate-100 shadow-sm col-span-2 space-y-6 rounded-2xl bg-card">
-              <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60 block border-b pb-2">Target Scope Details</span>
-              {error && <p className="text-red-655 font-bold">{error}</p>}
+            <div className="p-6 border border-border shadow-sm col-span-2 space-y-6 rounded-xl bg-card">
+              <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2">Target Scope Details</span>
+              {error && <p className="text-red-655 font-semibold">{error}</p>}
               <form onSubmit={handleGeneralSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="name" className="text-slate-600">Project Name *</Label>
+                    <Label htmlFor="name" className="text-muted-foreground">Project Name *</Label>
                     <Input id="name" name="name" required defaultValue={project.name} className="h-9" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="webAppUrl" className="text-slate-600">Web App URL *</Label>
+                    <Label htmlFor="webAppUrl" className="text-muted-foreground">Web App URL *</Label>
                     <Input id="webAppUrl" name="webAppUrl" type="url" required defaultValue={project.webAppUrl} className="h-9" />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="description" className="text-slate-600">Description</Label>
+                  <Label htmlFor="description" className="text-muted-foreground">Description</Label>
                   <Input id="description" name="description" defaultValue={project.description || ""} className="h-9" />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="environment" className="text-slate-600">Environment</Label>
+                    <Label htmlFor="environment" className="text-muted-foreground">Environment</Label>
                     <select id="environment" name="environment" defaultValue={project.environment} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                       <option value="Dev">Dev</option>
                       <option value="Staging">Staging</option>
@@ -257,7 +257,7 @@ export default function ProjectDetailPage() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="browserType" className="text-slate-600">Browser Type</Label>
+                    <Label htmlFor="browserType" className="text-muted-foreground">Browser Type</Label>
                     <select id="browserType" name="browserType" defaultValue={project.browserType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                       <option value="Chromium">Chromium</option>
                       <option value="Firefox">Firefox</option>
@@ -265,7 +265,7 @@ export default function ProjectDetailPage() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="viewport" className="text-slate-600">Viewport Size</Label>
+                    <Label htmlFor="viewport" className="text-muted-foreground">Viewport Size</Label>
                     <select id="viewport" name="viewport" defaultValue={project.viewport} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                       <option value="Desktop">Desktop (1280x800)</option>
                       <option value="Tablet">Tablet (768x1024)</option>
@@ -276,7 +276,7 @@ export default function ProjectDetailPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="testType" className="text-slate-600">Test Execution Type</Label>
+                    <Label htmlFor="testType" className="text-muted-foreground">Test Execution Type</Label>
                     <select id="testType" name="testType" defaultValue={project.testType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                       <option value="E2E">E2E Automated</option>
                       <option value="API">API Backend</option>
@@ -284,7 +284,7 @@ export default function ProjectDetailPage() {
                     </select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="figmaUrl" className="text-slate-600">Figma Prototype Link</Label>
+                    <Label htmlFor="figmaUrl" className="text-muted-foreground">Figma Prototype Link</Label>
                     <Input id="figmaUrl" name="figmaUrl" defaultValue={project.figmaUrl || ""} className="h-9" />
                   </div>
                 </div>
@@ -295,8 +295,8 @@ export default function ProjectDetailPage() {
               </form>
             </div>
 
-            <div className="p-6 border border-red-100 bg-red-500/[0.01] shadow-sm space-y-4 rounded-2xl">
-              <span className="text-[9px] uppercase font-extrabold text-red-600 tracking-wider flex items-center gap-1.5 border-b pb-2">
+            <div className="p-6 border border-red-100 bg-red-500/[0.01] shadow-sm space-y-4 rounded-xl">
+              <span className="text-[11px] font-medium text-red-600 flex items-center gap-1.5 border-b pb-2">
                 <ShieldAlert className="h-4 w-4" /> Danger Zone
               </span>
               <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
@@ -306,7 +306,7 @@ export default function ProjectDetailPage() {
                 onClick={handleDeleteProject}
                 variant="destructive" 
                 size="sm"
-                className="w-full h-9 font-bold flex items-center justify-center gap-1 bg-red-650 hover:bg-red-700"
+                className="w-full h-9 font-semibold flex items-center justify-center gap-1 bg-red-650 hover:bg-red-700"
               >
                 <Trash2 className="h-4 w-4" /> Delete Project Scope
               </Button>

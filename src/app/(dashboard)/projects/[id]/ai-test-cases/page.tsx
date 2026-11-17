@@ -270,8 +270,8 @@ export default function AITestCasesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-indigo-500" />
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
             AI Test Case Generator
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -292,7 +292,7 @@ export default function AITestCasesPage() {
             <div
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                 idx === currentStepIndex
-                  ? "bg-indigo-600 text-white"
+                  ? "bg-primary text-white"
                   : idx < currentStepIndex
                   ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400"
                   : "bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
@@ -302,7 +302,7 @@ export default function AITestCasesPage() {
               {step.label}
             </div>
             {idx < steps.length - 1 && (
-              <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600" />
+              <ChevronRight className="h-4 w-4 text-slate-300 dark:text-muted-foreground" />
             )}
           </div>
         ))}
@@ -320,13 +320,13 @@ export default function AITestCasesPage() {
 
       {/* Step 1: Upload */}
       {currentStep === "upload" && (
-        <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-12 text-center space-y-6 bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="mx-auto w-16 h-16 bg-indigo-50 dark:bg-indigo-950/30 rounded-2xl flex items-center justify-center">
-            <Upload className="h-8 w-8 text-indigo-500" />
+        <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-12 text-center space-y-6 bg-slate-50/50 dark:bg-slate-900/50">
+          <div className="mx-auto w-16 h-16 bg-indigo-50 dark:bg-indigo-950/30 rounded-xl flex items-center justify-center">
+            <Upload className="h-8 w-8 text-primary" />
           </div>
           <div className="space-y-2">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Upload Requirements Document</h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
+            <h3 className="text-lg font-semibold text-foreground dark:text-slate-100">Upload Requirements Document</h3>
+            <p className="text-sm text-muted-foreground max-w-md mx-auto">
               Upload a Business Requirements Document (BRD), Product Requirements Document (PRD), or any text file containing your requirements.
             </p>
           </div>
@@ -339,7 +339,7 @@ export default function AITestCasesPage() {
                 disabled={isLoading}
                 className="hidden"
               />
-              <Button disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700">
+              <Button disabled={isLoading} className="bg-primary hover:bg-primary/90">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -353,34 +353,34 @@ export default function AITestCasesPage() {
                 )}
               </Button>
             </label>
-            <p className="text-xs text-slate-400">Supported: PDF, DOCX, TXT, MD</p>
+            <p className="text-xs text-muted-foreground">Supported: PDF, DOCX, TXT, MD</p>
           </div>
 
           {/* AI Status */}
           {aiStatus && (
             <div className="mt-6 p-4 bg-white dark:bg-slate-800 rounded-xl border text-left max-w-md mx-auto">
-              <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-3 flex items-center gap-1">
+              <h4 className="text-xs font-medium text-muted-foreground mb-3 flex items-center gap-1">
                 <BrainCircuit className="h-3.5 w-3.5" /> AI Providers
               </h4>
               <div className="space-y-2 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600 dark:text-slate-300">Ollama (Local)</span>
-                  <span className={`font-semibold ${aiStatus.ollama.available ? "text-emerald-500" : "text-slate-400"}`}>
+                  <span className="text-muted-foreground dark:text-slate-300">Ollama (Local)</span>
+                  <span className={`font-semibold ${aiStatus.ollama.available ? "text-emerald-500" : "text-muted-foreground"}`}>
                     {aiStatus.ollama.available ? "Available" : "Not Available"}
                   </span>
                 </div>
                 {aiStatus.ollama.available && aiStatus.ollama.models.length > 0 && (
-                  <div className="text-slate-500 pl-4">Models: {aiStatus.ollama.models.slice(0, 3).join(", ")}</div>
+                  <div className="text-muted-foreground pl-4">Models: {aiStatus.ollama.models.slice(0, 3).join(", ")}</div>
                 )}
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-600 dark:text-slate-300">Hugging Face</span>
-                  <span className={`font-semibold ${aiStatus.huggingface.available ? "text-emerald-500" : "text-slate-400"}`}>
+                  <span className="text-muted-foreground dark:text-slate-300">Hugging Face</span>
+                  <span className={`font-semibold ${aiStatus.huggingface.available ? "text-emerald-500" : "text-muted-foreground"}`}>
                     {aiStatus.huggingface.available ? "Available" : "Not Available"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between pt-1 border-t dark:border-slate-700">
-                  <span className="text-slate-600 dark:text-slate-300 font-semibold">Recommended</span>
-                  <span className="font-bold text-indigo-500">
+                  <span className="text-muted-foreground dark:text-slate-300 font-semibold">Recommended</span>
+                  <span className="font-semibold text-primary">
                     {aiStatus.recommended || "None — install Ollama or set HF token"}
                   </span>
                 </div>
@@ -395,44 +395,44 @@ export default function AITestCasesPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-white dark:bg-slate-800 border rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-indigo-600">{extractedDoc.wordCount.toLocaleString()}</div>
-              <div className="text-xs text-slate-400 font-medium">Words</div>
+              <div className="text-2xl font-semibold text-primary">{extractedDoc.wordCount.toLocaleString()}</div>
+              <div className="text-xs text-muted-foreground font-medium">Words</div>
             </div>
             <div className="bg-white dark:bg-slate-800 border rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-indigo-600">{extractedDoc.requirementCount}</div>
-              <div className="text-xs text-slate-400 font-medium">Requirements Found</div>
+              <div className="text-2xl font-semibold text-primary">{extractedDoc.requirementCount}</div>
+              <div className="text-xs text-muted-foreground font-medium">Requirements Found</div>
             </div>
             <div className="bg-white dark:bg-slate-800 border rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-indigo-600">{extractedDoc.pageCount || "N/A"}</div>
-              <div className="text-xs text-slate-400 font-medium">Pages</div>
+              <div className="text-2xl font-semibold text-primary">{extractedDoc.pageCount || "N/A"}</div>
+              <div className="text-xs text-muted-foreground font-medium">Pages</div>
             </div>
             <div className="bg-white dark:bg-slate-800 border rounded-xl p-4 text-center">
-              <div className="text-2xl font-black text-indigo-600">{extractedDoc.sectionCount}</div>
-              <div className="text-xs text-slate-400 font-medium">Sections</div>
+              <div className="text-2xl font-semibold text-primary">{extractedDoc.sectionCount}</div>
+              <div className="text-xs text-muted-foreground font-medium">Sections</div>
             </div>
           </div>
 
           {/* Extracted Requirements */}
           {extractedDoc.requirements.length > 0 && (
             <div className="bg-white dark:bg-slate-800 border rounded-xl p-5">
-              <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <ListChecks className="h-5 w-5 text-indigo-500" />
+              <h3 className="font-semibold text-foreground dark:text-slate-100 mb-4 flex items-center gap-2">
+                <ListChecks className="h-5 w-5 text-primary" />
                 Extracted Requirements ({extractedDoc.requirements.length})
               </h3>
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {extractedDoc.requirements.map((req, idx) => (
-                  <div key={idx} className="border border-slate-100 dark:border-slate-700 rounded-lg p-3 text-sm">
+                  <div key={idx} className="border border-border dark:border-slate-700 rounded-lg p-3 text-sm">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded">{req.id}</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{req.title}</span>
+                      <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded">{req.id}</span>
+                      <span className="font-semibold text-foreground dark:text-slate-200">{req.title}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-bold ml-auto ${
                         req.priority === "Critical" ? "bg-red-50 text-red-600" :
                         req.priority === "High" ? "bg-orange-50 text-orange-600" :
-                        req.priority === "Low" ? "bg-slate-50 text-slate-500" :
+                        req.priority === "Low" ? "bg-muted/50 text-muted-foreground" :
                         "bg-blue-50 text-blue-600"
                       }`}>{req.priority}</span>
                     </div>
-                    <p className="text-xs text-slate-500 line-clamp-2">{req.description}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{req.description}</p>
                   </div>
                 ))}
               </div>
@@ -441,8 +441,8 @@ export default function AITestCasesPage() {
 
           {/* Text Preview */}
           <div className="bg-white dark:bg-slate-800 border rounded-xl p-5">
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
-              <FileText className="h-5 w-5 text-indigo-500" />
+            <h3 className="font-semibold text-foreground dark:text-slate-100 mb-3 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
               Document Preview
             </h3>
             <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 text-xs text-slate-600 dark:text-slate-300 max-h-64 overflow-y-auto font-mono whitespace-pre-wrap">
@@ -454,7 +454,7 @@ export default function AITestCasesPage() {
             <Button variant="outline" onClick={() => setCurrentStep("upload")}>
               <ChevronLeft className="h-4 w-4 mr-1" /> Back
             </Button>
-            <Button onClick={() => setCurrentStep("configure")} className="bg-indigo-600 hover:bg-indigo-700">
+            <Button onClick={() => setCurrentStep("configure")} className="bg-primary hover:bg-primary/90">
               Next: Configure AI <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
@@ -465,15 +465,15 @@ export default function AITestCasesPage() {
       {currentStep === "configure" && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-slate-800 border rounded-xl p-6 space-y-6">
-            <h3 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Settings className="h-5 w-5 text-indigo-500" />
+            <h3 className="font-semibold text-foreground dark:text-slate-100 flex items-center gap-2">
+              <Settings className="h-5 w-5 text-primary" />
               AI Generation Settings
             </h3>
 
             <div className="grid grid-cols-2 gap-6">
               {/* Provider */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">AI Provider</label>
+                <label className="text-sm font-semibold text-foreground dark:text-slate-300">AI Provider</label>
                 <select
                   value={provider}
                   onChange={(e) => setProvider(e.target.value as "ollama" | "huggingface")}
@@ -482,14 +482,14 @@ export default function AITestCasesPage() {
                   <option value="ollama">Ollama (Local — Free)</option>
                   <option value="huggingface">Hugging Face (Cloud — Free)</option>
                 </select>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-muted-foreground">
                   {provider === "ollama" ? "Runs on your machine. Install Ollama and pull a model (e.g., llama3.2)." : "Cloud API. No local setup needed but rate-limited."}
                 </p>
               </div>
 
               {/* Model */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Model</label>
+                <label className="text-sm font-semibold text-foreground dark:text-slate-300">Model</label>
                 <input
                   type="text"
                   value={model}
@@ -497,12 +497,12 @@ export default function AITestCasesPage() {
                   placeholder={provider === "ollama" ? "llama3.2" : "mistralai/Mistral-7B-Instruct-v0.2"}
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
-                <p className="text-xs text-slate-400">Leave empty to use default model</p>
+                <p className="text-xs text-muted-foreground">Leave empty to use default model</p>
               </div>
 
               {/* Language */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Document Language</label>
+                <label className="text-sm font-semibold text-foreground dark:text-slate-300">Document Language</label>
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value as "en" | "ar")}
@@ -515,7 +515,7 @@ export default function AITestCasesPage() {
 
               {/* Test Case Count */}
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Test Case Count</label>
+                <label className="text-sm font-semibold text-foreground dark:text-slate-300">Test Case Count</label>
                 <input
                   type="number"
                   min={1}
@@ -534,27 +534,27 @@ export default function AITestCasesPage() {
                   type="checkbox"
                   checked={includeNegative}
                   onChange={(e) => setIncludeNegative(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-slate-700 dark:text-slate-300">Include Negative Tests</span>
+                <span className="text-sm text-foreground dark:text-slate-300">Include Negative Tests</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeEdge}
                   onChange={(e) => setIncludeEdge(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-slate-700 dark:text-slate-300">Include Edge Cases</span>
+                <span className="text-sm text-foreground dark:text-slate-300">Include Edge Cases</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={includeExploratory}
                   onChange={(e) => setIncludeExploratory(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                 />
-                <span className="text-sm text-slate-700 dark:text-slate-300">Include Exploratory Tests</span>
+                <span className="text-sm text-foreground dark:text-slate-300">Include Exploratory Tests</span>
               </label>
             </div>
           </div>
@@ -566,7 +566,7 @@ export default function AITestCasesPage() {
             <Button
               onClick={handleGenerate}
               disabled={isLoading}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-primary hover:bg-primary/90"
             >
               {isLoading ? (
                 <>
@@ -588,15 +588,15 @@ export default function AITestCasesPage() {
       {currentStep === "generate" && (
         <div className="flex flex-col items-center justify-center py-20 space-y-4">
           <div className="relative">
-            <BrainCircuit className="h-16 w-16 text-indigo-500 animate-pulse" />
-            <div className="absolute inset-0 bg-indigo-500/20 rounded-full blur-xl animate-pulse" />
+            <BrainCircuit className="h-16 w-16 text-primary animate-pulse" />
+            <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Generating Test Cases...</h3>
-          <p className="text-sm text-slate-400 text-center max-w-md">
+          <h3 className="text-lg font-semibold text-foreground dark:text-slate-100">Generating Test Cases...</h3>
+          <p className="text-sm text-muted-foreground text-center max-w-md">
             The AI is analyzing your requirements and generating comprehensive test cases with steps, expected results, and locators. This may take 30-120 seconds.
           </p>
-          <div className="w-64 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 animate-[shimmer_2s_infinite]" style={{ width: "60%" }} />
+          <div className="w-64 h-2 bg-muted dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className="h-full bg-primary animate-[shimmer_2s_infinite]" style={{ width: "60%" }} />
           </div>
         </div>
       )}
@@ -606,10 +606,10 @@ export default function AITestCasesPage() {
         <div className="space-y-6">
           <div className="flex items-center justify-between bg-white dark:bg-slate-800 border rounded-xl p-4">
             <div className="flex items-center gap-4">
-              <div className="text-2xl font-black text-indigo-600">{generatedTestCases.length}</div>
+              <div className="text-2xl font-semibold text-primary">{generatedTestCases.length}</div>
               <div>
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">Test Cases Generated</div>
-                <div className="text-xs text-slate-400">{selectedCount} selected to save</div>
+                <div className="text-sm font-semibold text-foreground dark:text-slate-100">Test Cases Generated</div>
+                <div className="text-xs text-muted-foreground">{selectedCount} selected to save</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -638,29 +638,29 @@ export default function AITestCasesPage() {
                     className="mt-0.5 shrink-0"
                   >
                     {tc.selected ? (
-                      <CheckCircle2 className="h-5 w-5 text-indigo-600" />
+                      <CheckCircle2 className="h-5 w-5 text-primary" />
                     ) : (
                       <Circle className="h-5 w-5 text-slate-300" />
                     )}
                   </button>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
-                      <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm">{tc.title}</h4>
+                      <h4 className="font-semibold text-foreground dark:text-slate-100 text-sm">{tc.title}</h4>
                       <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
                         tc.priority === "Critical" ? "bg-red-50 text-red-600" :
                         tc.priority === "High" ? "bg-orange-50 text-orange-600" :
-                        tc.priority === "Low" ? "bg-slate-50 text-slate-500" :
+                        tc.priority === "Low" ? "bg-muted/50 text-muted-foreground" :
                         "bg-blue-50 text-blue-600"
                       }`}>{tc.priority}</span>
                       {tc.tags?.map((tag, tIdx) => (
-                        <span key={tIdx} className="text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <span key={tIdx} className="text-[10px] px-2 py-0.5 rounded bg-muted dark:bg-slate-700 text-muted-foreground dark:text-muted-foreground flex items-center gap-1">
                           <Tag className="h-2.5 w-2.5" /> {tag}
                         </span>
                       ))}
                     </div>
-                    <p className="text-xs text-slate-500 mb-3">{tc.description}</p>
+                    <p className="text-xs text-muted-foreground mb-3">{tc.description}</p>
                     {tc.preconditions && (
-                      <p className="text-xs text-slate-400 mb-3">
+                      <p className="text-xs text-muted-foreground mb-3">
                         <span className="font-semibold">Preconditions:</span> {tc.preconditions}
                       </p>
                     )}
@@ -668,17 +668,17 @@ export default function AITestCasesPage() {
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700">
-                            <th className="text-left px-3 py-2 w-12 font-semibold text-slate-500">#</th>
-                            <th className="text-left px-3 py-2 font-semibold text-slate-500">Action</th>
-                            <th className="text-left px-3 py-2 font-semibold text-slate-500">Expected Result</th>
+                            <th className="text-left px-3 py-2 w-12 font-semibold text-muted-foreground">#</th>
+                            <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Action</th>
+                            <th className="text-left px-3 py-2 font-semibold text-muted-foreground">Expected Result</th>
                           </tr>
                         </thead>
                         <tbody>
                           {tc.steps.map((step, sIdx) => (
                             <tr key={sIdx} className="border-b dark:border-slate-700 last:border-0">
-                              <td className="px-3 py-2 text-slate-400 font-mono">{step.stepNumber}</td>
-                              <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{step.actionDescription}</td>
-                              <td className="px-3 py-2 text-slate-600 dark:text-slate-400">{step.expectedResult}</td>
+                              <td className="px-3 py-2 text-muted-foreground font-mono">{step.stepNumber}</td>
+                              <td className="px-3 py-2 text-foreground dark:text-slate-300">{step.actionDescription}</td>
+                              <td className="px-3 py-2 text-muted-foreground dark:text-muted-foreground">{step.expectedResult}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -697,7 +697,7 @@ export default function AITestCasesPage() {
             <Button
               onClick={handleSave}
               disabled={isLoading || selectedCount === 0}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-primary hover:bg-primary/90"
             >
               {isLoading ? (
                 <>
@@ -722,14 +722,14 @@ export default function AITestCasesPage() {
             <CheckCircle2 className="h-10 w-10 text-emerald-500" />
           </div>
           <div className="text-center space-y-2">
-            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Test Cases Saved!</h3>
-            <p className="text-sm text-slate-500">
+            <h3 className="text-xl font-semibold text-foreground dark:text-slate-100">Test Cases Saved!</h3>
+            <p className="text-sm text-muted-foreground">
               {savedCount} test case{savedCount !== 1 ? "s" : ""} with requirements and steps have been saved to your project.
             </p>
           </div>
           <div className="flex gap-3">
             <Link href={`/projects/${projectId}/test-cases`}>
-              <Button className="bg-indigo-600 hover:bg-indigo-700">
+              <Button className="bg-primary hover:bg-primary/90">
                 <ListChecks className="h-4 w-4 mr-2" />
                 View Test Cases
               </Button>

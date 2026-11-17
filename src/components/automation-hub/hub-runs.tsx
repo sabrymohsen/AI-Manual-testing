@@ -85,7 +85,7 @@ export default function HubRunsSection({ projectId, onOpenTrace }: { projectId: 
 
   if (runs === null) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border bg-white p-10 text-sm text-slate-500">
+      <div className="flex items-center gap-2 rounded-xl border bg-card p-10 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading runs…
       </div>
     )
@@ -100,24 +100,24 @@ export default function HubRunsSection({ projectId, onOpenTrace }: { projectId: 
         <button
           type="button"
           onClick={() => setOpenId(open ? null : r.id)}
-          className={`flex w-full flex-wrap items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50 ${nested ? "pl-10" : ""} ${open ? "bg-indigo-50/50" : ""}`}
+          className={`flex w-full flex-wrap items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-muted/50 ${nested ? "pl-10" : ""} ${open ? "bg-primary/10" : ""}`}
         >
           <StatusBadge status={r.status} />
-          <span className="min-w-[160px] flex-1 truncate font-medium text-slate-800">
+          <span className="min-w-[160px] flex-1 truncate font-medium text-foreground">
             {r.script?.name || "Deleted test"}
-            {r.script?.folder ? <span className="ml-2 font-normal text-slate-400">{r.script.folder}</span> : null}
+            {r.script?.folder ? <span className="ml-2 font-normal text-muted-foreground">{r.script.folder}</span> : null}
           </span>
           {results.length > 0 && (
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {results.length - failed}/{results.length} checks passed
             </span>
           )}
-          <span className="w-20 text-right text-xs text-slate-400">{formatDuration(r.duration)}</span>
-          <span className="w-24 truncate text-xs text-slate-400">{r.browser}</span>
-          <span className="w-40 text-right text-xs text-slate-400">{new Date(r.createdAt).toLocaleString()}</span>
+          <span className="w-20 text-right text-xs text-muted-foreground">{formatDuration(r.duration)}</span>
+          <span className="w-24 truncate text-xs text-muted-foreground">{r.browser}</span>
+          <span className="w-40 text-right text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</span>
         </button>
         {open && detail && detail.id === r.id && (
-          <div className="border-t bg-slate-50/60 p-4">
+          <div className="border-t bg-muted/60 p-4">
             <HubRunResults execution={detail} onOpenTrace={onOpenTrace} />
           </div>
         )}
@@ -128,13 +128,13 @@ export default function HubRunsSection({ projectId, onOpenTrace }: { projectId: 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-lg border bg-white p-0.5 text-sm">
+        <div className="inline-flex rounded-lg border bg-card p-0.5 text-sm">
           {(["all", "Failed", "Passed"] as const).map((f) => (
             <button
               key={f}
               type="button"
               onClick={() => setFilter(f)}
-              className={`rounded-md px-3 py-1 ${filter === f ? "bg-indigo-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}
+              className={`rounded-md px-3 py-1 ${filter === f ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/50"}`}
             >
               {f === "all" ? "All" : f}
             </button>
@@ -146,30 +146,30 @@ export default function HubRunsSection({ projectId, onOpenTrace }: { projectId: 
       </div>
 
       {groups.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-white p-10 text-center">
+        <div className="rounded-xl border border-dashed bg-card p-10 text-center">
           <History className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-2 font-medium text-slate-800">{runs.length ? "No runs match this filter" : "No runs yet"}</p>
-          <p className="text-sm text-slate-500">Run a test, a folder or everything from the Tests tab.</p>
+          <p className="mt-2 font-medium text-foreground">{runs.length ? "No runs match this filter" : "No runs yet"}</p>
+          <p className="text-sm text-muted-foreground">Run a test, a folder or everything from the Tests tab.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-white">
+        <div className="overflow-hidden rounded-xl border bg-card">
           {groups.map((g, gi) =>
             g.batchId ? (
               <div key={g.key} className={gi ? "border-t" : ""}>
-                <div className="flex flex-wrap items-center gap-3 bg-slate-50 px-4 py-2 text-sm">
-                  <Layers className="h-4 w-4 text-slate-400" />
+                <div className="flex flex-wrap items-center gap-3 bg-muted/50 px-4 py-2 text-sm">
+                  <Layers className="h-4 w-4 text-muted-foreground" />
                   <StatusBadge status={groupStatus(g.runs)} />
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-foreground">
                     {g.runs.length} tests run together
                     {(() => {
                       const folders = [...new Set(g.runs.map((r) => r.script?.folder || ""))]
                       return folders.length === 1 && folders[0] ? ` · ${folders[0]}` : ""
                     })()}
                   </span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     {g.runs.filter((r) => r.status === "Passed").length} passed, {g.runs.filter((r) => r.status === "Failed").length} failed
                   </span>
-                  <span className="ml-auto text-xs text-slate-400">{new Date(g.runs[g.runs.length - 1].createdAt).toLocaleString()}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">{new Date(g.runs[g.runs.length - 1].createdAt).toLocaleString()}</span>
                 </div>
                 {g.runs.map((r) => row(r, true))}
               </div>

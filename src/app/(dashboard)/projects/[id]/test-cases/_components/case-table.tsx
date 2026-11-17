@@ -60,17 +60,17 @@ import {
 
 const COL = {
   select: 32,
-  suite: 150,
-  priority: 88,
-  type: 96,
-  lastRun: 140,
-  links: 88,
+  suite: 130,
+  priority: 80,
+  type: 90,
+  lastRun: 124,
+  links: 72,
   actions: 32,
 } as const
 
 const GAP = 12
 /** Never let the title get narrower than this before dropping a column. */
-const MIN_TITLE = 220
+const MIN_TITLE = 320
 
 /**
  * Decides which optional columns fit, dropping them in reverse priority order.
@@ -215,7 +215,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
     <div ref={ref} className="flex h-full flex-col">
       {/* Header — mirrors Row's column widths exactly. */}
       <div
-        className="flex shrink-0 items-center border-b bg-muted/30 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+        className="flex shrink-0 items-center border-b bg-muted/30 px-4 py-2 text-[11px] font-medium text-muted-foreground"
         style={{ gap: GAP }}
       >
         <div style={{ width: COL.select }} className="shrink-0">
@@ -268,7 +268,9 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
           <div className="rounded-full bg-muted p-3 text-muted-foreground">
             <FlaskConical className="h-6 w-6" />
           </div>
-          <p className="text-sm font-semibold">No test cases match</p>
+          <p className="text-sm font-semibold">
+            {filters.q || filters.status?.length || filters.trace || filters.suite ? "No test cases match" : "No test cases yet"}
+          </p>
           <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
             {filters.q || filters.status?.length || filters.trace || filters.suite
               ? "Try clearing a filter, or pick a different suite."
@@ -420,11 +422,10 @@ function Row({
         </span>
         {row.isOrphan && (
           <span
-            title="Covers no user story"
-            className="shrink-0 rounded-full bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400"
-          >
-            orphan
-          </span>
+            title="Not linked to any user story"
+            aria-label="Not linked to any user story"
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
+          />
         )}
       </div>
 
@@ -519,7 +520,7 @@ function Row({
                 <FolderInput className="h-3.5 w-3.5" /> Move to suite
               </DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="max-h-64 w-52 overflow-y-auto">
-                <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">
                   Move test case to
                 </DropdownMenuLabel>
                 <DropdownMenuItem

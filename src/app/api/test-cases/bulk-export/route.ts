@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, usableProjectIds } from "@/lib/api-guards"
 
 const bodySchema = z.object({
   testCaseIds: z.array(z.string().min(1)).min(1, "No test case IDs provided"),
@@ -25,7 +25,6 @@ export async function POST(request: Request) {
     const testCases = await prisma.testCase.findMany({
       where: {
         id: { in: testCaseIds },
-        project: { userId: session.user.id }
       },
       include: {
         steps: { orderBy: { stepNumber: "asc" } },
@@ -36,7 +35,8 @@ export async function POST(request: Request) {
       }
     })
 
-    const exported = testCases.map(tc => ({
+    const allowed = await usableProjectIds(session.user.id, testCases.map((tc) => tc.projectId), "read")
+    const exported = testCases.filter((tc) => allowed.has(tc.projectId)).map(tc => ({
       id: tc.id,
       title: tc.title,
       priority: tc.priority,

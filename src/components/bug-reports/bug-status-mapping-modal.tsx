@@ -94,10 +94,10 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="flex max-h-[90vh] w-[560px] flex-col overflow-hidden rounded-2xl border bg-background text-xs font-semibold shadow-2xl animate-in zoom-in-95 duration-200">
+      <div className="flex max-h-[90vh] w-[560px] flex-col overflow-hidden rounded-xl border bg-background text-xs font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in zoom-in-95 duration-200">
         <div className="flex items-center justify-between border-b bg-accent/10 p-5">
-          <h3 className="flex items-center gap-1.5 text-sm font-extrabold text-foreground">
-            <GitCompare className="h-4 w-4 text-indigo-500" /> Bug status mapping
+          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+            <GitCompare className="h-4 w-4 text-primary" /> Bug status mapping
           </h3>
           <button
             onClick={onClose}
@@ -110,13 +110,13 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
 
         <div className="flex-1 space-y-4 overflow-y-auto p-5">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-[11px] font-bold text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-[11px] font-semibold text-red-700">
               {error}
             </div>
           )}
 
           {loading ? (
-            <p className="animate-pulse py-6 text-center font-bold text-muted-foreground">
+            <p className="animate-pulse py-6 text-center font-semibold text-muted-foreground">
               Reading the tracker&apos;s statuses…
             </p>
           ) : (
@@ -141,7 +141,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
                   const current = mapping[app.value] || ""
                   return (
                     <div key={app.value} className="grid grid-cols-[1fr_auto_1.3fr] items-center gap-2">
-                      <span className="truncate rounded-md border bg-muted/40 px-2 py-1.5 text-[11px] font-bold">
+                      <span className="truncate rounded-md border bg-muted/40 px-2 py-1.5 text-[11px] font-semibold">
                         {app.label}
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -155,7 +155,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
                           setMapping(next)
                           setSaved(false)
                         }}
-                        className="h-8 w-full cursor-pointer rounded-md border bg-background px-2 text-[11px] font-semibold outline-none focus:ring-2 focus:ring-indigo-200 disabled:opacity-60"
+                        className="h-8 w-full cursor-pointer rounded-md border bg-background px-2 text-[11px] font-semibold outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
                       >
                         <option value="">— Not mapped —</option>
                         {trackerStatuses.map((s) => {
@@ -186,7 +186,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t bg-accent/5 p-4">
-          <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700">
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700">
             {saved && (
               <>
                 <CheckCircle2 className="h-3.5 w-3.5" /> Saved
@@ -201,7 +201,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
               size="sm"
               onClick={save}
               disabled={saving || loading || trackerStatuses.length === 0}
-              className="h-9 bg-indigo-600 font-bold text-white hover:bg-indigo-700"
+              className="h-9 bg-primary font-semibold text-white hover:bg-primary/90"
             >
               {saving ? "Saving…" : "Save mapping"}
             </Button>

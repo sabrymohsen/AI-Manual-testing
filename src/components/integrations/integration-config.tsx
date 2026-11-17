@@ -737,7 +737,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 {/* Create a bug-workflow board. Status columns rather than a free
                     board: a work package holds one status, so a card can only
                     render in one column — no id filters, no duplicate cards. */}
-                <div className="space-y-1.5 rounded-lg border border-indigo-100 bg-indigo-50/40 p-3">
+                <div className="space-y-1.5 rounded-lg border border-primary/25 bg-primary/10 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <p className="text-sm font-semibold">Bug workflow board</p>
@@ -872,7 +872,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                   <div key={key} className="flex items-start space-x-3 p-2 rounded hover:bg-accent/10">
                     <input type="checkbox" id={`op-${key}`} checked={op[key]}
                       onChange={(e) => setOp((p) => ({ ...p, [key]: e.target.checked }))}
-                      className="h-4 w-4 mt-0.5 rounded border-gray-300 text-primary focus:ring-primary" />
+                      className="h-4 w-4 mt-0.5 rounded border-border text-primary focus:ring-primary" />
                     <div>
                       <Label htmlFor={`op-${key}`} className="cursor-pointer font-medium text-sm">{label}</Label>
                       <p className="text-xs text-muted-foreground">{desc}</p>
@@ -966,7 +966,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
           <div className="flex items-center space-x-2">
             <input id="legacy-enable" type="checkbox" checked={legacy.enabled}
               onChange={(e) => setLegacy((p) => ({ ...p, enabled: e.target.checked }))}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
+              className="h-4 w-4 rounded border-border text-primary focus:ring-primary" />
             <Label htmlFor="legacy-enable" className="cursor-pointer font-medium">Enable this integration</Label>
           </div>
           <div className="grid gap-4 md:grid-cols-2">

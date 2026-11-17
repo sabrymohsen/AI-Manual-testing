@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAuth, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, canUseProject, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 
 const bodySchema = z.object({
   flowId: z.string().min(1, "flowId is required"),
@@ -18,10 +18,10 @@ export async function POST(
   }
 
   const entity = await prisma.testCase.findFirst({
-    where: { id: params.testCaseId, project: { userId: auth.session!.user.id } },
+    where: { id: params.testCaseId },
     select: { projectId: true }
   })
-  if (!entity) {
+  if (!entity || !(await canUseProject(entity.projectId, auth.session!.user.id, "write"))) {
     return notFoundResponse("Not found")
   }
 

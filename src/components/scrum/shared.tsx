@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus, ScrumMember } from "@/types/scrum"
+import type { TaskPriority, TaskStatus, TaskType, ScrumMember } from "@/types/scrum"
 import { ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -21,6 +21,9 @@ export const STATUS_META: Record<TaskStatus, { label: string; dot: string }> = {
   DEPLOYED: { label: "Deployed", dot: "bg-cyan-500" },
   DONE: { label: "Done", dot: "bg-emerald-500" },
 }
+
+/** Workflow order, used to place a status that has no saved column. */
+export const STATUS_ORDER: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "TESTING", "DONE", "DEPLOYED"]
 
 export function PriorityBadge({ priority, className }: { priority: TaskPriority; className?: string }) {
   const meta = PRIORITY_META[priority]
@@ -49,16 +52,17 @@ export function initials(name: string | null | undefined, email?: string) {
 }
 
 /** Overlapping avatar stack, showing up to `max` then a +N chip. */
-export function AvatarStack({ members, max = 2 }: { members: ScrumMember[]; max?: number }) {
+export function AvatarStack({ members, max = 2, size = "md" }: { members: ScrumMember[]; max?: number; size?: "sm" | "md" }) {
+  const dim = size === "sm" ? "h-[18px] w-[18px] text-[8px] border" : "h-6 w-6 text-[9px] border-2"
   const shown = members.slice(0, max)
   const extra = members.length - shown.length
   return (
-    <div className="flex -space-x-1.5">
+    <div className={cn("flex", size === "sm" ? "-space-x-1" : "-space-x-1.5")}>
       {shown.map((m) => (
         <span
           key={m.id}
           title={m.name || m.email}
-          className="inline-flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-primary/10 text-[9px] font-bold text-primary"
+          className={cn("inline-flex items-center justify-center overflow-hidden rounded-full border-background bg-primary/10 font-bold text-primary", dim)}
         >
           {m.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -69,7 +73,7 @@ export function AvatarStack({ members, max = 2 }: { members: ScrumMember[]; max?
         </span>
       ))}
       {extra > 0 && (
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-slate-200 text-[9px] font-bold text-slate-600">
+        <span className={cn("inline-flex items-center justify-center rounded-full border-background bg-muted font-bold text-muted-foreground", dim)}>
           +{extra}
         </span>
       )}
@@ -84,4 +88,99 @@ export function overdueDays(dueDate: string | null, status: TaskStatus): number 
   const now = new Date()
   const diff = Math.floor((now.getTime() - due.getTime()) / 86_400_000)
   return diff > 0 ? diff : null
+}
+
+/* ── Linear-style primitives ─────────────────────────────────────────────── */
+
+const STATUS_ICON: Record<TaskStatus, { color: string; fill: number }> = {
+  TODO: { color: "text-slate-400", fill: 0 },
+  IN_PROGRESS: { color: "text-amber-500", fill: 0.5 },
+  REVIEW: { color: "text-violet-500", fill: 0.75 },
+  TESTING: { color: "text-indigo-500", fill: 0.75 },
+  DONE: { color: "text-emerald-500", fill: 1 },
+  DEPLOYED: { color: "text-cyan-500", fill: 1 },
+}
+
+/** 14px status ring: empty, part-filled pie, or a filled check. */
+export function StatusIcon({ status, className }: { status: TaskStatus; className?: string }) {
+  const meta = STATUS_ICON[status] ?? STATUS_ICON.TODO
+  const label = STATUS_META[status]?.label ?? status
+  if (meta.fill >= 1) {
+    return (
+      <svg viewBox="0 0 14 14" className={cn("h-3.5 w-3.5 shrink-0", meta.color, className)} role="img" aria-label={label}>
+        <circle cx="7" cy="7" r="6" fill="currentColor" />
+        <path d="M4.3 7.2 6.2 9l3.5-3.8" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  // Pie slice from 12 o'clock, clockwise, radius 3.5 inside a 5.5 ring.
+  const a = meta.fill * 2 * Math.PI
+  const x = 7 + 3.5 * Math.sin(a)
+  const y = 7 - 3.5 * Math.cos(a)
+  const large = meta.fill > 0.5 ? 1 : 0
+  return (
+    <svg viewBox="0 0 14 14" className={cn("h-3.5 w-3.5 shrink-0", meta.color, className)} role="img" aria-label={label}>
+      <circle cx="7" cy="7" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      {meta.fill > 0 && <path d={`M7 7V3.5A3.5 3.5 0 ${large} 1 ${x.toFixed(2)} ${y.toFixed(2)}Z`} fill="currentColor" />}
+    </svg>
+  )
+}
+
+const PRIORITY_BARS: Record<TaskPriority, number> = { HIGHEST: 4, HIGH: 3, MEDIUM: 2, LOW: 1, LOWEST: 0 }
+
+/** Linear-style priority: 1–3 signal bars, or a red "!" square for Highest. */
+export function PriorityIcon({ priority, className }: { priority: TaskPriority; className?: string }) {
+  const label = PRIORITY_META[priority]?.label ?? priority
+  const bars = PRIORITY_BARS[priority] ?? 2
+  if (bars === 4) {
+    return (
+      <svg viewBox="0 0 16 16" className={cn("h-3 w-3 shrink-0 text-red-500", className)} role="img" aria-label={label}>
+        <title>{label}</title>
+        <rect x="1" y="1" width="14" height="14" rx="3" fill="currentColor" />
+        <path d="M8 4v5M8 11.6v.2" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 16 16" className={cn("h-3 w-3 shrink-0 text-muted-foreground", className)} role="img" aria-label={label}>
+      <title>{label}</title>
+      <rect x="2" y="9" width="3" height="5" rx="1" fill="currentColor" opacity={bars >= 1 ? 1 : 0.3} />
+      <rect x="6.5" y="5.5" width="3" height="8.5" rx="1" fill="currentColor" opacity={bars >= 2 ? 1 : 0.3} />
+      <rect x="11" y="2" width="3" height="12" rx="1" fill="currentColor" opacity={bars >= 3 ? 1 : 0.3} />
+    </svg>
+  )
+}
+
+export const TYPE_DOT: Record<TaskType, string> = {
+  STORY: "bg-emerald-500",
+  BUG: "bg-red-500",
+  TASK: "bg-indigo-500",
+  TEST_CASE: "bg-teal-500",
+  SUBTASK: "bg-sky-500",
+  EPIC: "bg-violet-500",
+}
+
+/** Small bordered pill with a coloured dot: issue type, epic, label. */
+export function DotLabel({
+  dotClass,
+  dotColor,
+  children,
+  className,
+}: {
+  dotClass?: string
+  dotColor?: string
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 max-w-[11rem] items-center gap-1.5 rounded-full border border-border px-2 text-[11px] text-muted-foreground",
+        className
+      )}
+    >
+      <span className={cn("h-[7px] w-[7px] shrink-0 rounded-full", dotClass)} style={dotColor ? { backgroundColor: dotColor } : undefined} />
+      <span className="truncate">{children}</span>
+    </span>
+  )
 }

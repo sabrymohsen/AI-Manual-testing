@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { withNextTaskNumber } from "@/lib/scrum/task-number"
 import { requireProjectMember, requireProjectPermission } from "@/lib/api-guards"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { taskInclude, serializeTask, logActivity } from "@/lib/scrum/server"
+import { loadBoardSignals } from "@/lib/scrum/board-signals"
 import { notify } from "@/lib/notifications"
 import { logUserActivity } from "@/lib/user-activity"
 
@@ -21,6 +23,7 @@ const createSchema = z.object({
   // must NOT be .int() — that rejected every half-point estimate with a 400.
   storyPoints: z.number().min(0).max(999).optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
+  startDate: z.string().datetime().optional().nullable(),
   branchName: z.string().optional().nullable(),
   sprintId: z.string().optional().nullable(),
   epicId: z.string().optional().nullable(),
@@ -78,7 +81,10 @@ export async function GET(
     prisma.task.findMany({ where, orderBy, include: taskInclude }),
   ])
 
-  return NextResponse.json({ tasks: tasks.map((t) => serializeTask(t, project?.boardKey)) })
+  const signals = await loadBoardSignals(tasks.map((t) => t.id))
+  return NextResponse.json({
+    tasks: tasks.map((t) => ({ ...serializeTask(t, project?.boardKey), signals: signals.get(t.id) })),
+  })
 }
 
 // POST /api/projects/:projectId/scrum/tasks
@@ -110,8 +116,10 @@ export async function POST(
 
   const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { boardKey: true } })
 
-  const task = await prisma.task.create({
+  const task = await withNextTaskNumber(params.projectId, (taskNumber) =>
+        prisma.task.create({
     data: {
+          taskNumber,
       projectId: params.projectId,
       title: data.title,
       description: data.description ?? null,
@@ -120,6 +128,7 @@ export async function POST(
       priority: data.priority ?? "MEDIUM",
       storyPoints: data.storyPoints ?? null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
+      startDate: data.startDate ? new Date(data.startDate) : null,
       branchName: data.branchName ?? null,
       sprintId: data.sprintId ?? null,
       epicId: data.epicId ?? null,
@@ -132,7 +141,7 @@ export async function POST(
       assignees: data.assigneeIds?.length ? { connect: data.assigneeIds.map((id) => ({ id })) } : undefined,
     },
     include: taskInclude,
-  })
+  }))
 
   await logActivity(task.id, "created", `Task created in ${status}`, auth.session.user.id)
   logUserActivity(auth.session.user.id, "TASK_CREATED", `Created "${task.title}"`, params.projectId)

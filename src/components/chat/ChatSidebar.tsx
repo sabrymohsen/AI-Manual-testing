@@ -122,8 +122,8 @@ export function ChatSidebar({
     <div className="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col h-full select-none">
       {/* Header */}
       <div className="h-14 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 justify-between bg-white dark:bg-slate-900">
-        <h2 className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-1.5">
-          <MessageSquare className="h-4 w-4 text-indigo-500" />
+        <h2 className="font-semibold text-foreground dark:text-slate-200 text-sm flex items-center gap-1.5">
+          <MessageSquare className="h-4 w-4 text-primary" />
           <span>Team Channels</span>
         </h2>
       </div>
@@ -131,10 +131,10 @@ export function ChatSidebar({
       <div className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-4">
         {/* CHANNELS SECTION */}
         <div>
-          <div className="flex items-center justify-between px-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+          <div className="flex items-center justify-between px-2 text-xs font-medium text-muted-foreground mb-1.5">
             <button
               onClick={() => setChannelsCollapsed(!channelsCollapsed)}
-              className="flex items-center gap-1 hover:text-slate-600 dark:hover:text-slate-200"
+              className="flex items-center gap-1 hover:text-muted-foreground dark:hover:text-slate-200"
             >
               {channelsCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
               <span>Channels</span>
@@ -182,7 +182,7 @@ export function ChatSidebar({
                             value="PUBLIC"
                             checked={newChannelType === "PUBLIC"}
                             onChange={() => setNewChannelType("PUBLIC")}
-                            className="text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                            className="text-primary focus:ring-primary h-4 w-4"
                           />
                           <span>Public</span>
                         </label>
@@ -193,7 +193,7 @@ export function ChatSidebar({
                             value="PRIVATE"
                             checked={newChannelType === "PRIVATE"}
                             onChange={() => setNewChannelType("PRIVATE")}
-                            className="text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                            className="text-primary focus:ring-primary h-4 w-4"
                           />
                           <span>Private</span>
                         </label>
@@ -205,7 +205,7 @@ export function ChatSidebar({
                     <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>
                       Cancel
                     </Button>
-                    <Button type="submit" className="bg-indigo-600 text-white" disabled={isSubmitting}>
+                    <Button type="submit" className="bg-primary text-white" disabled={isSubmitting}>
                       {isSubmitting ? "Creating..." : "Create"}
                     </Button>
                   </DialogFooter>
@@ -241,7 +241,7 @@ export function ChatSidebar({
                     </div>
 
                     {unread > 0 && (
-                      <span className="bg-indigo-600 text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
+                      <span className="bg-primary text-white text-[10px] font-semibold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
                         {unread}
                       </span>
                     )}
@@ -249,7 +249,7 @@ export function ChatSidebar({
                 );
               })}
               {channels.length === 0 && (
-                <span className="text-[11px] text-slate-400 italic px-2">No channels created</span>
+                <span className="text-[11px] text-muted-foreground italic px-2">No channels created</span>
               )}
             </div>
           )}
@@ -259,7 +259,7 @@ export function ChatSidebar({
         <div>
           <button
             onClick={() => setDMsCollapsed(!dmsCollapsed)}
-            className="flex items-center gap-1 px-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 hover:text-slate-600 dark:hover:text-slate-200"
+            className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-1.5 hover:text-muted-foreground dark:hover:text-slate-200"
           >
             {dmsCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             <span>Direct Messages</span>
@@ -288,13 +288,13 @@ export function ChatSidebar({
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="relative">
-                        <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">
+                        <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[11px] font-medium text-slate-600 dark:text-slate-400">
                           {(memberInfo.name || memberInfo.email).slice(0, 2)}
                         </div>
                         <Circle
                           className={cn(
                             "h-2 w-2 rounded-full absolute -bottom-0.5 -right-0.5 border border-white dark:border-slate-950",
-                            online ? "fill-emerald-500 text-emerald-500" : "fill-slate-400 text-slate-400"
+                            online ? "fill-emerald-500 text-emerald-500" : "fill-slate-400 text-muted-foreground"
                           )}
                         />
                       </div>
@@ -302,7 +302,7 @@ export function ChatSidebar({
                     </div>
 
                     {unread > 0 && (
-                      <span className="bg-indigo-600 text-white text-[10px] font-bold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
+                      <span className="bg-primary text-white text-[10px] font-semibold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
                         {unread}
                       </span>
                     )}
@@ -310,7 +310,7 @@ export function ChatSidebar({
                 );
               })}
               {dms.length === 0 && (
-                <span className="text-[11px] text-slate-400 italic px-2">No active conversations</span>
+                <span className="text-[11px] text-muted-foreground italic px-2">No active conversations</span>
               )}
             </div>
           )}
@@ -320,7 +320,7 @@ export function ChatSidebar({
         <div>
           <button
             onClick={() => setMembersCollapsed(!membersCollapsed)}
-            className="flex items-center gap-1 px-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 hover:text-slate-600 dark:hover:text-slate-200"
+            className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-1.5 hover:text-muted-foreground dark:hover:text-slate-200"
           >
             {membersCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             <Users className="h-3.5 w-3.5 text-slate-450" />
@@ -357,7 +357,7 @@ export function ChatSidebar({
                   );
                 })}
               {projectMembers.length <= 1 && (
-                <span className="text-[11px] text-slate-400 italic px-2">No other members in project</span>
+                <span className="text-[11px] text-muted-foreground italic px-2">No other members in project</span>
               )}
             </div>
           )}

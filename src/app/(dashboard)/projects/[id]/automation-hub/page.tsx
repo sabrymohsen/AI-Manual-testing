@@ -423,15 +423,15 @@ export default function AutomationHubPage() {
   }
 
   return (
-    <div className="flex-1 space-y-5 text-xs font-semibold text-slate-800">
+    <div className="flex-1 space-y-5 text-xs font-semibold text-foreground">
       
       {/* HUB HEADER */}
       <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
-            <Layers className="h-6 w-6 text-indigo-600" /> Automation Hub
+          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
+            <Layers className="h-6 w-6 text-primary" /> Automation Hub
           </h1>
-          <p className="mt-1 text-sm font-normal text-slate-500">
+          <p className="mt-1 text-sm font-normal text-muted-foreground">
             Write and run Playwright tests in JavaScript, record flows into code, and see exactly what failed.
           </p>
         </div>
@@ -439,7 +439,7 @@ export default function AutomationHubPage() {
 
       {/* TABS: the three everyday tabs, then the analysis tools in one menu */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-xl border bg-slate-100 p-1">
+        <div className="inline-flex rounded-xl border bg-muted p-1">
           {[
             { id: "Tests", label: "Tests", icon: Code },
             { id: "Runs", label: "Runs", icon: ListRestart },
@@ -449,7 +449,7 @@ export default function AutomationHubPage() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
-                activeTab === tab.id ? "bg-white text-indigo-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                activeTab === tab.id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon size={15} />
@@ -457,13 +457,13 @@ export default function AutomationHubPage() {
             </button>
           ))}
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-600">
-          <SlidersHorizontal size={15} className="text-slate-400" />
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <SlidersHorizontal size={15} className="text-muted-foreground" />
           <select
             value={["Tests", "Runs", "Recorder"].includes(activeTab) ? "" : activeTab}
             onChange={(e) => e.target.value && setActiveTab(e.target.value as any)}
             className={`h-10 rounded-xl border px-3 text-sm font-semibold ${
-              ["Tests", "Runs", "Recorder"].includes(activeTab) ? "bg-white text-slate-600" : "border-indigo-200 bg-indigo-50 text-indigo-700"
+              ["Tests", "Runs", "Recorder"].includes(activeTab) ? "bg-card text-muted-foreground" : "border-primary/25 bg-primary/10 text-primary"
             }`}
             aria-label="More tools"
           >
@@ -499,9 +499,9 @@ export default function AutomationHubPage() {
 
       {/* HUB MAIN WORKSPACE (analysis tools) */}
       {["Tests", "Runs", "Recorder"].includes(activeTab) ? null : loading ? (
-        <div className="py-32 flex flex-col items-center justify-center gap-2 border bg-white rounded-2xl shadow-sm">
-          <Loader2 className="animate-spin text-indigo-600" size={32} />
-          <span className="font-semibold text-slate-500 text-sm">Loading…</span>
+        <div className="py-32 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
+          <Loader2 className="animate-spin text-primary" size={32} />
+          <span className="font-semibold text-muted-foreground text-sm">Loading…</span>
         </div>
       ) : (
         <div className="transition-all duration-300">
@@ -542,7 +542,7 @@ export default function AutomationHubPage() {
           {activeTab === "Heal" && (
             <div className="space-y-4">
               {/* Heal Center sub-view switch (Self-Healing · Locator Health) */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border w-fit select-none">
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border w-fit select-none">
                 {[
                   { id: "recoveries", label: "Self-Healing", icon: Shield },
                   { id: "locators", label: "Locator Health", icon: Activity }
@@ -551,7 +551,7 @@ export default function AutomationHubPage() {
                     key={v.id}
                     onClick={() => setHealView(v.id as "recoveries" | "locators")}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      healView === v.id ? "bg-white text-indigo-700 shadow-3xs border" : "text-slate-500 hover:text-slate-800"
+                      healView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <v.icon size={13} /> {v.label}
@@ -564,19 +564,19 @@ export default function AutomationHubPage() {
               ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Self-healing recovery events queue</span>
+                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Self-healing recovery events queue</span>
                   
                   {activeHeals.length > 0 ? (
                     <div className="space-y-3">
                       {activeHeals.map(event => (
-                        <div key={event.id} className="p-4 border rounded-2xl bg-white space-y-3.5 shadow-3xs text-left">
+                        <div key={event.id} className="p-4 border rounded-xl bg-card space-y-3.5 shadow-3xs text-left">
                           <div className="flex justify-between items-center border-b pb-2 flex-wrap gap-2">
                             <div>
-                              <span className="text-[10.5px] font-black text-slate-900 block">{event.locatorName}</span>
-                              <span className="text-[9px] text-slate-400 block font-mono mt-0.5">{event.className}.{event.methodName}</span>
+                              <span className="text-[10.5px] font-semibold text-foreground block">{event.locatorName}</span>
+                              <span className="text-[9px] text-muted-foreground block font-mono mt-0.5">{event.className}.{event.methodName}</span>
                             </div>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] border font-black uppercase ${
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] border font-semibold uppercase ${
                               event.confidence >= healingThreshold 
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-250 animate-pulse" 
                                 : "bg-amber-50 text-amber-700 border-amber-250"
@@ -586,13 +586,13 @@ export default function AutomationHubPage() {
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] font-mono leading-relaxed">
-                            <div className="bg-slate-50 border p-3 rounded-xl">
-                              <span className="text-slate-400 font-bold block uppercase text-[8.5px]">Old broken selector</span>
-                              <span className="text-slate-700 block truncate select-all">{event.oldSelector}</span>
+                            <div className="bg-muted/50 border p-3 rounded-xl">
+                              <span className="text-muted-foreground font-semibold block uppercase text-[8.5px]">Old broken selector</span>
+                              <span className="text-foreground block truncate select-all">{event.oldSelector}</span>
                             </div>
-                            <div className="bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl">
-                              <span className="text-indigo-650 font-bold block uppercase text-[8.5px]">Healed recovery selector</span>
-                              <span className="text-indigo-900 block truncate select-all">{event.newSelector}</span>
+                            <div className="bg-primary/10 border border-primary/25 p-3 rounded-xl">
+                              <span className="text-indigo-650 font-semibold block uppercase text-[8.5px]">Healed recovery selector</span>
+                              <span className="text-primary block truncate select-all">{event.newSelector}</span>
                             </div>
                           </div>
 
@@ -602,14 +602,14 @@ export default function AutomationHubPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => alert("Discarded healed selector suggestion")}
-                                className="h-7.5 rounded-lg border-slate-200 text-slate-500 bg-white"
+                                className="h-7.5 rounded-lg border-border text-muted-foreground bg-card"
                               >
                                 Reject
                               </Button>
                               <Button
                                 size="sm"
                                 onClick={() => handleApproveHeal(event.id)}
-                                className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-lg h-7.5 font-black px-3"
+                                className="bg-indigo-650 hover:bg-primary/90 text-white rounded-lg h-7.5 font-semibold px-3"
                               >
                                 Approve Healed Locator
                               </Button>
@@ -626,13 +626,13 @@ export default function AutomationHubPage() {
 
               {/* Sidebar threshold configurators */}
               <div className="lg:col-span-4 space-y-6">
-                <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4 text-left">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Heal Settings</span>
+                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4 text-left">
+                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Heal Settings</span>
                   
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-bold">
-                      <span className="text-slate-500">Auto-Apply Confidence Threshold</span>
-                      <span className="text-indigo-650 font-black">{healingThreshold}%</span>
+                    <div className="flex justify-between items-center text-[10px] font-semibold">
+                      <span className="text-muted-foreground">Auto-Apply Confidence Threshold</span>
+                      <span className="text-indigo-650 font-semibold">{healingThreshold}%</span>
                     </div>
                     <input
                       type="range"
@@ -640,9 +640,9 @@ export default function AutomationHubPage() {
                       max="95"
                       value={healingThreshold}
                       onChange={(e) => setHealingThreshold(Number(e.target.value))}
-                      className="w-full h-1 bg-slate-100 rounded-lg cursor-pointer accent-indigo-650"
+                      className="w-full h-1 bg-muted rounded-lg cursor-pointer accent-indigo-650"
                     />
-                    <span className="text-[8.5px] text-slate-400 leading-relaxed block font-medium">
+                    <span className="text-[8.5px] text-muted-foreground leading-relaxed block font-medium">
                       Recoveries with scores below this limit will wait in the manual review queue before modifying Page Objects.
                     </span>
                   </div>
@@ -657,7 +657,7 @@ export default function AutomationHubPage() {
           {activeTab === "Flakes" && (
             <div className="space-y-4">
               {/* Flake Map sub-view switch (Timing Profile · Wait Analysis) */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border w-fit select-none">
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border w-fit select-none">
                 {[
                   { id: "timing", label: "Timing Profile", icon: Activity },
                   { id: "waits", label: "Wait Analysis", icon: Clock }
@@ -666,7 +666,7 @@ export default function AutomationHubPage() {
                     key={v.id}
                     onClick={() => setFlakeView(v.id as "timing" | "waits")}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      flakeView === v.id ? "bg-white text-indigo-700 shadow-3xs border" : "text-slate-500 hover:text-slate-800"
+                      flakeView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <v.icon size={13} /> {v.label}
@@ -679,21 +679,21 @@ export default function AutomationHubPage() {
               ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Timing performance breakdowns</span>
+                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Timing performance breakdowns</span>
                   
                   {activeFlakes.length > 0 ? (
                     <div className="space-y-4 text-left">
-                      <div className="p-4 border rounded-2xl bg-slate-50/50 space-y-3">
-                        <div className="flex justify-between items-center text-[10px] font-bold border-b pb-1">
-                          <span className="text-slate-800">{activeFlakes[0].testName} Stability</span>
-                          <span className="text-amber-600 font-black">Stability Index: {100 - activeFlakes[0].flakinessScore}%</span>
+                      <div className="p-4 border rounded-xl bg-muted/50 space-y-3">
+                        <div className="flex justify-between items-center text-[10px] font-semibold border-b pb-1">
+                          <span className="text-foreground">{activeFlakes[0].testName} Stability</span>
+                          <span className="text-amber-600 font-semibold">Stability Index: {100 - activeFlakes[0].flakinessScore}%</span>
                         </div>
 
                         {/* Timing distribution bars */}
                         <div className="space-y-3 pt-2 font-mono text-[9.5px]">
                           <div className="space-y-1">
-                            <div className="flex justify-between font-bold text-slate-500">
+                            <div className="flex justify-between font-semibold text-muted-foreground">
                               <span>Element wait time</span>
                               <span>{activeFlakes[0].avgWaitTime}ms</span>
                             </div>
@@ -703,7 +703,7 @@ export default function AutomationHubPage() {
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex justify-between font-bold text-slate-500">
+                            <div className="flex justify-between font-semibold text-muted-foreground">
                               <span>Locator sync time</span>
                               <span>{activeFlakes[0].avgSyncTime}ms</span>
                             </div>
@@ -713,7 +713,7 @@ export default function AutomationHubPage() {
                           </div>
 
                           <div className="space-y-1">
-                            <div className="flex justify-between font-bold text-slate-500">
+                            <div className="flex justify-between font-semibold text-muted-foreground">
                               <span>Assertion checks checks</span>
                               <span>{activeFlakes[0].avgAssertTime}ms</span>
                             </div>
@@ -727,9 +727,9 @@ export default function AutomationHubPage() {
                       <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl space-y-1.5">
                         <div className="flex items-center gap-1 text-amber-700">
                           <AlertTriangle size={13} />
-                          <span className="text-[10px] font-black uppercase tracking-wider">Root cause diagnosis recommendation</span>
+                          <span className="text-[11px] font-medium">Root cause diagnosis recommendation</span>
                         </div>
-                        <p className="text-slate-650 leading-relaxed font-bold">
+                        <p className="text-slate-650 leading-relaxed font-semibold">
                           {activeFlakes[0].rootCause === "sync"
                             ? "Timing sync issue detected. Increasing explicit wait limits or using smart elements wrapper selectors solves this flakiness."
                             : "Dynamic network requests delays. Add explicit assertions limits or verify endpoints response sizes."
@@ -745,18 +745,18 @@ export default function AutomationHubPage() {
 
               {/* Sidebar stabilization config */}
               <div className="lg:col-span-4 space-y-6 text-left">
-                <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Profiler config Controls</span>
-                  <div className="flex items-center justify-between p-3 border rounded-xl bg-slate-50/50">
-                    <span className="font-extrabold text-slate-800 text-[10px]">Enable Flake Profiler</span>
+                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Profiler config Controls</span>
+                  <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
+                    <span className="font-semibold text-foreground text-[10px]">Enable Flake Profiler</span>
                     <input
                       type="checkbox"
                       checked={stabilizeConfig}
                       onChange={() => setStabilizeConfig(!stabilizeConfig)}
-                      className="h-4 w-4 rounded border-slate-350 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                      className="h-4 w-4 rounded border-slate-350 text-indigo-650 focus:ring-primary cursor-pointer"
                     />
                   </div>
-                  <span className="text-[8.5px] text-slate-400 block font-medium mt-1 leading-relaxed">
+                  <span className="text-[8.5px] text-muted-foreground block font-medium mt-1 leading-relaxed">
                     Builds the timing profile from each run's Playwright trace.
                   </span>
                 </div>
@@ -770,7 +770,7 @@ export default function AutomationHubPage() {
           {activeTab === "Matrix" && (
             <div className="space-y-4">
               {/* Browser Matrix sub-view switch (Local Grid · Cloud & Parallel) */}
-              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border w-fit select-none">
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border w-fit select-none">
                 {[
                   { id: "local", label: "Local Matrix", icon: LayoutGrid },
                   { id: "cloud", label: "Cloud & Parallel", icon: Server }
@@ -779,7 +779,7 @@ export default function AutomationHubPage() {
                     key={v.id}
                     onClick={() => setMatrixView(v.id as "local" | "cloud")}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                      matrixView === v.id ? "bg-white text-indigo-700 shadow-3xs border" : "text-slate-500 hover:text-slate-800"
+                      matrixView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <v.icon size={13} /> {v.label}
@@ -792,12 +792,12 @@ export default function AutomationHubPage() {
               ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Matrix Results Grid</span>
+                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Matrix Results Grid</span>
                   <div className="overflow-x-auto">
                     <table className="w-full text-center border-collapse">
                       <thead>
-                        <tr className="bg-slate-50 border-b text-[9.5px] font-bold text-slate-450 uppercase tracking-wider text-left">
+                        <tr className="bg-muted/50 border-b text-[9.5px] font-semibold text-slate-450 uppercase tracking-wider text-left">
                           <th className="p-3.5 text-left w-48">Test Class</th>
                           {["Chrome", "Firefox", "Edge", "Safari"].map(b => (
                             <th key={b} className="p-3.5 text-center">{b}</th>
@@ -806,8 +806,8 @@ export default function AutomationHubPage() {
                       </thead>
                       <tbody className="divide-y text-slate-650 text-left">
                         {["LoginFlowTest", "ApiCrudTest", "DbQueryTest", "SearchFlowTest"].map(t => (
-                          <tr key={t} className="hover:bg-slate-50/50 transition-colors">
-                            <td className="p-3.5 font-black text-slate-800 text-left truncate w-48">{t}</td>
+                          <tr key={t} className="hover:bg-muted/50 transition-colors">
+                            <td className="p-3.5 font-semibold text-foreground text-left truncate w-48">{t}</td>
                             {["Chrome", "Firefox", "Edge", "Safari"].map(b => {
                               const cell = matrixMap[t][b]
                               let iconColor = "text-slate-300"
@@ -834,7 +834,7 @@ export default function AutomationHubPage() {
                                     }`}
                                   >
                                     <Icon className={`h-5.5 w-5.5 ${iconColor}`} />
-                                    <span className="text-[7.5px] text-slate-400 font-mono font-medium block">
+                                    <span className="text-[7.5px] text-muted-foreground font-mono font-medium block">
                                       {cell.status !== "not_run"
                                         ? new Date(cell.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                         : "Not Run"
@@ -852,13 +852,13 @@ export default function AutomationHubPage() {
                 </div>
 
                 {matrixRecommendation && (
-                  <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-3 text-left">
-                    <div className="flex items-center gap-1.5 border-b pb-1.5 text-indigo-700">
+                  <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-3 text-left">
+                    <div className="flex items-center gap-1.5 border-b pb-1.5 text-primary">
                       <Sparkles size={13} />
-                      <span className="text-[10px] uppercase font-black tracking-wider">Cross-Browser Advice</span>
+                      <span className="text-[11px] font-medium">Cross-Browser Advice</span>
                     </div>
-                    <div className="flex items-start gap-2.5 bg-indigo-50/50 border border-indigo-100 p-3 rounded-2xl">
-                      <Info className="text-indigo-600 shrink-0 mt-0.5" size={14} />
+                    <div className="flex items-start gap-2.5 bg-primary/10 border border-primary/25 p-3 rounded-xl">
+                      <Info className="text-primary shrink-0 mt-0.5" size={14} />
                       <p className="text-slate-650 leading-relaxed font-semibold">
                         {matrixRecommendation}
                       </p>
@@ -869,11 +869,11 @@ export default function AutomationHubPage() {
 
               {/* Sidebar matrix batch controls */}
               <div className="lg:col-span-4 space-y-6 text-left">
-                <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Batch Run Controls</span>
+                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Batch Run Controls</span>
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-450 block uppercase">1. Select Suite Classes</label>
+                      <label className="text-[11px] font-medium text-slate-450 block">1. Select Suite Classes</label>
                       <div className="space-y-1">
                         {["LoginFlowTest", "ApiCrudTest", "DbQueryTest", "SearchFlowTest"].map(t => (
                           <div key={t} className="flex items-center gap-2">
@@ -881,16 +881,16 @@ export default function AutomationHubPage() {
                               type="checkbox"
                               checked={batchTests.includes(t)}
                               onChange={() => setBatchTests(prev => prev.includes(t) ? prev.filter(item => item !== t) : [...prev, t])}
-                              className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                              className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
                             />
-                            <span className="text-slate-700 font-bold font-mono text-[9.5px]">{t}</span>
+                            <span className="text-foreground font-semibold font-mono text-[9.5px]">{t}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-450 block uppercase">2. Target Browsers</label>
+                      <label className="text-[11px] font-medium text-slate-450 block">2. Target Browsers</label>
                       <div className="space-y-1">
                         {["Chrome", "Firefox", "Edge", "Safari"].map(b => (
                           <div key={b} className="flex items-center gap-2">
@@ -898,9 +898,9 @@ export default function AutomationHubPage() {
                               type="checkbox"
                               checked={batchBrowsers.includes(b)}
                               onChange={() => setBatchBrowsers(prev => prev.includes(b) ? prev.filter(item => item !== b) : [...prev, b])}
-                              className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                              className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
                             />
-                            <span className="text-slate-700 font-bold font-mono text-[9.5px]">{b}</span>
+                            <span className="text-foreground font-semibold font-mono text-[9.5px]">{b}</span>
                           </div>
                         ))}
                       </div>
@@ -909,15 +909,15 @@ export default function AutomationHubPage() {
                     {runningMatrixBatch ? (
                       <div className="space-y-2 text-center py-2">
                         <Loader2 size={16} className="animate-spin text-indigo-650 mx-auto" />
-                        <span className="text-[10px] text-indigo-700 font-black">
+                        <span className="text-[10px] text-primary font-semibold">
                           Executing {matrixProgress} of {matrixTotal} combinations...
                         </span>
-                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
                           <div className="bg-indigo-650 h-full transition-all duration-300" style={{ width: `${(matrixProgress / matrixTotal) * 100}%` }} />
                         </div>
                       </div>
                     ) : (
-                      <Button onClick={handleRunMatrixBatch} className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl w-full h-9.5 font-black text-xs">
+                      <Button onClick={handleRunMatrixBatch} className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl w-full h-9.5 font-semibold text-xs">
                         Execute Batch Matrix Suite
                       </Button>
                     )}
@@ -963,36 +963,36 @@ export default function AutomationHubPage() {
       {/* ---- DIAGNOSTIC CELL MODAL POPUP ---- */}
       {selectedMatrixCell && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in text-left">
-          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4 text-slate-800">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-base font-black text-slate-900">Diagnostics Matrix Cell Details</h3>
-              <button onClick={() => setSelectedMatrixCell(null)} className="text-slate-400 hover:text-slate-600 font-bold">Close</button>
+              <h3 className="text-base font-semibold text-foreground">Diagnostics Matrix Cell Details</h3>
+              <button onClick={() => setSelectedMatrixCell(null)} className="text-muted-foreground hover:text-muted-foreground font-semibold">Close</button>
             </div>
             <div className="space-y-2.5 text-[10.5px]">
               <div>
-                <span className="text-slate-400 font-bold block">Test Class</span>
-                <span className="font-mono font-black">{selectedMatrixCell.testId}</span>
+                <span className="text-muted-foreground font-semibold block">Test Class</span>
+                <span className="font-mono font-semibold">{selectedMatrixCell.testId}</span>
               </div>
               <div>
-                <span className="text-slate-400 font-bold block">Target Browser</span>
-                <span className="font-mono font-black">{selectedMatrixCell.browserName}</span>
+                <span className="text-muted-foreground font-semibold block">Target Browser</span>
+                <span className="font-mono font-semibold">{selectedMatrixCell.browserName}</span>
               </div>
               <div>
-                <span className="text-slate-400 font-bold block">Status</span>
-                <span className={`font-black uppercase ${selectedMatrixCell.status === "pass" ? "text-emerald-600" : "text-rose-600 animate-pulse"}`}>
+                <span className="text-muted-foreground font-semibold block">Status</span>
+                <span className={`font-semibold uppercase ${selectedMatrixCell.status === "pass" ? "text-emerald-600" : "text-rose-600 animate-pulse"}`}>
                   {selectedMatrixCell.status}
                 </span>
               </div>
               {selectedMatrixCell.errorMessage && (
                 <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl">
-                  <span className="text-rose-700 font-bold block">Error trace logs</span>
+                  <span className="text-rose-700 font-semibold block">Error trace logs</span>
                   <code className="text-rose-800 font-mono text-[9px] block select-all break-all mt-1">{selectedMatrixCell.errorMessage}</code>
                 </div>
               )}
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => setSelectedMatrixCell(null)} className="flex-1 rounded-xl bg-white border-slate-200 text-slate-600">Close</Button>
-              <Button onClick={() => setSelectedMatrixCell(null)} className="bg-indigo-650 text-white hover:bg-indigo-700 flex-1 rounded-xl font-black">Re-run Cell Combination</Button>
+              <Button variant="outline" onClick={() => setSelectedMatrixCell(null)} className="flex-1 rounded-xl bg-card border-border text-muted-foreground">Close</Button>
+              <Button onClick={() => setSelectedMatrixCell(null)} className="bg-indigo-650 text-white hover:bg-primary/90 flex-1 rounded-xl font-semibold">Re-run Cell Combination</Button>
             </div>
           </div>
         </div>

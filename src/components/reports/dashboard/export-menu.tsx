@@ -42,7 +42,7 @@ export function ExportMenu({
       <DropdownMenuTrigger asChild>
         <button
           disabled={!report || !!busy}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-indigo-600 px-3 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Export
           <ChevronDown className="h-3 w-3 opacity-80" />

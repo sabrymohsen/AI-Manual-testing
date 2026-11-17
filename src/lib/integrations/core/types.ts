@@ -11,7 +11,7 @@
 export type ProviderId = "OpenProject" | "Jira" | "AzureDevOps" | "ClickUp"
 
 /** Local entity kinds we sync out to an external tracker. */
-export type EntityType = "BugReport" | "TestCase" | "Requirement" | "TestRun"
+export type EntityType = "BugReport" | "TestCase" | "Requirement" | "TestRun" | "ScrumTask"
 
 /** The three logical work-item roles the app maps to a provider's native types. */
 export type ItemRole = "testCase" | "bug" | "userStory"

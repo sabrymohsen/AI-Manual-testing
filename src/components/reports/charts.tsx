@@ -24,8 +24,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="border border-slate-200 rounded-xl p-4 bg-white break-inside-avoid">
-      <h3 className="text-xs font-extrabold text-slate-700 mb-3">{title}</h3>
+    <div className="border border-border rounded-xl p-4 bg-card break-inside-avoid">
+      <h3 className="text-xs font-semibold text-foreground mb-3">{title}</h3>
       {children}
     </div>
   )
@@ -35,9 +35,9 @@ export function StatTiles({ tiles }: { tiles: Array<{ label: string; value: stri
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {tiles.map((t, i) => (
-        <div key={i} className="border border-slate-200 rounded-xl p-3 bg-white">
-          <div className="text-[9px] uppercase font-extrabold text-slate-400">{t.label}</div>
-          <div className={`text-xl font-extrabold ${t.tone || "text-slate-800"}`}>{t.value}</div>
+        <div key={i} className="border border-border rounded-xl p-3 bg-card">
+          <div className="text-[11px] font-medium text-muted-foreground">{t.label}</div>
+          <div className={`text-xl font-semibold ${t.tone || "text-foreground"}`}>{t.value}</div>
         </div>
       ))}
     </div>
@@ -126,7 +126,7 @@ export function CoverageDonut({ covered, uncovered }: { covered: number; uncover
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ height: 220 }}>
-        <span className="text-lg font-extrabold text-slate-800">{Math.round((covered / total) * 100)}%</span>
+        <span className="text-lg font-semibold text-foreground">{Math.round((covered / total) * 100)}%</span>
       </div>
     </div>
   )
@@ -146,9 +146,9 @@ export function ExecutionFunnel({ total, executed, passed }: { total: number; ex
         const pct = Math.round((s.value / max) * 100)
         return (
           <div key={i} className="flex items-center gap-3">
-            <div className="w-24 text-[10px] font-bold text-slate-500 text-right shrink-0">{s.label}</div>
-            <div className="flex-1 bg-slate-100 rounded h-7 overflow-hidden">
-              <div className="h-full flex items-center justify-end pr-2 text-[10px] font-extrabold text-white"
+            <div className="w-24 text-[10px] font-semibold text-muted-foreground text-right shrink-0">{s.label}</div>
+            <div className="flex-1 bg-muted rounded h-7 overflow-hidden">
+              <div className="h-full flex items-center justify-end pr-2 text-[10px] font-semibold text-white"
                 style={{ width: `${Math.max(pct, 6)}%`, background: s.color }}>
                 {s.value}
               </div>
@@ -173,8 +173,8 @@ export function DefectLifecycleFlow({ open, inProgress, fixed, closed }: { open:
       {stages.map((s, i) => (
         <div key={i} className="flex items-center gap-1">
           <div className="rounded-lg px-3 py-3 text-center min-w-[74px]" style={{ background: `${s.color}14`, border: `1px solid ${s.color}55` }}>
-            <div className="text-lg font-extrabold" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-[9px] font-bold text-slate-500">{s.label}</div>
+            <div className="text-lg font-semibold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-[9px] font-semibold text-muted-foreground">{s.label}</div>
           </div>
           {i < stages.length - 1 && <span className="text-slate-300 text-lg">→</span>}
         </div>
@@ -188,16 +188,16 @@ export function DataTable({ columns, rows }: { columns: string[]; rows: (string 
     <div className="overflow-x-auto">
       <table className="w-full text-[11px] border-collapse">
         <thead>
-          <tr className="border-b border-slate-200">
-            {columns.map((c, i) => <th key={i} className="text-left py-1.5 px-2 font-extrabold text-slate-500 uppercase text-[9px]">{c}</th>)}
+          <tr className="border-b border-border">
+            {columns.map((c, i) => <th key={i} className="text-left py-1.5 px-2 font-medium text-muted-foreground text-[11px]">{c}</th>)}
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
-            <tr><td colSpan={columns.length} className="py-4 text-center text-slate-400 italic">No data</td></tr>
+            <tr><td colSpan={columns.length} className="py-4 text-center text-muted-foreground italic">No data</td></tr>
           ) : rows.map((r, i) => (
-            <tr key={i} className="border-b border-slate-100">
-              {r.map((cell, j) => <td key={j} className="py-1.5 px-2 text-slate-700">{cell}</td>)}
+            <tr key={i} className="border-b border-border">
+              {r.map((cell, j) => <td key={j} className="py-1.5 px-2 text-foreground">{cell}</td>)}
             </tr>
           ))}
         </tbody>
@@ -207,5 +207,5 @@ export function DataTable({ columns, rows }: { columns: string[]; rows: (string 
 }
 
 function EmptyChart() {
-  return <div className="h-[180px] flex items-center justify-center text-slate-400 italic text-xs">No data in range</div>
+  return <div className="h-[180px] flex items-center justify-center text-muted-foreground italic text-xs">No data in range</div>
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 
 const bodySchema = z.object({
@@ -33,7 +33,7 @@ export async function PUT(
       return notFoundResponse("Difference issue not found")
     }
 
-    if (issue.run.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(issue.run.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

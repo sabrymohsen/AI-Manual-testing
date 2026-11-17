@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireTaskOwner, logActivity } from "@/lib/scrum/server"
 import { notify } from "@/lib/notifications"
+import { mentionedUserIds, mentionsToPlain } from "@/lib/scrum/mentions"
 
 const schema = z.object({ content: z.string().min(1).max(5000) })
 
@@ -28,35 +29,58 @@ export async function POST(request: Request, { params }: { params: { taskId: str
     data: { taskId: params.taskId, authorId: auth.userId, content: parsed.data.content },
     include: { author: { select: authorSelect } },
   })
-  await logActivity(params.taskId, "commented", parsed.data.content.slice(0, 140), auth.userId)
+  await logActivity(params.taskId, "commented", mentionsToPlain(parsed.data.content).text.slice(0, 140), auth.userId)
 
-  // Notify the task reporter and assignees (excluding the commenter).
+  // Notify people @mentioned (only real members of this project), then the
+  // reporter, assignees and watchers — each person once, never the commenter.
   const task = await prisma.task.findUnique({
     where: { id: params.taskId },
     select: {
       title: true,
+      taskNumber: true,
       projectId: true,
       reporterId: true,
       assignees: { select: { id: true } },
+      watchers: { select: { id: true } },
+      project: { select: { boardKey: true, userId: true } },
     },
   })
   if (task) {
     const commenterName = comment.author.name || comment.author.email
-    const recipients = [
-      ...new Set([task.reporterId, ...task.assignees.map((a) => a.id)].filter(Boolean) as string[]),
-    ].filter((id) => id !== auth.userId)
-    if (recipients.length > 0) {
-      notify(
-        recipients.map((userId) => ({
-          userId,
-          type: "COMMENT" as const,
-          title: "New comment",
-          body: `${commenterName} commented on ${task.title}`,
-          projectId: task.projectId,
-          actionUrl: `/projects/${task.projectId}/scrum?task=${params.taskId}`,
-        }))
-      ).catch(() => {})
-    }
+    const key = `${task.project?.boardKey || "TASK"}-${task.taskNumber}`
+    const actionUrl = `/projects/${task.projectId}/scrum?task=${params.taskId}`
+    const wanted = mentionedUserIds(parsed.data.content).filter((id) => id !== auth.userId)
+    const members = wanted.length
+      ? await prisma.user.findMany({
+          where: {
+            id: { in: wanted },
+            OR: [{ id: task.project?.userId ?? "" }, { projectMemberships: { some: { projectId: task.projectId } } }],
+          },
+          select: { id: true },
+        })
+      : []
+    const mentioned = new Set(members.map((m) => m.id))
+    const followers = [task.reporterId, ...task.assignees.map((a) => a.id), ...task.watchers.map((w) => w.id)]
+      .filter((id): id is string => !!id && id !== auth.userId && !mentioned.has(id))
+    const notes = [
+      ...[...mentioned].map((userId) => ({
+        userId,
+        type: "MENTION" as const,
+        title: "You were mentioned",
+        body: `${commenterName} mentioned you on ${key} ${task.title}`,
+        projectId: task.projectId,
+        actionUrl,
+      })),
+      ...[...new Set(followers)].map((userId) => ({
+        userId,
+        type: "COMMENT" as const,
+        title: "New comment",
+        body: `${commenterName} commented on ${key} ${task.title}`,
+        projectId: task.projectId,
+        actionUrl,
+      })),
+    ]
+    if (notes.length > 0) notify(notes).catch(() => {})
   }
 
   return NextResponse.json({ comment }, { status: 201 })

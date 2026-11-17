@@ -26,7 +26,7 @@ export const SCREEN_STATUS_META: Record<ScreenStatus, { label: string; className
   Accepted: { label: "Accepted", className: "bg-emerald-50 text-emerald-700 border-emerald-200", icon: CheckCircle2, hint: "Someone approved this change. It is the new approved image." },
   Rejected: { label: "Rejected", className: "bg-rose-50 text-rose-700 border-rose-200", icon: XCircle, hint: "Someone marked this change as a defect." },
   Error: { label: "Error", className: "bg-rose-50 text-rose-700 border-rose-200", icon: AlertTriangle, hint: "The page could not be captured." },
-  Removed: { label: "Removed", className: "bg-slate-100 text-slate-700 border-slate-200", icon: MinusCircle, hint: "The page is no longer in the sitemap." },
+  Removed: { label: "Removed", className: "bg-muted text-foreground border-border", icon: MinusCircle, hint: "The page is no longer in the sitemap." },
 }
 
 export function ScreenStatusBadge({ status, auto }: { status: ScreenStatus; auto?: boolean }) {
@@ -56,19 +56,19 @@ export function RunStatusBadge({
 }) {
   if (status === "Queued")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
         <Clock className="h-3 w-3" /> Waiting to start
       </span>
     )
   if (status === "Running")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+      <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
         <Loader2 className="h-3 w-3 animate-spin" /> Capturing
       </span>
     )
   if (status === "Cancelled")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
         <Ban className="h-3 w-3" /> Stopped
       </span>
     )
@@ -124,11 +124,11 @@ export function EnvChips({ environments, max = 3 }: { environments: VisualEnviro
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
       {environments.slice(0, max).map(e => (
-        <span key={e.key} className="rounded border bg-white px-1.5 py-0.5 text-[11px] text-slate-600">
-          {e.name} <span className="text-slate-400">{e.width}×{e.height}</span>
+        <span key={e.key} className="rounded border bg-card px-1.5 py-0.5 text-[11px] text-muted-foreground">
+          {e.name} <span className="text-muted-foreground">{e.width}×{e.height}</span>
         </span>
       ))}
-      {environments.length > max && <span className="text-[11px] text-slate-500">+{environments.length - max}</span>}
+      {environments.length > max && <span className="text-[11px] text-muted-foreground">+{environments.length - max}</span>}
     </span>
   )
 }

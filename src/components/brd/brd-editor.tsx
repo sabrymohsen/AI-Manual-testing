@@ -209,12 +209,12 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
 
   const Btn = ({ onClick, title, active, children }: any) => (
     <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={onClick} title={title}
-      className={`rounded p-1.5 text-slate-600 hover:bg-slate-200 ${active ? "bg-slate-200" : ""}`}>
+      className={`rounded p-1.5 text-muted-foreground hover:bg-muted ${active ? "bg-muted" : ""}`}>
       {children}
     </button>
   )
   const Sel = ({ onChange, title, placeholder, options }: any) => (
-    <select onChange={(e) => { onChange(e.target.value); e.target.selectedIndex = 0 }} className="h-7 rounded border bg-white px-1 text-xs" title={title} defaultValue="">
+    <select onChange={(e) => { onChange(e.target.value); e.target.selectedIndex = 0 }} className="h-7 rounded border bg-card px-1 text-xs" title={title} defaultValue="">
       <option value="" disabled>{placeholder}</option>
       {options.map((o: any) => <option key={o.v ?? o} value={o.v ?? o}>{o.l ?? o}</option>)}
     </select>
@@ -223,7 +223,7 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
 
   return (
     <div>
-      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-lg border border-b-0 bg-slate-50 px-2 py-1.5">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 rounded-t-lg border border-b-0 bg-muted/50 px-2 py-1.5">
         <Btn onClick={() => cmd("undo")} title="Undo"><Undo2 className="h-4 w-4" /></Btn>
         <Btn onClick={() => cmd("redo")} title="Redo"><Redo2 className="h-4 w-4" /></Btn>
         <Sep />
@@ -268,7 +268,7 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
         <input ref={imgInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageFile} />
         <SymbolPicker onPick={insertSymbol} />
         <Btn onClick={insertDropCap} title="Drop cap"><Type className="h-4 w-4" /></Btn>
-        <Btn onClick={insertTextBox} title="Text box"><span className="text-[11px] font-bold">▭</span></Btn>
+        <Btn onClick={insertTextBox} title="Text box"><span className="text-[11px] font-semibold">▭</span></Btn>
         <Btn onClick={() => cmd("insertHorizontalRule")} title="Horizontal rule"><Minus className="h-4 w-4" /></Btn>
         <Btn onClick={insertPageBreak} title="Page break"><SeparatorHorizontal className="h-4 w-4" /></Btn>
         <Sep />
@@ -277,28 +277,28 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
         <Btn onClick={() => setShowFind((v) => !v)} title="Find & replace" active={showFind}><Search className="h-4 w-4" /></Btn>
         <div className="ml-auto flex items-center gap-2">
           {autoSavedAt && <span className="text-[10px] text-muted-foreground">Draft saved {autoSavedAt}</span>}
-          <button onClick={() => setShowSaveModal(true)} className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Save version</button>
+          <button onClick={() => setShowSaveModal(true)} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90">Save version</button>
         </div>
       </div>
 
       {showFind && <FindReplace getRoot={() => ref.current} />}
 
-      {!loaded && <div className="flex items-center justify-center border py-16"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>}
+      {!loaded && <div className="flex items-center justify-center border py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
       <div ref={ref} contentEditable={loaded} suppressContentEditableWarning
-        className="brd-doc min-h-[62vh] max-w-none rounded-b-lg border bg-white p-8 outline-none focus:ring-2 focus:ring-indigo-200"
+        className="brd-doc min-h-[62vh] max-w-none rounded-b-lg border bg-card p-8 outline-none focus:ring-2 focus:ring-primary/30"
         style={{ display: loaded ? "block" : "none" }} />
 
       {showSaveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowSaveModal(false)}>
-          <div className="w-full max-w-md rounded-xl border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-bold">Describe your changes</h3>
+          <div className="w-full max-w-md rounded-xl border bg-background p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold">Describe your changes</h3>
             <p className="mt-1 text-xs text-muted-foreground">Stored in the version history (required).</p>
             <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} autoFocus
               placeholder="e.g. Added the authentication scope section"
-              className="mt-3 w-full rounded-lg border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-200" />
+              className="mt-3 w-full rounded-lg border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowSaveModal(false)} className="rounded-lg border px-3 py-1.5 text-sm font-semibold">Cancel</button>
-              <button onClick={doSave} disabled={saving || !summary.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+              <button onClick={doSave} disabled={saving || !summary.trim()} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
                 {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save new version
               </button>
             </div>
@@ -313,16 +313,16 @@ function Swatches({ icon, title, colors, onPick }: { icon: React.ReactNode; titl
   const [open, setOpen] = useState(false)
   return (
     <div className="relative">
-      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((v) => !v)} title={title} className="flex items-center rounded p-1.5 text-slate-600 hover:bg-slate-200">
+      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((v) => !v)} title={title} className="flex items-center rounded p-1.5 text-muted-foreground hover:bg-muted">
         {icon}<ChevronDown className="h-3 w-3" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 grid grid-cols-5 gap-1 rounded-lg border bg-white p-2 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 grid grid-cols-5 gap-1 rounded-lg border bg-card p-2 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
             {colors.map((c) => (
               <button key={c} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(c); setOpen(false) }}
-                className="h-5 w-5 rounded border border-slate-300"
+                className="h-5 w-5 rounded border border-border"
                 style={{ backgroundColor: c === "transparent" ? "#fff" : c, backgroundImage: c === "transparent" ? "linear-gradient(45deg,#ddd 25%,transparent 25%,transparent 75%,#ddd 75%)" : undefined }} title={c} />
             ))}
           </div>
@@ -336,15 +336,15 @@ function SymbolPicker({ onPick }: { onPick: (s: string) => void }) {
   const [open, setOpen] = useState(false)
   return (
     <div className="relative">
-      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((v) => !v)} title="Insert symbol" className="flex items-center rounded p-1.5 text-slate-600 hover:bg-slate-200">
+      <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => setOpen((v) => !v)} title="Insert symbol" className="flex items-center rounded p-1.5 text-muted-foreground hover:bg-muted">
         <Sigma className="h-4 w-4" /><ChevronDown className="h-3 w-3" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-20 mt-1 grid w-48 grid-cols-8 gap-0.5 rounded-lg border bg-white p-2 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 grid w-48 grid-cols-8 gap-0.5 rounded-lg border bg-card p-2 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
             {SYMBOLS.map((s) => (
-              <button key={s} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(s); setOpen(false) }} className="h-6 w-6 rounded text-sm hover:bg-slate-100">{s}</button>
+              <button key={s} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => { onPick(s); setOpen(false) }} className="h-6 w-6 rounded text-sm hover:bg-muted">{s}</button>
             ))}
           </div>
         </>
@@ -408,13 +408,13 @@ function FindReplace({ getRoot }: { getRoot: () => HTMLElement | null }) {
   }
   return (
     <div className="flex flex-wrap items-center gap-2 border-x bg-amber-50 px-3 py-2 text-sm">
-      <input value={find} onChange={(e) => { setFind(e.target.value); runFind(e.target.value) }} placeholder="Find" className="h-8 w-40 rounded border bg-white px-2 text-sm outline-none" />
+      <input value={find} onChange={(e) => { setFind(e.target.value); runFind(e.target.value) }} placeholder="Find" className="h-8 w-40 rounded border bg-card px-2 text-sm outline-none" />
       <span className="text-xs text-muted-foreground">{count ? `${current}/${count}` : "0 results"}</span>
-      <button onClick={() => step(-1)} className="rounded border bg-white px-2 py-1 text-xs">Prev</button>
-      <button onClick={() => step(1)} className="rounded border bg-white px-2 py-1 text-xs">Next</button>
-      <input value={replace} onChange={(e) => setReplace(e.target.value)} placeholder="Replace with" className="h-8 w-40 rounded border bg-white px-2 text-sm outline-none" />
-      <button onClick={() => doReplace(false)} className="rounded border bg-white px-2 py-1 text-xs font-semibold">Replace</button>
-      <button onClick={() => doReplace(true)} className="rounded bg-indigo-600 px-2 py-1 text-xs font-semibold text-white">Replace all</button>
+      <button onClick={() => step(-1)} className="rounded border bg-card px-2 py-1 text-xs">Prev</button>
+      <button onClick={() => step(1)} className="rounded border bg-card px-2 py-1 text-xs">Next</button>
+      <input value={replace} onChange={(e) => setReplace(e.target.value)} placeholder="Replace with" className="h-8 w-40 rounded border bg-card px-2 text-sm outline-none" />
+      <button onClick={() => doReplace(false)} className="rounded border bg-card px-2 py-1 text-xs font-semibold">Replace</button>
+      <button onClick={() => doReplace(true)} className="rounded bg-primary px-2 py-1 text-xs font-semibold text-white">Replace all</button>
     </div>
   )
 }

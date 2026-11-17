@@ -28,7 +28,7 @@ interface Brd {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  Draft: "bg-slate-100 text-slate-600 border-slate-200",
+  Draft: "bg-muted text-muted-foreground border-border",
   Reviewed: "bg-blue-50 text-blue-700 border-blue-200",
   Final: "bg-emerald-50 text-emerald-700 border-emerald-200",
   Archived: "bg-amber-50 text-amber-700 border-amber-200",
@@ -135,7 +135,7 @@ export default function BrdHubPage() {
     <div className="mx-auto max-w-6xl">
       <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">BRD Hub</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">BRD Hub</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Business requirement documents for this project — upload, version, link, and review.
           </p>
@@ -145,7 +145,7 @@ export default function BrdHubPage() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               Upload BRD
@@ -169,7 +169,7 @@ export default function BrdHubPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search documents…"
-            className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+            className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
@@ -193,7 +193,7 @@ export default function BrdHubPage() {
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="grid grid-cols-[1fr_90px_130px_90px_90px_44px] gap-2 border-b bg-muted/30 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        <div className="grid grid-cols-[1fr_90px_130px_90px_90px_44px] gap-2 border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
           <span>Document</span>
           <span>Type</span>
           <span>Updated</span>
@@ -204,7 +204,7 @@ export default function BrdHubPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
         ) : brds.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
@@ -217,12 +217,12 @@ export default function BrdHubPage() {
             <div
               key={b.id}
               onClick={() => router.push(`/projects/${projectId}/brds/${b.id}`)}
-              className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-slate-50"
+              className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-muted/50"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <FileTypeIcon type={b.fileType} className="h-5 w-5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-slate-800">{b.name}</p>
+                  <p className="truncate font-semibold text-foreground">{b.name}</p>
                   <p className="truncate text-[11px] text-muted-foreground">
                     {b.uploaderName}
                     {b.linkCount > 0 && (
@@ -248,7 +248,7 @@ export default function BrdHubPage() {
                 {canManage && (
                   <button
                     onClick={(e) => handleDelete(b, e)}
-                    className="rounded p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                    className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                     title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />

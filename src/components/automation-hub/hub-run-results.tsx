@@ -58,11 +58,11 @@ export function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     Passed: "bg-emerald-50 text-emerald-700 border-emerald-200",
     Failed: "bg-rose-50 text-rose-700 border-rose-200",
-    Running: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    Running: "bg-primary/10 text-primary border-primary/25",
     Queued: "bg-amber-50 text-amber-700 border-amber-200",
   }
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${map[status] || "bg-slate-50 text-slate-600 border-slate-200"}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${map[status] || "bg-muted/50 text-muted-foreground border-border"}`}>
       {status === "Running" && <Loader2 className="h-3 w-3 animate-spin" />}
       {status === "Queued" && <Clock className="h-3 w-3" />}
       {status === "Passed" && <CheckCircle2 className="h-3 w-3" />}
@@ -74,7 +74,7 @@ export function StatusBadge({ status }: { status: string }) {
 
 function TestIcon({ status }: { status: HubTestResultView["status"] }) {
   if (status === "passed") return <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-  if (status === "skipped") return <MinusCircle className="h-4 w-4 shrink-0 text-slate-400" />
+  if (status === "skipped") return <MinusCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
   if (status === "flaky") return <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
   return <XCircle className="h-4 w-4 shrink-0 text-rose-600" />
 }
@@ -129,27 +129,27 @@ export default function HubRunResults({
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <StatusBadge status={execution.status} />
         {results.length > 0 && (
-          <span className="text-slate-600">
+          <span className="text-muted-foreground">
             <b className="text-emerald-700">{passed} passed</b>
             {failed > 0 && <>, <b className="text-rose-700">{failed} failed</b></>}
             {flaky > 0 && <>, <b className="text-amber-700">{flaky} flaky</b></>}
             {skipped > 0 && <>, {skipped} skipped</>}
           </span>
         )}
-        {execution.duration ? <span className="text-slate-400">· {formatDuration(execution.duration)}</span> : null}
-        {execution.browser && <span className="text-slate-400">· {execution.browser}</span>}
-        <span className="text-slate-400">· {new Date(execution.createdAt).toLocaleString()}</span>
+        {execution.duration ? <span className="text-muted-foreground">· {formatDuration(execution.duration)}</span> : null}
+        {execution.browser && <span className="text-muted-foreground">· {execution.browser}</span>}
+        <span className="text-muted-foreground">· {new Date(execution.createdAt).toLocaleString()}</span>
       </div>
 
       {isActive(execution.status) && results.length === 0 && (
-        <p className="flex items-center gap-2 text-sm text-slate-500">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           {execution.status === "Queued" ? "Waiting for the run before it to finish…" : "Running… results appear here when it finishes."}
         </p>
       )}
 
       {results.length > 0 && (
-        <ul className="divide-y rounded-lg border bg-white">
+        <ul className="divide-y rounded-lg border bg-card">
           {failedFirst.map(({ r, i }) => {
             const traceId = traceIdFor(execution.id, r.trace)
             const expanded = !!open[i]
@@ -159,21 +159,21 @@ export default function HubRunResults({
                 <button
                   type="button"
                   onClick={() => hasDetail && setOpen((o) => ({ ...o, [i]: !o[i] }))}
-                  className={`flex w-full items-center gap-2 px-3 py-2 text-left ${hasDetail ? "hover:bg-slate-50" : "cursor-default"}`}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left ${hasDetail ? "hover:bg-muted/50" : "cursor-default"}`}
                 >
                   {hasDetail ? (
-                    expanded ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />
+                    expanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   ) : (
                     <span className="w-4" />
                   )}
                   <TestIcon status={r.status} />
-                  <span className="flex-1 truncate text-slate-800">{r.title}</span>
+                  <span className="flex-1 truncate text-foreground">{r.title}</span>
                   {r.retries > 0 && <span className="text-xs text-amber-600">retried {r.retries}×</span>}
-                  <span className="shrink-0 text-xs text-slate-400">{formatDuration(r.durationMs)}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatDuration(r.durationMs)}</span>
                 </button>
 
                 {expanded && (
-                  <div className="space-y-3 border-t bg-slate-50/60 px-3 py-3 pl-11">
+                  <div className="space-y-3 border-t bg-muted/60 px-3 py-3 pl-11">
                     {r.error && (
                       <div className="space-y-2">
                         <pre className="whitespace-pre-wrap break-words rounded-md border border-rose-200 bg-rose-50 p-3 font-mono text-xs text-rose-800">
@@ -190,7 +190,7 @@ export default function HubRunResults({
                           <img
                             src={artifactUrl(execution.id, i, "screenshot")}
                             alt={`Screenshot at the end of “${r.title}”`}
-                            className="max-h-48 rounded-md border bg-white shadow-sm"
+                            className="max-h-48 rounded-md border bg-card shadow-sm"
                           />
                         </a>
                       )}
@@ -199,7 +199,7 @@ export default function HubRunResults({
                           <button
                             type="button"
                             onClick={() => onOpenTrace(traceId)}
-                            className="inline-flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-700"
+                            className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-primary/25 hover:text-primary"
                           >
                             <Route className="h-3.5 w-3.5" /> Open trace
                           </button>
@@ -207,7 +207,7 @@ export default function HubRunResults({
                         {r.trace && (
                           <a
                             href={artifactUrl(execution.id, i, "trace")}
-                            className="inline-flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-700"
+                            className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-primary/25 hover:text-primary"
                             title="Open with: npx playwright show-trace <file>"
                           >
                             <Download className="h-3.5 w-3.5" /> Trace .zip
@@ -217,7 +217,7 @@ export default function HubRunResults({
                           <button
                             type="button"
                             onClick={() => setVideo(video === i ? null : i)}
-                            className="inline-flex items-center gap-1.5 rounded-md border bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:border-indigo-300 hover:text-indigo-700"
+                            className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-primary/25 hover:text-primary"
                           >
                             <Film className="h-3.5 w-3.5" /> {video === i ? "Hide video" : "Watch video"}
                           </button>
@@ -240,7 +240,7 @@ export default function HubRunResults({
           <button
             type="button"
             onClick={() => setShowLog((v) => !v)}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <Terminal className="h-3.5 w-3.5" /> {showLog ? "Hide" : "Show"} console output
           </button>

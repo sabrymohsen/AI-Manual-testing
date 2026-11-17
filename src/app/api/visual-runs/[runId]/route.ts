@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 
 export async function GET(
   request: Request,
@@ -30,7 +30,7 @@ export async function GET(
       return notFoundResponse("Visual check run not found")
     }
 
-    if (run.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(run.projectId, auth.session!.user.id, "read"))) {
       return unauthorizedResponse("Access denied")
     }
 

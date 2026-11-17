@@ -67,13 +67,13 @@ export default function InviteAcceptPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-md rounded-2xl border bg-white p-6 shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
+      <div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <div className="h-9 w-9 rounded-xl bg-indigo-100 flex items-center justify-center">
-            <Users className="h-5 w-5 text-indigo-600" />
+          <div className="h-9 w-9 rounded-xl bg-primary/15 flex items-center justify-center">
+            <Users className="h-5 w-5 text-primary" />
           </div>
-          <span className="font-extrabold text-indigo-700 tracking-tight">QA Engine</span>
+          <span className="font-semibold text-primary tracking-tight">QA Engine</span>
         </div>
 
         {loading ? (
@@ -83,20 +83,20 @@ export default function InviteAcceptPage() {
         ) : done === "accepted" ? (
           <div className="text-center py-6">
             <Check className="h-10 w-10 text-green-500 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-slate-800">You've joined {preview?.projectName}!</p>
-            <p className="text-xs text-slate-400 mt-1">Redirecting…</p>
+            <p className="text-sm font-semibold text-foreground">You've joined {preview?.projectName}!</p>
+            <p className="text-xs text-muted-foreground mt-1">Redirecting…</p>
           </div>
         ) : done === "declined" ? (
           <div className="text-center py-6">
-            <X className="h-10 w-10 text-slate-400 mx-auto mb-2" />
-            <p className="text-sm text-slate-600">Invitation declined.</p>
+            <X className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Invitation declined.</p>
           </div>
         ) : preview && (preview.status === "EXPIRED" || preview.status === "DECLINED") ? (
-          <p className="text-sm text-slate-600">This invitation is no longer valid ({preview.status.toLowerCase()}).</p>
+          <p className="text-sm text-muted-foreground">This invitation is no longer valid ({preview.status.toLowerCase()}).</p>
         ) : preview ? (
           <>
-            <h1 className="text-lg font-bold text-slate-900">You're invited</h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <h1 className="text-lg font-semibold text-foreground">You're invited</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               <span className="font-semibold">{preview.invitedBy}</span> invited you to join{" "}
               <span className="font-semibold">{preview.projectName}</span> as a{" "}
               <span className="font-semibold">{preview.role}</span>.
@@ -109,27 +109,27 @@ export default function InviteAcceptPage() {
                 <button
                   onClick={accept}
                   disabled={working}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
                 >
                   {working && <Loader2 className="h-4 w-4 animate-spin" />} Accept & Join
                 </button>
-                <button onClick={decline} disabled={working} className="rounded-lg border px-4 py-2 text-sm font-semibold text-slate-600">
+                <button onClick={decline} disabled={working} className="rounded-lg border px-4 py-2 text-sm font-semibold text-muted-foreground">
                   Decline
                 </button>
               </div>
             ) : (
               <div className="mt-5 space-y-2">
-                <p className="text-xs text-slate-500">Sign in or create an account to accept this invitation.</p>
+                <p className="text-xs text-muted-foreground">Sign in or create an account to accept this invitation.</p>
                 <div className="flex gap-2">
                   <Link
                     href={`/register?email=${encodeURIComponent(preview.email)}&redirect=${encodeURIComponent(`/invite/${token}`)}`}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
                   >
                     Create account
                   </Link>
                   <Link
                     href={`/login?redirect=${encodeURIComponent(`/invite/${token}`)}`}
-                    className="rounded-lg border px-4 py-2 text-sm font-semibold text-slate-600"
+                    className="rounded-lg border px-4 py-2 text-sm font-semibold text-muted-foreground"
                   >
                     Sign in
                   </Link>

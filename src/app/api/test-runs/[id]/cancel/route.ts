@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, memberProjectWhere, canUseProject } from "@/lib/api-guards"
 import { cancelTestRunJob } from "@/lib/queue"
 
 export async function POST(
@@ -15,12 +15,16 @@ export async function POST(
     const testRun = await prisma.testRun.findFirst({
       where: {
         id: params.id,
-        project: { userId: session.user.id },
+        project: memberProjectWhere(session.user.id),
       },
     })
 
     if (!testRun) {
       return NextResponse.json({ error: "Test run not found" }, { status: 404 })
+    }
+    // Viewers can watch runs but not cancel them.
+    if (!(await canUseProject(testRun.projectId, session.user.id, "write"))) {
+      return NextResponse.json({ error: "Viewers can't cancel runs" }, { status: 403 })
     }
 
     if (testRun.status === "Passed" || testRun.status === "Failed" || testRun.status === "Blocked" || testRun.status === "Cancelled") {

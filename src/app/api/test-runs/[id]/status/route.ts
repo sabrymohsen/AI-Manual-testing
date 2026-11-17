@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, memberProjectWhere } from "@/lib/api-guards"
 
 export async function GET(
   request: Request,
@@ -14,7 +14,7 @@ export async function GET(
     const testRun = await prisma.testRun.findFirst({
       where: {
         id: params.id,
-        project: { userId: session.user.id },
+        project: memberProjectWhere(session.user.id),
       },
       include: {
         stepResults: true,

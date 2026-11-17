@@ -24,7 +24,7 @@ export default function TestRunDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Test Run</h1>
+          <h1 className="text-3xl font-semibold">Test Run</h1>
           <p className="text-sm text-muted-foreground">
             Status: {progress.status} · {progress.durationMs > 0 ? `${progress.durationMs}ms` : "in progress"}
           </p>
@@ -36,7 +36,7 @@ export default function TestRunDetailPage() {
           progress.status === "Passed" ? "bg-green-100 text-green-700" :
           progress.status === "Failed" ? "bg-red-100 text-red-700" :
           progress.status === "Running" ? "bg-blue-100 text-blue-700" :
-          progress.status === "Queued" ? "bg-gray-100 text-gray-700" :
+          progress.status === "Queued" ? "bg-muted text-foreground" :
           "bg-yellow-100 text-yellow-700"
         }`}>
           {progress.status}

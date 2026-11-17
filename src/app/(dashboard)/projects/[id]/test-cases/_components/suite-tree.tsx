@@ -256,7 +256,7 @@ export function SuiteTree({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-1.5 border-b px-3 py-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <span className="text-[11px] font-medium text-muted-foreground">
           Suites
         </span>
         <button
@@ -336,8 +336,8 @@ export function SuiteTree({
 
         {!isLoading && roots.length === 0 && addingUnder !== null && (
           <p className="px-2 py-3 text-[11px] leading-relaxed text-muted-foreground">
-            No suites yet. Create one to start organising, or run the backfill to generate suites
-            from your existing features.
+            No suites yet. Suites are folders for test cases — press + above to create one,
+            e.g. &ldquo;Checkout&rdquo; or &ldquo;Login&rdquo;.
           </p>
         )}
 

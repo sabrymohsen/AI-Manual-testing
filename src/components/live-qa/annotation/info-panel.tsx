@@ -74,32 +74,32 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
       <div className="p-3 space-y-4 text-sm">
         {/* ── Metadata ── */}
         <section>
-          <h3 className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-muted-foreground mb-2">
+          <h3 className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground mb-2">
             <Info className="h-3.5 w-3.5" /> Screenshot Info
           </h3>
           <input
             value={metadata.title}
             onChange={(e) => patch({ title: e.target.value })}
             placeholder="Title"
-            className="w-full border rounded-md px-2.5 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-indigo-500 mb-2"
+            className="w-full border rounded-md px-2.5 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary mb-2"
           />
           <textarea
             value={metadata.description}
             onChange={(e) => patch({ description: e.target.value })}
             placeholder="Description / notes…"
             rows={4}
-            className="w-full border rounded-md px-2.5 py-1.5 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-indigo-500 mb-2 resize-none"
+            className="w-full border rounded-md px-2.5 py-1.5 text-[13px] bg-background focus:outline-none focus:ring-1 focus:ring-primary mb-2 resize-none"
           />
           <input
             value={metadata.url}
             onChange={(e) => patch({ url: e.target.value })}
             placeholder="Page URL"
-            className="w-full border rounded-md px-2.5 py-1.5 text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-indigo-500 mb-2"
+            className="w-full border rounded-md px-2.5 py-1.5 text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-primary mb-2"
           />
           {/* tags */}
           <div className="flex flex-wrap gap-1 mb-1.5">
             {metadata.tags.map((t) => (
-              <span key={t} className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border flex items-center gap-1">
+              <span key={t} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground border flex items-center gap-1">
                 #{t}
                 <button onClick={() => patch({ tags: metadata.tags.filter((x) => x !== t) })} className="hover:text-red-600">×</button>
               </span>
@@ -110,7 +110,7 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag() } }}
             placeholder="Add tag + Enter"
-            className="w-full border rounded-md px-2.5 py-1 text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full border rounded-md px-2.5 py-1 text-[12px] bg-background focus:outline-none focus:ring-1 focus:ring-primary"
           />
           {/* auto-captured */}
           <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px]">
@@ -123,13 +123,13 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
 
         {/* ── Issue templates ── */}
         <section>
-          <h3 className="text-[11px] font-black uppercase tracking-wide text-muted-foreground mb-2">Issue Severity</h3>
+          <h3 className="text-[11px] font-medium text-muted-foreground mb-2">Issue Severity</h3>
           <div className="grid grid-cols-2 gap-1.5">
             {(Object.keys(SEVERITY_META) as Severity[]).map((s) => (
               <button
                 key={s}
                 onClick={() => applySeverity(s)}
-                className={`h-8 rounded-md text-[11px] font-black text-white transition-transform ${metadata.severity === s ? "ring-2 ring-offset-1 ring-indigo-400 scale-[1.02]" : ""}`}
+                className={`h-8 rounded-md text-[11px] font-semibold text-white transition-transform ${metadata.severity === s ? "ring-2 ring-offset-1 ring-primary scale-[1.02]" : ""}`}
                 style={{ backgroundColor: SEVERITY_META[s].color }}
               >
                 {SEVERITY_META[s].label}
@@ -140,7 +140,7 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
 
         {/* ── Compare ── */}
         <section>
-          <h3 className="text-[11px] font-black uppercase tracking-wide text-muted-foreground mb-2">Compare</h3>
+          <h3 className="text-[11px] font-medium text-muted-foreground mb-2">Compare</h3>
           <input ref={compareInput} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadCompare(f); e.target.value = "" }} />
           <button onClick={() => compareInput.current?.click()} className="w-full h-9 rounded-md border text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-muted">
             <GitCompare className="h-3.5 w-3.5" /> Upload image to compare
@@ -149,11 +149,11 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
 
         {/* ── Export ── */}
         <section className="relative">
-          <button onClick={() => setExportOpen((o) => !o)} className="w-full h-9 rounded-md bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black flex items-center justify-center gap-1.5">
+          <button onClick={() => setExportOpen((o) => !o)} className="w-full h-9 rounded-md bg-primary hover:bg-primary/90 text-white text-xs font-semibold flex items-center justify-center gap-1.5">
             <Download className="h-3.5 w-3.5" /> Export <ChevronDown className="h-3.5 w-3.5" />
           </button>
           {exportOpen && (
-            <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-lg overflow-hidden">
+            <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-[0_4px_12px_rgba(0,0,0,0.06)] overflow-hidden">
               {exportItems.map((it) => (
                 <button
                   key={it.fmt}
@@ -171,7 +171,7 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
 
         {/* ── Share ── */}
         <section>
-          <button onClick={onShare} disabled={sharing} className="w-full h-9 rounded-md border text-xs font-black flex items-center justify-center gap-1.5 hover:bg-muted disabled:opacity-60">
+          <button onClick={onShare} disabled={sharing} className="w-full h-9 rounded-md border text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-muted disabled:opacity-60">
             {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Share link
           </button>
           {shareUrl && (
@@ -192,7 +192,7 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
 function Auto({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[9px] uppercase tracking-wide text-muted-foreground font-semibold">{label}</dt>
+      <dt className="text-[11px] text-muted-foreground font-medium">{label}</dt>
       <dd className="font-medium text-foreground break-words">{value || "—"}</dd>
     </div>
   )

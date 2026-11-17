@@ -685,7 +685,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="bg-card text-card-foreground border shadow-2xl rounded-2xl w-full max-w-6xl overflow-hidden flex flex-col h-[90vh]">
+      <div className="bg-card text-card-foreground border shadow-[0_8px_24px_rgba(0,0,0,0.08)] rounded-xl w-full max-w-6xl overflow-hidden flex flex-col h-[90vh]">
         {/* aria-live announcements for screen readers */}
         <div aria-live="polite" className="sr-only">{announcement}</div>
 
@@ -710,7 +710,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                     aria-pressed={tool === t.id}
                     title={`${t.label} · ${t.key}`}
                     className={`h-8 w-8 rounded-md flex items-center justify-center transition-colors ${
-                      tool === t.id ? "bg-indigo-600 text-white" : "text-muted-foreground hover:text-foreground hover:bg-background"
+                      tool === t.id ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground hover:bg-background"
                     }`}
                   >
                     <t.icon className="h-4 w-4" />
@@ -730,7 +730,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                     style={{ backgroundColor: c }}
                     aria-label={`Color ${c}`}
                     title={c}
-                    className={`w-5 h-5 rounded-full border transition-transform ${color === c ? "ring-2 ring-offset-2 ring-indigo-400 scale-110" : "border-border"}`}
+                    className={`w-5 h-5 rounded-full border transition-transform ${color === c ? "ring-2 ring-offset-2 ring-primary scale-110" : "border-border"}`}
                   />
                 ))}
               </div>
@@ -765,7 +765,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                         onClick={() => store.setFontSize(size)}
                         className={`h-6 w-6 rounded-md border text-[11px] font-bold ${
                           (selected?.type === "text" ? selected.fontSize || fontSize : fontSize) === size
-                            ? "bg-indigo-600 text-white border-indigo-600"
+                            ? "bg-primary text-white border-primary"
                             : "bg-background text-muted-foreground"
                         }`}
                         title={`${label} (${size}px)`}
@@ -785,8 +785,8 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                       key={s.key}
                       onClick={() => store.setSticker(s.key)}
                       title={s.label}
-                      className={`h-7 rounded-md border text-[10px] font-black px-1.5 flex items-center transition-colors ${
-                        sticker === s.key ? "ring-2 ring-indigo-400" : ""
+                      className={`h-7 rounded-md border text-[10px] font-semibold px-1.5 flex items-center transition-colors ${
+                        sticker === s.key ? "ring-2 ring-primary" : ""
                       } ${s.kind === "badge" ? "text-white" : "bg-background"}`}
                       style={s.kind === "badge" ? { backgroundColor: s.color } : undefined}
                     >
@@ -803,7 +803,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                     <button
                       key={p}
                       onClick={() => store.setMagnifierPower(p)}
-                      className={`h-7 px-2.5 rounded-md border text-xs font-bold ${magnifierPower === p ? "bg-indigo-600 text-white" : "bg-background text-muted-foreground"}`}
+                      className={`h-7 px-2.5 rounded-md border text-xs font-semibold ${magnifierPower === p ? "bg-primary text-white" : "bg-background text-muted-foreground"}`}
                     >
                       {p}×
                     </button>
@@ -818,7 +818,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                     <button
                       key={ar.key}
                       onClick={() => setCropAspect(ar.ratio)}
-                      className={`h-7 px-2 rounded-md border text-[11px] font-semibold ${cropAspect === ar.ratio ? "bg-indigo-600 text-white" : "bg-background text-muted-foreground"}`}
+                      className={`h-7 px-2 rounded-md border text-[11px] font-semibold ${cropAspect === ar.ratio ? "bg-primary text-white" : "bg-background text-muted-foreground"}`}
                     >
                       {ar.label}
                     </button>
@@ -873,16 +873,16 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
 
           {/* Floating text input */}
           {textInput && (
-            <div className="absolute z-20 flex items-center gap-1.5 bg-card border p-1.5 shadow-xl rounded-lg" style={{ left: textInput.x, top: textInput.y }}>
+            <div className="absolute z-20 flex items-center gap-1.5 bg-card border p-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.08)] rounded-lg" style={{ left: textInput.x, top: textInput.y }}>
               <input
                 autoFocus
                 value={textInput.value}
                 onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
                 onKeyDown={(e) => { if (e.key === "Enter") commitText(); if (e.key === "Escape") setTextInput(null) }}
                 placeholder="Label text…"
-                className="border rounded-md px-2.5 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48"
+                className="border rounded-md px-2.5 py-1.5 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary w-48"
               />
-              <Button onClick={commitText} size="icon" className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 w-8"><Check className="h-4 w-4" /></Button>
+              <Button onClick={commitText} size="icon" className="bg-primary hover:bg-primary/90 text-white h-8 w-8"><Check className="h-4 w-4" /></Button>
               <Button onClick={() => setTextInput(null)} variant="ghost" size="icon" className="h-8 w-8"><X className="h-4 w-4" /></Button>
             </div>
           )}
@@ -890,7 +890,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
           {/* Magnifier lens — circular loupe that follows the cursor (2x/4x) */}
           {tool === "magnifier" && lens && img && (
             <div
-              className="absolute rounded-full border-2 border-indigo-500 shadow-xl pointer-events-none z-30 overflow-hidden"
+              className="absolute rounded-full border-2 border-primary shadow-[0_8px_24px_rgba(0,0,0,0.08)] pointer-events-none z-30 overflow-hidden"
               style={{
                 left: lens.sx - 70,
                 top: lens.sy - 70,
@@ -910,13 +910,13 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
           {minimap && minimap.visible && (
             <div
               onClick={onMinimapClick}
-              className="absolute bottom-3 right-3 z-20 border-2 border-border rounded-md overflow-hidden shadow-lg cursor-pointer bg-card"
+              className="absolute bottom-3 right-3 z-20 border-2 border-border rounded-md overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.06)] cursor-pointer bg-card"
               style={{ width: minimap.MM_W, height: minimap.mmH }}
               title="Click to navigate"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={imageSrc} alt="" className="w-full h-full object-contain pointer-events-none select-none" draggable={false} />
-              <div className="absolute border-2 border-indigo-500 bg-indigo-500/10 pointer-events-none" style={{ left: minimap.rect.x, top: minimap.rect.y, width: minimap.rect.w, height: minimap.rect.h }} />
+              <div className="absolute border-2 border-primary bg-primary/10 pointer-events-none" style={{ left: minimap.rect.x, top: minimap.rect.y, width: minimap.rect.w, height: minimap.rect.h }} />
             </div>
           )}
 
@@ -971,7 +971,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
               {showPanel ? <PanelRightClose className="h-4 w-4" /> : <PanelRightOpen className="h-4 w-4" />}
             </button>
             <Button variant="outline" onClick={onCancel} disabled={saving} className="h-9 px-4">Cancel</Button>
-            <Button onClick={handleSave} disabled={saving || !img} className="h-9 px-5 bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5">
+            <Button onClick={handleSave} disabled={saving || !img} className="h-9 px-5 bg-primary hover:bg-primary/90 text-white flex items-center gap-1.5">
               <Check className="h-4 w-4" /> {saving ? "Saving…" : "Save Screenshot"}
             </Button>
           </div>

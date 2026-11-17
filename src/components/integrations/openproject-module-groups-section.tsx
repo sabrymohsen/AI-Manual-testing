@@ -79,7 +79,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
       <div className="flex items-center justify-between px-4 py-3 bg-accent/10 border-b">
         <button
           onClick={() => setCollapsed(v => !v)}
-          className="flex items-center gap-2 text-sm font-bold text-foreground/80 hover:text-foreground"
+          className="flex items-center gap-2 text-sm font-semibold text-foreground/80 hover:text-foreground"
         >
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           Feature Coverage
@@ -146,7 +146,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                     <div className="px-4 pt-4 pb-3">
                       <div className="min-w-0">
                         <h3
-                          className="font-bold text-sm leading-tight"
+                          className="font-semibold text-sm leading-tight"
                           dir="auto"
                           title={group.groupName}
                         >
@@ -167,7 +167,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                       ) : !hasRuns ? (
                         /* Untested — never show a red/0% bar */
                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground" dir="ltr">
-                          <Clock className="h-3 w-3 shrink-0 text-slate-400" />
+                          <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
                           <span>
                             {group.totalCases} case{group.totalCases !== 1 ? "s" : ""} · not run yet
                           </span>
@@ -188,7 +188,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                                 }}
                               />
                             </div>
-                            <span className="text-[10px] font-bold text-muted-foreground w-8 shrink-0 text-right">
+                            <span className="text-[10px] font-semibold text-muted-foreground w-8 shrink-0 text-right">
                               {passRate}%
                             </span>
                           </div>

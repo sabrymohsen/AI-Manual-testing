@@ -95,11 +95,11 @@ export function SprintReport({ projectId }: { projectId: string }) {
     <div className="space-y-4">
       {/* Sprint selector */}
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Sprint</span>
+        <span className="text-[11px] font-medium text-muted-foreground/60">Sprint</span>
         <select
           value={activeSprintId}
           onChange={(e) => setActiveSprintId(e.target.value)}
-          className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold"
+          className="h-8 rounded-md border border-border bg-card px-2 text-xs font-semibold"
         >
           {sprints.map((s) => (
             <option key={s.id} value={s.id}>
@@ -120,45 +120,45 @@ export function SprintReport({ projectId }: { projectId: string }) {
         <>
           {/* Sprint summary cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="rounded-xl border border-slate-100 bg-card p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60">
                 <Timer className="h-3 w-3" /> Time
               </div>
-              <p className="text-lg font-extrabold text-slate-800">{elapsedDays}d / {totalDays}d</p>
-              <p className="text-[10px] text-slate-400">{remainingDays} days remaining</p>
+              <p className="text-lg font-semibold text-foreground">{elapsedDays}d / {totalDays}d</p>
+              <p className="text-[10px] text-muted-foreground">{remainingDays} days remaining</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-card p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60">
                 <Target className="h-3 w-3" /> Story Points
               </div>
-              <p className="text-lg font-extrabold text-slate-800">{completedPoints} / {totalPoints}</p>
-              <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
+              <p className="text-lg font-semibold text-foreground">{completedPoints} / {totalPoints}</p>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div className={cn("h-full rounded-full", isAhead ? "bg-emerald-500" : "bg-amber-500")} style={{ width: `${workProgress}%` }} />
               </div>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-card p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60">
                 <CheckCircle2 className="h-3 w-3 text-emerald-500" /> Completed
               </div>
-              <p className="text-lg font-extrabold text-emerald-600">{completedTasks.length}</p>
-              <p className="text-[10px] text-slate-400">{completedPoints} pts</p>
+              <p className="text-lg font-semibold text-emerald-600">{completedTasks.length}</p>
+              <p className="text-[10px] text-muted-foreground">{completedPoints} pts</p>
             </div>
-            <div className="rounded-xl border border-slate-100 bg-card p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/60 uppercase">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/60">
                 <XCircle className="h-3 w-3 text-rose-500" /> Not Done
               </div>
-              <p className="text-lg font-extrabold text-rose-600">{notCompletedTasks.length}</p>
-              <p className="text-[10px] text-slate-400">{totalPoints - completedPoints} pts remaining</p>
+              <p className="text-lg font-semibold text-rose-600">{notCompletedTasks.length}</p>
+              <p className="text-[10px] text-muted-foreground">{totalPoints - completedPoints} pts remaining</p>
             </div>
           </div>
 
           {/* Completed issues */}
           {completedTasks.length > 0 && (
-            <div className="rounded-xl border border-slate-100 bg-card">
+            <div className="rounded-xl border border-border bg-card">
               <div className="flex items-center gap-2 border-b px-4 py-2.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Completed Issues</span>
-                <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{completedTasks.length}</span>
+                <span className="text-xs font-medium text-foreground">Completed Issues</span>
+                <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">{completedTasks.length}</span>
               </div>
               <div className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto">
                 {completedTasks.map((task) => (
@@ -170,11 +170,11 @@ export function SprintReport({ projectId }: { projectId: string }) {
 
           {/* Not completed issues */}
           {notCompletedTasks.length > 0 && (
-            <div className="rounded-xl border border-slate-100 bg-card">
+            <div className="rounded-xl border border-border bg-card">
               <div className="flex items-center gap-2 border-b px-4 py-2.5">
                 <XCircle className="h-4 w-4 text-rose-500" />
-                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Issues Not Completed</span>
-                <span className="ml-auto rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">{notCompletedTasks.length}</span>
+                <span className="text-xs font-medium text-foreground">Issues Not Completed</span>
+                <span className="ml-auto rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-700">{notCompletedTasks.length}</span>
               </div>
               <div className="divide-y divide-slate-50 max-h-[300px] overflow-y-auto">
                 {notCompletedTasks.map((task) => (
@@ -192,28 +192,28 @@ export function SprintReport({ projectId }: { projectId: string }) {
 function SprintTaskRow({ task }: { task: SprintTask }) {
   const statusColor = (status: string) => {
     const map: Record<string, string> = {
-      TODO: "bg-slate-100 text-slate-600",
+      TODO: "bg-muted text-muted-foreground",
       IN_PROGRESS: "bg-blue-100 text-blue-700",
       REVIEW: "bg-violet-100 text-violet-700",
       TESTING: "bg-amber-100 text-amber-700",
       DONE: "bg-emerald-100 text-emerald-700",
     }
-    return map[status] || "bg-slate-100 text-slate-600"
+    return map[status] || "bg-muted text-muted-foreground"
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50/40 transition-colors">
-      <span className="shrink-0 font-mono text-[10px] font-bold text-primary">{task.key}</span>
-      <span className="flex-1 truncate text-xs font-medium text-slate-700">{task.title}</span>
-      <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-bold shrink-0", statusColor(task.status))}>
+    <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/40 transition-colors">
+      <span className="shrink-0 font-mono text-[10px] font-semibold text-primary">{task.key}</span>
+      <span className="flex-1 truncate text-xs font-medium text-foreground">{task.title}</span>
+      <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-semibold shrink-0", statusColor(task.status))}>
         {task.status.replace("_", " ")}
       </span>
       {task.storyPoints != null && (
-        <span className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-600">
+        <span className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
           {task.storyPoints}
         </span>
       )}
-      <span className="shrink-0 text-[10px] text-slate-400">
+      <span className="shrink-0 text-[10px] text-muted-foreground">
         {task.assignees.map((a) => a.name || a.email).join(", ") || "Unassigned"}
       </span>
     </div>

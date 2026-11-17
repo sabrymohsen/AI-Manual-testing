@@ -51,7 +51,7 @@ export default function NewProjectPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <h1 className="text-3xl font-bold">New Project</h1>
+      <h1 className="text-3xl font-semibold">New Project</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="name">Project Name *</Label>

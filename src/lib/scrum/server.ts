@@ -9,7 +9,9 @@ export const DEFAULT_COLUMNS: { name: string; status: TaskStatus; order: number 
   { name: "To Do", status: "TODO", order: 0 },
   { name: "In Progress", status: "IN_PROGRESS", order: 1 },
   { name: "In Review", status: "REVIEW", order: 2 },
-  { name: "Done", status: "DONE", order: 3 },
+  // A QA board without a testing stage hid every task moved to TESTING.
+  { name: "Testing", status: "TESTING", order: 3 },
+  { name: "Done", status: "DONE", order: 4 },
 ]
 
 /** Ensure a project has board columns; lazily seed defaults on first read. */
@@ -69,7 +71,7 @@ export const taskDetailInclude = {
     include: { user: { select: { id: true, name: true, avatarUrl: true } } },
   },
   testCaseLinks: {
-    include: { testCase: { select: { id: true, title: true, priority: true, executionType: true } } },
+    include: { testCase: { select: { id: true, title: true, priority: true, executionType: true, lastStatus: true, lastRunAt: true } } },
   },
   bugLinks: {
     include: { bugReport: { select: { id: true, bugKey: true, title: true, severity: true, status: true } } },

@@ -1,3 +1,4 @@
+import type { BoardSignals } from "@/lib/scrum/board-signals"
 // Shared client/server types for the spec-literal Scrum board.
 
 export type TaskStatus = "TODO" | "IN_PROGRESS" | "DONE" | "REVIEW" | "TESTING" | "DEPLOYED"
@@ -122,6 +123,9 @@ export interface LinkedTestCase {
   title: string
   priority: string
   executionType: string
+  /** NotExecuted | Passed | Failed | Blocked | Warning | Skipped */
+  lastStatus?: string
+  lastRunAt?: string | null
 }
 
 export interface LinkedBug {
@@ -144,6 +148,7 @@ export interface ScrumTask {
   priority: TaskPriority
   storyPoints: number | null
   dueDate: string | null
+  startDate?: string | null
   branchName: string | null
   progress: number
   boardRank: number
@@ -177,6 +182,8 @@ export interface ScrumTask {
   commentCount: number
   testCaseCount?: number
   bugCount?: number
+  /** Board-only: blocked + test results (task list GET). */
+  signals?: BoardSignals
   createdAt: string
   updatedAt: string
 }

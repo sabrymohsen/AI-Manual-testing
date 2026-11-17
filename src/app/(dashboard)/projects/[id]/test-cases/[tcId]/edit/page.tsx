@@ -2,36 +2,32 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { StepBuilder } from "@/components/test-cases/step-builder"
-import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
-import { AssigneeSelect } from "@/components/team/assignee-select"
-import { ModuleSelect } from "@/components/bug-reports/module-select"
+import { Loader2 } from "lucide-react"
+import { TestCaseEditor, type TestCaseDraft, type EditorStep } from "@/components/test-cases/test-case-editor"
 
 export default function EditTestCasePage() {
   const params = useParams()
   const router = useRouter()
-  const [testCase, setTestCase] = useState<any>(null)
-  const [steps, setSteps] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [assignee, setAssignee] = useState("")
-  const [suiteId, setSuiteId] = useState<string>("")
-
-  const [requirementIds, setRequirementIds] = useState<string[]>([])
+  const projectId = params.id as string
+  const tcId = params.tcId as string
+  const [initial, setInitial] = useState<TestCaseDraft | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch(`/api/projects/${params.id}/test-cases/${params.tcId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setTestCase(data.testCase)
-        setAssignee(data.testCase.assignee || "")
-        setSuiteId(data.testCase.suiteId || data.testCase.suite?.id || "")
-        setRequirementIds((data.testCase.requirements || []).map((r: any) => r.requirementId))
-        setSteps(
-          data.testCase.steps.map((s: any) => ({
+    fetch(`/api/projects/${projectId}/test-cases/${tcId}`)
+      .then(async (res) => {
+        const data = await res.json()
+        if (!res.ok || !data.testCase) throw new Error(data.error || "Test case not found")
+        const tc = data.testCase
+        setInitial({
+          title: tc.title,
+          priority: tc.priority,
+          preconditions: tc.preconditions || "",
+          executionType: tc.executionType === "Automated" ? "Automated" : "Manual",
+          suiteId: tc.suiteId || tc.suite?.id || "",
+          assignee: tc.assignee || "",
+          requirementIds: (tc.requirements || []).map((r: { requirementId: string }) => r.requirementId),
+          steps: tc.steps.map((s: Record<string, unknown>) => ({
             actionDescription: s.actionDescription,
             expectedResult: s.expectedResult,
             actionType: s.actionType,
@@ -47,107 +43,50 @@ export default function EditTestCasePage() {
             groupId: s.groupId ?? null,
             selectedOptionText: s.selectedOptionText ?? null,
             selectedOptionValue: s.selectedOptionValue ?? null,
-          }))
-        )
+          })) as EditorStep[],
+        })
       })
-  }, [params.id, params.tcId])
+      .catch((e: Error) => setLoadError(e.message))
+  }, [projectId, tcId])
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
-    const form = new FormData(e.currentTarget)
-    const body = {
-      title: form.get("title"),
-      priority: form.get("priority"),
-      preconditions: form.get("preconditions") || null,
-      assignee: assignee || null,
-      suiteId: suiteId || null,
-      steps,
-      requirementIds
-    }
-
-    const res = await fetch(`/api/projects/${params.id}/test-cases/${params.tcId}`, {
+  async function save(d: TestCaseDraft) {
+    const res = await fetch(`/api/projects/${projectId}/test-cases/${tcId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        title: d.title,
+        priority: d.priority,
+        preconditions: d.preconditions.trim() || null,
+        executionType: d.executionType,
+        assignee: d.assignee || null,
+        suiteId: d.suiteId || null,
+        steps: d.steps,
+        requirementIds: d.requirementIds,
+      }),
     })
-
-    if (res.ok) {
-      router.push(`/projects/${params.id}/test-cases${suiteId ? `?suite=${encodeURIComponent(suiteId)}` : ""}`)
-    } else {
-      const data = await res.json()
-      setError(data.error || "Failed to update test case")
-      setLoading(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      return data.error || "Failed to update test case"
     }
+    router.push(`/projects/${projectId}/test-cases?case=${tcId}${d.suiteId ? `&suite=${encodeURIComponent(d.suiteId)}` : ""}`)
   }
 
-  if (!testCase) return <p className="text-muted-foreground">Loading...</p>
+  if (loadError) return <p className="text-sm text-destructive">{loadError}</p>
+  if (!initial)
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading test case…
+      </p>
+    )
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <h1 className="text-3xl font-bold">Edit Test Case</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input id="title" name="title" required defaultValue={testCase.title} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="suite">Module / Suite</Label>
-            <ModuleSelect
-              projectId={params.id as string}
-              value={suiteId}
-              onChange={setSuiteId}
-              placeholder="— Unfiled (No Module) —"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <select id="priority" name="priority" defaultValue={testCase.priority} className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-          </div>
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="assignee">Assignee</Label>
-            <AssigneeSelect
-              id="assignee"
-              projectId={params.id as string}
-              value={assignee}
-              onChange={setAssignee}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="preconditions">Preconditions</Label>
-            <Input id="preconditions" name="preconditions" defaultValue={testCase.preconditions || ""} />
-          </div>
-        </div>
-
-        <LinkedRequirementsSelector
-          projectId={params.id as string}
-          selectedIds={requirementIds}
-          onChange={setRequirementIds}
-        />
-
-        <StepBuilder steps={steps} onChange={setSteps} projectId={params.id as string} />
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex gap-2">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : "Save Changes"}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </div>
+    <TestCaseEditor
+      projectId={projectId}
+      initial={initial}
+      heading={`Edit · ${initial.title}`}
+      submitLabel="Save changes"
+      onSubmit={save}
+      onCancel={() => router.back()}
+    />
   )
 }

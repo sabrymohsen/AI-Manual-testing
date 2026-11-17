@@ -36,10 +36,10 @@ export const ENTITY_CHIP: Record<string, string> = {
   BUG_REPORT: "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
   TEST_CASE: "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100",
   BRD_DOCUMENT: "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100",
-  REQUIREMENT: "bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100",
+  REQUIREMENT: "bg-primary/10 text-primary border-primary/25 hover:bg-primary/15",
   TEST_RUN: "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100",
 }
-const ENTITY_CHIP_FALLBACK = "bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200"
+const ENTITY_CHIP_FALLBACK = "bg-muted text-muted-foreground border-border hover:bg-muted"
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
@@ -90,7 +90,7 @@ function renderInline(
       out.push(<s key={k} className="opacity-70">{tok.slice(2, -2)}</s>)
     } else if (tok.startsWith("`") && tok.endsWith("`")) {
       out.push(
-        <code key={k} className="rounded bg-slate-100 px-1 py-0.5 font-mono text-[0.85em] text-slate-800">
+        <code key={k} className="rounded bg-muted px-1 py-0.5 font-mono text-[0.85em] text-foreground">
           {tok.slice(1, -1)}
         </code>
       )
@@ -111,7 +111,7 @@ function renderInline(
       const ref = entities.find((e) => e.key === key)
       const cls = ref ? ENTITY_CHIP[ref.type] ?? ENTITY_CHIP_FALLBACK : ENTITY_CHIP_FALLBACK
       const content = (
-        <span className={`rounded border px-1 py-0.5 text-[0.85em] font-bold transition-colors ${cls}`}>
+        <span className={`rounded border px-1 py-0.5 text-[0.85em] font-semibold transition-colors ${cls}`}>
           {tok}
         </span>
       )

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, canUseProject, usableProjectIds, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
 import { addTestRunJob } from "@/lib/queue"
 
 const bodySchema = z.object({
@@ -39,24 +39,22 @@ export async function POST(request: Request) {
       projectId
     } = parse.data
 
-    if (projectId) {
-      const projAuth = await requireProjectOwner(projectId)
-      if (projAuth.error) {
-        return notFoundResponse("Project not found or access denied")
-      }
+    if (projectId && !(await canUseProject(projectId, session.user.id, "write"))) {
+      return notFoundResponse("Project not found or access denied")
     }
 
     // Fetch test cases to group by projectId
-    const testCases = await prisma.testCase.findMany({
+    const found = await prisma.testCase.findMany({
       where: {
         id: { in: testCaseIds },
-        project: { userId: session.user.id }
       },
       include: {
         steps: { orderBy: { stepNumber: "asc" } },
         project: true
       }
     })
+    const allowed = await usableProjectIds(session.user.id, found.map((tc) => tc.projectId), "write")
+    const testCases = found.filter((tc) => allowed.has(tc.projectId))
 
     if (testCases.length === 0) {
       return NextResponse.json({ error: "No valid test cases found" }, { status: 404 })

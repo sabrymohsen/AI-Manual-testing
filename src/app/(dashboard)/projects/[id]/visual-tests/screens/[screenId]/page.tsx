@@ -135,7 +135,7 @@ export default function VisualScreenAnalyzerPage() {
 
   if (!data) {
     return (
-      <div className="flex items-center gap-2 p-10 text-sm text-slate-500">
+      <div className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading…
       </div>
     )
@@ -205,27 +205,27 @@ export default function VisualScreenAnalyzerPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Top bar */}
-      <div className="flex flex-wrap items-center gap-3 border-b bg-white px-4 py-3">
-        <Link href={`/projects/${projectId}/visual-tests/runs/${screen.runId}`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+      <div className="flex flex-wrap items-center gap-3 border-b bg-card px-4 py-3">
+        <Link href={`/projects/${projectId}/visual-tests/runs/${screen.runId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Run
         </Link>
         <div className="min-w-0 flex-1">
-          <p className="flex items-center gap-2 truncate font-semibold text-slate-900">
+          <p className="flex items-center gap-2 truncate font-semibold text-foreground">
             {screen.url ? pathOf(screen.url) : screen.name}
             {screen.url && (
-              <a href={screen.url} target="_blank" rel="noreferrer" className="text-slate-400 hover:text-indigo-600" aria-label="Open page">
+              <a href={screen.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary" aria-label="Open page">
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             )}
             <ScreenStatusBadge status={screen.status as ScreenStatus} auto={screen.resolvedByAuto} />
           </p>
-          <p className="truncate text-xs text-slate-500">
+          <p className="truncate text-xs text-muted-foreground">
             {test?.name} · {screen.envName} · {screen.viewport}
             {screen.httpStatus ? ` · HTTP ${screen.httpStatus}` : ""}
             {screen.loadMs ? ` · loaded in ${(screen.loadMs / 1000).toFixed(1)} s` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-1 text-sm text-slate-500">
+        <div className="flex items-center gap-1 text-sm text-muted-foreground">
           <Button size="sm" variant="ghost" disabled={index <= 0} onClick={() => go(siblings[index - 1]?.id)} aria-label="Previous screen">
             <ChevronLeft />
           </Button>
@@ -238,8 +238,8 @@ export default function VisualScreenAnalyzerPage() {
 
       <div className="flex min-h-0 flex-1">
         {/* Images */}
-        <div className="flex min-w-0 flex-1 flex-col bg-slate-100">
-          <div className="flex flex-wrap items-center gap-2 border-b bg-white px-4 py-2 text-sm">
+        <div className="flex min-w-0 flex-1 flex-col bg-muted">
+          <div className="flex flex-wrap items-center gap-2 border-b bg-card px-4 py-2 text-sm">
             {(
               [
                 ["side", "Side by side"],
@@ -251,7 +251,7 @@ export default function VisualScreenAnalyzerPage() {
                 key={v}
                 disabled={(v !== "side" && !hasBaseline) || (v === "diff" && !hasDiff)}
                 onClick={() => setView(v)}
-                className={`rounded-md px-3 py-1 disabled:opacity-40 ${view === v ? "bg-indigo-600 text-white" : "hover:bg-slate-100"}`}
+                className={`rounded-md px-3 py-1 disabled:opacity-40 ${view === v ? "bg-primary text-white" : "hover:bg-muted"}`}
               >
                 {label}
               </button>
@@ -274,7 +274,7 @@ export default function VisualScreenAnalyzerPage() {
                 </button>
               ))}
             </div>
-            <label className="ml-2 flex items-center gap-1 text-slate-600">
+            <label className="ml-2 flex items-center gap-1 text-muted-foreground">
               <input type="checkbox" checked={showBoxes} onChange={e => setShowBoxes(e.target.checked)} className="accent-indigo-600" /> Outline changes
             </label>
             {hasActual && (
@@ -322,7 +322,7 @@ export default function VisualScreenAnalyzerPage() {
                     />
                   </Pane>
                 )}
-                {!hasBaseline && !hasActual && <p className="text-sm text-slate-500">No screenshot was taken.</p>}
+                {!hasBaseline && !hasActual && <p className="text-sm text-muted-foreground">No screenshot was taken.</p>}
               </div>
             )}
             {view === "diff" && hasDiff && (
@@ -341,11 +341,11 @@ export default function VisualScreenAnalyzerPage() {
         </div>
 
         {/* Decision panel */}
-        <aside className="w-80 shrink-0 space-y-4 overflow-y-auto border-l bg-white p-4">
-          <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-700">
+        <aside className="w-80 shrink-0 space-y-4 overflow-y-auto border-l bg-card p-4">
+          <div className="rounded-lg bg-muted/50 p-3 text-sm text-foreground">
             {screen.status === "Unresolved" && (
               <>
-                <p className="font-medium text-slate-900">Your turn: is this change expected?</p>
+                <p className="font-medium text-foreground">Your turn: is this change expected?</p>
                 <p className="mt-1 text-xs">
                   {screen.diffRegions.length} area(s) changed, {(screen.mismatchPercent ?? 0).toFixed(2)}% of the page.
                 </p>
@@ -355,7 +355,7 @@ export default function VisualScreenAnalyzerPage() {
                       <button
                         key={i}
                         onClick={() => jumpTo(b)}
-                        className="rounded border border-rose-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-rose-700 hover:bg-rose-50"
+                        className="rounded border border-rose-200 bg-card px-1.5 py-0.5 text-[11px] font-medium text-rose-700 hover:bg-rose-50"
                         title={`Zoom to change ${i + 1} (${b.width}×${b.height}px at ${b.x},${b.y})`}
                       >
                         Change {i + 1}
@@ -383,11 +383,11 @@ export default function VisualScreenAnalyzerPage() {
                   {deciding === "reject" ? <Loader2 className="animate-spin" /> : <X />} Reject
                 </Button>
               </div>
-              <p className="text-center text-[11px] text-slate-400">Keyboard: A accept · R reject · ← → move</p>
+              <p className="text-center text-[11px] text-muted-foreground">Keyboard: A accept · R reject · ← → move</p>
               {test?.autoMaintenance && screen.diffRegions.length > 0 && (
-                <label className="block space-y-1 text-xs text-slate-600">
-                  <span className="font-medium text-slate-800">Also decide identical changes on</span>
-                  <select value={scope} onChange={e => setScope(e.target.value as any)} className="h-8 w-full rounded-md border bg-white px-2 text-sm">
+                <label className="block space-y-1 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Also decide identical changes on</span>
+                  <select value={scope} onChange={e => setScope(e.target.value as any)} className="h-8 w-full rounded-md border bg-card px-2 text-sm">
                     <option value="run">other screens in this run</option>
                     <option value="test">screens waiting in any run of this test</option>
                     <option value="none">only this screen</option>
@@ -398,11 +398,11 @@ export default function VisualScreenAnalyzerPage() {
           )}
 
           {autoResult && (
-            <div className="space-y-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-sm">
-              <p className="font-medium text-indigo-900">
+            <div className="space-y-2 rounded-lg border border-primary/25 bg-primary/10 p-3 text-sm">
+              <p className="font-medium text-primary">
                 {autoResult.action} {autoResult.rows.length} other screen(s) with the same change
               </p>
-              <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-indigo-800">
+              <ul className="max-h-40 space-y-1 overflow-y-auto text-xs text-primary">
                 {autoResult.rows.map(r => (
                   <li key={r.id}>
                     <Link href={`/projects/${projectId}/visual-tests/screens/${r.id}`} className="hover:underline">
@@ -418,7 +418,7 @@ export default function VisualScreenAnalyzerPage() {
           )}
 
           {!autoResult && autoChildren?.length > 0 && (
-            <p className="text-xs text-slate-500">This decision was also applied to {autoChildren.length} other screen(s) with the same change.</p>
+            <p className="text-xs text-muted-foreground">This decision was also applied to {autoChildren.length} other screen(s) with the same change.</p>
           )}
 
           {nextToReview && (
@@ -429,12 +429,12 @@ export default function VisualScreenAnalyzerPage() {
 
           {drawing && (
             <div className="space-y-2 rounded-lg border p-3 text-sm">
-              <p className="font-medium text-slate-900">Ignore an area</p>
+              <p className="font-medium text-foreground">Ignore an area</p>
               {!draft ? (
-                <p className="text-xs text-slate-500">Drag a box over the new screenshot, around something that is allowed to change (an ad, a carousel, a clock).</p>
+                <p className="text-xs text-muted-foreground">Drag a box over the new screenshot, around something that is allowed to change (an ad, a carousel, a clock).</p>
               ) : (
                 <>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {draft.width}×{draft.height} at ({draft.x}, {draft.y})
                   </p>
                   <label className="flex items-center gap-2 text-xs">
@@ -470,15 +470,15 @@ export default function VisualScreenAnalyzerPage() {
               </Button>
             ) : (
               <div className="space-y-2 rounded-lg border p-3 text-sm">
-                <p className="font-medium text-slate-900">File a bug{test?.suite ? ` in ${test.suite.name}` : ""}</p>
+                <p className="font-medium text-foreground">File a bug{test?.suite ? ` in ${test.suite.name}` : ""}</p>
                 <input value={bugForm.title} onChange={e => setBugForm(f => ({ ...f, title: e.target.value }))} placeholder="Title (a good one is suggested if left empty)" className="h-8 w-full rounded-md border px-2 text-xs" />
-                <select value={bugForm.severity} onChange={e => setBugForm(f => ({ ...f, severity: e.target.value }))} className="h-8 w-full rounded-md border bg-white px-2 text-xs">
+                <select value={bugForm.severity} onChange={e => setBugForm(f => ({ ...f, severity: e.target.value }))} className="h-8 w-full rounded-md border bg-card px-2 text-xs">
                   {["Low", "Medium", "High", "Critical"].map(s => (
                     <option key={s}>{s}</option>
                   ))}
                 </select>
                 <textarea value={bugForm.notes} onChange={e => setBugForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Notes (optional)" className="w-full rounded-md border p-2 text-xs" />
-                <p className="text-[11px] text-slate-500">The approved, new and difference images are attached.</p>
+                <p className="text-[11px] text-muted-foreground">The approved, new and difference images are attached.</p>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={fileBug} disabled={busy}>
                     {busy ? <Loader2 className="animate-spin" /> : <Bug />} File bug
@@ -492,15 +492,15 @@ export default function VisualScreenAnalyzerPage() {
           </div>
 
           {regions.length > 0 && (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {regions.length} ignored area(s) apply to this screen (grey). Manage them on the{" "}
-              <Link href={`/projects/${projectId}/visual-tests/${test?.id}`} className="text-indigo-700 hover:underline">
+              <Link href={`/projects/${projectId}/visual-tests/${test?.id}`} className="text-primary hover:underline">
                 test page
               </Link>
               .
             </p>
           )}
-          {run && <p className="text-xs text-slate-400">Compared {run.matchLevel === "Strict" ? "exactly" : run.matchLevel === "Dynamic" ? "ignoring changing text" : "ignoring colours"}.</p>}
+          {run && <p className="text-xs text-muted-foreground">Compared {run.matchLevel === "Strict" ? "exactly" : run.matchLevel === "Dynamic" ? "ignoring changing text" : "ignoring colours"}.</p>}
         </aside>
       </div>
     </div>
@@ -528,11 +528,11 @@ function Pane({
 }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
       <div
         ref={scrollRef}
         onScroll={onScroll}
-        className={`rounded-lg border bg-white shadow-sm ${zoomed ? "max-h-[75vh] overflow-auto" : "overflow-hidden"}`}
+        className={`rounded-lg border bg-card shadow-sm ${zoomed ? "max-h-[75vh] overflow-auto" : "overflow-hidden"}`}
       >
         {children}
       </div>
@@ -636,7 +636,7 @@ function ImageWithOverlays({
         <div key={`b${i}`} className="pointer-events-none absolute border-2 border-rose-500" style={{ left: b.x * scale - 2, top: b.y * scale - 2, width: b.width * scale + 4, height: b.height * scale + 4 }} />
       ))}
       {draft && (
-        <div className="pointer-events-none absolute border-2 border-dashed border-indigo-600 bg-indigo-500/20" style={{ left: draft.x * scale, top: draft.y * scale, width: draft.width * scale, height: draft.height * scale }} />
+        <div className="pointer-events-none absolute border-2 border-dashed border-primary bg-primary/20" style={{ left: draft.x * scale, top: draft.y * scale, width: draft.width * scale, height: draft.height * scale }} />
       )}
     </div>
   )

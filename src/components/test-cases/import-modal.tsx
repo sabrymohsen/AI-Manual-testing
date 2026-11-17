@@ -471,12 +471,12 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-background border rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-background border rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
         <div className="px-6 py-4 border-b flex items-center justify-between bg-accent/20">
           <div>
-            <h3 className="text-xl font-bold flex items-center gap-2">
+            <h3 className="text-xl font-semibold flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5 text-green-500" /> Excel Test Case Importer
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -504,7 +504,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-2xl p-12 text-center bg-accent/5 hover:bg-accent/15 cursor-pointer transition-all flex flex-col items-center justify-center group"
+                className="border-2 border-dashed border-muted-foreground/30 hover:border-primary/50 rounded-xl p-12 text-center bg-accent/5 hover:bg-accent/15 cursor-pointer transition-all flex flex-col items-center justify-center group"
               >
                 <input 
                   type="file" 
@@ -516,7 +516,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 <div className="h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform mb-4">
                   <Upload className="h-7 w-7 text-primary" />
                 </div>
-                <h4 className="font-bold text-lg">Drag & Drop Excel File here</h4>
+                <h4 className="font-semibold text-lg">Drag & Drop Excel File here</h4>
                 <p className="text-sm text-muted-foreground mt-1.5 max-w-sm">
                   Support formats: .xlsx or .xls files. Make sure the first row contains column headings.
                 </p>
@@ -573,7 +573,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 {SCHEMA_FIELDS.map((field) => (
                   <div key={field.key} className="p-4 border rounded-xl bg-card space-y-2.5 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm flex items-center gap-1.5">
+                      <Label className="font-semibold text-sm flex items-center gap-1.5">
                         {field.label}
                       </Label>
                       {mapping[field.key as keyof ColumnMapping] && (
@@ -607,7 +607,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
               <div className="p-4 bg-green-50 dark:bg-green-950/15 border border-green-200 dark:border-green-900/50 rounded-xl flex items-center gap-3">
                 <Eye className="h-5 w-5 text-green-600 dark:text-green-400" />
                 <div className="text-xs text-green-800 dark:text-green-300">
-                  <span className="font-bold">Parsing Completed:</span> Successfully loaded <span className="font-bold">{parsedTestCases.length} Test Cases</span> from the file. Please review the details below.
+                  <span className="font-semibold">Parsing Completed:</span> Successfully loaded <span className="font-semibold">{parsedTestCases.length} Test Cases</span> from the file. Please review the details below.
                 </div>
               </div>
 
@@ -629,7 +629,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                         tc.priority === "Critical" ? "bg-red-100 text-red-700" :
                         tc.priority === "High" ? "bg-orange-100 text-orange-700" :
                         tc.priority === "Medium" ? "bg-blue-100 text-blue-700" :
-                        "bg-gray-100 text-gray-700"
+                        "bg-muted text-foreground"
                       }`}>
                         {tc.priority}
                       </span>
@@ -642,7 +642,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                     )}
 
                     <div className="space-y-2.5">
-                      <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Steps Checklist</div>
+                      <div className="text-xs font-medium text-muted-foreground">Steps Checklist</div>
                       <ol className="list-decimal list-inside divide-y border rounded-lg bg-background/50 overflow-hidden">
                         {tc.steps.map((step: any, stepIdx: number) => (
                           <li key={stepIdx} className="p-3 text-xs flex flex-col md:flex-row gap-2 items-start justify-between hover:bg-accent/10 transition-colors">
@@ -651,7 +651,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                               <div className="text-[11px] text-muted-foreground break-words" dir="auto"><strong className="font-semibold">Expected:</strong> {step.expectedResult}</div>
                             </div>
                             <div className="flex flex-wrap gap-1.5 mt-2 md:mt-0 items-center justify-end shrink-0">
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-secondary border font-semibold uppercase tracking-wider">{step.actionType}</span>
+                              <span className="text-[11px] px-1.5 py-0.5 rounded bg-secondary border font-medium">{step.actionType}</span>
                               {step.targetValue && (
                                 <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/5 border font-mono truncate max-w-[150px]" title={`${step.targetType}: ${step.targetValue}`}>
                                   {step.targetType}: {step.targetValue}

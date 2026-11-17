@@ -108,7 +108,7 @@ export function BugReportForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background border rounded-lg p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-background border rounded-lg p-6 w-full max-w-lg shadow-[0_8px_24px_rgba(0,0,0,0.08)] max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Create Bug Report</h3>
           <Button

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, badRequestResponse, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, badRequestResponse, unauthorizedResponse, memberProjectWhere, usableProjectIds } from "@/lib/api-guards"
 import { addTestRunJob } from "@/lib/queue"
 import { z } from "zod"
 
@@ -25,13 +25,16 @@ export async function POST(request: Request) {
 
     const { testCaseIds, credentialId, browserType, viewport } = parsed.data
 
-    const testCases = await prisma.testCase.findMany({
+    const found = await prisma.testCase.findMany({
       where: {
         id: { in: testCaseIds },
-        project: { userId: session.user.id },
+        project: memberProjectWhere(session.user.id),
       },
       include: { project: true },
     })
+    // Viewers can't start runs.
+    const writable = await usableProjectIds(session.user.id, found.map((tc) => tc.projectId), "write")
+    const testCases = found.filter((tc) => writable.has(tc.projectId))
 
     if (testCases.length === 0) {
       return NextResponse.json({ error: "No matching test cases found" }, { status: 404 })

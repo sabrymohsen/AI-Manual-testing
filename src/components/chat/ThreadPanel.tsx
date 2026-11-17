@@ -54,8 +54,8 @@ export function ThreadPanel({
   return (
     <div className="w-80 border-l border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col h-full z-20">
       {/* Header */}
-      <div className="h-14 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4">
-        <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Thread</h3>
+      <div className="h-14 border-b border-border dark:border-slate-800 flex items-center justify-between px-4">
+        <h3 className="font-semibold text-sm text-foreground dark:text-slate-200">Thread</h3>
         <button
           onClick={() => setActiveThread(null, null)}
           className="rounded p-1 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-slate-350"
@@ -81,10 +81,10 @@ export function ThreadPanel({
         <div className="flex-1 py-4 flex flex-col gap-2 min-h-0">
           {isLoading ? (
             <div className="h-32 flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
           ) : replies.length === 0 ? (
-            <div className="h-32 flex items-center justify-center text-slate-400 dark:text-slate-500 text-xs">
+            <div className="h-32 flex items-center justify-center text-muted-foreground dark:text-muted-foreground text-xs">
               No replies yet.
             </div>
           ) : (

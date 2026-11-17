@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
-import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, usableProjectIds } from "@/lib/api-guards"
 
 const bodySchema = z.object({
   testCaseIds: z.array(z.string().min(1)).min(1, "No test case IDs provided"),
@@ -23,10 +23,14 @@ export async function POST(request: Request) {
     }
     const { testCaseIds, priority } = parse.data
 
+    const candidates = await prisma.testCase.findMany({
+      where: { id: { in: testCaseIds } },
+      select: { id: true, projectId: true },
+    })
+    const allowed = await usableProjectIds(session.user.id, candidates.map((c) => c.projectId), "write")
     const result = await prisma.testCase.updateMany({
       where: {
-        id: { in: testCaseIds },
-        project: { userId: session.user.id }
+        id: { in: candidates.filter((c) => allowed.has(c.projectId)).map((c) => c.id) },
       },
       data: {
         priority: priority as any

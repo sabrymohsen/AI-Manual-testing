@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useScrumUI } from "@/stores/scrum-ui"
-import { useCreateTask, useScrumMembers, useScrumSprints, useScrumEpics } from "@/hooks/scrum/use-scrum"
+import { useCreateTask, useScrumMembers, useScrumSprints, useScrumEpics, useScrumProject } from "@/hooks/scrum/use-scrum"
 import type { TaskPriority, TaskType } from "@/types/scrum"
-import { PRIORITY_META, initials } from "@/components/scrum/shared"
+import { PRIORITY_META, PriorityIcon, AvatarStack, TYPE_DOT } from "@/components/scrum/shared"
 import { TYPE_META, STORY_POINT_OPTIONS } from "@/components/scrum/task/task-detail-config"
 import {
   ISSUE_TYPE_CONFIG,
@@ -14,13 +14,11 @@ import {
   parseList,
   type SectionKey,
 } from "./issue-type-config"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ComposerDialog, ComposerTitle, ComposerText, ChipRow, ChipButton, CreateMoreToggle } from "@/components/ui/issue-composer"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { AlertCircle, Check, Loader2, Search, Zap } from "lucide-react"
+import { CalendarDays, Check, ChevronDown, Hash, Layers, Monitor, Search, Tag, UserRound, Zap } from "lucide-react"
 
 const PRIORITIES: TaskPriority[] = ["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"]
 type FormType = keyof typeof ISSUE_TYPE_CONFIG
@@ -56,6 +54,9 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
   const [assigneeIds, setAssigneeIds] = useState<string[]>([])
   const [memberQuery, setMemberQuery] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [createMore, setCreateMore] = useState(false)
+  const { data: project } = useScrumProject(projectId)
+  const boardKey = project?.boardKey
 
   const config = ISSUE_TYPE_CONFIG[type]
   const preselectedSprint = sprints?.find((s) => s.id === createTaskSprintId)
@@ -133,7 +134,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
       {
         onSuccess: () => {
           reset()
-          closeCreateTask()
+          if (!createMore) closeCreateTask()
         },
         // The hook already toasts, but a dialog that stays open with no visible
         // reason is a dead end — surface the server's actual message inline.
@@ -148,265 +149,287 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
     )
   }
 
-  const TypeIcon = TYPE_META[type as TaskType].icon
   const freeTextSections = config.sections.filter((s) => !STRUCTURED_SECTIONS.includes(s))
   const showEnvironment = config.sections.includes("environment")
+  const typeLabel = type === "STORY" ? "User Story" : TYPE_META[type as TaskType].label
+  const chosenSprint = sprints?.find((s) => s.id === sprintId)
+  const chosenEpic = epics?.find((e) => e.id === epicId)
+  const chosenMembers = (members ?? []).filter((m) => assigneeIds.includes(m.id))
 
   return (
-    <Dialog open={createTaskOpen} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        <form onSubmit={submit} className="flex max-h-[90vh] flex-col">
-          <DialogHeader className="shrink-0 space-y-1 border-b px-6 py-4">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <TypeIcon className={cn("h-4 w-4", TYPE_META[type as TaskType].color)} />
-              Create {TYPE_META[type as TaskType].label}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              {preselectedSprint ? (
-                <span className="inline-flex items-center gap-1.5 font-medium text-primary">
-                  <Zap className="h-3 w-3" />
-                  Will be added to sprint “{preselectedSprint.name}”
-                </span>
+    <ComposerDialog
+      open={createTaskOpen}
+      onOpenChange={(o) => !o && close()}
+      title={`Create ${typeLabel}`}
+      description="Fields adapt to the issue type you pick."
+      crumbs={[
+        <span key="key" className="rounded border border-border px-1 font-mono text-[10px]">{boardKey || "ISSUE"}</span>,
+        <DropdownMenu key="type">
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Issue type"
+              className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+            >
+              <span className={cn("h-2 w-2 rounded-full", TYPE_DOT[type as TaskType])} />
+              New {typeLabel.toLowerCase()}
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-44">
+            {ISSUE_TYPES.map((t) => (
+              <DropdownMenuItem key={t} onSelect={() => setType(t)} className="gap-2 text-xs">
+                <span className={cn("h-2 w-2 rounded-full", TYPE_DOT[t as TaskType])} />
+                {t === "STORY" ? "User Story" : TYPE_META[t as TaskType].label}
+                {type === t && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>,
+      ]}
+      onSubmit={() => submit()}
+      canSubmit={!!title.trim()}
+      submitting={create.isPending}
+      submitLabel={`Create ${typeLabel.toLowerCase()}`}
+      error={error}
+      footerLeft={
+        <>
+          <CreateMoreToggle checked={createMore} onChange={setCreateMore} />
+          {preselectedSprint && (
+            <span className="hidden items-center gap-1 truncate sm:inline-flex">
+              <Zap className="h-3 w-3 text-primary" /> Goes into {preselectedSprint.name}
+            </span>
+          )}
+        </>
+      }
+    >
+      <ComposerTitle
+        id="issue-title"
+        aria-label="Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder={config.titlePlaceholder}
+        autoFocus
+        required
+      />
+
+      {freeTextSections.map((key, i) => {
+        const meta = SECTION_META[key]
+        return (
+          <ComposerText
+            key={key}
+            id={`section-${key}`}
+            label={i === 0 && key === "description" ? undefined : meta.label}
+            hint={meta.hint}
+            value={sections[key]}
+            onChange={(v) => setSection(key, v)}
+            placeholder={key === "description" ? "Add description…" : meta.placeholder}
+            minRows={key === "description" ? 3 : 2}
+          />
+        )
+      })}
+
+      <ChipRow>
+        {/* Priority */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ChipButton active aria-label={`Priority: ${PRIORITY_META[priority].label}`}>
+              <PriorityIcon priority={priority} />
+              {PRIORITY_META[priority].label}
+            </ChipButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-40">
+            {PRIORITIES.map((p) => (
+              <DropdownMenuItem key={p} onSelect={() => setPriority(p)} className="gap-2 text-xs">
+                <PriorityIcon priority={p} />
+                {PRIORITY_META[p].label}
+                {priority === p && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Assignees */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <ChipButton active={chosenMembers.length > 0} aria-label="Assignees">
+              {chosenMembers.length > 0 ? (
+                <>
+                  <AvatarStack members={chosenMembers} max={3} size="sm" />
+                  <span className="truncate">
+                    {chosenMembers.length === 1 ? chosenMembers[0].name || chosenMembers[0].email : `${chosenMembers.length} people`}
+                  </span>
+                </>
               ) : (
-                "Fields adapt to the issue type you pick."
+                <>
+                  <UserRound className="h-3.5 w-3.5" /> Assignee
+                </>
               )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            {/* Issue type selector */}
-            <fieldset className="mb-4">
-              <legend className="mb-1.5 text-xs font-semibold text-muted-foreground">Issue type</legend>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-                {ISSUE_TYPES.map((t) => {
-                  const meta = TYPE_META[t as TaskType]
-                  const Icon = meta.icon
-                  const on = type === t
-                  return (
-                    <button
-                      key={t}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => setType(t)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors",
-                        on
-                          ? ISSUE_TYPE_CONFIG[t].accent
-                          : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      <Icon className={cn("h-3.5 w-3.5", on ? "" : meta.color)} />
-                      {t === "STORY" ? "User Story" : meta.label}
-                    </button>
-                  )
-                })}
-              </div>
-            </fieldset>
-
-            {/* Title */}
-            <div className="mb-4 space-y-1">
-              <label htmlFor="issue-title" className="text-xs font-semibold text-muted-foreground">
-                Title <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="issue-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={config.titlePlaceholder}
-                autoFocus
-                required
+            </ChipButton>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-64 p-1">
+            <div className="relative p-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={memberQuery}
+                onChange={(e) => setMemberQuery(e.target.value)}
+                placeholder="Assign to…"
+                aria-label="Filter members"
+                className="h-8 w-full rounded-md bg-transparent pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground"
               />
-              {config.titleHint && <p className="text-[11px] text-muted-foreground">{config.titleHint}</p>}
             </div>
-
-            {/* Type-specific free-text sections */}
-            <div className="mb-4 space-y-3">
-              {freeTextSections.map((key) => {
-                const meta = SECTION_META[key]
+            <div className="max-h-56 overflow-y-auto border-t border-border pt-1">
+              {filteredMembers.length === 0 && (
+                <p className="px-2 py-2 text-xs text-muted-foreground">No members match “{memberQuery}”.</p>
+              )}
+              {filteredMembers.map((m) => {
+                const on = assigneeIds.includes(m.id)
                 return (
-                  <div key={key} className="space-y-1">
-                    <label htmlFor={`section-${key}`} className="text-xs font-semibold text-muted-foreground">
-                      {meta.label}
-                    </label>
-                    <Textarea
-                      id={`section-${key}`}
-                      value={sections[key]}
-                      onChange={(e) => setSection(key, e.target.value)}
-                      rows={meta.rows}
-                      placeholder={meta.placeholder}
-                      className="resize-y"
-                    />
-                    {meta.hint && <p className="text-[11px] text-muted-foreground">{meta.hint}</p>}
-                  </div>
+                  <button
+                    key={m.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setAssigneeIds(on ? assigneeIds.filter((id) => id !== m.id) : [...assigneeIds, m.id])}
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent"
+                  >
+                    <AvatarStack members={[m]} max={1} size="sm" />
+                    <span className="truncate">{m.name || m.email}</span>
+                    {on && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                  </button>
                 )
               })}
             </div>
+          </PopoverContent>
+        </Popover>
 
-            {/* Structured fields */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {showEnvironment && (
-                <div className="space-y-1 sm:col-span-2">
-                  <label htmlFor="environment" className="text-xs font-semibold text-muted-foreground">
-                    {SECTION_META.environment.label}
-                  </label>
-                  <Input
-                    id="environment"
-                    value={sections.environment}
-                    onChange={(e) => setSection("environment", e.target.value)}
-                    placeholder={SECTION_META.environment.placeholder}
-                  />
-                </div>
+        {/* Sprint */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ChipButton active={!!chosenSprint} aria-label="Sprint">
+              <Zap className={cn("h-3.5 w-3.5", chosenSprint && "text-amber-500")} />
+              <span className="truncate">{chosenSprint ? chosenSprint.name : "Backlog"}</span>
+            </ChipButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onSelect={() => setSprintId("none")} className="gap-2 text-xs">
+              No sprint (backlog)
+              {sprintId === "none" && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+            </DropdownMenuItem>
+            {sprints?.map((sp) => (
+              <DropdownMenuItem key={sp.id} onSelect={() => setSprintId(sp.id)} className="gap-2 text-xs">
+                <span className="truncate">{sp.name}</span>
+                {sp.status === "ACTIVE" && <span className="rounded-full bg-emerald-500/10 px-1.5 text-[10px] text-emerald-700 dark:text-emerald-400">Active</span>}
+                {sprintId === sp.id && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Epic */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ChipButton active={!!chosenEpic} aria-label="Epic">
+              {chosenEpic ? (
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: chosenEpic.color }} />
+              ) : (
+                <Layers className="h-3.5 w-3.5" />
               )}
+              <span className="truncate">{chosenEpic ? chosenEpic.title : "Epic"}</span>
+            </ChipButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuItem onSelect={() => setEpicId("none")} className="text-xs">
+              No epic
+              {epicId === "none" && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+            </DropdownMenuItem>
+            {epics?.map((ep) => (
+              <DropdownMenuItem key={ep.id} onSelect={() => setEpicId(ep.id)} className="gap-2 text-xs">
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: ep.color }} />
+                <span className="truncate">{ep.title}</span>
+                {epicId === ep.id && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-primary" />}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Priority</label>
-                <Select value={priority} onValueChange={(v) => setPriority(v as TaskPriority)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {PRIORITIES.map((p) => (
-                      <SelectItem key={p} value={p}>{PRIORITY_META[p].label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Story points */}
+        {config.showStoryPoints && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <ChipButton active={storyPoints != null} aria-label="Story points">
+                <Hash className="h-3.5 w-3.5" />
+                {storyPoints != null ? `${storyPoints} pts` : "Estimate"}
+              </ChipButton>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-36">
+              <DropdownMenuItem onSelect={() => setStoryPoints(null)} className="text-xs">
+                No estimate
+                {storyPoints == null && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+              </DropdownMenuItem>
+              {STORY_POINT_OPTIONS.map((pts) => (
+                <DropdownMenuItem key={pts} onSelect={() => setStoryPoints(pts)} className="text-xs tabular-nums">
+                  {pts} {pts === 1 ? "point" : "points"}
+                  {storyPoints === pts && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Due date</label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </div>
+        {/* Due date */}
+        <label
+          className={cn(
+            "relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-within:ring-2 focus-within:ring-ring",
+            dueDate
+              ? "border-border bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent"
+              : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          {dueDate ? new Date(dueDate + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Due date"}
+          <input
+            type="date"
+            aria-label="Due date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+          />
+        </label>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Sprint</label>
-                <Select value={sprintId} onValueChange={setSprintId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No sprint (backlog)</SelectItem>
-                    {sprints?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Labels */}
+        <span
+          className={cn(
+            "inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring",
+            labels.trim() ? "border-border bg-card text-foreground" : "border-dashed border-border text-muted-foreground"
+          )}
+        >
+          <Tag className="h-3.5 w-3.5 shrink-0" />
+          <input
+            id="labels"
+            aria-label="Labels"
+            value={labels}
+            onChange={(e) => setLabels(e.target.value)}
+            placeholder="Labels"
+            className="w-24 bg-transparent outline-none placeholder:text-muted-foreground focus:w-40"
+          />
+        </span>
+      </ChipRow>
 
-              <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground">Epic</label>
-                <Select value={epicId} onValueChange={setEpicId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No epic</SelectItem>
-                    {epics?.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        <span className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: e.color }} />
-                          {e.title}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1 sm:col-span-2">
-                <label htmlFor="labels" className="text-xs font-semibold text-muted-foreground">Labels</label>
-                <Input
-                  id="labels"
-                  value={labels}
-                  onChange={(e) => setLabels(e.target.value)}
-                  placeholder="ui, api, regression"
-                />
-              </div>
-            </div>
-
-            {/* Story points — only where estimation is meaningful */}
-            {config.showStoryPoints && (
-              <div className="mt-4 space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">Story points</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {STORY_POINT_OPTIONS.map((pts) => (
-                    <button
-                      key={pts}
-                      type="button"
-                      aria-pressed={storyPoints === pts}
-                      onClick={() => setStoryPoints(storyPoints === pts ? null : pts)}
-                      className={cn(
-                        "h-8 min-w-8 rounded-md border px-2 text-xs font-semibold transition-colors",
-                        storyPoints === pts
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      {pts}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Assignees */}
-            <div className="mt-4 space-y-1.5">
-              <label className="text-xs font-semibold text-muted-foreground">
-                Assignees{assigneeIds.length > 0 && ` (${assigneeIds.length})`}
-              </label>
-              {(members?.length ?? 0) > 6 && (
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={memberQuery}
-                    onChange={(e) => setMemberQuery(e.target.value)}
-                    placeholder="Filter members"
-                    className="h-8 pl-8 text-xs"
-                  />
-                </div>
-              )}
-              <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto rounded-md border p-2">
-                {filteredMembers.length === 0 && (
-                  <p className="px-1 py-0.5 text-[11px] text-muted-foreground">No members match “{memberQuery}”.</p>
-                )}
-                {filteredMembers.map((m) => {
-                  const on = assigneeIds.includes(m.id)
-                  return (
-                    <button
-                      key={m.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() =>
-                        setAssigneeIds(on ? assigneeIds.filter((id) => id !== m.id) : [...assigneeIds, m.id])
-                      }
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-full border py-1 pl-1 pr-2.5 text-xs font-medium transition-colors",
-                        on
-                          ? "border-primary bg-primary/10 text-primary"
-                          : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted text-[9px] font-bold">
-                        {on ? <Check className="h-3 w-3" /> : initials(m.name, m.email)}
-                      </span>
-                      {m.name || m.email}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {error && (
-              <p
-                role="alert"
-                className="mt-4 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive"
-              >
-                <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
-                {error}
-              </p>
-            )}
-          </div>
-
-          <DialogFooter className="shrink-0 border-t px-6 py-4">
-            <Button type="button" variant="outline" onClick={close}>Cancel</Button>
-            <Button type="submit" disabled={!title.trim() || create.isPending}>
-              {create.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Create {TYPE_META[type as TaskType].label.toLowerCase()}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {showEnvironment && (
+        <ChipRow className="mt-2">
+          <span className="inline-flex h-7 w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 text-xs text-muted-foreground focus-within:border-solid focus-within:ring-2 focus-within:ring-ring">
+            <Monitor className="h-3.5 w-3.5 shrink-0" />
+            <input
+              id="environment"
+              aria-label={SECTION_META.environment.label}
+              value={sections.environment}
+              onChange={(e) => setSection("environment", e.target.value)}
+              placeholder={SECTION_META.environment.placeholder}
+              className="w-full bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </span>
+        </ChipRow>
+      )}
+    </ComposerDialog>
   )
 }

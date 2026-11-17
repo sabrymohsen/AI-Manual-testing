@@ -26,6 +26,8 @@ interface StepBuilderProps {
   steps: Step[]
   onChange: (steps: Step[]) => void
   projectId?: string
+  /** Manual cases: no automation-wording warnings. */
+  manual?: boolean
 }
 
 import {
@@ -43,7 +45,7 @@ interface Locator {
   locatorValue: string
 }
 
-export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
+export function StepBuilder({ steps, onChange, projectId, manual = false }: StepBuilderProps) {
   const [locators, setLocators] = useState<Locator[]>([])
   const [validatingIdx, setValidatingIdx] = useState<number | null>(null)
   const [validationResults, setValidationResults] = useState<Record<number, { valid: boolean; message: string }>>({})
@@ -182,13 +184,14 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-lg font-semibold">Test Steps</h3>
+          <h2 className="text-[13px] font-medium text-foreground">Steps <span className="font-normal text-muted-foreground">{steps.length || ""}</span></h2>
           {modeToggle}
         </div>
         <PlainEnglishEditor
           steps={steps}
           onChange={onChange}
           projectId={projectId}
+          manual={manual}
           onEditDetailed={() => {
             setMode("detailed")
             setModeTouched(true)
@@ -201,7 +204,7 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="text-lg font-semibold">Test Steps</h3>
+        <h2 className="text-[13px] font-medium text-foreground">Steps <span className="font-normal text-muted-foreground">{steps.length || ""}</span></h2>
         <div className="flex items-center gap-2">
           {modeToggle}
           <Button type="button" variant="outline" size="sm" onClick={addStep}>
@@ -218,7 +221,7 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
         {steps.map((step, index) => (
           <div key={index} className="border rounded-lg p-4 space-y-3 bg-card/45">
             {isPlainStep(step) && (
-              <p className="rounded-md bg-indigo-50 px-2 py-1 text-[11px] text-indigo-800">
+              <p className="rounded-md bg-primary/10 px-2 py-1 text-[11px] text-primary">
                 Written in plain English — it runs from its description. Edit it in the Plain English view; the fields below are a summary.
               </p>
             )}
@@ -258,7 +261,7 @@ export function StepBuilder({ steps, onChange, projectId }: StepBuilderProps) {
             {projectId && locators.length > 0 && (
               <div className="bg-accent/10 p-3 rounded-lg border border-border space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Use Saved Locator</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Use Saved Locator</Label>
                   {step.targetValue && (
                     <Button
                       type="button"

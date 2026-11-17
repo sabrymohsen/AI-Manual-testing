@@ -61,10 +61,10 @@ export function TestsByStatusPie({ projectId }: { projectId: string }) {
   const total = data.reduce((a, d) => a + d.value, 0)
 
   return (
-    <div className="p-4 border border-slate-100 shadow-sm rounded-xl bg-card space-y-3">
+    <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[9px] uppercase font-extrabold text-muted-foreground/60">Tests by Status</span>
-        <FileCheck className="h-4 w-4 text-indigo-500" />
+        <span className="text-[11px] font-medium text-muted-foreground/60">Tests by Status</span>
+        <FileCheck className="h-4 w-4 text-primary" />
       </div>
       <div className="h-48 w-full">
         {loading ? (

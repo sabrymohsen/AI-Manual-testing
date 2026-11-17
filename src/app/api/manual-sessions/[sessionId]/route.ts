@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 
 const putBodySchema = z.object({
@@ -52,7 +52,7 @@ export async function GET(
       return notFoundResponse("Manual session not found")
     }
 
-    if (sessionDetails.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(sessionDetails.projectId, auth.session!.user.id, "read"))) {
       return unauthorizedResponse("Access denied")
     }
 
@@ -79,7 +79,7 @@ export async function PUT(
       return notFoundResponse("Manual session not found")
     }
 
-    if (session.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(session.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

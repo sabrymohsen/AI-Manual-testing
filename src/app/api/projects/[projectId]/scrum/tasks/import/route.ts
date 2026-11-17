@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { withNextTaskNumber } from "@/lib/scrum/task-number"
 import { requireProjectPermission } from "@/lib/api-guards"
 import { z } from "zod"
 import { logActivity } from "@/lib/scrum/server"
@@ -202,8 +203,11 @@ export async function POST(request: Request, { params }: { params: { projectId: 
         .map((t) => t.trim())
         .filter(Boolean)
 
-      const task = await prisma.task.create({
+      const boardRank = await nextRank(status)
+      const task = await withNextTaskNumber(params.projectId, (taskNumber) =>
+        prisma.task.create({
         data: {
+          taskNumber,
           projectId: params.projectId,
           title,
           description: row.description?.trim() || null,
@@ -215,9 +219,9 @@ export async function POST(request: Request, { params }: { params: { projectId: 
           epicId,
           tags,
           reporterId: userId,
-          boardRank: await nextRank(status),
+          boardRank,
         },
-      })
+      }))
       await logActivity(task.id, "created", "Imported from file", userId)
       created++
     }
@@ -262,8 +266,10 @@ export async function POST(request: Request, { params }: { params: { projectId: 
         .filter(Boolean)
         .join("\n\n") || null
 
-      const task = await prisma.task.create({
+      const task = await withNextTaskNumber(params.projectId, (taskNumber) =>
+        prisma.task.create({
         data: {
+          taskNumber,
           projectId: params.projectId,
           title: tc.title,
           description,
@@ -277,7 +283,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
           boardRank: ++rank,
           testCaseLinks: { create: { testCaseId: tc.id } },
         },
-      })
+      }))
       await logActivity(task.id, "created", "Imported from Test Cases", userId)
       created++
     }

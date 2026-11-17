@@ -1,180 +1,48 @@
 "use client"
 
-import { useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { StepBuilder } from "@/components/test-cases/step-builder"
-import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
-import { AssigneeSelect } from "@/components/team/assignee-select"
-import { ModuleSelect } from "@/components/bug-reports/module-select"
-
-interface Step {
-  actionDescription: string
-  expectedResult: string
-  actionType: string
-  targetType: string
-  targetValue: string
-  inputValue: string
-  timeoutMs: number
-  assertions: any[]
-}
+import { TestCaseEditor, EMPTY_DRAFT, type TestCaseDraft } from "@/components/test-cases/test-case-editor"
 
 export default function NewTestCasePage() {
   const params = useParams()
   const router = useRouter()
   const searchParams = useSearchParams()
+  const projectId = params.id as string
   const initialSuiteId = searchParams.get("suite") || ""
 
-  const [steps, setSteps] = useState<Step[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [executionType, setExecutionType] = useState<"Manual" | "Automated">("Manual")
-  const [assignee, setAssignee] = useState("")
-  const [suiteId, setSuiteId] = useState<string>(initialSuiteId)
-
-  const [requirementIds, setRequirementIds] = useState<string[]>([])
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
-
-    const form = new FormData(e.currentTarget)
-    const body = {
-      title: form.get("title"),
-      priority: form.get("priority"),
-      preconditions: form.get("preconditions") || null,
-      source: "Manual",
-      executionType,
-      suiteId: suiteId || null,
-      testData: null,
-      tags: [],
-      assignee: assignee || null,
-      steps: steps.map((s) => ({
-        ...s,
-        timeoutMs: s.timeoutMs || 10000,
-      })),
-      requirementIds
-    }
-
-    const res = await fetch(`/api/projects/${params.id}/test-cases`, {
+  async function create(d: TestCaseDraft) {
+    const res = await fetch(`/api/projects/${projectId}/test-cases`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        title: d.title,
+        priority: d.priority,
+        preconditions: d.preconditions.trim() || null,
+        source: "Manual",
+        executionType: d.executionType,
+        suiteId: d.suiteId || null,
+        testData: null,
+        tags: [],
+        assignee: d.assignee || null,
+        steps: d.steps.map((s) => ({ ...s, timeoutMs: s.timeoutMs || 10000 })),
+        requirementIds: d.requirementIds,
+      }),
     })
-
-    if (res.ok) {
-      router.push(`/projects/${params.id}/test-cases${suiteId ? `?suite=${encodeURIComponent(suiteId)}` : ""}`)
-    } else {
-      const data = await res.json()
-      setError(data.error || "Failed to create test case")
-      setLoading(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      return data.error || "Failed to create test case"
     }
+    router.push(`/projects/${projectId}/test-cases${d.suiteId ? `?suite=${encodeURIComponent(d.suiteId)}` : ""}`)
   }
 
   return (
-    <div className="max-w-3xl space-y-6">
-      <h1 className="text-3xl font-bold">New Test Case</h1>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input id="title" name="title" required placeholder="e.g. Login flow validation" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="suite">Module / Suite</Label>
-            <ModuleSelect
-              projectId={params.id as string}
-              value={suiteId}
-              onChange={setSuiteId}
-              placeholder="— Unfiled (No Module) —"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <select id="priority" name="priority" className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-          </div>
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="assignee">Assignee</Label>
-            <AssigneeSelect
-              id="assignee"
-              projectId={params.id as string}
-              value={assignee}
-              onChange={setAssignee}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-          </div>
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="preconditions">Preconditions</Label>
-            <Input id="preconditions" name="preconditions" placeholder="e.g. User must be logged out" />
-          </div>
-        </div>
-
-        {/* Execution Type Picker */}
-        <div className="border rounded-2xl p-5 bg-accent/5 space-y-3 shadow-sm border-accent/20">
-          <h3 className="font-semibold text-xs text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Execution Type</h3>
-          <p className="text-xs text-muted-foreground">How will this test case be executed?</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setExecutionType("Manual")}
-              className={`rounded-xl border p-4 text-left transition-all ${
-                executionType === "Manual"
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20 shadow-md"
-                  : "border-input hover:border-muted-foreground/40 hover:bg-accent/30"
-              }`}
-            >
-              <div className="font-semibold text-sm flex items-center gap-2">
-                <span className={`text-base ${executionType === "Manual" ? "text-blue-600" : "text-muted-foreground"}`}>👤</span>
-                Manual
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1">A human tester executes steps one by one in a manual session.</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setExecutionType("Automated")}
-              className={`rounded-xl border p-4 text-left transition-all ${
-                executionType === "Automated"
-                  ? "border-violet-500 bg-violet-50 dark:bg-violet-950/20 shadow-md"
-                  : "border-input hover:border-muted-foreground/40 hover:bg-accent/30"
-              }`}
-            >
-              <div className="font-semibold text-sm flex items-center gap-2">
-                <span className={`text-base ${executionType === "Automated" ? "text-violet-600" : "text-muted-foreground"}`}>⚡</span>
-                Automated
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-1">Steps are executed by Playwright. Requires selectors and actionable step types.</p>
-            </button>
-          </div>
-        </div>
-
-        <LinkedRequirementsSelector
-          projectId={params.id as string}
-          selectedIds={requirementIds}
-          onChange={setRequirementIds}
-        />
-
-        <StepBuilder steps={steps} onChange={setSteps} projectId={params.id as string} />
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex gap-2">
-          <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : "Save Test Case"}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            Cancel
-          </Button>
-        </div>
-      </form>
-    </div>
+    <TestCaseEditor
+      projectId={projectId}
+      initial={{ ...EMPTY_DRAFT, suiteId: initialSuiteId }}
+      heading="New test case"
+      submitLabel="Create test case"
+      onSubmit={create}
+      onCancel={() => router.back()}
+    />
   )
 }

@@ -112,11 +112,11 @@ export function EpicFeatureSelector({
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Epic</label>
+        <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Epic</label>
         <select
           value={epicId}
           onChange={(e) => handleEpicChange(e.target.value)}
-          className="w-full px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+          className="w-full px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
         >
           <option value="">No Epic</option>
           {epics.map((ep) => (
@@ -125,7 +125,7 @@ export function EpicFeatureSelector({
         </select>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Feature</label>
+        <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Feature</label>
         {creating ? (
           <div className="flex gap-1.5">
             <input
@@ -147,7 +147,7 @@ export function EpicFeatureSelector({
             <button
               type="button"
               onClick={() => { setCreating(false); setNewFeatureName("") }}
-              className="px-2 rounded-xl border border-slate-200 text-slate-400 hover:text-slate-600 text-xs"
+              className="px-2 rounded-xl border border-border text-muted-foreground hover:text-muted-foreground text-xs"
             >
               ✕
             </button>
@@ -157,7 +157,7 @@ export function EpicFeatureSelector({
             <select
               value={featureId}
               onChange={(e) => handleFeatureChange(e.target.value)}
-              className="flex-1 min-w-0 px-3 py-2 border border-slate-200 bg-white rounded-xl text-xs focus:outline-none"
+              className="flex-1 min-w-0 px-3 py-2 border border-border bg-card rounded-xl text-xs focus:outline-none"
             >
               <option value="">No Feature</option>
               {visibleFeatures.map((f) => (

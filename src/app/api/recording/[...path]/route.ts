@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse, canUseProject } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { getSessionStats, saveRecordedCaseAsTestCase } from "@/lib/recording/session-store"
@@ -52,7 +52,7 @@ async function verifyRecordedStep(stepId: string, userId: string) {
     }
   })
   if (!step) return notFoundResponse("Step not found")
-  if (step.recordedTestCase.session.project.userId !== userId) return unauthorizedResponse("Access denied")
+  if (!(await canUseProject(step.recordedTestCase.session.projectId, userId, "write"))) return unauthorizedResponse("Access denied")
   return null
 }
 
@@ -68,7 +68,7 @@ async function verifyRecordedTestCase(caseId: string, userId: string) {
     }
   })
   if (!recCase) return notFoundResponse("Test case not found")
-  if (recCase.session.project.userId !== userId) return unauthorizedResponse("Access denied")
+  if (!(await canUseProject(recCase.session.projectId, userId, "write"))) return unauthorizedResponse("Access denied")
   return null
 }
 

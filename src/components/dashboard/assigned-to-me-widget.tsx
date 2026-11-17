@@ -58,7 +58,7 @@ export function AssignedToMeWidget({ projectId }: { projectId: string }) {
 
   const statusColor = (status: string) => {
     const map: Record<string, string> = {
-      TODO: "bg-slate-100 text-slate-600",
+      TODO: "bg-muted text-muted-foreground",
       IN_PROGRESS: "bg-blue-100 text-blue-700",
       REVIEW: "bg-violet-100 text-violet-700",
       TESTING: "bg-amber-100 text-amber-700",
@@ -66,7 +66,7 @@ export function AssignedToMeWidget({ projectId }: { projectId: string }) {
       Open: "bg-red-100 text-red-700",
       InProgress: "bg-amber-100 text-amber-700",
     }
-    return map[status] || "bg-slate-100 text-slate-600"
+    return map[status] || "bg-muted text-muted-foreground"
   }
 
   const priorityColor = (p: string) => {
@@ -75,24 +75,24 @@ export function AssignedToMeWidget({ projectId }: { projectId: string }) {
       HIGH: "text-orange-500",
       MEDIUM: "text-amber-500",
       LOW: "text-blue-400",
-      LOWEST: "text-slate-400",
+      LOWEST: "text-muted-foreground",
     }
-    return map[p] || "text-slate-400"
+    return map[p] || "text-muted-foreground"
   }
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-card shadow-sm">
+    <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center justify-between border-b px-5 py-3">
         <div className="flex items-center gap-2">
-          <User className="h-4 w-4 text-indigo-600" />
-          <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Assigned to Me</span>
+          <User className="h-4 w-4 text-primary" />
+          <span className="text-xs font-medium text-foreground">Assigned to Me</span>
         </div>
-        <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
+        <div className="flex gap-1 rounded-lg border border-border p-0.5">
           <button
             onClick={() => setTab("tasks")}
             className={cn(
               "rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors",
-              tab === "tasks" ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-50"
+              tab === "tasks" ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
             Tasks ({tasks.length})
@@ -101,7 +101,7 @@ export function AssignedToMeWidget({ projectId }: { projectId: string }) {
             onClick={() => setTab("bugs")}
             className={cn(
               "rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors",
-              tab === "bugs" ? "bg-rose-600 text-white" : "text-slate-500 hover:bg-slate-50"
+              tab === "bugs" ? "bg-rose-600 text-white" : "text-muted-foreground hover:bg-muted/50"
             )}
           >
             Bugs ({bugs.length})
@@ -132,15 +132,15 @@ export function AssignedToMeWidget({ projectId }: { projectId: string }) {
               <div
                 key={task.id}
                 onClick={() => router.push(`/projects/${projectId}/scrum?task=${task.id}`)}
-                className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 transition-colors"
+                className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-muted/60 transition-colors"
               >
-                <span className="shrink-0 font-mono text-[10px] font-bold text-primary">{task.key}</span>
-                <span className="flex-1 truncate text-xs font-medium text-slate-700">{task.title}</span>
-                <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-bold", statusColor(task.status))}>
+                <span className="shrink-0 font-mono text-[10px] font-semibold text-primary">{task.key}</span>
+                <span className="flex-1 truncate text-xs font-medium text-foreground">{task.title}</span>
+                <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-semibold", statusColor(task.status))}>
                   {task.status.replace("_", " ")}
                 </span>
-                <span className={cn("text-[10px] font-bold", priorityColor(task.priority))}>{task.priority[0]}</span>
-                <span className="text-[10px] text-slate-400">
+                <span className={cn("text-[10px] font-semibold", priorityColor(task.priority))}>{task.priority[0]}</span>
+                <span className="text-[10px] text-muted-foreground">
                   <Clock className="inline h-3 w-3 mr-0.5" />
                   {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
                 </span>
@@ -153,15 +153,15 @@ export function AssignedToMeWidget({ projectId }: { projectId: string }) {
               <div
                 key={bug.id}
                 onClick={() => router.push(`/projects/${projectId}/bug-reports`)}
-                className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-slate-50/60 transition-colors"
+                className="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-muted/60 transition-colors"
               >
                 <Bug className="h-3.5 w-3.5 shrink-0 text-rose-500" />
-                <span className="shrink-0 font-mono text-[10px] font-bold text-rose-600">{bug.bugKey || "BUG"}</span>
-                <span className="flex-1 truncate text-xs font-medium text-slate-700">{bug.title}</span>
-                <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-bold", statusColor(bug.status))}>
+                <span className="shrink-0 font-mono text-[10px] font-semibold text-rose-600">{bug.bugKey || "BUG"}</span>
+                <span className="flex-1 truncate text-xs font-medium text-foreground">{bug.title}</span>
+                <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-semibold", statusColor(bug.status))}>
                   {bug.status}
                 </span>
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-muted-foreground">
                   <Clock className="inline h-3 w-3 mr-0.5" />
                   {formatDistanceToNow(new Date(bug.updatedAt), { addSuffix: true })}
                 </span>

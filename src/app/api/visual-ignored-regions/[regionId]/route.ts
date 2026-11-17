@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 
 export async function DELETE(
   request: Request,
@@ -25,7 +25,7 @@ export async function DELETE(
       return notFoundResponse("Ignored region not found")
     }
 
-    if (region.mapping.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(region.mapping.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

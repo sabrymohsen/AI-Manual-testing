@@ -62,22 +62,22 @@ export default function PublicProfilePage() {
   if (status === "loading") {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
       </div>
     )
   }
 
   if (status === "denied") {
     return (
-      <div className="mx-auto mt-16 max-w-md rounded-2xl border bg-card p-10 text-center">
+      <div className="mx-auto mt-16 max-w-md rounded-xl border bg-card p-10 text-center">
         <ShieldAlert className="mx-auto h-12 w-12 text-rose-400" />
-        <h1 className="mt-4 text-lg font-bold">Access denied</h1>
+        <h1 className="mt-4 text-lg font-semibold">Access denied</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           You can only view profiles of people you share a project with.
         </p>
         <button
           onClick={() => router.back()}
-          className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          className="mt-6 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
         >
           Go back
         </button>
@@ -87,8 +87,8 @@ export default function PublicProfilePage() {
 
   if (status === "missing" || !user) {
     return (
-      <div className="mx-auto mt-16 max-w-md rounded-2xl border bg-card p-10 text-center">
-        <h1 className="text-lg font-bold">User not found</h1>
+      <div className="mx-auto mt-16 max-w-md rounded-xl border bg-card p-10 text-center">
+        <h1 className="text-lg font-semibold">User not found</h1>
         <p className="mt-2 text-sm text-muted-foreground">This user doesn&apos;t exist or was removed.</p>
       </div>
     )
@@ -97,20 +97,20 @@ export default function PublicProfilePage() {
   return (
     <div className="mx-auto max-w-3xl">
       {/* Header card */}
-      <div className="rounded-2xl border bg-card p-8">
+      <div className="rounded-xl border bg-card p-8">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={user.avatarUrl} alt="" className="h-24 w-24 shrink-0 rounded-full border object-cover" />
           ) : (
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-3xl font-bold uppercase text-white">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-3xl font-semibold uppercase text-white">
               {(user.name || user.email)[0]}
             </div>
           )}
           <div className="min-w-0 flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-              <h1 className="text-xl font-bold">{user.name || user.email}</h1>
-              <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700">
+              <h1 className="text-xl font-semibold">{user.name || user.email}</h1>
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
                 {user.role}
               </span>
             </div>
@@ -129,17 +129,17 @@ export default function PublicProfilePage() {
                 <CalendarDays className="h-3.5 w-3.5" /> Joined {new Date(user.createdAt).toLocaleDateString()}
               </span>
             </div>
-            {user.bio && <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{user.bio}</p>}
+            {user.bio && <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{user.bio}</p>}
           </div>
         </div>
       </div>
 
       {/* Shared projects */}
-      <div className="mt-6 rounded-2xl border bg-card p-6">
-        <h2 className="flex items-center gap-1.5 text-sm font-bold">
-          <FolderKanban className="h-4 w-4 text-indigo-500" />
+      <div className="mt-6 rounded-xl border bg-card p-6">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          <FolderKanban className="h-4 w-4 text-primary" />
           Shared projects
-          <span className="ml-1 rounded-full bg-slate-100 px-2 text-[11px] font-semibold text-slate-500">
+          <span className="ml-1 rounded-full bg-muted px-2 text-[11px] font-semibold text-muted-foreground">
             {projects.length}
           </span>
         </h2>
@@ -151,18 +151,18 @@ export default function PublicProfilePage() {
               <Link
                 key={p.id}
                 href={`/projects/${p.id}/scrum`}
-                className="group flex items-center justify-between py-3 transition-colors hover:bg-slate-50"
+                className="group flex items-center justify-between py-3 transition-colors hover:bg-muted/50"
               >
                 <div className="flex items-center gap-3 px-1">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-xs font-bold uppercase text-indigo-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold uppercase text-primary">
                     {p.name.slice(0, 2)}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">{p.name}</p>
+                    <p className="text-sm font-semibold text-foreground">{p.name}</p>
                     <p className="text-[11px] text-muted-foreground">{p.role}</p>
                   </div>
                 </div>
-                <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-slate-500" />
+                <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
               </Link>
             ))}
           </div>

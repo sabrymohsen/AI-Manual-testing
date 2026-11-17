@@ -26,6 +26,35 @@ export async function GET(_req: Request, { params }: { params: { projectId: stri
     if (synced.ok && synced.synced > 0) members = await load()
   }
 
+  // No tracker (or it returned nobody): fall back to the app's own project
+  // members, so a project without Jira/OpenProject still has assignees.
+  if (members.length === 0) {
+    const project = await prisma.project.findUnique({
+      where: { id: params.projectId },
+      select: {
+        user: { select: { id: true, name: true, email: true } },
+        projectMembers: { select: { user: { select: { id: true, name: true, email: true } } } },
+      },
+    })
+    const people = new Map<string, { name: string; email: string | null; role: string | null }>()
+    if (project?.user) people.set(project.user.id, { name: project.user.name || project.user.email, email: project.user.email, role: null })
+    for (const m of project?.projectMembers ?? []) {
+      if (m.user) people.set(m.user.id, { name: m.user.name || m.user.email, email: m.user.email, role: null })
+    }
+    if (people.size > 0) {
+      await prisma.$transaction(
+        Array.from(people, ([userId, p]) =>
+          prisma.projectTeamMember.upsert({
+            where: { projectId_provider_externalId: { projectId: params.projectId, provider: "QA Engine", externalId: userId } },
+            create: { projectId: params.projectId, source: "synced", provider: "QA Engine", externalId: userId, name: p.name, email: p.email },
+            update: { name: p.name, email: p.email, active: true },
+          })
+        )
+      )
+      members = await load()
+    }
+  }
+
   return NextResponse.json({ members })
 }
 

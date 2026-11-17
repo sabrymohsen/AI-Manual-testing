@@ -110,26 +110,26 @@ export default function FlakeDetectorPage() {
   })
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-slate-800">
+    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-foreground">
       
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             <Activity className="text-indigo-650 animate-pulse h-5 w-5" /> Flake Detector
           </h1>
-          <p className="text-slate-500 font-medium mt-1">
+          <p className="text-muted-foreground font-medium mt-1">
             Analyze execution timing spikes, dynamic locator stalls, and test retries using SHAFT Flake Profiler.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
+        <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px]">
           <span>Profiler attachment parsed: allure-results/</span>
         </div>
       </div>
 
       {/* KPI Cards Row */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-2 text-slate-400 border bg-white rounded-2xl">
+        <div className="py-20 flex flex-col items-center justify-center gap-2 text-muted-foreground border bg-card rounded-xl">
           <Loader2 className="animate-spin" size={24} />
           <span>Synchronizing flakiness logs...</span>
         </div>
@@ -137,15 +137,15 @@ export default function FlakeDetectorPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
           {[
             { label: "Suite Stability", val: `${kpis.suiteStability}%`, desc: "Target rate >90%", icon: Award, color: kpis.suiteStability >= 80 ? "text-emerald-600 bg-emerald-50" : "text-amber-600 bg-amber-50" },
-            { label: "Flaky Tests", val: kpis.flakyCount, desc: "High flakiness score tests", icon: AlertTriangle, color: kpis.flakyCount > 0 ? "text-rose-600 bg-rose-50 animate-pulse" : "text-slate-600 bg-slate-50" },
-            { label: "Avg Action Time", val: `${kpis.avgActionTime}ms`, desc: "Includes element identification", icon: Clock, color: "text-indigo-600 bg-indigo-50" },
+            { label: "Flaky Tests", val: kpis.flakyCount, desc: "High flakiness score tests", icon: AlertTriangle, color: kpis.flakyCount > 0 ? "text-rose-600 bg-rose-50 animate-pulse" : "text-muted-foreground bg-muted/50" },
+            { label: "Avg Action Time", val: `${kpis.avgActionTime}ms`, desc: "Includes element identification", icon: Clock, color: "text-primary bg-primary/10" },
             { label: "Slowest Test Name", val: kpis.slowestTest.split(".")[0], desc: kpis.slowestTest, icon: Flame, color: "text-amber-600 bg-amber-55" }
           ].map((kpi, idx) => (
-            <div key={idx} className="bg-white border rounded-2xl p-4 shadow-sm flex items-center justify-between gap-4">
+            <div key={idx} className="bg-card border rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
               <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-450 tracking-wider">{kpi.label}</span>
-                <h3 className="text-xl font-black text-slate-900 block truncate max-w-[170px]">{kpi.val}</h3>
-                <p className="text-[10px] text-slate-400 font-medium truncate max-w-[175px]">{kpi.desc}</p>
+                <span className="text-[11px] font-medium text-slate-450">{kpi.label}</span>
+                <h3 className="text-xl font-semibold text-foreground block truncate max-w-[170px]">{kpi.val}</h3>
+                <p className="text-[10px] text-muted-foreground font-medium truncate max-w-[175px]">{kpi.desc}</p>
               </div>
               <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${kpi.color}`}>
                 <kpi.icon size={18} />
@@ -163,12 +163,12 @@ export default function FlakeDetectorPage() {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Flaky Test Leaderboard Table */}
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Unstable Tests Leaderboard</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Unstable Tests Leaderboard</span>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+                    <tr className="bg-muted/50 border-b text-[11px] font-medium text-slate-450">
                       <th className="p-3">Test Case Details</th>
                       <th className="p-3 text-center">Flakiness %</th>
                       <th className="p-3 text-center">Runs</th>
@@ -190,26 +190,26 @@ export default function FlakeDetectorPage() {
                         <tr
                           key={test.id}
                           onClick={() => setSelectedTest(test)}
-                          className={`hover:bg-slate-50/50 transition-colors cursor-pointer ${
-                            isSelected ? "bg-indigo-50/30 font-bold" : ""
+                          className={`hover:bg-muted/50 transition-colors cursor-pointer ${
+                            isSelected ? "bg-primary/10 font-semibold" : ""
                           }`}
                         >
-                          <td className="p-3 font-extrabold text-slate-900 truncate max-w-[220px]">{test.testName}</td>
+                          <td className="p-3 font-semibold text-foreground truncate max-w-[220px]">{test.testName}</td>
                           <td className="p-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase ${badgeColor}`}>
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-medium border ${badgeColor}`}>
                               {flPercent}% Flaky
                             </span>
                           </td>
-                          <td className="p-3 text-center font-bold text-slate-800">{test.totalRuns}</td>
-                          <td className="p-3 text-center font-bold text-slate-500">{test.failures} / {test.retries}</td>
-                          <td className="p-3 text-slate-500 font-medium truncate max-w-[180px]">{test.rootCause}</td>
+                          <td className="p-3 text-center font-semibold text-foreground">{test.totalRuns}</td>
+                          <td className="p-3 text-center font-semibold text-muted-foreground">{test.failures} / {test.retries}</td>
+                          <td className="p-3 text-muted-foreground font-medium truncate max-w-[180px]">{test.rootCause}</td>
                           <td className="p-3 text-center">
                             {test.trendDirection === "up" ? (
                               <TrendingUp className="text-rose-500 h-4.5 w-4.5 mx-auto" />
                             ) : test.trendDirection === "down" ? (
                               <TrendingDown className="text-emerald-500 h-4.5 w-4.5 mx-auto" />
                             ) : (
-                              <Minus className="text-slate-400 h-4.5 w-4.5 mx-auto" />
+                              <Minus className="text-muted-foreground h-4.5 w-4.5 mx-auto" />
                             )}
                           </td>
                         </tr>
@@ -222,12 +222,12 @@ export default function FlakeDetectorPage() {
 
             {/* Timeline Timing Breakdown */}
             {selectedTest && timelineBreakdown && (
-              <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
+              <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
                 <div className="flex items-center justify-between border-b pb-2">
-                  <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider">
+                  <span className="text-[11px] font-medium text-slate-450">
                     Action Timeline Breakdown: {selectedTest.testName.split(".")[1]}
                   </span>
-                  <span className="text-[10px] font-bold text-slate-400 font-mono">
+                  <span className="text-[10px] font-semibold text-muted-foreground font-mono">
                     Total Duration: {timelineBreakdown.total}ms
                   </span>
                 </div>
@@ -237,16 +237,16 @@ export default function FlakeDetectorPage() {
                     { label: "Element Identification (Locator query)", val: timelineBreakdown.elementIdTime, color: "bg-blue-500" },
                     { label: "Synchronization Waits (shaft implicit/explicit waits)", val: timelineBreakdown.syncWaitTime, color: "bg-amber-500 animate-pulse" },
                     { label: "Screenshot & Diagnostics Captures", val: timelineBreakdown.screenshotTime, color: "bg-purple-500" },
-                    { label: "Assertion Verification Engine", val: timelineBreakdown.assertionTime, color: "bg-indigo-500" }
+                    { label: "Assertion Verification Engine", val: timelineBreakdown.assertionTime, color: "bg-primary" }
                   ].map((bar, idx) => {
                     const percentage = Math.round((bar.val / timelineBreakdown.total) * 100)
                     return (
                       <div key={idx} className="space-y-1.5">
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="font-bold text-slate-650">{bar.label}</span>
-                          <span className="font-bold text-slate-400 font-mono">{bar.val}ms ({percentage}%)</span>
+                          <span className="font-semibold text-slate-650">{bar.label}</span>
+                          <span className="font-semibold text-muted-foreground font-mono">{bar.val}ms ({percentage}%)</span>
                         </div>
-                        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
                           <div className={`h-full ${bar.color}`} style={{ width: `${percentage}%` }} />
                         </div>
                       </div>
@@ -263,10 +263,10 @@ export default function FlakeDetectorPage() {
             
             {/* Fix Suggestions Panel */}
             {selectedTest && (
-              <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-                <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Recommended Heuristics</span>
-                <div className="bg-indigo-50/50 border border-indigo-150 p-3.5 rounded-2xl space-y-3">
-                  <div className="flex items-center gap-1.5 text-indigo-700 font-extrabold text-[10.5px]">
+              <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+                <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Recommended Heuristics</span>
+                <div className="bg-primary/10 border border-indigo-150 p-3.5 rounded-xl space-y-3">
+                  <div className="flex items-center gap-1.5 text-primary font-semibold text-[10.5px]">
                     <Zap size={13} className="fill-current" /> Suggested Fix Recommendation:
                   </div>
                   <p className="text-slate-650 leading-relaxed font-medium">
@@ -274,7 +274,7 @@ export default function FlakeDetectorPage() {
                   </p>
                   <Button
                     onClick={() => alert("Suggestion details copied to clipboard. Paste this optimization in your test class code!")}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl w-full h-8.5 text-[10px] font-bold shadow-xs flex items-center justify-center gap-1.5 mt-2"
+                    className="bg-primary hover:bg-primary/90 text-white rounded-xl w-full h-8.5 text-[10px] font-semibold shadow-xs flex items-center justify-center gap-1.5 mt-2"
                   >
                     Copy Fix Parameters
                   </Button>
@@ -283,33 +283,33 @@ export default function FlakeDetectorPage() {
             )}
 
             {/* Last 30 Days Trend mini list chart */}
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">30-Day Flakiness Trend</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">30-Day Flakiness Trend</span>
               <div className="h-16 flex items-end justify-between gap-1 select-none">
                 {trendDays.filter((_, i) => i % 2 === 0).map((pt, idx) => (
                   <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group cursor-pointer">
                     <div
-                      className="w-full bg-indigo-500 hover:bg-indigo-650 rounded-xs transition-all"
+                      className="w-full bg-primary hover:bg-indigo-650 rounded-xs transition-all"
                       style={{ height: `${pt.val * 1.2}px` }}
                       title={`Day ${pt.day}: ${pt.val}% Flakiness`}
                     />
                   </div>
                 ))}
               </div>
-              <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold font-mono">
+              <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold font-mono">
                 <span>30 Days Ago (45% Flakes)</span>
                 <span>Today (15% Flakes)</span>
               </div>
             </div>
 
             {/* Profiler Configuration Switch */}
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Profiler Configuration</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Profiler Configuration</span>
               <div className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
-                    <span className="font-extrabold text-slate-800 block">Flake Profiler Logging</span>
-                    <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
+                    <span className="font-semibold text-foreground block">Flake Profiler Logging</span>
+                    <p className="text-[9px] text-muted-foreground font-medium leading-relaxed">
                       Enable execution attachments and timing reports under target/allure-results/.
                     </p>
                   </div>
@@ -320,10 +320,10 @@ export default function FlakeDetectorPage() {
                       setProfilerEnabled(e.target.checked)
                       alert("Flake Profiler configuration toggled! Updates will be written to properties/custom.properties.")
                     }}
-                    className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
-                <div className="bg-slate-50 border p-2 rounded-xl text-[9px] font-mono text-slate-500 select-all font-bold">
+                <div className="bg-muted/50 border p-2 rounded-xl text-[9px] font-mono text-muted-foreground select-all font-semibold">
                   shaft.flakeProfiler.enabled={profilerEnabled ? "true" : "false"}
                 </div>
               </div>

@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useScrumUI } from "@/stores/scrum-ui"
-import { useEpicMutations } from "@/hooks/scrum/use-scrum"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
+import { useEpicMutations, useScrumProject } from "@/hooks/scrum/use-scrum"
+import { DotLabel } from "@/components/scrum/shared"
+import { ComposerDialog, ComposerTitle, ComposerText, ChipRow, ChipButton, CreateMoreToggle } from "@/components/ui/issue-composer"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { AlertCircle, Layers, Loader2 } from "lucide-react"
+import { Check, Pipette } from "lucide-react"
 
 const SWATCHES = [
   { hex: "#2563eb", name: "Blue" },
@@ -27,6 +26,8 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
   const [description, setDescription] = useState("")
   const [color, setColor] = useState(SWATCHES[0].hex)
   const [error, setError] = useState<string | null>(null)
+  const [createMore, setCreateMore] = useState(false)
+  const { data: project } = useScrumProject(projectId)
 
   function reset() {
     setTitle("")
@@ -51,7 +52,7 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
       {
         onSuccess: () => {
           reset()
-          setCreateEpicOpen(false)
+          if (!createMore) setCreateEpicOpen(false)
         },
         onError: (err: any) => {
           setError(
@@ -63,117 +64,92 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Dialog open={createEpicOpen} onOpenChange={(o) => { if (!o) { setError(null); setCreateEpicOpen(false) } }}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
-        <form onSubmit={submit}>
-          <DialogHeader className="space-y-1 border-b px-6 py-4">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Layers className="h-4 w-4 text-purple-600" />
-              Create Epic
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              A container for related stories. Its colour is how it reads on the board.
-            </DialogDescription>
-          </DialogHeader>
+    <ComposerDialog
+      open={createEpicOpen}
+      onOpenChange={(o) => { if (!o) { setError(null); setCreateEpicOpen(false) } }}
+      title="Create epic"
+      description="A container for related stories. Its colour is how it reads on the board."
+      crumbs={[
+        <span key="key" className="rounded border border-border px-1 font-mono text-[10px]">{project?.boardKey || "EPIC"}</span>,
+        <span key="t" className="inline-flex items-center gap-1.5 font-medium">
+          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+          New epic
+        </span>,
+      ]}
+      onSubmit={() => submit()}
+      canSubmit={!!title.trim()}
+      submitting={create.isPending}
+      submitLabel="Create epic"
+      error={error}
+      footerLeft={<CreateMoreToggle checked={createMore} onChange={setCreateMore} />}
+    >
+      <ComposerTitle
+        id="epic-title"
+        aria-label="Epic title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Epic name, e.g. Billing refactor"
+        autoFocus
+        required
+      />
+      <ComposerText
+        id="epic-description"
+        value={description}
+        onChange={setDescription}
+        placeholder="What outcome does this epic deliver?"
+        minRows={3}
+      />
 
-          <div className="space-y-4 px-6 py-4">
-            <div className="space-y-1">
-              <label htmlFor="epic-title" className="text-xs font-semibold text-muted-foreground">
-                Title <span className="text-destructive">*</span>
-              </label>
-              <Input
-                id="epic-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Billing Refactor"
-                autoFocus
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label htmlFor="epic-description" className="text-xs font-semibold text-muted-foreground">
-                Description
-              </label>
-              <Textarea
-                id="epic-description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-                placeholder="What outcome does this epic deliver?"
-                className="resize-y"
-              />
-            </div>
-
-            <fieldset className="space-y-2">
-              <legend className="text-xs font-semibold text-muted-foreground">Epic colour</legend>
-              <div className="flex flex-wrap items-center gap-2">
-                {SWATCHES.map((s) => (
-                  <button
-                    key={s.hex}
-                    type="button"
-                    title={s.name}
-                    aria-label={s.name}
-                    aria-pressed={color === s.hex}
-                    onClick={() => setColor(s.hex)}
-                    className={cn(
-                      "h-8 w-8 rounded-full ring-offset-2 ring-offset-background transition-all hover:scale-110",
-                      color === s.hex ? "ring-2 ring-foreground" : "ring-1 ring-border"
-                    )}
-                    style={{ backgroundColor: s.hex }}
-                  />
-                ))}
-                <label
-                  className="flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-input px-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  title="Custom colour"
+      <ChipRow>
+        <Popover>
+          <PopoverTrigger asChild>
+            <ChipButton active aria-label="Epic colour">
+              <span className="h-3 w-3 rounded-full ring-1 ring-black/10" style={{ backgroundColor: color }} />
+              {SWATCHES.find((sw) => sw.hex === color)?.name ?? "Custom colour"}
+            </ChipButton>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-2">
+            <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Epic colour">
+              {SWATCHES.map((sw) => (
+                <button
+                  key={sw.hex}
+                  type="button"
+                  role="radio"
+                  aria-checked={color === sw.hex}
+                  aria-label={sw.name}
+                  title={sw.name}
+                  onClick={() => setColor(sw.hex)}
+                  className={cn(
+                    "flex h-6 w-6 items-center justify-center rounded-full ring-offset-2 ring-offset-popover transition-transform hover:scale-110",
+                    color === sw.hex && "ring-2 ring-foreground/70"
+                  )}
+                  style={{ backgroundColor: sw.hex }}
                 >
-                  <span className="h-4 w-4 rounded-full border" style={{ backgroundColor: color }} />
-                  Custom
-                  <input
-                    type="color"
-                    value={color}
-                    onChange={(e) => setColor(e.target.value)}
-                    className="sr-only"
-                    aria-label="Custom epic colour"
-                  />
-                </label>
-              </div>
-
-              {/* Live preview of the chip as it appears on a board card */}
-              <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Preview
-                </span>
-                <span
-                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                  style={{ backgroundColor: `${color}1a`, color }}
-                >
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
-                  {title.trim() || "Epic name"}
-                </span>
-              </div>
-            </fieldset>
-
-            {error && (
-              <p
-                role="alert"
-                className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive"
+                  {color === sw.hex && <Check className="h-3 w-3 text-white" />}
+                </button>
+              ))}
+              <label
+                title="Custom colour"
+                className="relative ml-1 flex h-6 cursor-pointer items-center gap-1 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground hover:bg-accent"
               >
-                <AlertCircle className="mt-px h-3.5 w-3.5 shrink-0" />
-                {error}
-              </p>
-            )}
-          </div>
+                <Pipette className="h-3 w-3" /> Custom
+                <input
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                  aria-label="Custom epic colour"
+                />
+              </label>
+            </div>
+          </PopoverContent>
+        </Popover>
 
-          <DialogFooter className="border-t px-6 py-4">
-            <Button type="button" variant="outline" onClick={() => setCreateEpicOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!title.trim() || create.isPending}>
-              {create.isPending && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-              Create epic
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        <span className="ml-auto inline-flex items-center gap-2 text-[11px] text-muted-foreground">
+          On cards
+          <DotLabel dotColor={color}>{title.trim() || "Epic name"}</DotLabel>
+        </span>
+      </ChipRow>
+    </ComposerDialog>
   )
 }

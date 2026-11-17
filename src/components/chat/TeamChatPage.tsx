@@ -273,7 +273,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
         class:
           // No @tailwindcss/typography in this project, so `prose` would be a
           // no-op; composer formatting is styled in globals.css instead.
-          "composer-body min-h-[44px] max-h-[160px] overflow-y-auto outline-none px-4 py-3 text-sm text-slate-800",
+          "composer-body min-h-[44px] max-h-[160px] overflow-y-auto outline-none px-4 py-3 text-sm text-foreground",
       },
       handleKeyDown: (_view, event) => {
         if (event.key === "Escape" && mentionModeRef.current) {
@@ -559,13 +559,13 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
   const messagesWithDividers = getDateDividers(activeChannelMessages)
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] rounded-xl border bg-white shadow-sm overflow-hidden -m-2">
+    <div className="flex h-[calc(100vh-7rem)] rounded-xl border bg-card shadow-sm overflow-hidden -m-2">
       {/* ─── LEFT: Channels Sidebar ─── */}
-      <div className="w-[260px] border-r bg-slate-50/80 flex flex-col shrink-0">
+      <div className="w-[260px] border-r bg-muted/80 flex flex-col shrink-0">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="font-bold text-base text-gray-900">Conversations</h2>
-          <button className="p-1 rounded hover:bg-slate-200 transition-colors text-muted-foreground">
+          <h2 className="font-semibold text-base text-foreground">Conversations</h2>
+          <button className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground">
             <Edit2 className="h-4 w-4" />
           </button>
         </div>
@@ -575,10 +575,10 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
           {/* Channels Section */}
           <div className="mb-4">
             <div className="flex items-center justify-between px-3 mb-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70">Channels</span>
+              <span className="text-[11px] font-medium text-muted-foreground/70">Channels</span>
               <button
                 onClick={() => setShowCreateChannel(true)}
-                className="p-0.5 rounded hover:bg-slate-200 transition-colors text-muted-foreground"
+                className="p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -586,7 +586,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
             {/* Create channel inline */}
             {showCreateChannel && (
-              <div className="px-2 py-2 mx-1 mb-1 bg-white rounded-lg border shadow-sm">
+              <div className="px-2 py-2 mx-1 mb-1 bg-card rounded-lg border shadow-sm">
                 <input
                   autoFocus
                   value={newChannelName}
@@ -596,19 +596,19 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                     if (e.key === "Escape") { setShowCreateChannel(false); setNewChannelName("") }
                   }}
                   placeholder="Channel name..."
-                  className="w-full px-2 py-1.5 text-xs rounded border bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="w-full px-2 py-1.5 text-xs rounded border bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <div className="flex gap-1 mt-1.5">
                   <button
                     onClick={handleCreateChannel}
                     disabled={creatingChannel || !newChannelName.trim()}
-                    className="flex-1 text-[10px] py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50 font-medium"
+                    className="flex-1 text-[10px] py-1 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 font-medium"
                   >
                     Create
                   </button>
                   <button
                     onClick={() => { setShowCreateChannel(false); setNewChannelName("") }}
-                    className="flex-1 text-[10px] py-1 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 font-medium"
+                    className="flex-1 text-[10px] py-1 bg-muted text-muted-foreground rounded hover:bg-muted font-medium"
                   >
                     Cancel
                   </button>
@@ -626,14 +626,14 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   onClick={() => setActiveChannel(channel.id)}
                   className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all group ${
                     isActive
-                      ? "bg-indigo-100 text-indigo-800 font-semibold"
-                      : "text-gray-600 hover:bg-slate-100"
+                      ? "bg-primary/15 text-primary font-semibold"
+                      : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
-                  <Hash className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-600" : "text-gray-400"}`} />
+                  <Hash className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                   <span className="truncate flex-1 text-left">{channel.name}</span>
                   {unread > 0 && (
-                    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
+                    <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold px-1.5">
                       {unread}
                     </span>
                   )}
@@ -645,23 +645,23 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
           {/* DMs Section */}
           <div className="mb-4">
             <div className="flex items-center justify-between px-3 mb-1">
-              <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70">Direct Messages</span>
+              <span className="text-[11px] font-medium text-muted-foreground/70">Direct Messages</span>
               <Popover open={showNewDM} onOpenChange={setShowNewDM}>
                 <PopoverTrigger asChild>
                   <button
-                    className="p-0.5 rounded hover:bg-slate-200 transition-colors text-muted-foreground"
+                    className="p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground"
                     title="New direct message"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-64 p-2" align="start">
-                  <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/70 px-2 pb-1.5">
+                  <p className="text-[11px] font-medium text-muted-foreground/70 px-2 pb-1.5">
                     Message a member
                   </p>
                   <div className="max-h-64 overflow-y-auto">
                     {projectMembers.filter((m) => m.id !== currentUserId).length === 0 ? (
-                      <p className="text-xs text-gray-400 px-2 py-3 text-center">
+                      <p className="text-xs text-muted-foreground px-2 py-3 text-center">
                         No other members in this project yet
                       </p>
                     ) : (
@@ -674,10 +674,10 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                               key={member.id}
                               onClick={() => handleStartDM(member.id)}
                               disabled={startingDM}
-                              className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm text-gray-700 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                              className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-lg text-sm text-foreground hover:bg-muted transition-colors disabled:opacity-50"
                             >
                               <div className="relative shrink-0">
-                                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[11px] font-bold">
+                                <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[11px] font-semibold">
                                   {(member.name || member.email)[0].toUpperCase()}
                                 </div>
                                 <Circle
@@ -688,7 +688,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                               </div>
                               <div className="min-w-0 text-left">
                                 <p className="truncate font-medium leading-tight">{member.name || member.email}</p>
-                                <p className="truncate text-[11px] text-gray-400 leading-tight">{member.email}</p>
+                                <p className="truncate text-[11px] text-muted-foreground leading-tight">{member.email}</p>
                               </div>
                             </button>
                           )
@@ -699,7 +699,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
               </Popover>
             </div>
             {dms.length === 0 && (
-              <p className="px-3 py-1 text-[11px] text-gray-400 italic">
+              <p className="px-3 py-1 text-[11px] text-muted-foreground italic">
                 No conversations yet — click + to message a member
               </p>
             )}
@@ -714,12 +714,12 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                     onClick={() => setActiveChannel(dm.id)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
                       isActive
-                        ? "bg-indigo-100 text-indigo-800 font-semibold"
-                        : "text-gray-600 hover:bg-slate-100"
+                        ? "bg-primary/15 text-primary font-semibold"
+                        : "text-muted-foreground hover:bg-muted"
                     }`}
                   >
                     <div className="relative">
-                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-bold">
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[10px] font-semibold">
                         {(otherName || "?")[0].toUpperCase()}
                       </div>
                       <Circle
@@ -732,7 +732,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                     </div>
                     <span className="truncate flex-1 text-left">{otherName}</span>
                     {unread > 0 && (
-                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1.5">
+                      <span className="min-w-[20px] h-5 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold px-1.5">
                         {unread}
                       </span>
                     )}
@@ -748,12 +748,12 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
         {activeChannel ? (
           <>
             {/* Channel Header */}
-            <div className="flex items-center gap-3 px-5 py-3 border-b bg-white shrink-0">
+            <div className="flex items-center gap-3 px-5 py-3 border-b bg-card shrink-0">
               <div className="flex items-center gap-2">
                 {activeChannel.type === "DIRECT" ? (
                   <>
                     <div className="relative">
-                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[11px] font-bold">
+                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-[11px] font-semibold">
                         {(activeDisplayName || "?")[0].toUpperCase()}
                       </div>
                       <Circle
@@ -764,29 +764,29 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                         }`}
                       />
                     </div>
-                    <h3 className="font-bold text-base text-gray-900">{activeDisplayName}</h3>
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 bg-slate-100 rounded px-1.5 py-0.5">
+                    <h3 className="font-semibold text-base text-foreground">{activeDisplayName}</h3>
+                    <span className="text-[11px] font-medium text-muted-foreground bg-muted rounded px-1.5 py-0.5">
                       Private
                     </span>
                   </>
                 ) : (
                   <>
-                    <Hash className="h-5 w-5 text-gray-400" />
-                    <h3 className="font-bold text-base text-gray-900">{activeChannel.name}</h3>
+                    <Hash className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="font-semibold text-base text-foreground">{activeChannel.name}</h3>
                   </>
                 )}
               </div>
-              <button className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors text-muted-foreground">
+              <button className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground">
                 <Users className="h-4 w-4" />
               </button>
               <div className="flex-1" />
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={isDM ? `Search messages with ${activeDisplayName}...` : `Search in #${activeChannel.name}...`}
-                  className="pl-9 pr-3 py-1.5 text-xs rounded-lg border bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-400 w-52"
+                  className="pl-9 pr-3 py-1.5 text-xs rounded-lg border bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary w-52"
                 />
               </div>
             </div>
@@ -813,22 +813,22 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                     {/* Date Divider */}
                     {msg.showDivider && (
                       <div className="flex items-center gap-3 my-4">
-                        <div className="flex-1 h-px bg-gray-200" />
-                        <span className="text-[11px] font-medium text-gray-400 px-2">
+                        <div className="flex-1 h-px bg-muted" />
+                        <span className="text-[11px] font-medium text-muted-foreground px-2">
                           {formatDateDivider(msg.createdAt)}
                         </span>
-                        <div className="flex-1 h-px bg-gray-200" />
+                        <div className="flex-1 h-px bg-muted" />
                       </div>
                     )}
 
                     {/* Message */}
-                    <div className="group flex gap-3 py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="group flex gap-3 py-1.5 px-2 rounded-lg hover:bg-muted/50 transition-colors">
                       {/* Avatar — links to the sender's public profile */}
                       <a href={`/users/${msg.sender.id}`} className="shrink-0 mt-0.5" title="View profile">
                         {msg.sender.avatarUrl ? (
-                          <img src={msg.sender.avatarUrl} className="h-9 w-9 rounded-full object-cover hover:ring-2 hover:ring-indigo-300 transition-shadow" alt="" />
+                          <img src={msg.sender.avatarUrl} className="h-9 w-9 rounded-full object-cover hover:ring-2 hover:ring-primary/30 transition-shadow" alt="" />
                         ) : (
-                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold hover:ring-2 hover:ring-indigo-300 transition-shadow">
+                          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-sm font-semibold hover:ring-2 hover:ring-primary/30 transition-shadow">
                             {(msg.sender.name || msg.sender.email || "?")[0].toUpperCase()}
                           </div>
                         )}
@@ -837,17 +837,17 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2">
-                          <span className="font-semibold text-sm text-gray-900">
+                          <span className="font-semibold text-sm text-foreground">
                             {msg.sender.name || msg.sender.email}
                           </span>
-                          <span className="text-[11px] text-gray-400">{formatTime(msg.createdAt)}</span>
+                          <span className="text-[11px] text-muted-foreground">{formatTime(msg.createdAt)}</span>
                           {msg.editedAt && (
                             <span className="text-[10px] text-gray-300 italic">(edited)</span>
                           )}
                         </div>
-                        <div className="text-sm text-gray-700 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
+                        <div className="text-sm text-foreground mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
                           {msg.isDeleted ? (
-                            <span className="italic text-gray-400">This message was deleted</span>
+                            <span className="italic text-muted-foreground">This message was deleted</span>
                           ) : (
                             // Rendered from the message text into React nodes:
                             // bold/italic/lists plus blue @mentions and
@@ -870,7 +870,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                                 href={att.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="flex items-center gap-2 px-3 py-2 bg-indigo-50 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors text-xs text-indigo-700"
+                                className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg border border-primary/25 hover:bg-primary/15 transition-colors text-xs text-primary"
                               >
                                 <Paperclip className="h-3.5 w-3.5" />
                                 <span className="truncate max-w-[180px]">{att.name}</span>
@@ -889,8 +889,8 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                                 title={r.users.map((u: any) => u.name || "Someone").join(", ")}
                                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${
                                   r.users.some((u: any) => u.id === currentUserId)
-                                    ? "bg-indigo-100 border-indigo-300 text-indigo-700"
-                                    : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                                    ? "bg-primary/15 border-primary/25 text-primary"
+                                    : "bg-muted/50 border-border hover:bg-muted"
                                 }`}
                               >
                                 <span>{r.emoji}</span>
@@ -904,7 +904,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                         {(msg._count?.replies || 0) > 0 && (
                           <button
                             onClick={() => setActiveThread(msg.id)}
-                            className="flex items-center gap-1.5 mt-2 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                            className="flex items-center gap-1.5 mt-2 text-xs text-primary hover:text-primary font-medium transition-colors"
                           >
                             <MessageSquare className="h-3.5 w-3.5" />
                             {msg._count.replies} {msg._count.replies === 1 ? "reply" : "replies"}
@@ -916,14 +916,14 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                       <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-start gap-0.5 mt-1">
                         <button
                           onClick={() => setActiveThread(msg.id)}
-                          className="p-1 rounded hover:bg-slate-200 text-gray-400 hover:text-gray-600"
+                          className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-muted-foreground"
                           title="Reply in thread"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
                         </button>
                         <Popover>
                           <PopoverTrigger asChild>
-                            <button className="p-1 rounded hover:bg-slate-200 text-gray-400 hover:text-gray-600" title="React">
+                            <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-muted-foreground" title="React">
                               <Smile className="h-3.5 w-3.5" />
                             </button>
                           </PopoverTrigger>
@@ -933,7 +933,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                                 <button
                                   key={emoji}
                                   onClick={() => toggleReaction(msg, emoji)}
-                                  className="h-8 w-8 flex items-center justify-center rounded-lg text-lg hover:bg-slate-100 transition-colors"
+                                  className="h-8 w-8 flex items-center justify-center rounded-lg text-lg hover:bg-muted transition-colors"
                                 >
                                   {emoji}
                                 </button>
@@ -951,20 +951,20 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
             {/* Typing Indicator */}
             {currentTyping.length > 0 && (
-              <div className="px-5 py-1 text-xs text-gray-400 italic">
+              <div className="px-5 py-1 text-xs text-muted-foreground italic">
                 {currentTyping.map(t => t.name).join(", ")} {currentTyping.length === 1 ? "is" : "are"} typing...
               </div>
             )}
 
             {/* Message Input */}
-            <div className="px-5 pb-4 pt-2 border-t bg-white shrink-0">
-              <div className="relative rounded-xl border bg-white shadow-sm focus-within:ring-1 focus-within:ring-indigo-400 focus-within:border-indigo-400 transition-all">
+            <div className="px-5 pb-4 pt-2 border-t bg-card shrink-0">
+              <div className="relative rounded-xl border bg-card shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
                 {/* Formatting toolbar */}
-                <div className="flex items-center gap-0.5 px-3 pt-2.5 pb-1 border-b border-gray-100">
+                <div className="flex items-center gap-0.5 px-3 pt-2.5 pb-1 border-b border-border">
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleBold().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.bold ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.bold ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Bold (**text**)"
                   >
                     <Bold className="h-4 w-4" />
@@ -972,7 +972,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleItalic().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.italic ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.italic ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Italic (*text*)"
                   >
                     <Italic className="h-4 w-4" />
@@ -980,7 +980,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleStrike().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.strike ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.strike ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Strikethrough (~~text~~)"
                   >
                     <Strikethrough className="h-4 w-4" />
@@ -988,7 +988,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.bulletList ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.bulletList ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Bulleted list"
                   >
                     <List className="h-4 w-4" />
@@ -996,7 +996,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.orderedList ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.orderedList ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Numbered list"
                   >
                     <ListOrdered className="h-4 w-4" />
@@ -1004,7 +1004,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleCode().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.code ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.code ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Inline code (`code`)"
                   >
                     <Link2 className="h-4 w-4" />
@@ -1012,7 +1012,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     type="button"
                     onClick={() => editor?.chain().focus().toggleCode().run()}
-                    className={`p-1.5 rounded transition-colors ${editorState?.code ? "bg-indigo-50 text-indigo-600" : "hover:bg-slate-100 text-gray-400 hover:text-gray-600"}`}
+                    className={`p-1.5 rounded transition-colors ${editorState?.code ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-muted-foreground"}`}
                     title="Inline code"
                   >
                     <Code2 className="h-4 w-4" />
@@ -1021,8 +1021,8 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
                 {/* Mention pickers */}
                 {mentionMode && (
-                  <div className="absolute bottom-full left-3 z-50 mb-1 max-h-60 w-80 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                    <p className="px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
+                  <div className="absolute bottom-full left-3 z-50 mb-1 max-h-60 w-80 overflow-y-auto rounded-lg border border-border bg-card py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
+                    <p className="px-3 py-1 text-[11px] font-medium text-muted-foreground">
                       {mentionMode === "user" ? "Mention a person" : "Reference an item"}
                     </p>
 
@@ -1032,14 +1032,14 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                         (m.name || m.email).toLowerCase().includes(q)
                       )
                       if (list.length === 0)
-                        return <p className="px-3 py-2 text-xs text-slate-500">No matching people.</p>
+                        return <p className="px-3 py-2 text-xs text-muted-foreground">No matching people.</p>
                       return list.map((m) => (
                         <button
                           key={m.id}
                           onClick={() => insertUserMention(m)}
-                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
                         >
-                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold uppercase text-indigo-700">
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-medium text-primary">
                             {(m.name || m.email).slice(0, 2)}
                           </span>
                           <span className="truncate">{m.name || m.email}</span>
@@ -1049,20 +1049,20 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
 
                     {mentionMode === "entity" && (
                       <>
-                        {entityLoading && <p className="px-3 py-2 text-xs text-slate-500">Searching…</p>}
+                        {entityLoading && <p className="px-3 py-2 text-xs text-muted-foreground">Searching…</p>}
                         {!entityLoading && entityResults.length === 0 && (
-                          <p className="px-3 py-2 text-xs text-slate-500">No matching items.</p>
+                          <p className="px-3 py-2 text-xs text-muted-foreground">No matching items.</p>
                         )}
                         {!entityLoading &&
                           entityResults.map((e) => (
                             <button
                               key={`${e.type}:${e.id}`}
                               onClick={() => insertEntityMention(e)}
-                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-slate-700 hover:bg-slate-100"
+                              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-muted"
                             >
                               <span
                                 className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-bold ${
-                                  ENTITY_CHIP[e.type] || "border-slate-200 bg-slate-100 text-slate-600"
+                                  ENTITY_CHIP[e.type] || "border-border bg-muted text-muted-foreground"
                                 }`}
                               >
                                 {e.key}
@@ -1094,7 +1094,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                   <button
                     onClick={handleSendMessage}
                     disabled={(editorState?.isEmpty ?? true) || sendingMessage}
-                    className="flex items-center gap-1.5 px-4 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Send className="h-3.5 w-3.5" />
                     Send
@@ -1115,32 +1115,32 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
       </div>
 
       {/* ─── RIGHT: Thread Panel ─── */}
-      <div className={`w-[320px] border-l bg-white flex flex-col shrink-0 transition-all ${activeThreadId ? "" : ""}`}>
+      <div className={`w-[320px] border-l bg-card flex flex-col shrink-0 transition-all ${activeThreadId ? "" : ""}`}>
         {activeThreadId && threadParent ? (
           <>
             {/* Thread Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b">
-              <h3 className="font-bold text-base text-gray-900">Thread</h3>
+              <h3 className="font-semibold text-base text-foreground">Thread</h3>
               <button
                 onClick={() => setActiveThread(null)}
-                className="p-1 rounded hover:bg-slate-100 transition-colors text-muted-foreground"
+                className="p-1 rounded hover:bg-muted transition-colors text-muted-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Parent message */}
-            <div className="px-4 py-3 border-b bg-slate-50/50">
+            <div className="px-4 py-3 border-b bg-muted/50">
               <div className="flex gap-2.5">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-semibold shrink-0">
                   {(threadParent.sender.name || threadParent.sender.email || "?")[0].toUpperCase()}
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-sm text-gray-900">{threadParent.sender.name || threadParent.sender.email}</span>
-                    <span className="text-[10px] text-gray-400">{formatTime(threadParent.createdAt)}</span>
+                    <span className="font-semibold text-sm text-foreground">{threadParent.sender.name || threadParent.sender.email}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTime(threadParent.createdAt)}</span>
                   </div>
-                  <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{threadParent.content}</p>
+                  <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap break-words">{threadParent.content}</p>
                 </div>
               </div>
             </div>
@@ -1148,19 +1148,19 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
             {/* Thread replies */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
               {threadMessages.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-4">No replies yet</p>
+                <p className="text-xs text-muted-foreground text-center py-4">No replies yet</p>
               ) : (
                 threadMessages.map(reply => (
                   <div key={reply.id} className="flex gap-2.5">
-                    <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-[10px] font-bold shrink-0">
+                    <div className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-[10px] font-semibold shrink-0">
                       {(reply.sender.name || reply.sender.email || "?")[0].toUpperCase()}
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-baseline gap-2">
-                        <span className="font-semibold text-xs text-gray-900">{reply.sender.name || reply.sender.email}</span>
-                        <span className="text-[10px] text-gray-400">{formatTime(reply.createdAt)}</span>
+                        <span className="font-semibold text-xs text-foreground">{reply.sender.name || reply.sender.email}</span>
+                        <span className="text-[10px] text-muted-foreground">{formatTime(reply.createdAt)}</span>
                       </div>
-                      <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap break-words">{reply.content}</p>
+                      <p className="text-sm text-foreground mt-0.5 whitespace-pre-wrap break-words">{reply.content}</p>
                     </div>
                   </div>
                 ))
@@ -1181,12 +1181,12 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                     }
                   }}
                   placeholder="Reply..."
-                  className="flex-1 px-3 py-2 text-sm rounded-lg border bg-slate-50 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  className="flex-1 px-3 py-2 text-sm rounded-lg border bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <button
                   onClick={handleSendThreadReply}
                   disabled={!threadInput.trim() || sendingThread}
-                  className="px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   <Send className="h-3.5 w-3.5" />
                 </button>

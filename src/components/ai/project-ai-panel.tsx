@@ -145,19 +145,19 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
 
   if (loading) {
     return (
-      <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card flex items-center gap-2 text-slate-400">
+      <div className="p-6 border border-border shadow-sm rounded-xl bg-card flex items-center gap-2 text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading AI provider…
       </div>
     )
   }
 
   return (
-    <div className="p-6 border border-slate-100 shadow-sm rounded-2xl bg-card space-y-5">
+    <div className="p-6 border border-border shadow-sm rounded-xl bg-card space-y-5">
       <div>
-        <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-          <Bot className="h-4.5 w-4.5 text-indigo-600" /> AI Provider
+        <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+          <Bot className="h-4.5 w-4.5 text-primary" /> AI Provider
         </h2>
-        <p className="text-[10px] text-slate-400 font-medium">
+        <p className="text-[10px] text-muted-foreground font-medium">
           The model that writes this project&apos;s bug reports, test cases and user stories.
           Leave it empty to use the workspace provider.
         </p>
@@ -170,7 +170,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
       */}
       {config?.keyUnreadable && (
         <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3.5 py-3 text-[11px] font-semibold text-rose-800 space-y-1.5">
-          <div className="flex items-center gap-2 font-extrabold">
+          <div className="flex items-center gap-2 font-semibold">
             <AlertTriangle className="h-3.5 w-3.5" />
             This project&apos;s saved AI key can no longer be read
           </div>
@@ -209,7 +209,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-muted-foreground font-bold">Provider</Label>
+          <Label className="text-muted-foreground font-semibold">Provider</Label>
           <select
             value={provider}
             onChange={(e) => {
@@ -225,11 +225,11 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
               </option>
             ))}
           </select>
-          {meta && <p className="text-[10px] text-slate-400 font-medium">{meta.docsHint}</p>}
+          {meta && <p className="text-[10px] text-muted-foreground font-medium">{meta.docsHint}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-muted-foreground font-bold">Model</Label>
+          <Label className="text-muted-foreground font-semibold">Model</Label>
           {modelOptions.length > 0 ? (
             <select
               value={model}
@@ -252,7 +252,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
             />
           )}
           {detectedModels && (
-            <p className="text-[10px] text-emerald-600 font-bold">
+            <p className="text-[10px] text-emerald-600 font-semibold">
               {detectedModels.length} model(s) reported by this key
             </p>
           )}
@@ -261,10 +261,10 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
 
       {!meta?.local && (
         <div className="space-y-1.5">
-          <Label className="text-muted-foreground font-bold flex items-center gap-1.5">
+          <Label className="text-muted-foreground font-semibold flex items-center gap-1.5">
             <KeyRound className="h-3.5 w-3.5" /> API Key
             {config?.hasKey && (
-              <span className="text-emerald-600 font-bold">· stored (encrypted)</span>
+              <span className="text-emerald-600 font-semibold">· stored (encrypted)</span>
             )}
           </Label>
           <Input
@@ -274,14 +274,14 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
             placeholder={config?.hasKey ? "Leave blank to keep the stored key" : "Paste the API key…"}
             className="h-9 bg-background font-mono"
           />
-          <p className="text-[10px] text-slate-400 font-medium">
+          <p className="text-[10px] text-muted-foreground font-medium">
             Encrypted before it is stored, and never shown again. Leave blank to use the
             server&apos;s environment key instead.
           </p>
         </div>
       )}
 
-      <label className="flex items-center gap-2 text-[11px] font-bold text-slate-600">
+      <label className="flex items-center gap-2 text-[11px] font-semibold text-muted-foreground">
         <input
           type="checkbox"
           checked={enabled}
@@ -292,7 +292,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
       </label>
 
       {notice && (
-        <p className={`text-[11px] font-bold ${notice.ok ? "text-emerald-700" : "text-rose-600"}`}>
+        <p className={`text-[11px] font-semibold ${notice.ok ? "text-emerald-700" : "text-rose-600"}`}>
           {notice.text}
         </p>
       )}
@@ -301,7 +301,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
         <Button
           onClick={handleSave}
           disabled={saving}
-          className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+          className="h-9 px-4 bg-primary hover:bg-primary/90 text-white font-semibold"
         >
           {saving ? "Saving…" : "Save"}
         </Button>
@@ -309,7 +309,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
           onClick={handleTest}
           disabled={testing || (!apiKey && !config?.hasKey && !meta?.local)}
           variant="outline"
-          className="h-9 px-4 font-bold"
+          className="h-9 px-4 font-semibold"
         >
           {testing ? "Testing…" : "Test connection"}
         </Button>
@@ -318,7 +318,7 @@ export function ProjectAiPanel({ projectId }: { projectId: string }) {
             onClick={handleClear}
             disabled={saving}
             variant="outline"
-            className="h-9 px-4 font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1.5"
+            className="h-9 px-4 font-semibold text-rose-600 hover:text-rose-700 flex items-center gap-1.5"
           >
             <Trash2 className="h-3.5 w-3.5" /> Remove
           </Button>

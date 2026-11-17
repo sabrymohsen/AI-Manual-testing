@@ -53,32 +53,32 @@ export default function RegisterPage() {
   }
 
   const inputClass =
-    "w-full h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm text-slate-100 font-medium placeholder:text-slate-600 focus:outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/40 transition-colors"
+    "w-full h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm text-slate-100 font-medium placeholder:text-muted-foreground focus:outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/40 transition-colors"
 
   return (
     <>
       <div className="space-y-1.5">
-        <p className="font-mono text-[11px] font-bold text-violet-400 uppercase tracking-[0.25em]">// initialize account</p>
-        <h1 className="text-2xl font-black tracking-tight text-white">Create your account</h1>
-        <p className="text-[13px] text-slate-500">Free to start — your data stays on your machine.</p>
+        <p className="font-mono text-[11px] font-semibold text-violet-400 uppercase tracking-[0.25em]">// initialize account</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Create your account</h1>
+        <p className="text-[13px] text-muted-foreground">Free to start — your data stays on your machine.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <label htmlFor="name" className="flex items-center justify-between text-xs font-bold text-slate-300">
+          <label htmlFor="name" className="flex items-center justify-between text-xs font-semibold text-slate-300">
             <span>Name</span>
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Optional</span>
+            <span className="text-[11px] font-medium text-muted-foreground">Optional</span>
           </label>
           <input id="name" name="name" placeholder="Jane Tester" className={inputClass} />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-xs font-bold text-slate-300">Email</label>
+          <label htmlFor="email" className="text-xs font-semibold text-slate-300">Email</label>
           <input id="email" name="email" type="email" required placeholder="you@company.com" className={inputClass} />
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="password" className="text-xs font-bold text-slate-300">Password</label>
+          <label htmlFor="password" className="text-xs font-semibold text-slate-300">Password</label>
           <div className="relative">
             <input
               id="password"
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-300 transition-colors"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -101,7 +101,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="space-y-1.5">
-          <label htmlFor="confirmPassword" className="text-xs font-bold text-slate-300">Confirm Password</label>
+          <label htmlFor="confirmPassword" className="text-xs font-semibold text-slate-300">Confirm Password</label>
           <div className="relative">
             <input
               id="confirmPassword"
@@ -115,7 +115,7 @@ export default function RegisterPage() {
               type="button"
               tabIndex={-1}
               onClick={() => setShowConfirm((v) => !v)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-slate-300 transition-colors"
               aria-label={showConfirm ? "Hide password" : "Show password"}
             >
               {showConfirm ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
@@ -132,7 +132,7 @@ export default function RegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:hover:bg-violet-600 text-white text-sm font-bold h-11 px-6 shadow-lg shadow-violet-600/30 transition-all"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-60 disabled:hover:bg-violet-600 text-white text-sm font-semibold h-11 px-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
         >
           {loading ? (
             <>
@@ -146,9 +146,9 @@ export default function RegisterPage() {
         </button>
       </form>
 
-      <p className="text-center text-[13px] text-slate-500">
+      <p className="text-center text-[13px] text-muted-foreground">
         Already have an account?{" "}
-        <Link href="/login" className="font-bold text-violet-400 hover:text-violet-300 transition-colors">
+        <Link href="/login" className="font-semibold text-violet-400 hover:text-violet-300 transition-colors">
           Sign In
         </Link>
       </p>

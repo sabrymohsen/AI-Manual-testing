@@ -85,7 +85,7 @@ export function ConfirmDialog({
     headerIcon = <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
     confirmButtonClass += "bg-amber-600 hover:bg-amber-700 text-white"
   } else {
-    confirmButtonClass += "bg-indigo-600 hover:bg-indigo-700 text-white"
+    confirmButtonClass += "bg-primary hover:bg-primary/90 text-white"
   }
 
   return (
@@ -94,15 +94,15 @@ export function ConfirmDialog({
       onClick={handleBackdropClick}
     >
       <div
-        className="w-full max-w-md p-6 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl bg-background space-y-4 text-left"
+        className="w-full max-w-md p-6 border border-border dark:border-slate-800 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] bg-background space-y-4 text-left"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">
           {headerIcon}
           <div className="space-y-1.5 flex-1">
-            <h3 className="text-lg font-black text-slate-950 dark:text-slate-50">{title}</h3>
+            <h3 className="text-lg font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
             {description && (
-              <p className="text-xs text-slate-500 leading-relaxed font-semibold">{description}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{description}</p>
             )}
           </div>
         </div>
@@ -114,9 +114,9 @@ export function ConfirmDialog({
         )}
 
         {requireTextConfirmation && (
-          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-            <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
-              To confirm, type <span className="font-mono font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">"{requireTextConfirmation}"</span>:
+          <div className="space-y-2 pt-2 border-t border-border dark:border-slate-800">
+            <label className="text-[11px] font-medium text-muted-foreground block">
+              To confirm, type <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">"{requireTextConfirmation}"</span>:
             </label>
             <Input
               value={typedConfirmation}
@@ -128,7 +128,7 @@ export function ConfirmDialog({
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex justify-end gap-3 pt-3 border-t border-border dark:border-slate-800">
           {showCancel && (
             <Button
               variant="outline"

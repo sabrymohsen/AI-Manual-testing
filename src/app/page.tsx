@@ -289,21 +289,21 @@ function SectionHeading({
 }) {
   return (
     <div className="max-w-2xl space-y-3">
-      <p className={`font-mono text-[11px] font-bold uppercase tracking-[0.25em] ${accent}`}>{kicker}</p>
-      <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">{title}</h2>
-      <p className="text-[13.5px] text-slate-400 leading-relaxed">{blurb}</p>
+      <p className={`font-mono text-[11px] font-semibold uppercase tracking-[0.25em] ${accent}`}>{kicker}</p>
+      <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">{title}</h2>
+      <p className="text-[13.5px] text-muted-foreground leading-relaxed">{blurb}</p>
     </div>
   )
 }
 
 function FeatureCard({ feature, accent }: { feature: Feature; accent: string }) {
   return (
-    <div className="group rounded-2xl border border-white/10 bg-white/[0.03] p-5 hover:border-violet-500/40 hover:bg-white/[0.05] transition-all">
+    <div className="group rounded-xl border border-white/10 bg-white/[0.03] p-5 hover:border-violet-500/40 hover:bg-white/[0.05] transition-all">
       <div className={`h-10 w-10 rounded-xl border flex items-center justify-center mb-4 ${accent}`}>
         <feature.icon className="h-[18px] w-[18px]" />
       </div>
-      <h3 className="font-extrabold text-[14.5px] text-white mb-1.5">{feature.name}</h3>
-      <p className="text-[12.5px] text-slate-400 leading-relaxed">{feature.description}</p>
+      <h3 className="font-semibold text-[14.5px] text-white mb-1.5">{feature.name}</h3>
+      <p className="text-[12.5px] text-muted-foreground leading-relaxed">{feature.description}</p>
     </div>
   )
 }
@@ -328,7 +328,7 @@ export default async function Home() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-[#060918]/85 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <BrandMark />
-          <nav className="hidden md:flex items-center gap-5 text-[13px] font-semibold text-slate-400">
+          <nav className="hidden md:flex items-center gap-5 text-[13px] font-semibold text-muted-foreground">
             {NAV_SECTIONS.map((s) => (
               <a key={s.href} href={s.href} className="hover:text-white transition-colors">
                 {s.label}
@@ -344,14 +344,14 @@ export default async function Home() {
             {!session && (
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center rounded-xl text-[13px] font-bold text-slate-300 hover:text-white h-10 px-4 transition-colors"
+                className="inline-flex items-center justify-center rounded-xl text-[13px] font-semibold text-slate-300 hover:text-white h-10 px-4 transition-colors"
               >
                 Sign In
               </Link>
             )}
             <Link
               href={primaryCta.href}
-              className="inline-flex items-center gap-1.5 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-bold h-10 px-5 shadow-lg shadow-violet-600/30 transition-all"
+              className="inline-flex items-center gap-1.5 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-semibold h-10 px-5 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
             >
               {primaryCta.label} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -366,18 +366,18 @@ export default async function Home() {
 
         <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-14 grid lg:grid-cols-2 gap-14 items-center">
           <div className="space-y-7">
-            <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-[11px] font-bold text-violet-300 font-mono uppercase tracking-widest">
+            <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-[11px] font-semibold text-violet-300 font-mono uppercase tracking-widest">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> system online · v4
             </span>
 
-            <h1 className="text-4xl sm:text-[3.4rem] font-black tracking-tight leading-[1.04] text-white">
+            <h1 className="text-4xl sm:text-[3.4rem] font-semibold tracking-tight leading-[1.04] text-white">
               The operating system for{" "}
               <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">
                 quality engineering
               </span>
             </h1>
 
-            <p className="text-[15px] text-slate-400 leading-relaxed max-w-lg">
+            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-lg">
               Plan sprints, run live QA sessions in an embedded browser, drive a 12-tool automation
               hub with self-healing tests, generate cases with AI, and sync everything to
               OpenProject — one workspace, end to end.
@@ -386,19 +386,19 @@ export default async function Home() {
             <div className="flex flex-wrap gap-3">
               <Link
                 href={primaryCta.href}
-                className="inline-flex items-center gap-2 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold h-11 px-6 shadow-lg shadow-violet-600/30 transition-all"
+                className="inline-flex items-center gap-2 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold h-11 px-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
               >
                 {primaryCta.label} <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href={secondaryCta.href}
-                className="inline-flex items-center gap-2 justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-bold h-11 px-6 transition-all"
+                className="inline-flex items-center gap-2 justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-semibold h-11 px-6 transition-all"
               >
                 {secondaryCta.label}
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] text-slate-500 font-medium pt-1">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] text-muted-foreground font-medium pt-1">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Local-first
               </span>
@@ -424,8 +424,8 @@ export default async function Home() {
               ["3", "trackers synced (OpenProject · Jira · Azure)"]
             ].map(([stat, label]) => (
               <div key={label} className="space-y-1">
-                <p className="text-2xl font-black text-white font-mono">{stat}</p>
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
+                <p className="text-2xl font-semibold text-white font-mono">{stat}</p>
+                <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
               </div>
             ))}
           </div>
@@ -443,7 +443,7 @@ export default async function Home() {
           />
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {PLAN_FEATURES.map((f) => (
-              <FeatureCard key={f.name} feature={f} accent="text-indigo-400 bg-indigo-500/10 border-indigo-500/20" />
+              <FeatureCard key={f.name} feature={f} accent="text-indigo-400 bg-primary/10 border-primary/20" />
             ))}
           </div>
         </div>
@@ -477,7 +477,7 @@ export default async function Home() {
               blurb="The Automation Hub wraps the execution engine in a full toolchain — from authoring and evidence to AI diagnosis, self-healing, flake analysis, and cross-browser scale."
               accent="text-violet-400"
             />
-            <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-[11px] font-bold text-violet-300 font-mono uppercase tracking-widest">
+            <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-[11px] font-semibold text-violet-300 font-mono uppercase tracking-widest">
               <Cpu className="h-3.5 w-3.5" /> automation hub
             </span>
           </div>
@@ -486,18 +486,18 @@ export default async function Home() {
             {HUB_TOOLS.map((f, i) => (
               <div
                 key={f.name}
-                className="group rounded-2xl border border-white/10 bg-[#0A0E1F] p-4 hover:border-violet-500/40 transition-all"
+                className="group rounded-xl border border-white/10 bg-[#0A0E1F] p-4 hover:border-violet-500/40 transition-all"
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="h-9 w-9 rounded-lg border border-violet-500/20 bg-violet-500/10 text-violet-400 flex items-center justify-center">
                     <f.icon className="h-4 w-4" />
                   </div>
-                  <span className="font-mono text-[10px] font-bold text-slate-600">
+                  <span className="font-mono text-[10px] font-semibold text-muted-foreground">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                 </div>
-                <h3 className="font-extrabold text-[13.5px] text-white mb-1">{f.name}</h3>
-                <p className="text-[12px] text-slate-400 leading-relaxed">{f.description}</p>
+                <h3 className="font-semibold text-[13.5px] text-white mb-1">{f.name}</h3>
+                <p className="text-[12px] text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
@@ -518,8 +518,8 @@ export default async function Home() {
               <FeatureCard key={f.name} feature={f} accent="text-emerald-400 bg-emerald-500/10 border-emerald-500/20" />
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] font-bold text-slate-500">
-            <span className="uppercase tracking-widest text-slate-600">providers:</span>
+          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] font-semibold text-muted-foreground">
+            <span className="uppercase tracking-widest text-muted-foreground">providers:</span>
             {["Ollama (local)", "Hugging Face", "OpenAI", "rule-based · free"].map((p) => (
               <span key={p} className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-slate-300">
                 {p}
@@ -549,10 +549,10 @@ export default async function Home() {
       {/* ===== PIPELINE STRIP ===== */}
       <section id="pipeline" className="border-t border-white/5 bg-white/[0.015] scroll-mt-16">
         <div className="max-w-6xl mx-auto px-6 py-12 space-y-6">
-          <p className="text-center font-mono text-[11px] font-bold text-violet-400 uppercase tracking-[0.25em]">
+          <p className="text-center font-mono text-[11px] font-semibold text-violet-400 uppercase tracking-[0.25em]">
             // the pipeline
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[12px] font-bold">
+          <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[12px] font-semibold">
             {PIPELINE.map((step, i) => (
               <span key={step} className="flex items-center gap-2">
                 <span className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2 text-slate-300">
@@ -568,11 +568,11 @@ export default async function Home() {
       {/* ===== CTA + FOOTER ===== */}
       <section className="border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6 py-16 text-center space-y-6">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-lg shadow-violet-500/30 mx-auto">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-500/30 mx-auto">
             <Zap className="h-6 w-6" fill="currentColor" />
           </div>
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">Boot up your QA engine</h2>
-          <p className="text-sm text-slate-400 max-w-md mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Boot up your QA engine</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
             {session
               ? "Jump back into your workspace."
               : "Create an account and run your first live QA session in minutes."}
@@ -580,14 +580,14 @@ export default async function Home() {
           <div className="flex justify-center gap-3">
             <Link
               href={primaryCta.href}
-              className="inline-flex items-center gap-2 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold h-11 px-6 shadow-lg shadow-violet-600/30 transition-all"
+              className="inline-flex items-center gap-2 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold h-11 px-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
             >
               {session ? "Open Dashboard" : "Create Free Account"} <ArrowRight className="h-4 w-4" />
             </Link>
             {!session && (
               <Link
                 href="/login"
-                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-bold h-11 px-6 transition-all"
+                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-semibold h-11 px-6 transition-all"
               >
                 Sign In
               </Link>
@@ -595,7 +595,7 @@ export default async function Home() {
           </div>
         </div>
         <footer className="border-t border-white/5 py-6 text-center">
-          <p className="text-[11px] font-mono text-slate-600">
+          <p className="text-[11px] font-mono text-muted-foreground">
             © {new Date().getFullYear()} QA Engine — all systems nominal
           </p>
         </footer>

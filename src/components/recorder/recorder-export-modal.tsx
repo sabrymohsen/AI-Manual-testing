@@ -52,7 +52,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
+      className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
@@ -95,12 +95,12 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-background border rounded-2xl w-full max-w-3xl flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-h-[92vh]">
+      <div className="bg-background border rounded-xl w-full max-w-3xl flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in fade-in zoom-in-95 duration-150 max-h-[92vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
           <div>
-            <h2 className="text-base font-bold flex items-center gap-2">
+            <h2 className="text-base font-semibold flex items-center gap-2">
               <Code2 className="h-5 w-5 text-purple-500" />
               Export Test Code
             </h2>
@@ -153,7 +153,7 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
                   onClick={() =>
                     downloadText(playwrightCode, `${safeFilename}.spec.ts`)
                   }
-                  className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
+                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
                 >
                   <Download className="h-3.5 w-3.5" />
                   .spec.ts

@@ -375,7 +375,7 @@ export default function HubTestsSection({
 
   if (tests === null) {
     return (
-      <div className="flex items-center gap-2 rounded-xl border bg-white p-10 text-sm text-slate-500">
+      <div className="flex items-center gap-2 rounded-xl border bg-card p-10 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading tests…
       </div>
     )
@@ -384,7 +384,7 @@ export default function HubTestsSection({
   return (
     <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* ── library ── */}
-      <aside className="flex min-h-[560px] flex-col rounded-xl border bg-white">
+      <aside className="flex min-h-[560px] flex-col rounded-xl border bg-card">
         <div className="space-y-2 border-b p-3">
           <div className="flex gap-2">
             <Button size="sm" className="flex-1" onClick={() => setCreating(true)}>
@@ -395,33 +395,33 @@ export default function HubTestsSection({
             </Button>
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tests, folders, tags"
-              className="h-9 w-full rounded-md border bg-slate-50 pl-8 pr-2 text-sm outline-none focus:border-indigo-400 focus:bg-white"
+              className="h-9 w-full rounded-md border bg-muted/50 pl-8 pr-2 text-sm outline-none focus:border-primary focus:bg-card"
             />
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-2">
-          {folders.length === 0 && <p className="p-3 text-sm text-slate-500">No tests match “{search}”.</p>}
+          {folders.length === 0 && <p className="p-3 text-sm text-muted-foreground">No tests match “{search}”.</p>}
           {folders.map(([f, list]) => {
             const closed = closedFolders[f]
             return (
               <div key={f || "_unfiled"} className="mb-1">
-                <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-slate-50">
-                  <button type="button" onClick={() => setClosedFolders((c) => ({ ...c, [f]: !c[f] }))} className="flex flex-1 items-center gap-1.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-muted/50">
+                  <button type="button" onClick={() => setClosedFolders((c) => ({ ...c, [f]: !c[f] }))} className="flex flex-1 items-center gap-1.5 text-left text-xs font-medium text-muted-foreground">
                     {closed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                     {closed ? <Folder className="h-3.5 w-3.5" /> : <FolderOpen className="h-3.5 w-3.5" />}
-                    {f || "No folder"} <span className="font-normal text-slate-400">{list.length}</span>
+                    {f || "No folder"} <span className="font-normal text-muted-foreground">{list.length}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => run({ kind: "folder", folder: f })}
                     disabled={starting}
                     title={`Run every test in ${f || "No folder"}`}
-                    className="rounded p-1 text-slate-400 opacity-0 hover:bg-indigo-50 hover:text-indigo-700 group-hover:opacity-100 focus:opacity-100"
+                    className="rounded p-1 text-muted-foreground opacity-0 hover:bg-primary/10 hover:text-primary group-hover:opacity-100 focus:opacity-100"
                   >
                     <Play className="h-3.5 w-3.5" />
                   </button>
@@ -435,20 +435,20 @@ export default function HubTestsSection({
                         type="button"
                         onClick={() => t.id !== selectedId && select(t)}
                         className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-7 text-left text-sm ${
-                          t.id === selectedId ? "bg-indigo-50 text-indigo-800" : "text-slate-700 hover:bg-slate-50"
+                          t.id === selectedId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/50"
                         }`}
                       >
                         {!last ? (
                           <Circle className="h-3.5 w-3.5 shrink-0 text-slate-300" />
                         ) : isActive(last.status) ? (
-                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-indigo-500" />
+                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
                         ) : last.status === "Passed" ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                         ) : (
                           <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-600" />
                         )}
                         <span className="flex-1 truncate">{t.name}</span>
-                        {t.type === "API" && <span className="rounded bg-slate-100 px-1 text-[10px] font-semibold text-slate-500">API</span>}
+                        {t.type === "API" && <span className="rounded bg-muted px-1 text-[10px] font-semibold text-muted-foreground">API</span>}
                         {t.shared && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
                       </button>
                     )
@@ -462,17 +462,17 @@ export default function HubTestsSection({
       {/* ── editor + results ── */}
       <section className="min-w-0 space-y-4">
         {!selected ? (
-          <div className="rounded-xl border border-dashed bg-white p-10 text-center">
+          <div className="rounded-xl border border-dashed bg-card p-10 text-center">
             <BookOpen className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-2 font-medium text-slate-800">No test selected</p>
-            <p className="text-sm text-slate-500">Create one, or record a flow in the Recorder tab.</p>
+            <p className="mt-2 font-medium text-foreground">No test selected</p>
+            <p className="text-sm text-muted-foreground">Create one, or record a flow in the Recorder tab.</p>
             <Button className="mt-4" onClick={() => setCreating(true)}>
               <FilePlus2 className="h-4 w-4" /> New test
             </Button>
           </div>
         ) : (
           <>
-            <div className="rounded-xl border bg-white">
+            <div className="rounded-xl border bg-card">
               {/* header: name, folder, actions */}
               <div className="flex flex-wrap items-center gap-2 border-b p-3">
                 <input
@@ -482,9 +482,9 @@ export default function HubTestsSection({
                     setDirty(true)
                   }}
                   aria-label="Test name"
-                  className="h-9 min-w-[180px] flex-1 rounded-md border border-transparent px-2 text-base font-semibold text-slate-900 outline-none hover:border-slate-200 focus:border-indigo-400"
+                  className="h-9 min-w-[180px] flex-1 rounded-md border border-transparent px-2 text-base font-semibold text-foreground outline-none hover:border-border focus:border-primary"
                 />
-                <label className="flex items-center gap-1.5 text-sm text-slate-500">
+                <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <Folder className="h-4 w-4" />
                   <input
                     list="hub-folders"
@@ -495,7 +495,7 @@ export default function HubTestsSection({
                     }}
                     placeholder="No folder"
                     aria-label="Folder"
-                    className="h-9 w-36 rounded-md border px-2 text-sm outline-none focus:border-indigo-400"
+                    className="h-9 w-36 rounded-md border px-2 text-sm outline-none focus:border-primary"
                   />
                   <datalist id="hub-folders">
                     {folderNames.map((f) => (
@@ -515,19 +515,19 @@ export default function HubTestsSection({
               </div>
 
               {/* run bar */}
-              <div className="flex flex-wrap items-center gap-2 border-b bg-slate-50/70 px-3 py-2">
+              <div className="flex flex-wrap items-center gap-2 border-b bg-muted/70 px-3 py-2">
                 <Button id="hub-run" size="sm" onClick={() => run({ kind: "test" })} disabled={starting || running} title="Run (Ctrl/⌘ + Enter)">
                   {starting || running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                   {running ? (execution?.status === "Queued" ? "Queued…" : "Running…") : "Run test"}
                 </Button>
-                <select value={browser} onChange={(e) => setBrowser(e.target.value)} aria-label="Browser" className="h-8 rounded-md border bg-white px-2 text-sm">
+                <select value={browser} onChange={(e) => setBrowser(e.target.value)} aria-label="Browser" className="h-8 rounded-md border bg-card px-2 text-sm">
                   {BROWSERS.map((b) => (
                     <option key={b.value} value={b.value}>
                       {b.label}
                     </option>
                   ))}
                 </select>
-                <select value={targetId} onChange={(e) => setTargetId(e.target.value)} aria-label="Where to run" className="h-8 rounded-md border bg-white px-2 text-sm">
+                <select value={targetId} onChange={(e) => setTargetId(e.target.value)} aria-label="Where to run" className="h-8 rounded-md border bg-card px-2 text-sm">
                   <option value="local">This machine</option>
                   {targets.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -535,7 +535,7 @@ export default function HubTestsSection({
                     </option>
                   ))}
                 </select>
-                <button type="button" onClick={() => setTargetsOpen(true)} className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-700" title="Grid, Docker and BrowserStack targets">
+                <button type="button" onClick={() => setTargetsOpen(true)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary" title="Grid, Docker and BrowserStack targets">
                   <Server className="h-3.5 w-3.5" /> Targets
                 </button>
 
@@ -544,19 +544,19 @@ export default function HubTestsSection({
                     <Wand2 className="h-4 w-4" /> Insert step <ChevronDown className="h-3.5 w-3.5" />
                   </Button>
                   {snippetsOpen && (
-                    <div className="absolute right-0 z-20 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg">
+                    <div className="absolute right-0 z-20 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border bg-card p-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
                       {(["Test", "Find & act", "Check", "API", "Advanced"] as const).map((g) => (
                         <div key={g}>
-                          <p className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{g}</p>
+                          <p className="px-2 pb-1 pt-2 text-[11px] font-medium text-muted-foreground">{g}</p>
                           {PLAYWRIGHT_SNIPPETS.filter((s) => s.group === g).map((s) => (
                             <button
                               key={s.label}
                               type="button"
                               onClick={() => insertSnippet(s.insertText)}
-                              className="flex w-full items-baseline justify-between gap-3 rounded px-2 py-1.5 text-left text-sm hover:bg-indigo-50"
+                              className="flex w-full items-baseline justify-between gap-3 rounded px-2 py-1.5 text-left text-sm hover:bg-primary/10"
                             >
-                              <span className="text-slate-800">{s.detail}</span>
-                              <code className="shrink-0 text-[11px] text-slate-400">{s.label}</code>
+                              <span className="text-foreground">{s.detail}</span>
+                              <code className="shrink-0 text-[11px] text-muted-foreground">{s.label}</code>
                             </button>
                           ))}
                         </div>
@@ -592,7 +592,7 @@ export default function HubTestsSection({
                   }}
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-3 border-t px-3 py-1.5 text-xs text-slate-500">
+              <div className="flex flex-wrap items-center gap-3 border-t px-3 py-1.5 text-xs text-muted-foreground">
                 <span>Playwright · JavaScript</span>
                 {errors === 0 && warnings === 0 ? (
                   <span className="text-emerald-600">No problems found</span>
@@ -619,24 +619,24 @@ export default function HubTestsSection({
               </div>
             </div>
 
-            <div className="rounded-xl border bg-white p-4">
-              <h3 className="mb-3 text-sm font-semibold text-slate-800">Last run</h3>
+            <div className="rounded-xl border bg-card p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Last run</h3>
               {execution ? (
                 <HubRunResults execution={execution} onOpenTrace={onOpenTrace} />
               ) : (
-                <p className="text-sm text-slate-500">Not run yet. Press <b>Run test</b> to see each check pass or fail here.</p>
+                <p className="text-sm text-muted-foreground">Not run yet. Press <b>Run test</b> to see each check pass or fail here.</p>
               )}
             </div>
 
-            <div className="rounded-xl border bg-white">
+            <div className="rounded-xl border bg-card">
               <button
                 type="button"
                 onClick={() => setA11yOpen((v) => !v)}
-                className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-slate-800"
+                className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm font-semibold text-foreground"
               >
                 {a11yOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                 Accessibility check
-                <span className="font-normal text-slate-500">{selected.accessibilityEnabled ? "· on for this test" : "· off"}</span>
+                <span className="font-normal text-muted-foreground">{selected.accessibilityEnabled ? "· on for this test" : "· off"}</span>
               </button>
               {a11yOpen && (
                 <div className="border-t p-4">
@@ -697,22 +697,22 @@ function NewTestDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onCancel}>
-      <div className="w-full max-w-md space-y-4 rounded-xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-lg font-semibold text-slate-900">New test</h2>
+      <div className="w-full max-w-md space-y-4 rounded-xl bg-card p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-lg font-semibold text-foreground">New test</h2>
         <label className="block space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Name</span>
+          <span className="font-medium text-foreground">Name</span>
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submit()}
             placeholder="Checkout with a saved card"
-            className="h-10 w-full rounded-md border px-3 outline-none focus:border-indigo-400"
+            className="h-10 w-full rounded-md border px-3 outline-none focus:border-primary"
           />
           {name && !valid && <span className="text-xs text-rose-600">Letters, numbers, spaces, - or _ (up to 80).</span>}
         </label>
         <div className="space-y-1 text-sm">
-          <span className="font-medium text-slate-700">What does it test?</span>
+          <span className="font-medium text-foreground">What does it test?</span>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
@@ -724,22 +724,22 @@ function NewTestDialog({
                 key={value}
                 type="button"
                 onClick={() => setType(value)}
-                className={`rounded-lg border p-3 text-left ${type === value ? "border-indigo-500 bg-indigo-50" : "hover:border-slate-300"}`}
+                className={`rounded-lg border p-3 text-left ${type === value ? "border-primary bg-primary/10" : "hover:border-border"}`}
               >
-                <span className="block font-medium text-slate-900">{title}</span>
-                <span className="text-xs text-slate-500">{text}</span>
+                <span className="block font-medium text-foreground">{title}</span>
+                <span className="text-xs text-muted-foreground">{text}</span>
               </button>
             ))}
           </div>
         </div>
         <label className="block space-y-1 text-sm">
-          <span className="font-medium text-slate-700">Folder <span className="font-normal text-slate-400">(optional)</span></span>
+          <span className="font-medium text-foreground">Folder <span className="font-normal text-muted-foreground">(optional)</span></span>
           <input
             list="hub-new-folders"
             value={folder}
             onChange={(e) => setFolder(e.target.value)}
             placeholder="Smoke, Regression, Checkout…"
-            className="h-10 w-full rounded-md border px-3 outline-none focus:border-indigo-400"
+            className="h-10 w-full rounded-md border px-3 outline-none focus:border-primary"
           />
           <datalist id="hub-new-folders">
             {folders.map((f) => (
@@ -747,7 +747,7 @@ function NewTestDialog({
             ))}
           </datalist>
         </label>
-        <p className="text-xs text-slate-500">It starts with a working example you can run straight away and then change.</p>
+        <p className="text-xs text-muted-foreground">It starts with a working example you can run straight away and then change.</p>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel

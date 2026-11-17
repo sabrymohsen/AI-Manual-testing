@@ -6,7 +6,14 @@ import { useScrumLinkables, useTraceabilityMutations } from "@/hooks/scrum/use-s
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
-import { Plus, X, FlaskConical, Bug, Search, Link2 } from "lucide-react"
+import { Plus, X, FlaskConical, Bug, Search, Link2, Play, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
+import { scrumKeys } from "@/lib/scrum/api"
+import { toast } from "sonner"
+import { formatDistanceToNow } from "date-fns"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 export function TraceabilityLinks({
@@ -31,6 +38,43 @@ export function TraceabilityLinks({
 
   const linkBug = (id: string) => setBugs.mutate([...linkedBugIds, id])
 
+  // ── Test results for this story ──
+  const router = useRouter()
+  const qc = useQueryClient()
+  const [running, setRunning] = useState(false)
+  const automated = testCases.filter((t) => t.executionType === "Automated")
+  const manual = testCases.filter((t) => t.executionType !== "Automated")
+  const count = (st: string[]) => testCases.filter((t) => st.includes(t.lastStatus || "NotExecuted")).length
+  const passed = count(["Passed"])
+  const failed = count(["Failed"])
+  const blocked = count(["Blocked", "Warning"])
+  const notRun = count(["NotExecuted", "Skipped"])
+
+  const run = async (mode: "Automated Run" | "Manual Session") => {
+    const ids = (mode === "Automated Run" ? automated : manual).map((t) => t.id)
+    if (!ids.length) return
+    setRunning(true)
+    try {
+      const res = await fetch("/api/test-cases/bulk-run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testCaseIds: ids, executionMode: mode, projectId }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || "Couldn't start the run")
+      if (mode === "Manual Session" && body.sessions?.[0]) {
+        router.push(`/projects/${projectId}/manual-sessions/${body.sessions[0].id}`)
+      } else {
+        toast.success(`${ids.length} automated test${ids.length > 1 ? "s" : ""} queued. Results appear here when they finish.`)
+        qc.invalidateQueries({ queryKey: scrumKeys.task(taskId) })
+      }
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setRunning(false)
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* Test cases */}
@@ -52,15 +96,50 @@ export function TraceabilityLinks({
             emptyText="No test cases in this project yet."
           />
         </div>
+        {testCases.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted-foreground">
+              {passed > 0 && <b className="text-emerald-700">{passed} passed</b>}
+              {failed > 0 && <>{passed > 0 && " · "}<b className="text-red-600">{failed} failed</b></>}
+              {blocked > 0 && <>{passed + failed > 0 && " · "}<b className="text-amber-600">{blocked} blocked</b></>}
+              {notRun > 0 && <>{passed + failed + blocked > 0 && " · "}{notRun} not run</>}
+            </span>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={running}
+                className="ml-auto inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              >
+                {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />} Run linked tests
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60">
+                <DropdownMenuItem disabled={!automated.length} onClick={() => run("Automated Run")} className="text-sm">
+                  Run {automated.length} automated test{automated.length === 1 ? "" : "s"}
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={!manual.length} onClick={() => run("Manual Session")} className="text-sm">
+                  Start a manual session ({manual.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
         {testCases.length === 0 ? (
           <p className="text-xs text-muted-foreground">No test cases linked.</p>
         ) : (
           <ul className="space-y-1">
             {testCases.map((tc) => (
               <li key={tc.id} className="group flex items-center gap-2 rounded border border-border px-2 py-1.5 text-sm">
-                <FlaskConical className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                <span className="flex-1 truncate">{tc.title}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{tc.priority}</span>
+                <TestStatusDot status={tc.lastStatus} />
+                <Link href={`/projects/${projectId}/test-cases/${tc.id}`} className="flex-1 truncate hover:text-primary hover:underline" title="Open test case">
+                  {tc.title}
+                </Link>
+                {tc.lastRunAt && (
+                  <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:inline" title={new Date(tc.lastRunAt).toLocaleString()}>
+                    {formatDistanceToNow(new Date(tc.lastRunAt), { addSuffix: true })}
+                  </span>
+                )}
+                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                  {tc.executionType === "Automated" ? "Auto" : "Manual"}
+                </span>
                 <button
                   onClick={() => setTestCases.mutate(testCases.filter((t) => t.id !== tc.id).map((t) => t.id))}
                   className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
@@ -268,4 +347,18 @@ function Picker({
       </PopoverContent>
     </Popover>
   )
+}
+
+const TEST_STATUS: Record<string, { label: string; cls: string }> = {
+  Passed: { label: "Passed", cls: "bg-emerald-500" },
+  Failed: { label: "Failed", cls: "bg-red-500" },
+  Blocked: { label: "Blocked", cls: "bg-amber-500" },
+  Warning: { label: "Passed with warnings", cls: "bg-amber-400" },
+  Skipped: { label: "Skipped", cls: "bg-slate-300" },
+  NotExecuted: { label: "Not run yet", cls: "bg-slate-300" },
+}
+
+function TestStatusDot({ status }: { status?: string }) {
+  const meta = TEST_STATUS[status || "NotExecuted"] ?? TEST_STATUS.NotExecuted
+  return <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", meta.cls)} title={meta.label} aria-label={meta.label} />
 }

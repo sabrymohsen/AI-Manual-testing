@@ -34,7 +34,7 @@ export function CompareSlider({ beforeSrc, afterSrc, onClose }: { beforeSrc: str
   return (
     <div className="absolute inset-0 z-30 bg-black/80 flex flex-col">
       <div className="flex items-center justify-between px-4 py-2 text-white/90">
-        <span className="text-xs font-black uppercase tracking-wide">Before / After comparison</span>
+        <span className="text-xs font-medium">Before / After comparison</span>
         <button onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-white/10" aria-label="Close comparison">
           <X className="h-4 w-4" />
         </button>
@@ -44,20 +44,20 @@ export function CompareSlider({ beforeSrc, afterSrc, onClose }: { beforeSrc: str
           {/* before (full) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={beforeSrc} alt="Before" className="block max-w-full max-h-[75vh] w-auto h-auto pointer-events-none" draggable={false} />
-          <span className="absolute top-2 left-2 text-[10px] font-black uppercase bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span>
+          <span className="absolute top-2 left-2 text-[11px] font-medium bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span>
           {/* after (clipped to divider) */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={afterSrc} alt="After" className="block max-w-full max-h-[75vh] w-auto h-auto" draggable={false} />
-            <span className="absolute top-2 right-2 text-[10px] font-black uppercase bg-black/60 text-white px-1.5 py-0.5 rounded">After</span>
+            <span className="absolute top-2 right-2 text-[11px] font-medium bg-black/60 text-white px-1.5 py-0.5 rounded">After</span>
           </div>
           {/* divider handle */}
           <div
-            className="absolute top-0 bottom-0 w-0.5 bg-white cursor-ew-resize"
+            className="absolute top-0 bottom-0 w-0.5 bg-card cursor-ew-resize"
             style={{ left: `${pos}%` }}
             onMouseDown={(e) => { dragging.current = true; setFromClientX(e.clientX) }}
           >
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-white shadow-lg flex items-center justify-center text-slate-700 text-xs font-black">↔</div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-card shadow-[0_4px_12px_rgba(0,0,0,0.06)] flex items-center justify-center text-foreground text-xs font-semibold">↔</div>
           </div>
         </div>
       </div>

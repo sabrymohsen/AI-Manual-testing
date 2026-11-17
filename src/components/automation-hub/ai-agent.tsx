@@ -83,7 +83,7 @@ function renderInline(text: string, keyPrefix: string) {
   const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
   return parts.map((part, i) => {
     if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={`${keyPrefix}-${i}`} className="font-black">{part.slice(2, -2)}</strong>
+      return <strong key={`${keyPrefix}-${i}`} className="font-semibold">{part.slice(2, -2)}</strong>
     }
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
@@ -131,18 +131,18 @@ function Markdown({ text }: { text: string }) {
         flushList(`ul-${key}`)
         if (line.startsWith("> ")) {
           nodes.push(
-            <p key={key} className="border-l-2 border-indigo-300 pl-2 text-slate-500 italic my-1">
+            <p key={key} className="border-l-2 border-primary/25 pl-2 text-muted-foreground italic my-1">
               {renderInline(line.slice(2), key)}
             </p>
           )
         } else if (/^#{1,4}\s/.test(line)) {
           nodes.push(
-            <p key={key} className="font-black text-slate-900 mt-1.5">
+            <p key={key} className="font-semibold text-foreground mt-1.5">
               {renderInline(line.replace(/^#{1,4}\s/, ""), key)}
             </p>
           )
         } else if (line.trim() === "---") {
-          nodes.push(<hr key={key} className="my-2 border-slate-200" />)
+          nodes.push(<hr key={key} className="my-2 border-border" />)
         } else if (line.trim()) {
           nodes.push(<p key={key}>{renderInline(line, key)}</p>)
         }
@@ -371,9 +371,9 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
 
   if (loading) {
     return (
-      <div className="py-24 text-center text-slate-400 flex flex-col items-center justify-center gap-2 border bg-white rounded-2xl shadow-sm">
-        <Loader2 className="animate-spin text-indigo-600" size={28} />
-        <span className="font-extrabold text-[10px] tracking-wider uppercase">Loading QA Assistant Console...</span>
+      <div className="py-24 text-center text-muted-foreground flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
+        <Loader2 className="animate-spin text-primary" size={28} />
+        <span className="font-medium text-[11px]">Loading QA Assistant Console...</span>
       </div>
     )
   }
@@ -389,13 +389,13 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
   return (
     <div className="space-y-4">
       {/* SECTION 11 SUB-TABS */}
-      <div className="flex items-center gap-1.5 overflow-x-auto bg-slate-100 p-1 border rounded-2xl select-none scrollbar-none">
+      <div className="flex items-center gap-1.5 overflow-x-auto bg-muted p-1 border rounded-xl select-none scrollbar-none">
         {SUB_TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setView(t.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black tracking-tight shrink-0 transition-all ${
-              view === t.id ? "bg-white text-indigo-700 shadow-sm border border-indigo-100" : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-tight shrink-0 transition-all ${
+              view === t.id ? "bg-card text-primary shadow-sm border border-primary/25" : "text-muted-foreground hover:text-foreground hover:bg-white/50"
             }`}
           >
             <t.icon size={13} />
@@ -413,14 +413,14 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[500px] relative">
       {/* CHAT BOARD */}
       <div className={`space-y-6 transition-all duration-300 ${showSidebar ? "lg:col-span-8" : "lg:col-span-12"}`}>
-        <div className="bg-white border rounded-2xl p-4 shadow-sm space-y-3 flex flex-col justify-between h-[580px]">
+        <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3 flex flex-col justify-between h-[580px]">
           {/* Header */}
           <div className="flex items-center justify-between border-b pb-2 select-none">
             <div className="flex items-center gap-2">
-              <Bot size={16} className="text-indigo-600" />
-              <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">AI Agent — QA Assistant</span>
+              <Bot size={16} className="text-primary" />
+              <span className="text-[11px] font-medium text-muted-foreground">AI Agent — QA Assistant</span>
               <span
-                className={`text-[8px] uppercase font-black px-1.5 py-0.5 rounded-full border ${
+                className={`text-[8px] uppercase font-semibold px-1.5 py-0.5 rounded-full border ${
                   settings.hasKey ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
                 }`}
               >
@@ -430,13 +430,13 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowSettings(true)}
-                className="h-7 px-2.5 rounded-lg border border-slate-200 text-slate-600 bg-white font-bold flex items-center gap-1 text-[10px] hover:bg-slate-50"
+                className="h-7 px-2.5 rounded-lg border border-border text-muted-foreground bg-card font-semibold flex items-center gap-1 text-[10px] hover:bg-muted/50"
               >
                 <Settings size={12} /> Settings
               </button>
               <button
                 onClick={() => setShowSidebar(!showSidebar)}
-                className="h-7 w-7 rounded-lg text-slate-400 hover:text-slate-600 flex items-center justify-center"
+                className="h-7 w-7 rounded-lg text-muted-foreground hover:text-muted-foreground flex items-center justify-center"
                 title="Toggle MCP activity panel"
               >
                 {showSidebar ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
@@ -447,12 +447,12 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
           {/* Messages */}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-3 space-y-4 bg-slate-50/50 rounded-2xl border text-[11px] font-medium leading-relaxed text-slate-700"
+            className="flex-1 overflow-y-auto p-3 space-y-4 bg-muted/50 rounded-xl border text-[11px] font-medium leading-relaxed text-foreground"
           >
             {messages.length === 0 && (
               <div className="flex items-start gap-3 max-w-[85%]">
-                <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0 select-none bg-indigo-600">🤖</div>
-                <div className="p-3.5 rounded-2xl rounded-tl-none text-left bg-indigo-50 border border-indigo-100 text-indigo-950 shadow-sm">
+                <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0 select-none bg-primary">🤖</div>
+                <div className="p-3.5 rounded-xl rounded-tl-none text-left bg-primary/10 border border-primary/25 text-indigo-950 shadow-sm">
                   <Markdown text={WELCOME} />
                 </div>
               </div>
@@ -471,20 +471,20 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                   <div
                     className={`p-3.5 rounded-2xl text-left overflow-hidden ${
                       msg.role === "user"
-                        ? "bg-slate-200 text-slate-800 rounded-tr-none"
-                        : "bg-indigo-50 border border-indigo-100 text-indigo-950 rounded-tl-none shadow-sm"
+                        ? "bg-muted text-foreground rounded-tr-none"
+                        : "bg-primary/10 border border-primary/25 text-indigo-950 rounded-tl-none shadow-sm"
                     }`}
                   >
                     {msg.role === "assistant" ? <Markdown text={msg.content} /> : <p className="whitespace-pre-wrap">{msg.content}</p>}
 
                     {/* Server-provided action buttons */}
                     {msg.role === "assistant" && Array.isArray(msg.actions) && msg.actions.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap pt-2 mt-2 border-t border-indigo-100">
+                      <div className="flex items-center gap-1.5 flex-wrap pt-2 mt-2 border-t border-primary/25">
                         {msg.actions.map((a, i) => (
                           <button
                             key={i}
                             onClick={() => handleAction(a)}
-                            className="h-6.5 min-h-7 px-2.5 rounded-lg bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-600 hover:text-white text-[9.5px] font-black transition-colors"
+                            className="h-6.5 min-h-7 px-2.5 rounded-lg bg-card border border-primary/25 text-primary hover:bg-primary hover:text-white text-[9.5px] font-semibold transition-colors"
                           >
                             {a.label}
                           </button>
@@ -492,7 +492,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                       </div>
                     )}
                   </div>
-                  <span className="text-[8px] text-slate-400 font-mono block">
+                  <span className="text-[8px] text-muted-foreground font-mono block">
                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
@@ -502,12 +502,12 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
             {/* Typing indicator */}
             {sending && (
               <div className="flex items-start gap-3 max-w-[85%]">
-                <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0 bg-indigo-600">🤖</div>
-                <div className="p-3.5 rounded-2xl rounded-tl-none bg-indigo-50 border border-indigo-100 flex items-center gap-1.5">
+                <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0 bg-primary">🤖</div>
+                <div className="p-3.5 rounded-xl rounded-tl-none bg-primary/10 border border-primary/25 flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="text-[9px] text-indigo-400 font-bold ml-1.5">running tools & thinking...</span>
+                  <span className="text-[9px] text-indigo-400 font-semibold ml-1.5">running tools & thinking...</span>
                 </div>
               </div>
             )}
@@ -527,7 +527,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                     handleSendMessage(act.text)
                   }
                 }}
-                className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border rounded-lg transition-colors disabled:opacity-50"
+                className="px-2.5 py-1 text-[10px] font-semibold bg-muted hover:bg-muted text-foreground border rounded-lg transition-colors disabled:opacity-50"
               >
                 {act.label}
               </button>
@@ -542,12 +542,12 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
               onChange={(e) => setInputVal(e.target.value)}
               onKeyDown={handleKeyDownInput}
               placeholder="Ask why a test failed, run suites, or generate new tests... (↑ recalls previous messages)"
-              className="flex-1 h-10 rounded-xl border px-3 text-xs bg-slate-50 font-semibold"
+              className="flex-1 h-10 rounded-xl border px-3 text-xs bg-muted/50 font-semibold"
             />
             <Button
               onClick={() => handleSendMessage(inputVal)}
               disabled={sending || !inputVal.trim()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white h-10 px-4 rounded-xl font-black text-xs shadow-sm"
+              className="bg-primary hover:bg-primary/90 text-white h-10 px-4 rounded-xl font-semibold text-xs shadow-sm"
             >
               {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
             </Button>
@@ -558,17 +558,17 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
       {/* MCP ACTIVITY SIDEBAR */}
       {showSidebar && (
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-white border rounded-2xl p-4 shadow-sm space-y-3 flex flex-col justify-between h-[580px]">
+          <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3 flex flex-col justify-between h-[580px]">
             <div className="space-y-3 flex-1 flex flex-col overflow-hidden">
               <div className="flex items-center justify-between border-b pb-2 select-none">
-                <span className="text-[10px] uppercase font-black text-slate-400 tracking-wider">MCP Tool Call Audit</span>
+                <span className="text-[11px] font-medium text-muted-foreground">MCP Tool Call Audit</span>
                 <button
                   onClick={() =>
                     fetch("/api/hub/agent/mcp-log")
                       .then((r) => (r.ok ? r.json() : null))
                       .then((d) => d && setMcpCalls(d.calls || []))
                   }
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600"
+                  className="p-1 rounded-lg text-muted-foreground hover:text-muted-foreground"
                   title="Refresh log"
                 >
                   <RefreshCw size={12} />
@@ -577,13 +577,13 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
 
               <div className="space-y-2 overflow-y-auto flex-1 pr-1 text-left">
                 {mcpCalls.map((call) => (
-                  <div key={call.id} className="p-2.5 border rounded-xl bg-slate-50/50 space-y-1">
+                  <div key={call.id} className="p-2.5 border rounded-xl bg-muted/50 space-y-1">
                     <div className="flex justify-between items-center gap-2">
-                      <span className="text-indigo-700 font-mono font-bold text-[10px] truncate">{call.tool}()</span>
+                      <span className="text-primary font-mono font-semibold text-[10px] truncate">{call.tool}()</span>
                       <span className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[8px] font-mono text-amber-600 font-bold">{call.duration}ms</span>
+                        <span className="text-[8px] font-mono text-amber-600 font-semibold">{call.duration}ms</span>
                         <span
-                          className={`text-[7.5px] border px-1.5 py-px rounded-full uppercase font-black flex items-center gap-0.5 ${
+                          className={`text-[7.5px] border px-1.5 py-px rounded-full uppercase font-semibold flex items-center gap-0.5 ${
                             call.status === "success"
                               ? "bg-emerald-50 border-emerald-100 text-emerald-700"
                               : call.status === "denied"
@@ -597,15 +597,15 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                       </span>
                     </div>
                     {call.params && Object.keys(call.params).length > 0 && (
-                      <code className="font-mono text-[8px] text-slate-500 block truncate">{JSON.stringify(call.params)}</code>
+                      <code className="font-mono text-[8px] text-muted-foreground block truncate">{JSON.stringify(call.params)}</code>
                     )}
-                    <div className="text-[8px] text-slate-400 font-mono">
+                    <div className="text-[8px] text-muted-foreground font-mono">
                       {new Date(call.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                     </div>
                   </div>
                 ))}
                 {mcpCalls.length === 0 && (
-                  <p className="text-slate-400 italic text-center py-12 text-[10px]">
+                  <p className="text-muted-foreground italic text-center py-12 text-[10px]">
                     No tool calls yet. Every action the AI takes is audited here: timestamp, tool, parameters, status.
                   </p>
                 )}
@@ -615,7 +615,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
             <div className="pt-3 border-t">
               <button
                 onClick={handleClearHistory}
-                className="w-full text-slate-400 hover:text-rose-600 rounded-lg text-[9.5px] font-bold h-8 flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full text-muted-foreground hover:text-rose-600 rounded-lg text-[9.5px] font-semibold h-8 flex items-center justify-center gap-1.5 transition-colors"
               >
                 <Trash2 size={11} /> Clear Conversation
               </button>
@@ -627,19 +627,19 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
       {/* SETTINGS MODAL */}
       {showSettings && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 text-left">
-          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4 text-slate-800">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
-                <Sparkles size={15} className="text-indigo-600" /> AI Agent Settings
+              <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Sparkles size={15} className="text-primary" /> AI Agent Settings
               </h3>
-              <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600 font-bold">
+              <button onClick={() => setShowSettings(false)} className="text-muted-foreground hover:text-muted-foreground font-semibold">
                 Close
               </button>
             </div>
 
             <div className="space-y-3.5">
               <div className="space-y-1">
-                <label className="text-[9.5px] font-bold text-slate-400 block uppercase">AI Provider</label>
+                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">AI Provider</label>
                 <select
                   value={settings.provider}
                   onChange={(e) => {
@@ -647,7 +647,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                     const models = modelOptions[provider] || []
                     setSettings({ ...settings, provider, model: models[0] || settings.model })
                   }}
-                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-slate-50"
+                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-muted/50"
                 >
                   {providers.map((p) => (
                     <option key={p} value={p}>
@@ -658,11 +658,11 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9.5px] font-bold text-slate-400 block uppercase">Model</label>
+                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">Model</label>
                 <select
                   value={settings.model}
                   onChange={(e) => setSettings({ ...settings, model: e.target.value })}
-                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-slate-50"
+                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-muted/50"
                 >
                   {(modelOptions[settings.provider] || [settings.model]).map((m) => (
                     <option key={m} value={m}>
@@ -673,7 +673,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9.5px] font-bold text-slate-400 block uppercase">
+                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">
                   API Key {settings.provider === "Ollama" && <span className="text-slate-300 normal-case">(not needed for local Ollama)</span>}
                 </label>
                 <input
@@ -681,17 +681,17 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   placeholder={settings.apiKeyMasked || "Paste your provider API key..."}
-                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-slate-50 font-mono"
+                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-muted/50 font-mono"
                 />
-                <p className="text-[8.5px] text-slate-400 font-medium">Stored server-side and never returned to the browser. Leave blank to keep the current key.</p>
+                <p className="text-[8.5px] text-muted-foreground font-medium">Stored server-side and never returned to the browser. Leave blank to keep the current key.</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9.5px] font-bold text-slate-400 block uppercase">Permission Level</label>
+                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">Permission Level</label>
                 <select
                   value={settings.permission}
                   onChange={(e) => setSettings({ ...settings, permission: e.target.value })}
-                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-slate-50"
+                  className="flex h-9 w-full rounded-xl border px-3 text-xs bg-muted/50"
                 >
                   {permissions.map((p) => (
                     <option key={p} value={p}>
@@ -699,14 +699,14 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                     </option>
                   ))}
                 </select>
-                <p className="text-[8.5px] text-slate-400 font-medium">Read-Only blocks running tests and saving scripts — the agent can still inspect results.</p>
+                <p className="text-[8.5px] text-muted-foreground font-medium">Read-Only blocks running tests and saving scripts — the agent can still inspect results.</p>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] pt-1 bg-slate-50 border rounded-xl px-3 py-2.5">
-                <span className="font-bold text-slate-500 flex items-center gap-1.5">
+              <div className="flex items-center justify-between text-[10px] pt-1 bg-muted/50 border rounded-xl px-3 py-2.5">
+                <span className="font-semibold text-muted-foreground flex items-center gap-1.5">
                   <Server size={11} /> MCP Server
                 </span>
-                <span className="text-emerald-600 font-black flex items-center gap-1 uppercase text-[9px]">
+                <span className="text-emerald-600 font-medium flex items-center gap-1 text-[11px]">
                   {mcp ? `${mcp.transport} · ${mcp.toolCount} tools` : "embedded"}
                   {settings.provider === "Ollama" && mcp?.providerReachable === false && (
                     <span className="text-rose-500 ml-1">· Ollama unreachable</span>
@@ -716,10 +716,10 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
             </div>
 
             <div className="flex gap-2 pt-2 border-t">
-              <Button variant="outline" onClick={() => setShowSettings(false)} className="flex-1 rounded-xl bg-white border-slate-200 text-slate-600">
+              <Button variant="outline" onClick={() => setShowSettings(false)} className="flex-1 rounded-xl bg-card border-border text-muted-foreground">
                 Cancel
               </Button>
-              <Button onClick={handleSaveSettings} className="bg-indigo-600 text-white hover:bg-indigo-700 flex-1 rounded-xl font-black">
+              <Button onClick={handleSaveSettings} className="bg-primary text-white hover:bg-primary/90 flex-1 rounded-xl font-semibold">
                 Save Settings
               </Button>
             </div>
@@ -730,12 +730,12 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
       {/* TOAST */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-black uppercase ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-semibold uppercase ${
             toast.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800"
               : toast.type === "error"
                 ? "bg-rose-50 border-rose-200 text-rose-800"
-                : "bg-indigo-50 border-indigo-200 text-indigo-800"
+                : "bg-primary/10 border-primary/25 text-primary"
           }`}
         >
           <span>{toast.text}</span>
@@ -745,14 +745,14 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
       {/* CONFIRM DIALOG */}
       {confirmOpen && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 text-left">
-          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4 text-slate-800">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center gap-2 text-rose-600">
               <Shield size={18} />
-              <h3 className="text-sm font-black uppercase tracking-wider">Confirm Action</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider">Confirm Action</h3>
             </div>
-            <p className="text-xs text-slate-500 font-bold leading-relaxed">{confirmTitle}</p>
+            <p className="text-xs text-muted-foreground font-semibold leading-relaxed">{confirmTitle}</p>
             <div className="flex gap-2 pt-2 border-t">
-              <Button variant="outline" onClick={() => setConfirmOpen(false)} className="flex-1 rounded-xl bg-white border-slate-200 text-slate-600">
+              <Button variant="outline" onClick={() => setConfirmOpen(false)} className="flex-1 rounded-xl bg-card border-border text-muted-foreground">
                 Cancel
               </Button>
               <Button
@@ -760,7 +760,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
                   confirmCallback?.()
                   setConfirmOpen(false)
                 }}
-                className="bg-rose-600 hover:bg-rose-700 text-white flex-1 rounded-xl font-black"
+                className="bg-rose-600 hover:bg-rose-700 text-white flex-1 rounded-xl font-semibold"
               >
                 Confirm
               </Button>

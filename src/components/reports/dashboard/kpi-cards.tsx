@@ -26,8 +26,8 @@ function scrollToTarget(id?: string) {
   const el = document.getElementById(id)
   if (!el) return
   el.scrollIntoView({ behavior: "smooth", block: "center" })
-  el.classList.add("ring-2", "ring-indigo-400", "ring-offset-2")
-  setTimeout(() => el.classList.remove("ring-2", "ring-indigo-400", "ring-offset-2"), 1600)
+  el.classList.add("ring-2", "ring-primary", "ring-offset-2")
+  setTimeout(() => el.classList.remove("ring-2", "ring-primary", "ring-offset-2"), 1600)
 }
 
 const KPICard = memo(function KPICard({ data }: { data: KPICardData }) {
@@ -41,7 +41,7 @@ const KPICard = memo(function KPICard({ data }: { data: KPICardData }) {
       ? "bg-emerald-50 text-emerald-700"
       : badgeGood === "bad"
         ? "bg-rose-50 text-rose-700"
-        : "bg-slate-100 text-slate-600"
+        : "bg-muted text-muted-foreground"
   const TrendIcon = data.trend === "up" ? ArrowUp : data.trend === "down" ? ArrowDown : Minus
 
   const spark = data.sparkline.map((v, i) => ({ i, v }))
@@ -50,7 +50,7 @@ const KPICard = memo(function KPICard({ data }: { data: KPICardData }) {
     <button
       onClick={() => scrollToTarget(data.targetId)}
       aria-label={`${data.label}: ${data.value}, ${data.change}`}
-      className="group flex flex-col rounded-2xl border border-slate-100 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+      className="group flex flex-col rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="flex items-start justify-between">
         <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", accent.iconBg)}>
@@ -62,8 +62,8 @@ const KPICard = memo(function KPICard({ data }: { data: KPICardData }) {
         </span>
       </div>
 
-      <div className="mt-3 text-2xl font-bold text-slate-900">{data.value}</div>
-      <div className="text-[11px] font-medium uppercase tracking-wider text-slate-500">{data.label}</div>
+      <div className="mt-3 text-2xl font-semibold text-foreground">{data.value}</div>
+      <div className="text-[11px] font-medium text-muted-foreground">{data.label}</div>
 
       <div className="mt-2 h-6">
         {data.progress != null ? (
@@ -90,7 +90,7 @@ function ProgressRing({ value, color }: { value: number; color: string }) {
         <circle cx="12" cy="12" r={r} fill="none" stroke="#e2e8f0" strokeWidth="3" />
         <circle cx="12" cy="12" r={r} fill="none" stroke={color} strokeWidth="3" strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" />
       </svg>
-      <span className="text-[11px] font-semibold text-slate-500">{Math.round(value)}%</span>
+      <span className="text-[11px] font-semibold text-muted-foreground">{Math.round(value)}%</span>
     </div>
   )
 }
@@ -100,7 +100,7 @@ export function KPICards({ cards, loading }: { cards: KPICardData[]; loading: bo
     return (
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-[132px] rounded-2xl" />
+          <Skeleton key={i} className="h-[132px] rounded-xl" />
         ))}
       </div>
     )

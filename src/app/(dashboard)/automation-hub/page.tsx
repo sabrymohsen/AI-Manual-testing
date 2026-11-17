@@ -12,7 +12,7 @@ export default function AutomationHubRootPage() {
   }, [router])
 
   return (
-    <div className="py-20 text-center text-xs font-semibold text-slate-400">
+    <div className="py-20 text-center text-xs font-semibold text-muted-foreground">
       <span>Redirecting to projects dashboard selection...</span>
     </div>
   )

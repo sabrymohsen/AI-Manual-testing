@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, notFoundResponse, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireProjectOwner, notFoundResponse, unauthorizedResponse, badRequestResponse, memberProjectWhere } from "@/lib/api-guards"
 import fs from "node:fs"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
@@ -63,11 +63,11 @@ export async function POST(
 
       const [shot, rec] = await Promise.all([
         prisma.sessionScreenshot.findFirst({
-          where: { filePath, session: { project: { userId: auth.session!.user.id } } },
+          where: { filePath, session: { project: memberProjectWhere(auth.session!.user.id) } },
           select: { id: true },
         }),
         prisma.sessionRecording.findFirst({
-          where: { filePath, session: { project: { userId: auth.session!.user.id } } },
+          where: { filePath, session: { project: memberProjectWhere(auth.session!.user.id) } },
           select: { id: true },
         }),
       ])

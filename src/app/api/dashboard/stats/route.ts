@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, memberProjectWhere } from "@/lib/api-guards"
 
 export async function GET() {
   const auth = await requireAuth()
@@ -8,27 +8,27 @@ export async function GET() {
   const session = auth.session!
 
   const totalProjects = await prisma.project.count({
-    where: { userId: session.user.id },
+    where: memberProjectWhere(session.user.id),
   })
 
   const totalTestCases = await prisma.testCase.count({
-    where: { project: { userId: session.user.id } },
+    where: { project: memberProjectWhere(session.user.id) },
   })
 
   const totalTestRuns = await prisma.testRun.count({
-    where: { project: { userId: session.user.id } },
+    where: { project: memberProjectWhere(session.user.id) },
   })
 
   const passed = await prisma.testRun.count({
-    where: { project: { userId: session.user.id }, status: "Passed" },
+    where: { project: memberProjectWhere(session.user.id), status: "Passed" },
   })
 
   const failed = await prisma.testRun.count({
-    where: { project: { userId: session.user.id }, status: "Failed" },
+    where: { project: memberProjectWhere(session.user.id), status: "Failed" },
   })
 
   const warning = await prisma.testRun.count({
-    where: { project: { userId: session.user.id }, status: "Warning" },
+    where: { project: memberProjectWhere(session.user.id), status: "Warning" },
   })
 
   const passPercentage = totalTestRuns > 0

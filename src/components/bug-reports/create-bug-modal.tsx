@@ -5,10 +5,8 @@ import { ModuleSelect, useProjectModules } from "@/components/bug-reports/module
 import { applyModulePrefix } from "@/lib/bug-reports/title-prefix"
 import { encodeImageForAi } from "@/lib/images/encode-for-ai"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check, AlertTriangle } from "lucide-react"
+import { ComposerDialog, ComposerTitle, ComposerText, ComposerSection, ChipRow, ChipSelect } from "@/components/ui/issue-composer"
+import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check, AlertTriangle, Server, Globe, Tag, UserRound, GitBranch, Plus, Link2, Boxes, Image as ImageIcon } from "lucide-react"
 
 /**
  * Shared bug-creation modal — extracted from the Bug Reports page so the same
@@ -122,6 +120,8 @@ export function CreateBugModal({
   // Kept separate from the Description field so regenerating never clobbers
   // text the tester wrote by hand.
   const [aiPrompt, setAiPrompt] = useState("")
+  // The AI panel starts closed so the form opens on the title; opening it is one click.
+  const [aiOpen, setAiOpen] = useState(false)
   const [aiImage, setAiImage] = useState<File | null>(null)
   const [aiNotice, setAiNotice] = useState<{
     kind: "ai" | "template" | "degraded"
@@ -532,560 +532,406 @@ export function CreateBugModal({
     }
   }
 
-  if (!open) return null
+  const LEVELS = ["Low", "Medium", "High", "Critical"].map((v) => ({ value: v, label: v }))
+  const LEVEL_DOT: Record<string, string> = {
+    Low: "bg-slate-400",
+    Medium: "bg-amber-500",
+    High: "bg-orange-500",
+    Critical: "bg-red-500",
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-[550px] bg-background rounded-2xl border shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 text-xs font-semibold select-none">
-
-        <div className="p-5 border-b flex items-center justify-between bg-accent/10">
-          <h3 className="font-extrabold text-sm flex items-center gap-1.5 text-foreground">
-            <Bug className="h-4.5 w-4.5 text-indigo-500" /> Create Bug Report
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-accent"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
-          {error && (
-            <div className="p-2.5 rounded-lg border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 font-bold text-[11px]">
-              {error}
-            </div>
+    <ComposerDialog
+      open={open}
+      onOpenChange={(o) => { if (!o && !saving) onClose() }}
+      title="Create bug report"
+      description="Describe the defect; every field stays editable before you save."
+      wide
+      crumbs={[
+        <span key="b" className="inline-flex items-center gap-1.5 font-medium">
+          <Bug className="h-3.5 w-3.5 text-red-500" />
+          New bug
+        </span>,
+        <button
+          key="ai"
+          type="button"
+          onClick={() => setAiOpen((v) => !v)}
+          aria-expanded={aiOpen}
+          className={`inline-flex h-6 items-center gap-1 rounded-md px-1.5 font-medium transition-colors ${aiOpen ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+        >
+          <Sparkles className="h-3.5 w-3.5" /> Write with AI
+        </button>,
+      ]}
+      onSubmit={() => handleSubmit({ preventDefault() {} } as React.FormEvent)}
+      canSubmit={!!title.trim()}
+      submitting={saving}
+      submitLabel={saving ? "Saving…" : "Save bug"}
+      error={error}
+      footerLeft={
+        <label className="inline-flex cursor-pointer select-none items-center gap-2">
+          <input
+            type="checkbox"
+            id="createSyncOP"
+            checked={syncOP}
+            onChange={(e) => setSyncOP(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-input accent-[hsl(var(--primary))]"
+          />
+          Sync to {trackerName} after saving
+        </label>
+      }
+    >
+      {/* AI assist — describe the defect in plain words, optionally attach a
+          screenshot, and let the model fill the whole form. */}
+      {aiOpen && (
+        <div className="mb-3 space-y-2 rounded-lg border border-primary/20 bg-primary/[0.04] p-3">
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            onPaste={handleAiPaste}
+            rows={3}
+            dir="auto"
+            autoFocus
+            placeholder="Describe what went wrong in your own words — e.g. 'checkout button does nothing on mobile after applying a discount code'. Paste a screenshot here too."
+            className="w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-muted-foreground/70"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+              <Paperclip className="h-3.5 w-3.5" />
+              {aiImage ? (aiImage.name.length > 24 ? `${aiImage.name.slice(0, 24)}…` : aiImage.name) : "Attach picture"}
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => setAiImage(e.target.files?.[0] || null)} />
+            </label>
+            {aiImage && (
+              <button type="button" onClick={() => setAiImage(null)} className="text-xs text-muted-foreground hover:text-foreground" aria-label="Remove picture">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleGenerateWithAI}
+              disabled={aiGenerating}
+              className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              {aiGenerating ? "Writing the bug…" : "Fill the form"}
+            </button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Fills title, description, severity, priority, steps and expected/actual results.
+          </p>
+          {/* Say which engine answered, and on what evidence: a rule-based
+              draft means no AI provider produced one, and a degraded draft
+              means the model never saw the attached screenshot. */}
+          {aiNotice && (
+            <p className={`text-[11px] font-medium ${aiNotice.kind === "ai" ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
+              {aiNotice.text}
+            </p>
           )}
+        </div>
+      )}
 
-          {/* AI Assist — describe the defect in plain words, optionally attach a
-              screenshot, and let the model fill the whole form. */}
-          <div className="p-3.5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-purple-50/40 space-y-2.5">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="h-4 w-4 text-indigo-600" />
-              <span className="font-extrabold text-indigo-700 text-[11px] uppercase tracking-wide">
-                Write this bug with AI
-              </span>
-            </div>
+      <ComposerTitle
+        aria-label="Bug title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        dir="auto"
+        placeholder="Summarise the defect in one line"
+        autoFocus={!aiOpen}
+        required
+      />
 
-            <textarea
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-              onPaste={handleAiPaste}
-              rows={3}
-              dir="auto"
-              placeholder="Describe what went wrong in your own words — e.g. 'checkout button does nothing on mobile after applying a discount code'. Paste a screenshot here too."
-              className="w-full border rounded-lg p-2.5 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+      {/* Possible duplicates, checked as the title is typed — a hint, not a block. */}
+      {duplicateMatches.length > 0 && (
+        <div className="mt-2 rounded-md border border-amber-300/70 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 dark:text-amber-300">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            {duplicateMatches.length === 1 ? "A similar defect already exists" : `${duplicateMatches.length} similar defects already exist`}
+            <span className="font-normal text-amber-700/80 dark:text-amber-400/80">· still different? carry on</span>
+          </p>
+          <div className="mt-1 space-y-px">
+            {duplicateMatches.map((m) => (
+              <a
+                key={m.id}
+                href={`/projects/${projectId}/bug-reports?bugId=${m.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded px-1.5 py-1 text-[11px] hover:bg-background/70"
+              >
+                <span className="shrink-0 font-mono text-amber-700 dark:text-amber-400">{m.bugKey || "BUG"}</span>
+                <span className="min-w-0 flex-1 truncate" title={m.title}>{m.title}</span>
+                <span className="shrink-0 text-muted-foreground">{m.status}</span>
+                <span className="shrink-0 tabular-nums text-amber-700 dark:text-amber-400">{m.score}%</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <ComposerText value={desc} onChange={setDesc} placeholder="Add description…" minRows={2} />
+
+      <ChipRow>
+        <span
+          title="Module: groups the defect in the QA report and prefixes the title as [Module]. Empty = inherit the linked test case's module."
+          className={`relative inline-flex h-7 max-w-[14rem] items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${suiteId ? "border-border bg-card text-foreground" : "border-dashed border-border text-muted-foreground hover:bg-accent"}`}
+        >
+          <Boxes className="h-3.5 w-3.5 shrink-0" />
+          <ModuleSelect
+            projectId={projectId}
+            value={suiteId}
+            onChange={chooseModule}
+            enabled={open}
+            modules={projectModules}
+            placeholder="Module"
+            className="h-6 max-w-[11rem] cursor-pointer appearance-none truncate bg-transparent pr-1 text-xs outline-none"
+          />
+        </span>
+        <ChipSelect
+          label="Severity"
+          icon={<span className={`h-2 w-2 rounded-full ${LEVEL_DOT[severity] ?? "bg-slate-400"}`} />}
+          value={severity}
+          onChange={setSeverity}
+          options={LEVELS.map((o) => ({ ...o, label: `${o.label} severity` }))}
+        />
+        <ChipSelect
+          label="Priority"
+          icon={<span className={`h-2 w-2 rounded-full ${LEVEL_DOT[priority] ?? "bg-slate-400"}`} />}
+          value={priority}
+          onChange={setPriority}
+          options={LEVELS.map((o) => ({ ...o, label: `${o.label} priority` }))}
+        />
+        <ChipSelect
+          label="Environment"
+          icon={<Server className="h-3.5 w-3.5" />}
+          value={env}
+          onChange={setEnv}
+          options={["Dev", "Staging", "UAT", "Production"].map((v) => ({ value: v, label: v }))}
+        />
+        <ChipSelect
+          label="Browser"
+          icon={<Globe className="h-3.5 w-3.5" />}
+          value={browser}
+          onChange={setBrowser}
+          options={["Chromium", "Firefox", "WebKit"].map((v) => ({ value: v, label: v }))}
+        />
+        {sourceOptions && sourceOptions.length > 0 && (
+          <ChipSelect
+            label="Bug source"
+            icon={<Tag className="h-3.5 w-3.5" />}
+            value={source}
+            onChange={setSource}
+            placeholder="Source"
+            options={sourceOptions.map((o) => ({ value: o, label: o }))}
+          />
+        )}
+        {opMembers.length > 0 ? (
+          <ChipSelect
+            label="Assignee"
+            icon={<UserRound className="h-3.5 w-3.5" />}
+            value={assignee}
+            onChange={setAssignee}
+            placeholder="Assignee"
+            options={opMembers.map((m) => ({ value: String(m.id), label: m.name }))}
+          />
+        ) : (
+          <span className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${assignee ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
+            <UserRound className="h-3.5 w-3.5 shrink-0" />
+            <input
+              aria-label="Assignee email"
+              value={assignee}
+              onChange={(e) => setAssignee(e.target.value)}
+              placeholder="Assignee email"
+              className="w-28 bg-transparent outline-none placeholder:text-muted-foreground focus:w-44"
             />
+          </span>
+        )}
+        <span className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${parent ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
+          <GitBranch className="h-3.5 w-3.5 shrink-0" />
+          <input
+            aria-label={`Parent task (${trackerName} work package)`}
+            value={parent}
+            onChange={(e) => setParent(e.target.value)}
+            list="create-bug-parent-options"
+            placeholder="Parent task"
+            className="w-24 bg-transparent outline-none placeholder:text-muted-foreground focus:w-48"
+          />
+          {parentLoading && <span className="text-[10px] text-muted-foreground">…</span>}
+          <datalist id="create-bug-parent-options">
+            {parentOptions.map((wp) => (
+              <option key={wp.id} value={wp.id}>
+                #{wp.id} — {wp.subject}
+                {wp.type ? ` (${wp.type})` : ""}
+              </option>
+            ))}
+          </datalist>
+        </span>
+      </ChipRow>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <label className="h-8 px-3 rounded-lg border bg-background text-[11px] font-bold flex items-center gap-1.5 cursor-pointer hover:bg-muted">
-                <Paperclip className="h-3.5 w-3.5" />
-                {aiImage ? "Change picture" : "Attach picture"}
+
+      <ComposerSection
+        title={`Steps to reproduce${steps.length ? ` (${steps.length})` : ""}`}
+        action={
+          <button type="button" onClick={addStep} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+            <Plus className="h-3.5 w-3.5" /> Add step
+          </button>
+        }
+      >
+        {sessionSteps && sessionSteps.length > 0 && (
+          <button
+            type="button"
+            onClick={addRecordedSteps}
+            className="mb-1.5 inline-flex h-7 items-center gap-1.5 rounded-md border border-dashed border-primary/30 px-2 text-xs text-primary hover:bg-primary/5"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            Add {sessionSteps.length} recorded step{sessionSteps.length === 1 ? "" : "s"} from this session
+          </button>
+        )}
+        {steps.length === 0 ? (
+          <button type="button" onClick={addStep} className="w-full rounded-md px-2 py-1.5 text-left text-[13px] text-muted-foreground/70 hover:bg-accent/50">
+            1. Go to…
+          </button>
+        ) : (
+          <ol className="max-h-[180px] space-y-px overflow-y-auto">
+            {steps.map((step, idx) => (
+              <li key={idx} className="group/step flex items-center gap-2 rounded-md px-2 hover:bg-accent/50">
+                <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{idx + 1}.</span>
                 <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => setAiImage(e.target.files?.[0] || null)}
+                  value={step.actionDescription}
+                  onChange={(e) => updateStepText(idx, e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addStep() } }}
+                  dir="auto"
+                  aria-label={`Step ${idx + 1}`}
+                  placeholder="Describe the step…"
+                  className="h-8 min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/60"
                 />
-              </label>
+                <button
+                  type="button"
+                  onClick={() => removeStep(idx)}
+                  aria-label={`Remove step ${idx + 1}`}
+                  className="rounded p-1 text-muted-foreground opacity-0 hover:text-red-600 focus:opacity-100 group-hover/step:opacity-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+      </ComposerSection>
 
-              {aiImage && (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1">
-                  <Check className="h-3 w-3" />
-                  {aiImage.name.length > 28 ? `${aiImage.name.slice(0, 28)}…` : aiImage.name}
+      <div className="grid gap-x-4 sm:grid-cols-2">
+        <ComposerSection title="Expected result">
+          <input
+            value={expected}
+            onChange={(e) => setExpected(e.target.value)}
+            dir="auto"
+            aria-label="Expected result"
+            placeholder="What should happen"
+            className="h-8 w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/60"
+          />
+        </ComposerSection>
+        <ComposerSection title="Actual result">
+          <input
+            value={actual}
+            onChange={(e) => setActual(e.target.value)}
+            dir="auto"
+            aria-label="Actual result"
+            placeholder="What happened instead"
+            className="h-8 w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/60"
+          />
+        </ComposerSection>
+      </div>
+
+      <ComposerSection title="Evidence">
+        {attachmentChoices && attachmentChoices.length > 0 ? (
+          <div className="mb-2">
+            <p className="mb-1 text-[11px] text-muted-foreground">
+              From this session — click to attach ({sessionAttachments.length} selected)
+            </p>
+            <div className="grid max-h-[170px] grid-cols-4 gap-1.5 overflow-y-auto pr-1">
+              {attachmentChoices.map((att) => {
+                const selected = isAttached(att.filePath)
+                const isVideo = att.kind === "video"
+                return (
+                  <button
+                    key={att.filePath}
+                    type="button"
+                    onClick={() => toggleAttachment(att)}
+                    title={att.fileName}
+                    aria-pressed={selected}
+                    className={`group relative aspect-[4/3] overflow-hidden rounded-md border bg-muted/40 transition-all ${selected ? "border-primary ring-2 ring-primary" : "border-border hover:ring-2 hover:ring-primary/30"}`}
+                  >
+                    {isVideo ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                        <Video className="h-4 w-4" />
+                        <span className="text-[11px]">Video</span>
+                      </div>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={`/api/files/${encodeURIComponent(att.filePath)}`} alt={att.fileName} className="h-full w-full object-cover" />
+                    )}
+                    {selected && (
+                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-white shadow">
+                        <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : (
+          sessionAttachments.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {sessionAttachments.map((att) => (
+                <span key={att.filePath} className="inline-flex h-7 max-w-[16rem] items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs">
+                  <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="truncate" title={att.fileName}>{att.fileName}</span>
                   <button
                     type="button"
-                    onClick={() => setAiImage(null)}
-                    className="text-indigo-400 hover:text-indigo-700"
-                    aria-label="Remove picture"
+                    onClick={() => setSessionAttachments((prev) => prev.filter((x) => x.filePath !== att.filePath))}
+                    className="text-muted-foreground hover:text-red-600"
+                    aria-label={`Remove ${att.fileName}`}
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </span>
-              )}
-
-              <Button
-                type="button"
-                onClick={handleGenerateWithAI}
-                disabled={aiGenerating}
-                className="h-8 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold flex items-center gap-1.5"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                {aiGenerating ? "Writing the bug…" : "Generate bug report"}
-              </Button>
+              ))}
             </div>
+          )
+        )}
 
-            <p className="text-[10px] font-semibold text-muted-foreground">
-              Fills title, description, severity, priority, steps and expected/actual results.
-              Everything stays editable before you save.
-            </p>
-
-            {/* Say which engine answered, and on what evidence: a rule-based
-                draft means no AI provider produced one, and a degraded draft
-                means the model never saw the attached screenshot. Green is only
-                for a draft that had everything. */}
-            {aiNotice && (
-              <p
-                className={`text-[10px] font-bold ${
-                  aiNotice.kind === "ai" ? "text-emerald-700" : "text-amber-700"
-                }`}
-              >
-                {aiNotice.text}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground font-bold">Defect Title *</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              dir="auto"
-              placeholder="e.g., Application crashes on checkout submit"
-              className="h-9 bg-background"
-              required
-            />
-
-            {/* Possible duplicates, checked as the title is typed. The app could
-                already merge duplicates after the fact via mark-duplicate, but
-                that only helps once two people have each written the same defect
-                up — catching it here is what prevents the duplicate. */}
-            {duplicateMatches.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-500/40 dark:bg-amber-500/10">
-                <p className="flex items-center gap-1.5 text-[11px] font-bold text-amber-800 dark:text-amber-300">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  {duplicateMatches.length === 1
-                    ? "A similar defect already exists"
-                    : `${duplicateMatches.length} similar defects already exist`}
-                </p>
-                <div className="mt-1.5 space-y-1">
-                  {duplicateMatches.map((m) => (
-                    <a
-                      key={m.id}
-                      href={`/projects/${projectId}/bug-reports?bugId=${m.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 rounded-md bg-background/70 px-2 py-1.5 text-[11px] transition-colors hover:bg-background"
-                    >
-                      <span className="shrink-0 font-mono font-bold text-amber-700 dark:text-amber-400">
-                        {m.bugKey || "BUG"}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate" title={m.title}>{m.title}</span>
-                      <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
-                        {m.status}
-                      </span>
-                      <span className="shrink-0 text-[10px] font-bold text-amber-700 dark:text-amber-400">
-                        {m.score}%
-                      </span>
-                    </a>
-                  ))}
-                </div>
-                <p className="mt-1.5 text-[10px] text-amber-700/80 dark:text-amber-400/80">
-                  Still different? Carry on filing — this is a hint, not a block.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Severity</Label>
-              <select
-                value={severity}
-                onChange={(e) => setSeverity(e.target.value)}
-                className="h-9 w-full rounded-lg border bg-background px-3"
-              >
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Critical">Critical</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Priority</Label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="h-9 w-full rounded-lg border bg-background px-3"
-              >
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Critical">Critical</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground font-bold">Module / Service</Label>
-            <ModuleSelect
-              projectId={projectId}
-              value={suiteId}
-              onChange={chooseModule}
-              enabled={open}
-              modules={projectModules}
-            />
-            <p className="text-[10px] text-muted-foreground font-medium">
-              Groups this defect in the QA report, and prefixes the title as
-              <span className="font-bold"> [Module]</span>. Left empty, it inherits the linked test
-              case&apos;s module.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Environment</Label>
-              <select
-                value={env}
-                onChange={(e) => setEnv(e.target.value)}
-                className="h-9 w-full rounded-lg border bg-background px-3"
-              >
-                <option value="Dev">Dev</option>
-                <option value="Staging">Staging</option>
-                <option value="UAT">UAT</option>
-                <option value="Production">Production</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Target Browser</Label>
-              <select
-                value={browser}
-                onChange={(e) => setBrowser(e.target.value)}
-                className="h-9 w-full rounded-lg border bg-background px-3"
-              >
-                <option value="Chromium">Chromium</option>
-                <option value="Firefox">Firefox</option>
-                <option value="WebKit">WebKit</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Bug Source — options pulled from the tracker's list field */}
-          {sourceOptions && sourceOptions.length > 0 && (
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Bug Source</Label>
-              <select
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                className="h-9 w-full rounded-lg border bg-background px-3"
-              >
-                <option value="">— Select source —</option>
-                {sourceOptions.map((o) => (
-                  <option key={o} value={o}>{o}</option>
-                ))}
-              </select>
-            </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs ${screenshotFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
+            <ImageIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{screenshotFile ? screenshotFile.name : "Screenshot"}</span>
+            <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="hidden" onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)} />
+          </label>
+          {screenshotFile && (
+            <button type="button" onClick={() => setScreenshotFile(null)} aria-label="Remove screenshot" className="text-muted-foreground hover:text-red-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
           )}
-
-          <div className="space-y-1.5">
-            <Label className="text-muted-foreground font-bold">General Description / Summary Details</Label>
-            <textarea
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              rows={2}
-              dir="auto"
-              placeholder="Summarize the issue context..."
-              className="w-full border rounded-lg p-2.5 bg-background font-semibold text-xs outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-          </div>
-
-          {/* Steps builder list */}
-          <div className="space-y-2 border-t pt-3">
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-foreground">Reproduction Steps</span>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={addStep}
-                className="h-6 text-[9px] uppercase font-extrabold text-indigo-600"
-              >
-                + Add Step
-              </Button>
-            </div>
-
-            {/* Opt-in: pull the steps recorded in this Live QA session into the
-                builder. Shown whenever recorded steps are available. */}
-            {sessionSteps && sessionSteps.length > 0 && (
-              <button
-                type="button"
-                onClick={addRecordedSteps}
-                className="w-full flex items-center justify-center gap-1.5 h-8 rounded-lg border border-dashed border-indigo-300 dark:border-indigo-500/40 bg-indigo-50/60 dark:bg-indigo-500/[0.08] text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/[0.14] transition-colors"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Add {sessionSteps.length} recorded step{sessionSteps.length === 1 ? "" : "s"} from this session
-              </button>
-            )}
-
-            {steps.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground italic text-center py-2">No steps listed. Click add step to define instructions.</p>
-            ) : (
-              <div className="space-y-2 max-h-[150px] overflow-y-auto pr-1">
-                {steps.map((step, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="font-mono text-muted-foreground">{idx + 1}.</span>
-                    <Input
-                      value={step.actionDescription}
-                      onChange={(e) => updateStepText(idx, e.target.value)}
-                      dir="auto"
-                      placeholder="Step description..."
-                      className="h-8 text-xs bg-background flex-1"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeStep(idx)}
-                      className="text-muted-foreground hover:text-rose-600 p-1"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 border-t pt-3">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Expected Result</Label>
-              <Input
-                value={expected}
-                onChange={(e) => setExpected(e.target.value)}
-                dir="auto"
-                placeholder="What should happen..."
-                className="h-9 bg-background"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Actual Result</Label>
-              <Input
-                value={actual}
-                onChange={(e) => setActual(e.target.value)}
-                dir="auto"
-                placeholder="What happened instead..."
-                className="h-9 bg-background"
-              />
-            </div>
-          </div>
-
-          {/* Assignment & linking */}
-          <div className="grid grid-cols-2 gap-4 border-t pt-3">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Assign To</Label>
-              {opMembers.length > 0 ? (
-                <select
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  className="h-9 w-full rounded-lg border bg-background px-3 text-xs"
-                >
-                  <option value="">Unassigned</option>
-                  {opMembers.map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  value={assignee}
-                  onChange={(e) => setAssignee(e.target.value)}
-                  placeholder="Developer email..."
-                  className="h-9 bg-background"
-                />
-              )}
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Parent Task ({trackerName} WP ID)</Label>
-              {/* Type to search the tracker's tasks by title or number and pick
-                  one; the field still accepts a raw id typed by hand. */}
-              <Input
-                value={parent}
-                onChange={(e) => setParent(e.target.value)}
-                list="create-bug-parent-options"
-                placeholder={
-                  parentOptions.length > 0 ? "Search a task, or type an ID…" : "e.g. 1234"
-                }
-                className="h-9 bg-background"
-              />
-              <datalist id="create-bug-parent-options">
-                {parentOptions.map((wp) => (
-                  <option key={wp.id} value={wp.id}>
-                    #{wp.id} — {wp.subject}
-                    {wp.type ? ` (${wp.type})` : ""}
-                  </option>
-                ))}
-              </datalist>
-              {parentLoading && (
-                <span className="text-[10px] text-muted-foreground">Searching tasks…</span>
-              )}
-            </div>
-          </div>
-
-          {/* Evidence: session artifacts + screenshot / video file / video URL */}
-          <div className="space-y-3 border-t pt-3">
-            <span className="font-bold text-foreground">Evidence (optional)</span>
-
-            {/* Picker gallery: when the caller passes the full pool of session
-                artifacts, let the tester choose which to attach (selected ones
-                start from initialAttachmentPaths). */}
-            {attachmentChoices && attachmentChoices.length > 0 ? (
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground font-bold">
-                  From this session &mdash; tap to attach
-                  <span className="ml-1 font-semibold text-[10px] text-muted-foreground/80">
-                    ({sessionAttachments.length} selected)
-                  </span>
-                </Label>
-                <div className="grid grid-cols-3 gap-2 max-h-[190px] overflow-y-auto pr-1">
-                  {attachmentChoices.map((att) => {
-                    const selected = isAttached(att.filePath)
-                    const isVideo = att.kind === "video"
-                    return (
-                      <button
-                        key={att.filePath}
-                        type="button"
-                        onClick={() => toggleAttachment(att)}
-                        title={att.fileName}
-                        className={`group relative border rounded-lg overflow-hidden aspect-[4/3] bg-muted/40 transition-all ${
-                          selected ? "ring-2 ring-indigo-500 border-indigo-500" : "hover:ring-2 hover:ring-indigo-300"
-                        }`}
-                      >
-                        {isVideo ? (
-                          <div className="h-full w-full flex flex-col items-center justify-center gap-1 text-muted-foreground">
-                            <Video className="h-5 w-5 text-indigo-500" />
-                            <span className="text-[8px] font-bold uppercase">Video</span>
-                          </div>
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={`/api/files/${encodeURIComponent(att.filePath)}`}
-                            alt={att.fileName}
-                            className="h-full w-full object-cover"
-                          />
-                        )}
-                        {selected && (
-                          <span className="absolute top-1 right-1 h-4 w-4 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow">
-                            <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                          </span>
-                        )}
-                        {!selected && (
-                          <span className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[9px] font-bold">
-                            Attach
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : (
-              sessionAttachments.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-muted-foreground font-bold">From this session</Label>
-                  {sessionAttachments.map((att) => (
-                    <div key={att.filePath} className="flex items-center gap-2 p-2 border rounded-lg bg-accent/20">
-                      <Paperclip className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                      <span className="truncate flex-1 text-[11px]" title={att.fileName}>{att.fileName}</span>
-                      <button
-                        type="button"
-                        onClick={() => setSessionAttachments((prev) => prev.filter((a) => a.filePath !== att.filePath))}
-                        className="text-muted-foreground hover:text-rose-600 p-0.5"
-                        title="Remove"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )
-            )}
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Screenshot upload */}
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground font-bold">Screenshot</Label>
-                <label className="flex items-center gap-1.5 h-9 px-3 rounded-lg border bg-background cursor-pointer hover:bg-accent/40 transition-colors text-[11px] font-semibold text-muted-foreground">
-                  <Paperclip className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                  <span className="truncate">{screenshotFile ? screenshotFile.name : "Choose image..."}</span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/gif,image/webp"
-                    className="hidden"
-                    onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-                {screenshotFile && (
-                  <button type="button" onClick={() => setScreenshotFile(null)} className="text-[9px] text-rose-500 font-bold">
-                    Remove screenshot
-                  </button>
-                )}
-              </div>
-
-              {/* Video upload */}
-              <div className="space-y-1.5">
-                <Label className="text-muted-foreground font-bold">Video File</Label>
-                <label className="flex items-center gap-1.5 h-9 px-3 rounded-lg border bg-background cursor-pointer hover:bg-accent/40 transition-colors text-[11px] font-semibold text-muted-foreground">
-                  <Video className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                  <span className="truncate">{videoFile ? videoFile.name : "Choose video..."}</span>
-                  <input
-                    type="file"
-                    accept="video/webm,video/mp4,video/quicktime,video/ogg"
-                    className="hidden"
-                    onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                  />
-                </label>
-                {videoFile && (
-                  <button type="button" onClick={() => setVideoFile(null)} className="text-[9px] text-rose-500 font-bold">
-                    Remove video
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground font-bold">Video URL</Label>
-              <Input
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://... (used if no video file is chosen)"
-                disabled={!!videoFile}
-                className="h-9 bg-background disabled:opacity-60"
-              />
-            </div>
-          </div>
-
-          {/* Sync check box */}
-          <div className="flex items-center gap-2 pt-2 select-none border-t">
+          <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs ${videoFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
+            <Video className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{videoFile ? videoFile.name : "Video file"}</span>
+            <input type="file" accept="video/webm,video/mp4,video/quicktime,video/ogg" className="hidden" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
+          </label>
+          {videoFile && (
+            <button type="button" onClick={() => setVideoFile(null)} aria-label="Remove video" className="text-muted-foreground hover:text-red-600">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+          <span className={`inline-flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${videoUrl ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"} ${videoFile ? "opacity-50" : ""}`}>
+            <Link2 className="h-3.5 w-3.5 shrink-0" />
             <input
-              type="checkbox"
-              id="createSyncOP"
-              checked={syncOP}
-              onChange={(e) => setSyncOP(e.target.checked)}
-              className="h-4 w-4 rounded border-input text-indigo-600 focus:ring-indigo-500"
+              aria-label="Video URL"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="Video URL (used if no file is chosen)"
+              disabled={!!videoFile}
+              className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
             />
-            <label htmlFor="createSyncOP" className="text-[10px] font-bold text-muted-foreground cursor-pointer">
-              Sync this bug to {trackerName} immediately after creation
-            </label>
-          </div>
-
-          <div className="pt-3 border-t flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              disabled={saving}
-              className="h-9 font-bold"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={saving}
-              className="h-9 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-sm"
-            >
-              {saving ? "Submitting Defect..." : "Save Bug"}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </span>
+        </div>
+      </ComposerSection>
+    </ComposerDialog>
   )
 }

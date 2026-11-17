@@ -141,7 +141,7 @@ export function ChatMessageList({
       return (
         <div className="flex items-center my-2">
           <div className="h-[2px] bg-red-500 flex-grow" />
-          <span className="bg-red-500 text-white font-bold text-[9px] px-2 py-0.5 rounded-sm uppercase tracking-wider">
+          <span className="bg-red-500 text-white font-medium text-[11px] px-2 py-0.5 rounded-sm">
             New
           </span>
           <div className="h-[2px] bg-red-500 flex-grow" />
@@ -163,7 +163,7 @@ export function ChatMessageList({
   return (
     <div className="flex-1 min-h-0 relative bg-white dark:bg-slate-900">
       {listItems.length === 0 ? (
-        <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 p-6">
+        <div className="h-full flex flex-col items-center justify-center text-muted-foreground dark:text-muted-foreground p-6">
           <p className="text-sm">This is the start of this conversation.</p>
           <p className="text-xs mt-1">Send a message to start chatting!</p>
         </div>
@@ -183,7 +183,7 @@ export function ChatMessageList({
       {showJumpButton && (
         <button
           onClick={jumpToBottom}
-          className="absolute bottom-4 right-4 flex items-center gap-1 bg-indigo-600 text-white text-xs font-semibold px-3 py-2 rounded-full shadow-lg hover:bg-indigo-700 transition-all scale-100 hover:scale-105 z-20"
+          className="absolute bottom-4 right-4 flex items-center gap-1 bg-primary text-white text-xs font-semibold px-3 py-2 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:bg-primary/90 transition-all scale-100 hover:scale-105 z-20"
         >
           <span>Jump to bottom</span>
           <ArrowDown className="h-3 w-3 animate-bounce" />

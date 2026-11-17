@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
-import type { ScrumTask, BoardColumn, TaskFilters } from "@/types/scrum"
+import type { ScrumTask, BoardColumn, TaskFilters, TaskStatus } from "@/types/scrum"
 import {
   useScrumTasks,
   useBoardColumns,
@@ -11,19 +11,20 @@ import {
   useScrumSprints,
   useScrumEpics,
   useCurrentUser,
+  setBoardDragging,
 } from "@/hooks/scrum/use-scrum"
-import { useScrumUI } from "@/stores/scrum-ui"
-import { STATUS_META, overdueDays } from "@/components/scrum/shared"
+import { useScrumUI, boardDisplayFor, type BoardDisplay } from "@/stores/scrum-ui"
+import { STATUS_META, STATUS_ORDER, overdueDays, StatusIcon } from "@/components/scrum/shared"
 import { TaskCard } from "./task-card"
-import { CardLayoutToggle, type CardLayout } from "./card-layout-toggle"
 import { CreateColumnButton } from "./create-column-button"
 import { QuickFilters, type QuickFilter } from "./quick-filters"
-import { SwimlaneToggle, type SwimlaneMode } from "./swimlane-toggle"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
 import { CompleteSprintModal } from "@/components/scrum/modals/complete-sprint-modal"
+import { SprintReportDialog } from "./sprint-report"
 import {
-  Plus, MoreHorizontal, Trash2, Zap, Layers, User, FolderKanban, CheckCircle2,
-  Settings, Pencil, Hash, AlertTriangle, X
+  Plus, MoreHorizontal, Trash2, Layers, User, FolderKanban, CheckCircle2,
+  Pencil, Hash, AlertTriangle, X, Check,
+  BarChart3,
 } from "lucide-react"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -45,13 +46,18 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
   const { data: currentUser } = useCurrentUser()
   const move = useMoveTask(projectId)
   const { openTask, openCreateTask } = useScrumUI()
-  const { remove: removeColumn, update: updateColumn } = useColumnMutations(projectId)
+  const { remove: removeColumn, update: updateColumn, create: createColumn } = useColumnMutations(projectId)
 
-  const [quickFilters, setQuickFilters] = useState<QuickFilter[]>([])
-  const [epicFilter, setEpicFilter] = useState<string | null>(null)
-  const [swimlane, setSwimlane] = useState<SwimlaneMode>("none")
+  const display = useScrumUI((st) => boardDisplayFor(st, projectId))
+  const setDisplayFor = useScrumUI((st) => st.setBoardDisplay)
+  const setDisplay = (patch: Partial<BoardDisplay>) => setDisplayFor(projectId, patch)
+  const { quickFilters, swimlane, cardLayout, showEstimations, showSubtasks } = display
+  // An epic that no longer exists (deleted, or stale) must not silently empty the board.
+  const epicFilter = display.epicFilter && epics?.some((e) => e.id === display.epicFilter) ? display.epicFilter : null
+  const setQuickFilters = (q: QuickFilter[]) => setDisplay({ quickFilters: q })
+  const setEpicFilter = (id: string | null) => setDisplay({ epicFilter: id })
   const [completeModalOpen, setCompleteModalOpen] = useState(false)
-  const [cardLayout, setCardLayout] = useState<CardLayout>("detailed")
+  const [reportOpen, setReportOpen] = useState(false)
 
   // Column inline-edit state
   const [editingColumn, setEditingColumn] = useState<string | null>(null)
@@ -59,11 +65,6 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
   const [editWip, setEditWip] = useState<string>("")
   const [editError, setEditError] = useState<string | null>(null)
   const [columnPendingDelete, setColumnPendingDelete] = useState<BoardColumn | null>(null)
-
-  // Board settings
-  const [showSettings, setShowSettings] = useState(false)
-  const [showEstimations, setShowEstimations] = useState(true)
-  const [showSubtasks, setShowSubtasks] = useState(true)
 
   // The board shows only the ACTIVE sprint's stories (Jira-style sprint board).
   const activeSprint = useMemo(() => (sprints ?? []).find((s) => s.status === "ACTIVE") ?? null, [sprints])
@@ -105,6 +106,8 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
     return { total, completed, pct }
   }, [sprintTasks])
 
+  const blockedCount = useMemo(() => sprintTasks.filter((t) => t.signals?.blocked).length, [sprintTasks])
+
   const sprintSummaryData = useMemo(() => {
     if (!activeSprint) return null
     return {
@@ -135,6 +138,26 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
     for (const list of map.values()) list.sort((a, b) => a.boardRank - b.boardRank)
     return map
   }, [sprintTasks, columns])
+
+  // Every status that holds tasks gets a column, even without a saved one.
+  // Tasks moved to Testing or Deployed on a board that only had To Do / In
+  // Progress / In Review / Done used to vanish from the board while the sprint
+  // header still counted them. A missing status is shown as a temporary
+  // column (in workflow order) that can be saved with one click.
+  const displayColumns = useMemo(() => {
+    const saved = (columns ?? []) as (BoardColumn & { virtual?: boolean })[]
+    const covered = new Set(saved.map((c) => c.status))
+    const missing = STATUS_ORDER.filter((st) => !covered.has(st) && (byStatus.get(st)?.length ?? 0) > 0)
+    if (!missing.length) return saved
+    const out = [...saved]
+    for (const st of missing) {
+      const virtualCol = { id: `virtual-${st}`, name: STATUS_META[st].label, status: st, order: -1, wipLimit: null, projectId, createdAt: "", virtual: true } as unknown as BoardColumn & { virtual?: boolean }
+      // Insert before the first saved column that comes later in the workflow.
+      const at = out.findIndex((c) => STATUS_ORDER.indexOf(c.status as TaskStatus) > STATUS_ORDER.indexOf(st))
+      out.splice(at === -1 ? out.length : at, 0, virtualCol)
+    }
+    return out
+  }, [columns, byStatus, projectId])
 
   // Group tasks within a column by swimlane key
   function groupBySwimlane(tasks: ScrumTask[]): { key: string; label: string; tasks: ScrumTask[] }[] {
@@ -237,9 +260,9 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
 
   if (isLoading || !columns) {
     return (
-      <div className="flex gap-4 overflow-x-auto p-1">
+      <div className="flex gap-2.5 overflow-x-auto px-3 py-3">
         {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-96 min-w-[300px] flex-1 rounded-lg" />
+          <Skeleton key={i} className="h-96 w-[272px] shrink-0 rounded-lg" />
         ))}
       </div>
     )
@@ -263,118 +286,106 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
   }
 
   const activeEpic = epics?.find((e) => e.id === epicFilter)
+  const daysLeft = daysLeftLabel(activeSprint.endDate)
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      {/* Active-sprint banner */}
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card px-3 py-2">
-        <Zap className="h-4 w-4 text-primary" />
-        <span className="text-sm font-semibold text-foreground">{activeSprint.name}</span>
-        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">Active</span>
-        {activeSprint.startDate && activeSprint.endDate && (
-          <span className="text-[11px] text-muted-foreground">
-            {format(new Date(activeSprint.startDate), "MMM d")} – {format(new Date(activeSprint.endDate), "MMM d")}
-          </span>
-        )}
-        {activeSprint.goal && <span className="hidden text-[11px] italic text-muted-foreground sm:inline">· {activeSprint.goal}</span>}
-
-        {/* Story point progress */}
-        {sprintStats.total > 0 && (
-          <div className="ml-2 hidden items-center gap-2 md:flex">
-            <div className="h-1.5 w-24 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-primary transition-all"
-                style={{ width: `${sprintStats.pct}%` }}
-              />
-            </div>
-            <span className="text-[11px] font-medium text-muted-foreground">
-              {sprintStats.completed}/{sprintStats.total} pts
-            </span>
-          </div>
-        )}
-
-        <PermissionGate permission="canCreateSprints">
-          <button
-            onClick={() => setCompleteModalOpen(true)}
-            className="ml-auto inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-accent"
-            title="Complete this sprint"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-            Complete Sprint
-          </button>
-        </PermissionGate>
-        <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-          {sprintTasks.length} {sprintTasks.length === 1 ? "story" : "stories"}
-        </span>
-      </div>
-
-      {/* Toolbar: Quick Filters + Epic Filter + Card Layout + Swimlane Toggle + Board Settings */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-card px-3 py-2">
-        <div className="flex flex-wrap items-center gap-2">
+    <div className="flex h-full flex-col">
+      {/* Row 2 — quick filters on the left, sprint health on the right. */}
+      <div className="flex h-10 shrink-0 items-center gap-3 overflow-hidden border-b border-border bg-card px-4 text-xs">
+        <div className="flex min-w-0 shrink items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
           <QuickFilters activeFilters={quickFilters} onChange={setQuickFilters} />
-          {/* Epic quick filter */}
           {epics && epics.length > 0 && (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground">
-                <FolderKanban className="h-3 w-3" />
+              <DropdownMenuTrigger
+                className={`inline-flex h-6 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors ${
+                  activeEpic
+                    ? "border-border bg-background text-foreground"
+                    : "border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {activeEpic ? (
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: activeEpic.color }} />
+                ) : (
+                  <FolderKanban className="h-3 w-3" />
+                )}
                 {activeEpic ? activeEpic.title : "Epic"}
-                {activeEpic && <X className="h-3 w-3" onClick={(e) => { e.stopPropagation(); setEpicFilter(null) }} />}
+                {activeEpic && (
+                  <X
+                    className="h-3 w-3 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear epic filter"
+                    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); setEpicFilter(null) }}
+                  />
+                )}
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
-                <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Filter by Epic</p>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="start" className="w-52">
                 <DropdownMenuItem onClick={() => setEpicFilter(null)} className="text-xs">
-                  <span className={epicFilter === null ? "font-semibold text-primary" : ""}>All epics</span>
+                  <span className={epicFilter === null ? "font-medium text-foreground" : "text-muted-foreground"}>All epics</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 {epics.map((epic) => (
                   <DropdownMenuItem key={epic.id} onClick={() => setEpicFilter(epic.id)} className="gap-2 text-xs">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: epic.color }} />
-                    <span className={epicFilter === epic.id ? "font-semibold text-primary" : ""}>{epic.title}</span>
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: epic.color }} />
+                    <span className={`truncate ${epicFilter === epic.id ? "font-medium text-foreground" : ""}`}>{epic.title}</span>
+                    {epicFilter === epic.id && <Check className="ml-auto h-3.5 w-3.5 text-primary" />}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <CardLayoutToggle value={cardLayout} onChange={setCardLayout} />
-          <SwimlaneToggle value={swimlane} onChange={setSwimlane} />
-          {/* Board Settings */}
-          <DropdownMenu open={showSettings} onOpenChange={setShowSettings}>
-            <DropdownMenuTrigger className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground">
-              <Settings className="h-4 w-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Board Settings</p>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setShowEstimations((v) => !v)}
-                className="flex items-center justify-between gap-2 text-xs"
-              >
-                <span className="flex items-center gap-1.5">
-                  <Hash className="h-3.5 w-3.5" /> Show estimations
-                </span>
-                {showEstimations && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setShowSubtasks((v) => !v)}
-                className="flex items-center justify-between gap-2 text-xs"
-              >
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> Show subtasks
-                </span>
-                {showSubtasks && <CheckCircle2 className="h-3.5 w-3.5 text-primary" />}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+        {activeSprint.goal && (
+          <span className="hidden min-w-0 flex-1 items-center gap-1.5 border-l border-border pl-3 xl:flex" title={activeSprint.goal}>
+            <span className="text-muted-foreground">Goal</span>
+            <span className="truncate text-foreground">{activeSprint.goal}</span>
+          </span>
+        )}
+
+        <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap text-muted-foreground">
+          {sprintStats.total > 0 && (
+            <span className="flex items-center gap-1.5" title={`${sprintStats.completed} of ${sprintStats.total} story points done`}>
+              <ProgressRing pct={sprintStats.pct} />
+              <span className="font-medium tabular-nums text-foreground">{sprintStats.pct}%</span>
+              <span className="hidden tabular-nums sm:inline">· {sprintStats.completed} of {sprintStats.total} pts</span>
+            </span>
+          )}
+          {daysLeft && <span className={daysLeft.late ? "text-red-600 dark:text-red-400" : ""}>{daysLeft.text}</span>}
+          {blockedCount > 0 && (
+            <span
+              className="font-medium text-orange-600 dark:text-orange-400"
+              title="Issues waiting on an unfinished 'is blocked by' issue"
+            >
+              {blockedCount} blocked
+            </span>
+          )}
+          <span className="hidden tabular-nums 2xl:inline">{sprintTasks.length} {sprintTasks.length === 1 ? "issue" : "issues"}</span>
+          <span className="h-4 w-px bg-border" aria-hidden="true" />
+          <button
+            onClick={() => setReportOpen(true)}
+            className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Burndown and velocity for this sprint"
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            Report
+          </button>
+          <PermissionGate permission="canCreateSprints">
+            <button
+              onClick={() => setCompleteModalOpen(true)}
+              className="inline-flex h-6 items-center gap-1 rounded-md border border-border bg-background px-2 font-medium text-foreground transition-colors hover:bg-muted"
+              title="Complete this sprint"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              Complete sprint
+            </button>
+          </PermissionGate>
         </div>
       </div>
 
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DragDropContext onDragStart={() => setBoardDragging(true)} onDragEnd={(r) => { setBoardDragging(false); onDragEnd(r) }}>
         {/* Columns share the available width (flex-1) but never shrink below a
             readable 300px; past that the row overflows and scrolls sideways. */}
-        <div className="board-scroll flex min-h-0 flex-1 items-start gap-4 overflow-x-auto p-1">
-        {columns.map((col: BoardColumn) => {
+        <div className="board-scroll flex min-h-0 flex-1 items-start gap-2.5 overflow-x-auto px-3 py-3">
+        {displayColumns.map((col: BoardColumn & { virtual?: boolean }) => {
           const rawList = byStatus.get(col.status) ?? []
           const overLimit = col.wipLimit != null && rawList.length > col.wipLimit
           const swimlaneGroups = groupBySwimlane(rawList)
@@ -384,12 +395,12 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
           return (
             <div
               key={col.id}
-              className="flex max-h-full min-w-[300px] max-w-[480px] flex-1 flex-col rounded-lg border bg-muted/60"
+              className="flex max-h-full w-[272px] shrink-0 flex-col rounded-lg bg-muted/60"
             >
               {/* Column header */}
-              <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+              <div className="group/col flex h-9 items-center justify-between gap-2 pl-3 pr-1.5">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_META[col.status]?.dot ?? "bg-muted-foreground"}`} />
+                  <StatusIcon status={col.status as TaskStatus} />
                   {editingColumn === col.id ? (
                     <div className="flex items-center gap-1">
                       <Input
@@ -431,12 +442,10 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       </button>
                     </div>
                   ) : (
-                    <span className="truncate text-sm font-medium text-foreground">{col.name}</span>
+                    <span className="truncate text-[13px] font-medium text-foreground">{col.name}</span>
                   )}
                   <span
-                    className={`shrink-0 rounded-full px-1.5 text-[11px] font-semibold ${
-                      overLimit ? "bg-destructive/10 text-destructive" : "bg-background text-muted-foreground"
-                    }`}
+                    className={`shrink-0 text-xs tabular-nums ${overLimit ? "font-medium text-destructive" : "text-muted-foreground"}`}
                   >
                     {rawList.length}
                     {col.wipLimit != null ? `/${col.wipLimit}` : ""}
@@ -451,17 +460,29 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                   <PermissionGate permission="canCreateStories">
                     <button
                       onClick={() => openCreateTask(col.status, activeSprint?.id)}
-                      className="rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                      className="rounded-md p-1 text-muted-foreground opacity-0 transition group-hover/col:opacity-100 focus-visible:opacity-100 hover:bg-card hover:text-foreground"
                       title={`Add task to ${col.name}`}
                       aria-label={`Add task to ${col.name}`}
                     >
                       <Plus className="h-4 w-4" />
                     </button>
                   </PermissionGate>
-                  <PermissionGate permission="canEditBoard">
+                  {col.virtual && (
+                    <PermissionGate permission="canEditBoard">
+                      <button
+                        onClick={() => createColumn.mutate({ name: col.name, status: col.status })}
+                        disabled={createColumn.isPending}
+                        className="rounded px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-background"
+                        title="These issues have a status with no column. Save it as a column on this board."
+                      >
+                        Add column
+                      </button>
+                    </PermissionGate>
+                  )}
+                  {!col.virtual && <PermissionGate permission="canEditBoard">
                     <DropdownMenu>
                       <DropdownMenuTrigger
-                        className="rounded p-1 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                        className="rounded-md p-1 text-muted-foreground opacity-0 transition hover:bg-card hover:text-foreground group-hover/col:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
                         aria-label={`${col.name} column options`}
                       >
                         <MoreHorizontal className="h-4 w-4" />
@@ -487,7 +508,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </PermissionGate>
+                  </PermissionGate>}
                 </div>
               </div>
 
@@ -507,8 +528,8 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                     // min-height:auto, which refuses to shrink below its
                     // content, so overflow-y-auto would never actually scroll
                     // and the column would grow past max-h-full instead.
-                    className={`min-h-0 flex-1 space-y-2 overflow-y-auto px-2 pb-2 transition-colors ${
-                      snapshot.isDraggingOver ? "rounded-lg bg-primary/10 ring-2 ring-dashed ring-primary/40" : ""
+                    className={`min-h-[3rem] flex-1 space-y-1.5 overflow-y-auto rounded-md px-1.5 pb-1.5 transition-colors ${
+                      snapshot.isDraggingOver ? "bg-primary/5 ring-1 ring-inset ring-primary/30" : ""
                     }`}
                   >
                     {swimlane === "none" ? (
@@ -538,7 +559,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                         {swimlaneGroups.map((group) => (
                           <div key={group.key} className="space-y-1.5">
                             {/* Swimlane header */}
-                            <div className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1">
+                            <div className="flex items-center gap-1.5 px-1 pb-0.5 pt-1.5">
                               {swimlane === "assignee" && (
                                 <User className="h-3 w-3 text-muted-foreground" />
                               )}
@@ -556,8 +577,8 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                                   <FolderKanban className="h-3 w-3 text-muted-foreground" />
                                 </>
                               )}
-                              <span className="text-[10px] font-semibold text-muted-foreground truncate">{group.label}</span>
-                              <span className="ml-auto text-[10px] font-semibold text-muted-foreground">{group.tasks.length}</span>
+                              <span className="truncate text-[11px] font-medium text-muted-foreground">{group.label}</span>
+                              <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">{group.tasks.length}</span>
                             </div>
                             {group.tasks.map((task) => (
                               <Draggable key={task.id} draggableId={task.id} index={indexMap.get(task.id)!}>
@@ -581,14 +602,14 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       </>
                     )}
                     {provided.placeholder}
-                    {rawList.length === 0 && !snapshot.isDraggingOver && (
+                    {!snapshot.isDraggingOver && (
                       <PermissionGate permission="canCreateStories">
                         <button
                           onClick={() => openCreateTask(col.status, activeSprint?.id)}
-                          className="w-full rounded-lg border border-dashed border-border py-6 text-xs text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors"
+                          className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
                         >
-                          <Plus className="mx-auto mb-1 h-4 w-4" />
-                          Add a task
+                          <Plus className="h-3.5 w-3.5" />
+                          Add issue
                         </button>
                       </PermissionGate>
                     )}
@@ -604,6 +625,8 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
         </PermissionGate>
         </div>
       </DragDropContext>
+
+      <SprintReportDialog projectId={projectId} sprintId={activeSprint.id} open={reportOpen} onOpenChange={setReportOpen} />
 
       {/* Complete Sprint Modal */}
       <CompleteSprintModal
@@ -624,7 +647,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
         title={`Delete "${columnPendingDelete?.name}"?`}
         description={
           (byStatus.get(columnPendingDelete?.status ?? "")?.length ?? 0) > 0
-            ? `This column still holds ${byStatus.get(columnPendingDelete!.status)!.length} issue(s). The issues are not deleted — they keep their "${columnPendingDelete?.status}" status and will reappear if you recreate the column.`
+            ? `This column still holds ${byStatus.get(columnPendingDelete!.status)!.length} issue(s). The issues are not deleted — they keep their "${columnPendingDelete?.status}" status and stay on the board in a temporary column you can save again.`
             : "The column will be removed from this board. Issues are never deleted by this action."
         }
         confirmLabel="Delete column"
@@ -638,4 +661,32 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
       />
     </div>
   )
+}
+
+/** Small donut showing sprint completion. */
+function ProgressRing({ pct }: { pct: number }) {
+  const c = 2 * Math.PI * 6
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 -rotate-90" aria-hidden="true">
+      <circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2" className="text-border" />
+      <circle
+        cx="8" cy="8" r="6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+        className="text-primary"
+        strokeDasharray={`${(Math.min(100, Math.max(0, pct)) / 100) * c} ${c}`}
+      />
+    </svg>
+  )
+}
+
+/** "6 days left", "Ends today", or "3 days over" from a sprint end date. */
+export function daysLeftLabel(endDate: string | null): { text: string; late: boolean } | null {
+  if (!endDate) return null
+  const end = new Date(endDate)
+  const today = new Date()
+  end.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  const days = Math.round((end.getTime() - today.getTime()) / 86_400_000)
+  if (days > 0) return { text: `${days} ${days === 1 ? "day" : "days"} left`, late: false }
+  if (days === 0) return { text: "Ends today", late: false }
+  return { text: `${-days} ${days === -1 ? "day" : "days"} over`, late: true }
 }

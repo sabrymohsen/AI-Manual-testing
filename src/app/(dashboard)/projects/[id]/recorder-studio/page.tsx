@@ -1056,7 +1056,7 @@ export default function RecorderWorkspacePage() {
     if (["select","select_custom","select_searchable","multi_select","autocomplete_select","date_select","time_select"].includes(type))
       return <ChevronDown className="h-3.5 w-3.5 text-teal-400" />
     if (["check","uncheck","toggle_on","toggle_off","radio_select"].includes(type))
-      return <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
+      return <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />
     if (["wait","wait_for_text","wait_for_url"].includes(type))
       return <Clock className="h-3.5 w-3.5 text-sky-400" />
     if (["assert_visible","visible"].includes(type)) return <Eye className="h-3.5 w-3.5 text-emerald-400" />
@@ -1066,7 +1066,7 @@ export default function RecorderWorkspacePage() {
     if (type === "screenshot") return <ImageIcon className="h-3.5 w-3.5 text-indigo-400" />
     if (type === "note") return <FileText className="h-3.5 w-3.5 text-amber-400" />
     if (type === "upload_file") return <FileText className="h-3.5 w-3.5 text-orange-400" />
-    return <MousePointer2 className="h-3.5 w-3.5 text-slate-400" />
+    return <MousePointer2 className="h-3.5 w-3.5 text-muted-foreground" />
   }
 
   function getStepVerb(type: string): string {
@@ -1122,7 +1122,7 @@ export default function RecorderWorkspacePage() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="font-bold text-base tracking-tight truncate">Test Case Recorder</h1>
+            <h1 className="font-semibold text-base tracking-tight truncate">Test Case Recorder</h1>
           </div>
 
           {/* Phase stepper */}
@@ -1159,15 +1159,15 @@ export default function RecorderWorkspacePage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Idle
               </span>
             ) : sessionStatus === "Active" ? (
-              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-bold animate-pulse">
+              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 font-semibold animate-pulse">
                 <Video className="h-3 w-3 fill-current" /> Recording
               </span>
             ) : sessionStatus === "Paused" ? (
-              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 font-bold">
+              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 font-semibold">
                 <Pause className="h-3 w-3" /> Paused
               </span>
             ) : (
-              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-bold">
+              <span className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 font-semibold">
                 <CheckCircle2 className="h-3 w-3" /> Done
               </span>
             )}
@@ -1181,20 +1181,20 @@ export default function RecorderWorkspacePage() {
         /* 1. SETUP PHASE */
         <main className="flex-1 max-w-2xl mx-auto w-full px-4 md:px-6 py-8 space-y-5">
           <div>
-            <h2 className="text-xl font-bold">Start a new recording session</h2>
+            <h2 className="text-xl font-semibold">Start a new recording session</h2>
             <p className="text-sm text-muted-foreground mt-1">
               The browser opens right here in the studio and captures every interaction automatically.
             </p>
           </div>
 
           {/* Section 1 — What are you testing? */}
-          <div className="border rounded-2xl bg-card shadow-sm overflow-hidden">
+          <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b bg-accent/10">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">What are you testing?</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">What are you testing?</h3>
             </div>
             <div className="p-5 space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Test case name *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Test case name *</Label>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -1205,7 +1205,7 @@ export default function RecorderWorkspacePage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground">Priority</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Priority</Label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
@@ -1218,7 +1218,7 @@ export default function RecorderWorkspacePage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground">Preconditions (optional)</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Preconditions (optional)</Label>
                   <Input
                     value={preconditions}
                     onChange={(e) => setPreconditions(e.target.value)}
@@ -1231,13 +1231,13 @@ export default function RecorderWorkspacePage() {
           </div>
 
           {/* Section 2 — Browser & environment */}
-          <div className="border rounded-2xl bg-card shadow-sm overflow-hidden">
+          <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b bg-accent/10">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Browser & environment</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">Browser & environment</h3>
             </div>
             <div className="p-5 space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Target URL *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Target URL *</Label>
                 <Input
                   value={startUrl}
                   onChange={(e) => setStartUrl(e.target.value)}
@@ -1248,7 +1248,7 @@ export default function RecorderWorkspacePage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground">Browser</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Browser</Label>
                   <select
                     value={browserType}
                     onChange={(e) => setBrowserType(e.target.value)}
@@ -1260,7 +1260,7 @@ export default function RecorderWorkspacePage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground">Viewport</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Viewport</Label>
                   <select
                     value={viewport}
                     onChange={(e) => setViewport(e.target.value)}
@@ -1272,7 +1272,7 @@ export default function RecorderWorkspacePage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground">Login role</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Login role</Label>
                   <select
                     value={requiredCredentialId}
                     onChange={(e) => setRequiredCredentialId(e.target.value)}
@@ -1285,7 +1285,7 @@ export default function RecorderWorkspacePage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground">Recording mode</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Recording mode</Label>
                   <select
                     value={recordingMode}
                     onChange={(e) => setRecordingMode(e.target.value)}
@@ -1302,41 +1302,41 @@ export default function RecorderWorkspacePage() {
           </div>
 
           {/* Section 3 — Pre-flight + error + CTA */}
-          <div className="border rounded-2xl bg-card shadow-sm overflow-hidden">
+          <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
             <div className="px-5 py-3 border-b bg-accent/10 flex items-center justify-between">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pre-flight check</h3>
+              <h3 className="text-xs font-medium text-muted-foreground">Pre-flight check</h3>
               <button
                 type="button"
                 onClick={async () => { setIsCheckingStatus(true); await fetchRecorderStatus(); setIsCheckingStatus(false) }}
                 disabled={isCheckingStatus}
-                className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
               >
                 <RefreshCw className={`h-3 w-3 ${isCheckingStatus ? "animate-spin" : ""}`} /> Re-check
               </button>
             </div>
             <div className="px-5 py-4 space-y-2 text-xs">
               <div className={startUrl.trim() ? "text-emerald-700 dark:text-emerald-400 flex items-center gap-2" : "text-muted-foreground flex items-center gap-2"}>
-                <span className={`w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold ${startUrl.trim() ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground/50"}`}>{startUrl.trim() ? "✓" : "○"}</span>
+                <span className={`w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold ${startUrl.trim() ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground/50"}`}>{startUrl.trim() ? "✓" : "○"}</span>
                 Target URL {startUrl.trim() ? "configured" : "not set"}
               </div>
               <div className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold bg-emerald-500 text-white">✓</span>
+                <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold bg-emerald-500 text-white">✓</span>
                 Credentials {requiredCredentialId ? "selected" : "optional — public test"}
               </div>
               {workerOnline ? (
                 <div className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                  <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold bg-emerald-500 text-white">✓</span>
+                  <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold bg-emerald-500 text-white">✓</span>
                   Recorder worker online
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="text-red-600 dark:text-red-400 flex items-center gap-2 font-semibold">
-                    <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold bg-red-500 text-white">✗</span>
+                    <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold bg-red-500 text-white">✗</span>
                     Recorder worker offline
                   </div>
                   <div className="flex items-center gap-2 bg-slate-900 text-slate-100 rounded-lg px-3 py-2 font-mono ml-6">
                     <span className="flex-1 select-all text-[11px]">npm run recorder-worker</span>
-                    <button type="button" onClick={() => { navigator.clipboard.writeText("npm run recorder-worker"); setCopiedCmd("worker"); setTimeout(() => setCopiedCmd(null), 1800) }} className="shrink-0 text-slate-400 hover:text-slate-100 transition-colors">
+                    <button type="button" onClick={() => { navigator.clipboard.writeText("npm run recorder-worker"); setCopiedCmd("worker"); setTimeout(() => setCopiedCmd(null), 1800) }} className="shrink-0 text-muted-foreground hover:text-slate-100 transition-colors">
                       {copiedCmd === "worker" ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                     </button>
                   </div>
@@ -1346,18 +1346,18 @@ export default function RecorderWorkspacePage() {
               {workerOnline && (
                 playwrightInstalled !== false ? (
                   <div className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold bg-emerald-500 text-white">✓</span>
+                    <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold bg-emerald-500 text-white">✓</span>
                     Playwright browsers ready
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="text-red-600 dark:text-red-400 flex items-center gap-2 font-semibold">
-                      <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold bg-red-500 text-white">✗</span>
+                      <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold bg-red-500 text-white">✗</span>
                       Playwright not installed
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 text-slate-100 rounded-lg px-3 py-2 font-mono ml-6">
                       <span className="flex-1 select-all text-[11px]">npx playwright install chromium</span>
-                      <button type="button" onClick={() => { navigator.clipboard.writeText("npx playwright install chromium"); setCopiedCmd("playwright"); setTimeout(() => setCopiedCmd(null), 1800) }} className="shrink-0 text-slate-400 hover:text-slate-100 transition-colors">
+                      <button type="button" onClick={() => { navigator.clipboard.writeText("npx playwright install chromium"); setCopiedCmd("playwright"); setTimeout(() => setCopiedCmd(null), 1800) }} className="shrink-0 text-muted-foreground hover:text-slate-100 transition-colors">
                         {copiedCmd === "playwright" ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                       </button>
                     </div>
@@ -1366,7 +1366,7 @@ export default function RecorderWorkspacePage() {
               )}
               {!workerOnline && (
                 <div className="text-muted-foreground/50 flex items-center gap-2 italic">
-                  <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-bold bg-muted text-muted-foreground/40">○</span>
+                  <span className="w-4 h-4 rounded-full text-[9px] flex items-center justify-center font-semibold bg-muted text-muted-foreground/40">○</span>
                   Playwright — check after worker starts
                 </div>
               )}
@@ -1387,7 +1387,7 @@ export default function RecorderWorkspacePage() {
 
             <div className="px-5 pb-5">
               <Button
-                className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center gap-2"
+                className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
                 onClick={handleStartSession}
                 disabled={isStartingSession}
               >
@@ -1411,7 +1411,7 @@ export default function RecorderWorkspacePage() {
               {/* Case name + hierarchy */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-bold text-foreground truncate max-w-xs">{currentTestCase?.title || "Recording…"}</span>
+                  <span className="text-sm font-semibold text-foreground truncate max-w-xs">{currentTestCase?.title || "Recording…"}</span>
                   <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide ${
                     currentTestCase?.priority === "Critical" ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400" :
                     currentTestCase?.priority === "High" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400" :
@@ -1466,7 +1466,7 @@ export default function RecorderWorkspacePage() {
 
               {/* Cases list */}
               <div>
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+                <p className="text-[11px] font-medium text-muted-foreground mb-2">
                   Test cases ({savedCasesList.length})
                 </p>
                 <div className="space-y-1.5">
@@ -1492,7 +1492,7 @@ export default function RecorderWorkspacePage() {
               {/* Bugs */}
               {sessionBugs.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Bugs ({sessionBugs.length})</p>
+                  <p className="text-[11px] font-medium text-muted-foreground mb-2">Bugs ({sessionBugs.length})</p>
                   <div className="space-y-1">
                     {sessionBugs.map((b) => (
                       <div key={b.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/10 text-red-700 dark:text-red-400 text-[11px] font-medium">
@@ -1572,10 +1572,10 @@ export default function RecorderWorkspacePage() {
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-indigo-600/30 text-indigo-600 dark:text-indigo-400 font-bold" onClick={handleValidateRecordedFlow} disabled={isValidatingFlow}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-primary/30 text-primary dark:text-indigo-400 font-semibold" onClick={handleValidateRecordedFlow} disabled={isValidatingFlow}>
                     {isValidatingFlow ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />} Validate
                   </Button>
-                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-purple-600/30 text-purple-600 dark:text-purple-400 font-bold" onClick={() => setShowExportModal(true)} disabled={recordedSteps.length === 0}>
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-purple-600/30 text-purple-600 dark:text-purple-400 font-semibold" onClick={() => setShowExportModal(true)} disabled={recordedSteps.length === 0}>
                     <Code2 className="h-3 w-3" /> Export code
                   </Button>
                   <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={fetchSessionSteps} title="Refresh">
@@ -1613,10 +1613,10 @@ export default function RecorderWorkspacePage() {
 
                           {/* ── Card header ── */}
                           <div className="flex items-center gap-3 px-4 pt-3.5 pb-3 border-b">
-                            <span className="shrink-0 w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold flex items-center justify-center">
+                            <span className="shrink-0 w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-semibold flex items-center justify-center">
                               {step.stepNumber}
                             </span>
-                            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide bg-accent/50 px-2 py-1 rounded-md shrink-0 text-muted-foreground">
+                            <span className="flex items-center gap-1.5 text-[11px] font-medium bg-accent/50 px-2 py-1 rounded-md shrink-0 text-muted-foreground">
                               {getStepIcon(step.actionType)}
                               {getStepVerb(step.actionType)}
                             </span>
@@ -1660,8 +1660,8 @@ export default function RecorderWorkspacePage() {
                             <div className="flex items-start gap-3">
                               <div className="flex-1 space-y-1.5">
                                 <div className="flex items-center justify-between">
-                                  <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">Expected result</Label>
-                                  <button onClick={() => handleSuggestExpectedResult(step)} className="text-[10px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5 font-bold">
+                                  <Label className="text-[11px] font-medium text-muted-foreground">Expected result</Label>
+                                  <button onClick={() => handleSuggestExpectedResult(step)} className="text-[10px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-0.5 font-semibold">
                                     <Sparkles className="h-3 w-3 fill-current" /> AI Fill
                                   </button>
                                 </div>
@@ -1699,14 +1699,14 @@ export default function RecorderWorkspacePage() {
                                   {step.assertionType ? `Check: ${ASSERTION_LABELS[step.assertionType] ?? step.assertionType}` : "Add assertion check"}
                                 </span>
                                 <div className="flex items-center gap-2">
-                                  {step.assertionType && <span className="text-[9px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full font-bold uppercase">Set</span>}
+                                  {step.assertionType && <span className="text-[11px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 px-1.5 py-0.5 rounded-full font-medium">Set</span>}
                                   <ChevronRight className={`h-3 w-3 transition-transform ${assertionExpandedId === step.id ? "rotate-90" : ""}`} />
                                 </div>
                               </button>
                               {assertionExpandedId === step.id && (
                                 <div className="p-3 space-y-2.5 bg-background border-t">
                                   <div>
-                                    <Label className="text-[10px] font-bold text-muted-foreground uppercase">Check type</Label>
+                                    <Label className="text-[11px] font-medium text-muted-foreground">Check type</Label>
                                     <select
                                       value={step.assertionType || ""}
                                       onChange={(e) => handleUpdateStepField(step.id, "assertionType", e.target.value || null)}
@@ -1725,7 +1725,7 @@ export default function RecorderWorkspacePage() {
                                   </div>
                                   {step.assertionType && !["visible","hidden"].includes(step.assertionType) && (
                                     <div>
-                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Expected value</Label>
+                                      <Label className="text-[11px] font-medium text-muted-foreground">Expected value</Label>
                                       <Input
                                         value={step.assertionValue || ""}
                                         onChange={(e) => handleUpdateStepField(step.id, "assertionValue", e.target.value)}
@@ -1761,35 +1761,35 @@ export default function RecorderWorkspacePage() {
                               {isDetailed && (
                                 <div className="p-3 border-t bg-background space-y-3">
                                   <div className="space-y-1.5 text-xs text-muted-foreground">
-                                    <div className="truncate" title={step.pageUrl}><span className="font-bold">URL: </span><span className="font-mono">{step.pageUrl}</span></div>
+                                    <div className="truncate" title={step.pageUrl}><span className="font-semibold">URL: </span><span className="font-mono">{step.pageUrl}</span></div>
                                     {step.recommendedSelector && (
                                       <div className="flex items-center justify-between gap-2">
-                                        <div className="truncate"><span className="font-bold">Selector: </span><span className="font-mono text-foreground">{step.recommendedSelector}</span></div>
-                                        <button onClick={() => handleValidateStepLocator(step.id)} disabled={isValidating} className="shrink-0 text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-bold">
+                                        <div className="truncate"><span className="font-semibold">Selector: </span><span className="font-mono text-foreground">{step.recommendedSelector}</span></div>
+                                        <button onClick={() => handleValidateStepLocator(step.id)} disabled={isValidating} className="shrink-0 text-[10px] text-primary dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold">
                                           {isValidating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Compass className="h-3 w-3" />} Validate
                                         </button>
                                       </div>
                                     )}
-                                    {step.inputValue && <div><span className="font-bold">Input: </span><span className="font-mono text-foreground">{step.inputValue}</span></div>}
+                                    {step.inputValue && <div><span className="font-semibold">Input: </span><span className="font-mono text-foreground">{step.inputValue}</span></div>}
                                     {validation && (
                                       <div>
                                         {validation.success && validation.matches === 1 ? (
-                                          <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-0.5 rounded font-bold">✓ 1 element found</span>
+                                          <span className="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 px-2 py-0.5 rounded font-semibold">✓ 1 element found</span>
                                         ) : validation.matches > 1 ? (
-                                          <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded font-bold">⚠ {validation.matches} elements — ambiguous</span>
+                                          <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400 px-2 py-0.5 rounded font-semibold">⚠ {validation.matches} elements — ambiguous</span>
                                         ) : (
-                                          <span className="text-[10px] bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 px-2 py-0.5 rounded font-bold">✗ Not found</span>
+                                          <span className="text-[10px] bg-red-100 text-red-800 dark:bg-red-950/30 dark:text-red-400 px-2 py-0.5 rounded font-semibold">✗ Not found</span>
                                         )}
                                       </div>
                                     )}
                                   </div>
                                   <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Actual result</Label>
+                                      <Label className="text-[11px] font-medium text-muted-foreground">Actual result</Label>
                                       <Input value={step.actualResult || ""} onChange={(e) => handleUpdateStepField(step.id, "actualResult", e.target.value)} placeholder="Observed behavior…" className="mt-1 h-7 text-xs" />
                                     </div>
                                     <div>
-                                      <Label className="text-[10px] font-bold text-muted-foreground uppercase">Dev notes</Label>
+                                      <Label className="text-[11px] font-medium text-muted-foreground">Dev notes</Label>
                                       <Input value={step.notes || ""} onChange={(e) => handleUpdateStepField(step.id, "notes", e.target.value)} placeholder="Console errors…" className="mt-1 h-7 text-xs" />
                                     </div>
                                   </div>
@@ -1841,9 +1841,9 @@ export default function RecorderWorkspacePage() {
       {/* NEW TEST CASE IN-SESSION CREATION DIALOG */}
       {isNewCaseModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-background border rounded-xl w-full max-w-md p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div>
-              <h3 className="text-lg font-bold flex items-center gap-2">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
                 <Plus className="h-5 w-5 text-primary" /> Start New Test Case
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -1853,7 +1853,7 @@ export default function RecorderWorkspacePage() {
 
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">New Title *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">New Title *</Label>
                 <Input
                   value={newCaseTitle}
                   onChange={(e) => setNewCaseTitle(e.target.value)}
@@ -1862,7 +1862,7 @@ export default function RecorderWorkspacePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Priority</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Priority</Label>
                 <select
                   value={newCasePriority}
                   onChange={(e) => setNewCasePriority(e.target.value)}
@@ -1876,7 +1876,7 @@ export default function RecorderWorkspacePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Preconditions</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Preconditions</Label>
                 <textarea
                   value={newCasePreconditions}
                   onChange={(e) => setNewCasePreconditions(e.target.value)}
@@ -1902,9 +1902,9 @@ export default function RecorderWorkspacePage() {
       {/* CREATE BUG REPORT MODAL */}
       {bugModalStep && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <form onSubmit={handleCreateBugFromStep} className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <form onSubmit={handleCreateBugFromStep} className="bg-background border rounded-xl w-full max-w-md p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div>
-              <h3 className="text-lg font-bold flex items-center gap-1.5 text-red-600 dark:text-red-400">
+              <h3 className="text-lg font-semibold flex items-center gap-1.5 text-red-600 dark:text-red-400">
                 <Bug className="h-5 w-5" /> Report Observed Bug
               </h3>
               <p className="text-xs text-muted-foreground">
@@ -1914,7 +1914,7 @@ export default function RecorderWorkspacePage() {
 
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Bug Title *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Bug Title *</Label>
                 <Input
                   value={bugTitle}
                   onChange={(e) => setBugTitle(e.target.value)}
@@ -1925,7 +1925,7 @@ export default function RecorderWorkspacePage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-muted-foreground">Severity</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Severity</Label>
                   <select
                     value={bugSeverity}
                     onChange={(e) => setBugSeverity(e.target.value)}
@@ -1938,7 +1938,7 @@ export default function RecorderWorkspacePage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs font-bold text-muted-foreground">Priority</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground">Priority</Label>
                   <select
                     value={bugPriority}
                     onChange={(e) => setBugPriority(e.target.value)}
@@ -1953,7 +1953,7 @@ export default function RecorderWorkspacePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Actual Result *</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Actual Result *</Label>
                 <textarea
                   value={bugActualResult}
                   onChange={(e) => setBugActualResult(e.target.value)}
@@ -1965,7 +1965,7 @@ export default function RecorderWorkspacePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground">Notes (Optional)</Label>
+                <Label className="text-xs font-semibold text-muted-foreground">Notes (Optional)</Label>
                 <Input
                   value={bugNotes}
                   onChange={(e) => setBugNotes(e.target.value)}
@@ -1989,11 +1989,11 @@ export default function RecorderWorkspacePage() {
       {/* SCREENSHOT ANNOTATION MODAL */}
       {annotationStep && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-50 p-4">
-          <div className="bg-background border rounded-2xl w-full max-w-4xl p-6 shadow-2xl flex flex-col gap-4 max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-background border rounded-xl w-full max-w-4xl p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col gap-4 max-h-[95vh] overflow-hidden animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b pb-2">
               <div>
-                <h3 className="text-lg font-bold flex items-center gap-1.5">
-                  <ImageIcon className="h-5 w-5 text-indigo-500" /> Annotate Screenshot
+                <h3 className="text-lg font-semibold flex items-center gap-1.5">
+                  <ImageIcon className="h-5 w-5 text-primary" /> Annotate Screenshot
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   Draw arrows, circles, rectangles, add text, or blur sensitive values directly on the evidence screenshot.
@@ -2007,7 +2007,7 @@ export default function RecorderWorkspacePage() {
             {/* Annotation Toolbar */}
             <div className="flex flex-wrap items-center gap-4 bg-accent/20 p-3 rounded-xl border text-xs">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-muted-foreground">Tools:</span>
+                <span className="font-semibold text-muted-foreground">Tools:</span>
                 <div className="flex border rounded-lg overflow-hidden bg-background">
                   <button 
                     onClick={() => setAnnotationShape("rect")} 
@@ -2044,7 +2044,7 @@ export default function RecorderWorkspacePage() {
 
               {annotationShape === "text" && (
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-muted-foreground">Text Note:</span>
+                  <span className="font-semibold text-muted-foreground">Text Note:</span>
                   <Input 
                     value={annotationTextVal} 
                     onChange={(e) => setAnnotationTextVal(e.target.value)} 
@@ -2055,7 +2055,7 @@ export default function RecorderWorkspacePage() {
               )}
 
               <div className="flex items-center gap-2">
-                <span className="font-bold text-muted-foreground">Color:</span>
+                <span className="font-semibold text-muted-foreground">Color:</span>
                 <select 
                   value={annotationColor} 
                   onChange={(e) => setAnnotationColor(e.target.value)} 
@@ -2085,7 +2085,7 @@ export default function RecorderWorkspacePage() {
             <div className="flex-1 overflow-auto border rounded-xl bg-slate-900 flex items-center justify-center p-2 min-h-[300px]">
               <canvas 
                 ref={canvasRef} 
-                className="cursor-crosshair shadow-lg border bg-background"
+                className="cursor-crosshair shadow-[0_4px_12px_rgba(0,0,0,0.06)] border bg-background"
               />
             </div>
 
@@ -2104,8 +2104,8 @@ export default function RecorderWorkspacePage() {
       {/* FINISH SESSION MODAL */}
       {showFinishModal && finishStats && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-background border rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-            <h3 className="text-lg font-bold">Finish Recording Session?</h3>
+          <div className="bg-background border rounded-xl w-full max-w-md p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)] space-y-4">
+            <h3 className="text-lg font-semibold">Finish Recording Session?</h3>
             <p className="text-sm text-muted-foreground">
               You have:
             </p>

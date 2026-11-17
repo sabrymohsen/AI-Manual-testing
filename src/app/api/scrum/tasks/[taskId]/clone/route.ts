@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
+import { withNextTaskNumber } from "@/lib/scrum/task-number"
 import { requireTaskOwner, taskDetailInclude, serializeTask, logActivity } from "@/lib/scrum/server"
 
 /** Clone a task with its subtasks, labels, assignees, and outgoing links. */
@@ -18,8 +19,10 @@ export async function POST(_req: Request, { params }: { params: { taskId: string
   })
   if (!src) return NextResponse.json({ error: "Task not found" }, { status: 404 })
 
-  const clone = await prisma.task.create({
+  const clone = await withNextTaskNumber(src.projectId, (taskNumber) =>
+        prisma.task.create({
     data: {
+          taskNumber,
       title: `${src.title} - Copy`,
       description: src.description,
       type: src.type,
@@ -53,7 +56,7 @@ export async function POST(_req: Request, { params }: { params: { taskId: string
       },
     },
     include: taskDetailInclude,
-  })
+  }))
 
   // Duplicate outgoing links to the same targets.
   if (src.linkedTasks.length) {

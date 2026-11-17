@@ -4,9 +4,11 @@ import { useMemo, useState } from "react"
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd"
 import type { ScrumTask, ScrumSprint, TaskFilters } from "@/types/scrum"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations, useScrumEpics } from "@/hooks/scrum/use-scrum"
+import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations, useScrumEpics,
+  setBoardDragging,
+} from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
-import { PriorityBadge, STATUS_META, AvatarStack } from "@/components/scrum/shared"
+import { AvatarStack, StatusIcon, PriorityIcon, DotLabel } from "@/components/scrum/shared"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
@@ -17,7 +19,7 @@ import {
 import { CompleteSprintModal } from "@/components/scrum/modals/complete-sprint-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Layers, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X, FolderKanban, Filter } from "lucide-react"
+import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X, FolderKanban, Filter } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -35,6 +37,11 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
   const { data: sprints } = useScrumSprints(projectId)
   const { data: epics } = useScrumEpics(projectId)
   const move = useMoveTask(projectId)
+  const { data: velocity } = useQuery({
+    queryKey: ["scrum", projectId, "velocity"],
+    queryFn: async () => (await (await fetch(`/api/projects/${projectId}/scrum/velocity`)).json()) as { averageVelocity: number },
+    staleTime: 60_000,
+  })
   const { update: updateSprint } = useSprintMutations(projectId)
   const { data: membership } = useQuery({
     queryKey: ["project-membership", projectId],
@@ -213,7 +220,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
 
   return (
     <>
-      <DragDropContext onDragEnd={onDragEnd}>
+      <DragDropContext onDragStart={() => setBoardDragging(true)} onDragEnd={(r) => { setBoardDragging(false); onDragEnd(r) }}>
         <div className="h-full overflow-y-auto">
           <div className="w-full space-y-4 pb-6">
           {/* Active filters — without this the sections below just render
@@ -345,6 +352,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
               sprintBusy={updateSprint.isPending}
               selected={selected}
               onToggleSelect={canBulkMove || canBulkDelete ? toggleSelect : undefined}
+              velocity={s.status === "PLANNED" ? velocity?.averageVelocity || undefined : undefined}
             />
           ))}
 
@@ -467,6 +475,7 @@ function Section({
   sprintBusy,
   selected,
   onToggleSelect,
+  velocity,
 }: {
   id: string
   title: string
@@ -484,8 +493,11 @@ function Section({
   sprintBusy?: boolean
   selected: Set<string>
   onToggleSelect?: (id: string) => void
+  /** Average points the team finishes per sprint; shown while planning. */
+  velocity?: number
 }) {
   const points = tasks.reduce((a, t) => a + (t.storyPoints || 0), 0)
+  const over = velocity ? points > velocity : false
   const allSelected = tasks.length > 0 && tasks.every((t) => selected.has(t.id))
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
@@ -513,6 +525,14 @@ function Section({
               {points} pts
             </span>
           )}
+          {velocity ? (
+            <span
+              className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", over ? "bg-amber-100 text-amber-800" : "bg-muted text-muted-foreground")}
+              title={`The team finishes about ${velocity} points per sprint (average of completed sprints)`}
+            >
+              {over ? `Over capacity · usual ${velocity} pts` : `Capacity ~${velocity} pts`}
+            </span>
+          ) : null}
           <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
             {tasks.length}
           </span>
@@ -604,7 +624,7 @@ function BacklogRow({
   return (
     <div
       onClick={onClick}
-      className={cn("flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50", checked && "bg-primary/5")}
+      className={cn("flex h-9 cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-muted/50", checked && "bg-primary/5")}
     >
       {onToggleSelect && (
         <input
@@ -615,25 +635,23 @@ function BacklogRow({
           onClick={(e) => e.stopPropagation()}
         />
       )}
-      <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_META[task.status].dot)} title={STATUS_META[task.status].label} />
-      <span className="font-mono text-[11px] font-bold text-primary">{task.key}</span>
-      <span className="flex-1 truncate text-sm">{task.title}</span>
+      <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center" title={`Priority: ${task.priority.toLowerCase()}`}>
+        <PriorityIcon priority={task.priority} />
+      </span>
+      <span className="w-16 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{task.key}</span>
+      <StatusIcon status={task.status} />
+      <span className="flex-1 truncate text-[13px] text-foreground">{task.title}</span>
       {task.epic && (
-        <span
-          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold"
-          style={{ backgroundColor: `${task.epic.color}1a`, color: task.epic.color }}
-          title={task.epic.title}
-        >
-          <Layers className="h-2.5 w-2.5" /> {task.epic.title}
-        </span>
+        <DotLabel dotColor={task.epic.color} className="hidden md:inline-flex">
+          {task.epic.title}
+        </DotLabel>
       )}
-      <PriorityBadge priority={task.priority} />
       {task.storyPoints != null && (
-        <span className="hidden h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-bold text-muted-foreground sm:inline-flex">
+        <span className="hidden h-5 min-w-5 items-center justify-center rounded-[5px] border border-border px-1.5 text-[11px] tabular-nums text-muted-foreground sm:inline-flex">
           {task.storyPoints}
         </span>
       )}
-      {task.assignees.length > 0 && <AvatarStack members={task.assignees} max={2} />}
+      {task.assignees.length > 0 && <AvatarStack members={task.assignees} max={2} size="sm" />}
     </div>
   )
 }

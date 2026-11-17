@@ -24,7 +24,7 @@ import { BrdCommentsPanel } from "@/components/brd/brd-comments"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 
 const STATUS_STYLES: Record<string, string> = {
-  Draft: "bg-slate-100 text-slate-600 border-slate-200",
+  Draft: "bg-muted text-muted-foreground border-border",
   Reviewed: "bg-blue-50 text-blue-700 border-blue-200",
   Final: "bg-emerald-50 text-emerald-700 border-emerald-200",
   Archived: "bg-amber-50 text-amber-700 border-amber-200",
@@ -107,7 +107,7 @@ export default function BrdDetailPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-indigo-500" />
+        <Loader2 className="h-7 w-7 animate-spin text-primary" />
       </div>
     )
   }
@@ -139,7 +139,7 @@ export default function BrdDetailPage() {
         <div className="flex items-start gap-3">
           {isWord ? <FileText className="mt-0.5 h-7 w-7 text-blue-500" /> : <FileType2 className="mt-0.5 h-7 w-7 text-rose-500" />}
           <div>
-            <h1 className="text-xl font-bold">{brd.name}</h1>
+            <h1 className="text-xl font-semibold">{brd.name}</h1>
             <p className="text-xs text-muted-foreground">
               {brd.filename} · uploaded by {brd.uploaderName} · v{brd.versionCount}
             </p>
@@ -171,7 +171,7 @@ export default function BrdDetailPage() {
           {canManage && (
             <button
               onClick={handleDelete}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 text-sm font-semibold text-red-600 hover:bg-red-50"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-card px-3 text-sm font-semibold text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -185,7 +185,7 @@ export default function BrdDetailPage() {
         </div>
       )}
       {!canManage && (
-        <div className="mt-3 rounded-lg border bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+        <div className="mt-3 rounded-lg border bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground">
           View only — you don&apos;t have permission to edit BRDs.
         </div>
       )}
@@ -199,7 +199,7 @@ export default function BrdDetailPage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
-                tab === t.id ? "border-indigo-600 text-indigo-600" : "border-transparent text-muted-foreground hover:text-foreground"
+                tab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="h-4 w-4" /> {t.label}
@@ -249,18 +249,18 @@ function PreviewTab({ brd, projectId, currentUserId, onEdit }: { brd: any; proje
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <div className="min-w-0">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-slate-50 px-3 py-2 text-sm">
-          <span className="font-medium text-slate-600">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/50 px-3 py-2 text-sm">
+          <span className="font-medium text-muted-foreground">
             {isWord ? "Word document — select any text, then add a comment." : "PDF document — comment in the panel; open or download to read."}
           </span>
           <div className="flex items-center gap-2">
             {!isWord && (
-              <a href={brd.currentFileUrl} download={brd.filename} className="inline-flex items-center gap-1.5 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold hover:bg-muted">
+              <a href={brd.currentFileUrl} download={brd.filename} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">
                 <Download className="h-3.5 w-3.5" /> Download
               </a>
             )}
             {onEdit && (
-              <button onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
+              <button onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90">
                 <Pencil className="h-3.5 w-3.5" /> Edit document
               </button>
             )}
@@ -269,9 +269,9 @@ function PreviewTab({ brd, projectId, currentUserId, onEdit }: { brd: any; proje
         {!isWord ? (
           <iframe src={brd.currentFileUrl} title={brd.name} className="h-[72vh] w-full rounded-lg border" />
         ) : loadingHtml ? (
-          <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-indigo-500" /></div>
+          <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : (
-          <div ref={docRef} className="brd-doc max-w-none rounded-lg border bg-white p-8" dangerouslySetInnerHTML={{ __html: wordHtml || "" }} />
+          <div ref={docRef} className="brd-doc max-w-none rounded-lg border bg-card p-8" dangerouslySetInnerHTML={{ __html: wordHtml || "" }} />
         )}
       </div>
       <div className="lg:sticky lg:top-4 lg:h-[calc(100vh-9rem)]">
@@ -305,16 +305,16 @@ function VersionsTab({ brd, canManage, onChanged }: { brd: any; canManage: boole
         const isCurrent = v.id === brd.currentVersionId
         return (
           <li key={v.id} className="relative">
-            <span className={`absolute -left-[1.72rem] top-1.5 h-3 w-3 rounded-full border-2 border-background ${isCurrent ? "bg-indigo-600" : "bg-slate-300"}`} />
+            <span className={`absolute -left-[1.72rem] top-1.5 h-3 w-3 rounded-full border-2 border-background ${isCurrent ? "bg-primary" : "bg-slate-300"}`} />
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold">v{v.versionNumber}</span>
-                  {isCurrent && <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">Current</span>}
+                  <span className="text-sm font-semibold">v{v.versionNumber}</span>
+                  {isCurrent && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Current</span>}
                 </div>
                 <span className="text-[11px] text-muted-foreground">{timeAgo(v.createdAt)}</span>
               </div>
-              <p className="mt-1 text-sm text-slate-700">{v.changeSummary || "—"}</p>
+              <p className="mt-1 text-sm text-foreground">{v.changeSummary || "—"}</p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">{v.editorName} · {fmtBytes(v.fileSize)}</p>
               <div className="mt-2 flex gap-2">
                 <a href={v.fileUrl} download className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold hover:bg-muted">
@@ -374,12 +374,12 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
       {/* Add */}
       {canManage && (
         <div>
-          <h3 className="mb-2 text-sm font-bold">Link Epics & Stories</h3>
+          <h3 className="mb-2 text-sm font-semibold">Link Epics & Stories</h3>
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search epics or stories by name/key…"
-            className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+            className="h-9 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
           {ql && (
             <div className="mt-2 divide-y rounded-lg border">
@@ -387,15 +387,15 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
                 <p className="px-3 py-2 text-xs text-muted-foreground">No matches</p>
               )}
               {epicMatches.map((e) => (
-                <button key={e.id} onClick={() => addLink({ linkType: "epic", epicId: e.id })} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50">
-                  <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-700">EPIC</span>
+                <button key={e.id} onClick={() => addLink({ linkType: "epic", epicId: e.id })} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50">
+                  <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">EPIC</span>
                   <span className="truncate">{e.title}</span>
                   <Plus className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               ))}
               {storyMatches.map((s) => (
-                <button key={s.id} onClick={() => addLink({ linkType: "story", taskId: s.id })} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50">
-                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-bold text-green-700">{s.key}</span>
+                <button key={s.id} onClick={() => addLink({ linkType: "story", taskId: s.id })} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50">
+                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">{s.key}</span>
                   <span className="truncate">{s.title}</span>
                   <Plus className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
                 </button>
@@ -407,21 +407,21 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
 
       {/* Linked */}
       <div className={canManage ? "" : "md:col-span-2"}>
-        <h3 className="mb-2 text-sm font-bold">Linked items ({brd.links.length})</h3>
+        <h3 className="mb-2 text-sm font-semibold">Linked items ({brd.links.length})</h3>
         {brd.links.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing linked yet.</p>
         ) : (
           <div className="space-y-1.5">
             {brd.links.map((l: any) => (
               <div key={l.id} className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${l.linkType === "epic" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
+                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${l.linkType === "epic" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
                   {l.linkType === "epic" ? "EPIC" : l.task?.key || "STORY"}
                 </span>
                 <span className={`truncate ${l.deleted ? "italic text-muted-foreground" : ""}`}>
                   {l.deleted ? `Deleted item · ${l.label}` : l.label}
                 </span>
                 {canManage && (
-                  <button onClick={() => removeLink(l.id)} className="ml-auto rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Unlink">
+                  <button onClick={() => removeLink(l.id)} className="ml-auto rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600" title="Unlink">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 )}
@@ -462,9 +462,9 @@ function AuditTab({ brd }: { brd: any }) {
     <div className="space-y-1.5">
       {brd.auditLogs.map((a: any) => (
         <div key={a.id} className="flex items-start gap-3 rounded-lg border bg-card px-3 py-2 text-sm">
-          <span className="mt-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{AUDIT_LABEL[a.action] || a.action}</span>
+          <span className="mt-0.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{AUDIT_LABEL[a.action] || a.action}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-slate-700">{a.detail}</p>
+            <p className="text-foreground">{a.detail}</p>
             <p className="text-[11px] text-muted-foreground">{a.actorName || "System"} · {new Date(a.createdAt).toLocaleString()}</p>
           </div>
         </div>

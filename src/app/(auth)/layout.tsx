@@ -18,14 +18,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <div className="relative space-y-5">
           <TerminalMock compact />
-          <div className="space-y-2.5 text-[12.5px] text-slate-400 font-medium">
+          <div className="space-y-2.5 text-[12.5px] text-muted-foreground font-medium">
             <p className="flex items-center gap-2"><FlaskConical className="h-3.5 w-3.5 text-cyan-400" /> Live QA sessions in an embedded browser</p>
             <p className="flex items-center gap-2"><GitBranch className="h-3.5 w-3.5 text-indigo-400" /> Epic → Feature → Story traceability</p>
             <p className="flex items-center gap-2"><Globe className="h-3.5 w-3.5 text-sky-400" /> Two-way OpenProject sync</p>
           </div>
         </div>
 
-        <p className="relative text-[11px] font-mono text-slate-600">© {new Date().getFullYear()} QA Engine</p>
+        <p className="relative text-[11px] font-mono text-muted-foreground">© {new Date().getFullYear()} QA Engine</p>
       </div>
 
       {/* Form side */}

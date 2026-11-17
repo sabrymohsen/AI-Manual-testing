@@ -31,7 +31,7 @@ function timeAgo(d: string) {
 function renderBody(text: string) {
   return text.split(/(@[\p{L}][\p{L}\s]*?(?=\s@|[.,!?]|$)|@[\w.-]+)/u).map((part, i) =>
     part.startsWith("@") ? (
-      <span key={i} className="rounded bg-indigo-50 px-1 font-semibold text-indigo-700">{part.trim()}</span>
+      <span key={i} className="rounded bg-primary/10 px-1 font-semibold text-primary">{part.trim()}</span>
     ) : (
       <span key={i}>{part}</span>
     )
@@ -136,18 +136,18 @@ export function BrdCommentsPanel({
 
   const MentionMenu = ({ target }: { target: "new" | "reply" }) => (
     <div className="relative inline-block">
-      <button type="button" onClick={() => setMentionFor(mentionFor === target ? null : target)} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-100">
+      <button type="button" onClick={() => setMentionFor(mentionFor === target ? null : target)} className="inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground hover:bg-muted">
         <AtSign className="h-3 w-3" /> Mention
       </button>
       {mentionFor === target && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setMentionFor(null)} />
-          <div className="absolute left-0 top-full z-20 mt-1 max-h-48 w-52 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg">
+          <div className="absolute left-0 top-full z-20 mt-1 max-h-48 w-52 overflow-y-auto rounded-lg border bg-card p-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
             {members.length === 0 ? (
               <p className="px-2 py-1.5 text-xs text-muted-foreground">No members</p>
             ) : members.map((m) => (
-              <button key={m.id} type="button" onClick={() => insertMention(target, m)} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-slate-50">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">{(m.name || m.email)[0]}</span>
+              <button key={m.id} type="button" onClick={() => insertMention(target, m)} className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-muted/50">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-medium text-primary">{(m.name || m.email)[0]}</span>
                 <span className="truncate">{m.name || m.email}</span>
               </button>
             ))}
@@ -160,22 +160,22 @@ export function BrdCommentsPanel({
   return (
     <div className="flex h-full flex-col rounded-lg border bg-card">
       <div className="flex items-center justify-between border-b px-3 py-2.5">
-        <h3 className="flex items-center gap-1.5 text-sm font-bold">
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
           Comments
-          {openCount > 0 && <span className="rounded-full bg-indigo-100 px-1.5 text-[11px] font-bold text-indigo-700">{openCount}</span>}
+          {openCount > 0 && <span className="rounded-full bg-primary/15 px-1.5 text-[11px] font-semibold text-primary">{openCount}</span>}
         </h3>
-        <button onClick={startComment} className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700">
+        <button onClick={startComment} className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-white hover:bg-primary/90">
           <MessageSquarePlus className="h-3.5 w-3.5" /> New
         </button>
       </div>
 
       {composerOpen && (
-        <div className="border-b bg-slate-50/60 p-3">
+        <div className="border-b bg-muted/60 p-3">
           {getSelectedText && (
-            <div className="mb-2 flex items-start gap-1.5 rounded-md border-l-2 border-indigo-300 bg-white px-2 py-1.5 text-[11px] text-slate-600">
+            <div className="mb-2 flex items-start gap-1.5 rounded-md border-l-2 border-primary/25 bg-card px-2 py-1.5 text-[11px] text-muted-foreground">
               <Quote className="mt-0.5 h-3 w-3 shrink-0 text-indigo-400" />
               {quote ? <span className="line-clamp-2 italic">{quote}</span> : <span className="italic text-muted-foreground">Select text in the document to quote a section (optional).</span>}
-              {quote && <button onClick={() => setQuote("")} className="ml-auto text-slate-400 hover:text-slate-600"><X className="h-3 w-3" /></button>}
+              {quote && <button onClick={() => setQuote("")} className="ml-auto text-muted-foreground hover:text-muted-foreground"><X className="h-3 w-3" /></button>}
             </div>
           )}
           <textarea
@@ -184,13 +184,13 @@ export function BrdCommentsPanel({
             rows={3}
             autoFocus
             placeholder="Write a comment… use @ to mention a teammate"
-            className="w-full rounded-lg border bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+            className="w-full rounded-lg border bg-card p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
           <div className="mt-1.5 flex items-center gap-2">
             <MentionMenu target="new" />
             <div className="ml-auto flex gap-1.5">
               <button onClick={() => { setComposerOpen(false); setText(""); setQuote("") }} className="rounded-md border px-2.5 py-1 text-xs font-semibold">Cancel</button>
-              <button onClick={() => submit(null, text, quote)} disabled={submitting || !text.trim()} className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60">
+              <button onClick={() => submit(null, text, quote)} disabled={submitting || !text.trim()} className="inline-flex items-center gap-1 rounded-md bg-primary px-2.5 py-1 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
                 {submitting && <Loader2 className="h-3 w-3 animate-spin" />} Comment
               </button>
             </div>
@@ -200,7 +200,7 @@ export function BrdCommentsPanel({
 
       <div className="flex-1 overflow-y-auto p-3">
         {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-indigo-500" /></div>
+          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
         ) : roots.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             No comments yet.<br />Select any section and add one.
@@ -210,23 +210,23 @@ export function BrdCommentsPanel({
             {roots.map((c) => (
               <div key={c.id} className={`rounded-lg border p-2.5 ${c.resolved ? "opacity-60" : ""}`}>
                 {c.quote && (
-                  <div className="mb-1.5 border-l-2 border-indigo-300 pl-2 text-[11px] italic text-slate-500 line-clamp-2">“{c.quote}”</div>
+                  <div className="mb-1.5 border-l-2 border-primary/25 pl-2 text-[11px] italic text-muted-foreground line-clamp-2">“{c.quote}”</div>
                 )}
                 <div className="flex items-center gap-1.5">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold uppercase text-indigo-700">{(c.authorName || "?")[0]}</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-medium text-primary">{(c.authorName || "?")[0]}</span>
                   <span className="text-xs font-semibold">{c.authorName}</span>
                   <span className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</span>
-                  {c.resolved && <span className="ml-1 rounded-full bg-emerald-50 px-1.5 text-[9px] font-bold text-emerald-600">Resolved</span>}
+                  {c.resolved && <span className="ml-1 rounded-full bg-emerald-50 px-1.5 text-[9px] font-semibold text-emerald-600">Resolved</span>}
                   <div className="ml-auto flex items-center gap-0.5">
-                    <button onClick={() => toggleResolve(c)} title={c.resolved ? "Reopen" : "Resolve"} className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-emerald-600">
+                    <button onClick={() => toggleResolve(c)} title={c.resolved ? "Reopen" : "Resolve"} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-emerald-600">
                       {c.resolved ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Check className="h-3.5 w-3.5" />}
                     </button>
                     {(c.authorId === currentUserId) && (
-                      <button onClick={() => remove(c)} title="Delete" className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => remove(c)} title="Delete" className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     )}
                   </div>
                 </div>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">{renderBody(c.text || "")}</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{renderBody(c.text || "")}</p>
 
                 {/* Replies */}
                 {repliesOf(c.id).map((r) => (
@@ -237,10 +237,10 @@ export function BrdCommentsPanel({
                         <span className="text-xs font-semibold">{r.authorName}</span>
                         <span className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</span>
                         {r.authorId === currentUserId && (
-                          <button onClick={() => remove(r)} className="ml-auto rounded p-0.5 text-slate-400 hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
+                          <button onClick={() => remove(r)} className="ml-auto rounded p-0.5 text-muted-foreground hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                         )}
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700">{renderBody(r.text || "")}</p>
+                      <p className="whitespace-pre-wrap text-sm text-foreground">{renderBody(r.text || "")}</p>
                     </div>
                   </div>
                 ))}
@@ -248,17 +248,17 @@ export function BrdCommentsPanel({
                 {/* Reply box */}
                 {replyTo === c.id ? (
                   <div className="mt-2">
-                    <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={2} autoFocus placeholder="Reply… use @ to mention" className="w-full rounded-lg border bg-white p-2 text-sm outline-none focus:ring-2 focus:ring-indigo-200" />
+                    <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)} rows={2} autoFocus placeholder="Reply… use @ to mention" className="w-full rounded-lg border bg-card p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30" />
                     <div className="mt-1 flex items-center gap-2">
                       <MentionMenu target="reply" />
                       <div className="ml-auto flex gap-1.5">
                         <button onClick={() => { setReplyTo(null); setReplyText("") }} className="rounded-md border px-2 py-0.5 text-xs font-semibold">Cancel</button>
-                        <button onClick={() => submit(c.id, replyText, "")} disabled={submitting || !replyText.trim()} className="rounded-md bg-indigo-600 px-2 py-0.5 text-xs font-semibold text-white disabled:opacity-60">Reply</button>
+                        <button onClick={() => submit(c.id, replyText, "")} disabled={submitting || !replyText.trim()} className="rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-white disabled:opacity-60">Reply</button>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <button onClick={() => { setReplyTo(c.id); setReplyText("") }} className="mt-1.5 text-[11px] font-semibold text-indigo-600 hover:underline">Reply</button>
+                  <button onClick={() => { setReplyTo(c.id); setReplyText("") }} className="mt-1.5 text-[11px] font-semibold text-primary hover:underline">Reply</button>
                 )}
               </div>
             ))}

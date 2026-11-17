@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 
 const putBodySchema = z.object({
@@ -27,7 +27,7 @@ export async function PUT(
       return notFoundResponse("Flow not found")
     }
 
-    if (flow.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(flow.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 
@@ -112,7 +112,7 @@ export async function DELETE(
       return notFoundResponse("Flow not found")
     }
 
-    if (flow.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(flow.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

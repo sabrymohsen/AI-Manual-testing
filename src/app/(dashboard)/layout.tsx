@@ -109,7 +109,15 @@ export default function DashboardLayout({
 
   // Board-style routes render edge to edge instead of inside the padded,
   // vertically-scrolling document container.
-  const isFullBleed = useMemo(() => /^\/projects\/[^/]+\/scrum(\/|$)/.test(pathname), [pathname])
+  // Full-bleed app views manage their own header and scrolling: the Scrum
+  // board, the test case editor, and a manual run.
+  const isFullBleed = useMemo(
+    () =>
+      /^\/projects\/[^/]+\/scrum(\/|$)/.test(pathname) ||
+      /^\/projects\/[^/]+\/test-cases\/(new|[^/]+\/edit)\/?$/.test(pathname) ||
+      /^\/projects\/[^/]+\/manual-sessions\/[^/]+\/?$/.test(pathname),
+    [pathname]
+  )
 
   // Collapsing the nav hands ~256px back to wide views like the Scrum board.
   const [navCollapsed, setNavCollapsed] = useState(false)
@@ -342,10 +350,6 @@ export default function DashboardLayout({
     if (basePath === "/visual-tests") return `/projects/${activeProjectId}/visual-tests`
     if (basePath === "/bug-reports") return `/projects/${activeProjectId}/bug-reports`
     if (basePath === "/brds") return `/projects/${activeProjectId}/brds`
-    if (basePath.startsWith("/board")) {
-      const query = basePath.includes("?") ? basePath.substring(basePath.indexOf("?")) : ""
-      return `/projects/${activeProjectId}/board${query}`
-    }
     if (basePath === "/scrum") return `/projects/${activeProjectId}/scrum`
     if (basePath === "/requirements") return `/projects/${activeProjectId}/requirements`
     if (basePath === "/members") return `/projects/${activeProjectId}/members`
@@ -357,27 +361,31 @@ export default function DashboardLayout({
       
       {/* 1. LEFT SIDEBAR NAVIGATION */}
       <aside
-        className={`${navCollapsed ? "w-14" : "w-64"} border-r bg-card flex flex-col overflow-y-auto overflow-x-hidden shrink-0 select-none text-xs font-semibold transition-[width] duration-200`}
+        className={`${navCollapsed ? "w-[52px]" : "w-60"} flex shrink-0 select-none flex-col overflow-y-auto overflow-x-hidden border-r border-border bg-sidebar transition-[width] duration-200`}
       >
-        <div className={`flex h-14 items-center border-b select-none ${navCollapsed ? "justify-center px-2" : "px-6 justify-between"}`}>
+        <div className={`flex h-12 shrink-0 items-center ${navCollapsed ? "justify-center px-2" : "justify-between pl-4 pr-2"}`}>
           {!navCollapsed && (
-            <Link href="/dashboard" className="font-extrabold text-indigo-700 text-sm tracking-tight flex items-center gap-1.5 uppercase">
-              <Zap className="h-4.5 w-4.5 fill-current" /> QA Engine
+            <Link href="/dashboard" className="flex items-center gap-2 rounded-md text-[13px] font-semibold tracking-tight text-foreground">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+                <Zap className="h-3.5 w-3.5 fill-current" />
+              </span>
+              QA Engine
             </Link>
           )}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {!navCollapsed && (
               <button
                 onClick={() => setShowSearch(true)}
-                className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors border shadow-sm"
+                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Open command bar (Ctrl + K)"
+                aria-label="Open command bar"
               >
-                <Search className="h-3.5 w-3.5" />
+                <Search className="h-4 w-4" />
               </button>
             )}
             <button
               onClick={toggleNav}
-              className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors"
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title={navCollapsed ? "Expand sidebar" : "Collapse sidebar (more room for the board)"}
               aria-label={navCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
@@ -397,54 +405,25 @@ export default function DashboardLayout({
           />
         )}
 
-        <nav className="flex flex-col gap-1 p-4 flex-grow">
+        <nav className="flex flex-grow flex-col gap-px px-2 py-2">
           {user?.role === "Admin" ? (
             <>
-              {!navCollapsed && <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Administration</span>}
-              
-              <Link
-                href="/admin?tab=users"
-                title={navCollapsed ? "Users" : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <Users className="h-4 w-4 shrink-0 text-indigo-600" />
-                {!navCollapsed && "Users"}
-              </Link>
-
-              <Link
-                href="/admin?tab=finance"
-                title={navCollapsed ? "Finance" : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <DollarSign className="h-4 w-4 shrink-0 text-indigo-600" />
-                {!navCollapsed && "Finance"}
-              </Link>
-
-              <Link
-                href="/admin?tab=pricing"
-                title={navCollapsed ? "Subscription Panel" : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <CreditCard className="h-4 w-4 shrink-0 text-indigo-600" />
-                {!navCollapsed && "Subscription Panel"}
-              </Link>
-
-              <Link
-                href="/admin?tab=trial"
-                title={navCollapsed ? "Free Trial" : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                  pathname === "/admin" || pathname.startsWith("/admin") ? "bg-indigo-50 text-indigo-700 font-bold" : "text-muted-foreground hover:bg-accent/40"
-                }`}
-              >
-                <Sparkles className="h-4 w-4 shrink-0 text-indigo-600" />
-                {!navCollapsed && "Free Trial"}
-              </Link>
+              <NavSection label="Administration" collapsed={navCollapsed} first />
+              {[
+                { href: "/admin?tab=users", label: "Users", icon: Users },
+                { href: "/admin?tab=finance", label: "Finance", icon: DollarSign },
+                { href: "/admin?tab=pricing", label: "Subscription Panel", icon: CreditCard },
+                { href: "/admin?tab=trial", label: "Free Trial", icon: Sparkles },
+              ].map((item) => (
+                <NavItem
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  icon={item.icon}
+                  collapsed={navCollapsed}
+                  active={pathname.startsWith("/admin") && (activeTab ?? "users") === item.href.split("?tab=")[1]}
+                />
+              ))}
             </>
           ) : (
             <>
@@ -452,24 +431,14 @@ export default function DashboardLayout({
                 const dest = getHref(item.href)
                 const hasTab = item.href.includes("?tab=")
                 const targetTab = hasTab ? item.href.split("?tab=")[1] : null
-                
-                const isTabActive = hasTab 
+
+                const isTabActive = hasTab
                   ? (pathname.includes("/board") && activeTab === targetTab)
                   : (pathname.includes("/board") && !activeTab && item.href.endsWith("/board"))
-                
+
                 const isActive = isTabActive || (pathname === dest && !hasTab)
                 const link = (
-                  <Link
-                    key={item.href}
-                    href={dest}
-                    title={navCollapsed ? item.label : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
-                    }`}
-                  >
-                    <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
-                    {!navCollapsed && item.label}
-                  </Link>
+                  <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} />
                 )
                 return item.permission ? (
                   <PermissionGate key={item.href} permission={item.permission}>
@@ -480,57 +449,32 @@ export default function DashboardLayout({
                 )
               })}
 
-              <div className="border-t my-2" />
-              {!navCollapsed && <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">QA Workflows</span>}
-
+              <NavSection label="QA Workflows" collapsed={navCollapsed} />
               {workflowItems.map((item) => {
                 const dest = getHref(item.href)
                 const isActive = pathname === dest || pathname.startsWith(dest + "/")
-                return (
-                  <Link
-                    key={item.href}
-                    href={dest}
-                    title={navCollapsed ? item.label : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
-                    }`}
-                  >
-                    <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
-                    {!navCollapsed && item.label}
-                  </Link>
-                )
+                return <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} />
               })}
 
-              <div className="border-t my-2" />
-              {!navCollapsed && <span className="px-3 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60 mb-1">Management</span>}
-
+              <NavSection label="Management" collapsed={navCollapsed} />
               {managementItems.map((item) => {
                 const dest = getHref(item.href)
-                const isActive = pathname === dest || pathname.startsWith(dest + "/")
-                return (
-                  <Link
-                    key={item.href}
-                    href={dest}
-                    title={navCollapsed ? item.label : undefined}
-                    className={`flex items-center rounded-lg py-2 text-xs transition-colors ${navCollapsed ? "justify-center px-0" : "gap-3 px-3"} ${
-                      isActive ? "bg-indigo-50 text-indigo-700 font-bold border-l-4 border-indigo-700 rounded-l-none pl-2" : "text-muted-foreground hover:bg-accent/40"
-                    }`}
-                  >
-                    <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-indigo-700" : ""}`} />
-                    {!navCollapsed && item.label}
-                  </Link>
-                )
+                // Every project page lives under /projects/…; only the list and a
+                // project's own overview count as "Projects".
+                const isActive = pathname === dest || /^\/projects\/[^/]+\/?$/.test(pathname)
+                return <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} />
               })}
             </>
           )}
         </nav>
 
         {/* User signout */}
-        <div className="mt-auto p-4 border-t bg-accent/5">
+        <div className="mt-auto border-t border-border p-2">
           <form action="/api/auth/logout" method="POST">
             <button
               type="submit"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors w-full"
+              title={navCollapsed ? "Sign Out" : undefined}
+              className={`flex h-8 w-full items-center rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${navCollapsed ? "justify-center" : "gap-2.5 px-2.5"}`}
             >
               <LogOut className="h-4 w-4 shrink-0" />
               {!navCollapsed && "Sign Out"}
@@ -542,19 +486,20 @@ export default function DashboardLayout({
       {/* 2. MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top header: notifications + user menu */}
-        <header className="flex h-12 shrink-0 items-center justify-end gap-1.5 border-b bg-background px-4">
+        <header className="flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border bg-card px-3">
           <NotificationBell token={token} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-accent"
+                className="flex items-center gap-1.5 rounded-md p-1 transition-colors hover:bg-accent"
                 title="Account"
+                aria-label="Account"
               >
                 {user?.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={user.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
+                  <img src={user.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
                 ) : (
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-100 text-[11px] font-bold uppercase text-indigo-700">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[11px] font-medium text-primary">
                     {(user?.name || user?.email || "?")[0]}
                   </span>
                 )}
@@ -563,7 +508,7 @@ export default function DashboardLayout({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuLabel className="text-xs">
-                <p className="truncate font-bold">{user?.name || "My account"}</p>
+                <p className="truncate font-semibold">{user?.name || "My account"}</p>
                 <p className="truncate font-normal text-muted-foreground">{user?.email}</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -590,7 +535,7 @@ export default function DashboardLayout({
         {isFullBleed ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-6 md:p-8">
+          <div className="flex-1 overflow-y-auto bg-background px-6 py-6 md:px-8">
             <BackButton />
             {children}
           </div>
@@ -603,16 +548,16 @@ export default function DashboardLayout({
 
       {/* ── COMMAND BAR SEARCH OVERLAY ────────────────────────────────── */}
       {showSearch && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-[500px] bg-background rounded-2xl shadow-2xl border flex flex-col overflow-hidden max-h-[400px] animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b flex items-center justify-between gap-3 bg-accent/10 select-none">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh] backdrop-blur-[2px] animate-in fade-in duration-150" onClick={() => setShowSearch(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="flex max-h-[400px] w-[560px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_16px_48px_rgba(0,0,0,0.18)] animate-in zoom-in-95 duration-150">
+            <div className="flex select-none items-center justify-between gap-3 border-b border-border px-3 py-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <input 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Command Search: test cases, bugs, projects..." 
-                  className="pl-9 h-9 w-full bg-background border rounded-lg text-xs outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="h-9 w-full bg-transparent pl-9 text-sm outline-none placeholder:text-muted-foreground"
                   autoFocus
                 />
               </div>
@@ -621,21 +566,21 @@ export default function DashboardLayout({
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 text-xs font-semibold">
-              <span className="font-bold text-[10px] uppercase text-muted-foreground tracking-wider">Quick Actions</span>
-              <div className="space-y-1.5">
+            <div className="flex-1 space-y-2 overflow-y-auto p-2 text-[13px]">
+              <span className="block px-2 pt-1 text-[11px] font-medium text-muted-foreground">Quick actions</span>
+              <div className="space-y-px">
                 <div 
                   onClick={() => { setShowSearch(false); router.push(getHref("/live-qa-session")) }}
-                  className="p-2.5 rounded-lg hover:bg-indigo-50/50 cursor-pointer flex items-center justify-between text-slate-700"
+                  className="flex h-9 cursor-pointer items-center justify-between rounded-md px-2 text-foreground hover:bg-accent"
                 >
-                  <span className="flex items-center gap-2 font-bold"><Play className="h-4 w-4 text-indigo-500" /> Go to Live QA Session</span>
+                  <span className="flex items-center gap-2"><Play className="h-4 w-4 text-muted-foreground" /> Go to Live QA Session</span>
                   <ChevronRight className="h-4 w-4 opacity-55" />
                 </div>
                 <div 
                   onClick={() => { setShowSearch(false); router.push(getHref("/recorder-studio")) }}
-                  className="p-2.5 rounded-lg hover:bg-indigo-50/50 cursor-pointer flex items-center justify-between text-slate-700"
+                  className="flex h-9 cursor-pointer items-center justify-between rounded-md px-2 text-foreground hover:bg-accent"
                 >
-                  <span className="flex items-center gap-2 font-bold"><Video className="h-4 w-4 text-indigo-500" /> Go to Recorder Studio</span>
+                  <span className="flex items-center gap-2"><Video className="h-4 w-4 text-muted-foreground" /> Go to Recorder Studio</span>
                   <ChevronRight className="h-4 w-4 opacity-55" />
                 </div>
               </div>
@@ -647,5 +592,40 @@ export default function DashboardLayout({
       {/* Team Chat is now a dedicated page at /projects/[projectId]/team-chat */}
 
     </div>
+  )
+}
+
+function NavSection({ label, collapsed, first }: { label: string; collapsed: boolean; first?: boolean }) {
+  if (collapsed) return first ? null : <div className="mx-2 my-2 border-t border-border" />
+  return <span className={`px-2.5 pb-1 text-[11px] font-medium text-muted-foreground ${first ? "pt-1" : "pt-4"}`}>{label}</span>
+}
+
+function NavItem({
+  href,
+  label,
+  icon: Icon,
+  collapsed,
+  active,
+}: {
+  href: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  collapsed: boolean
+  active: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      aria-current={active ? "page" : undefined}
+      className={`flex h-8 items-center rounded-md text-[13px] font-medium transition-colors ${collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"} ${
+        active
+          ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-border"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+      }`}
+    >
+      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`} />
+      {!collapsed && <span className="truncate">{label}</span>}
+    </Link>
   )
 }

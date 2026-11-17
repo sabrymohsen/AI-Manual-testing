@@ -12,7 +12,7 @@ export const DASHBOARD_ROLES: DashboardRole[] = ["PM", "QA Manager", "Test Lead"
 export type DatePreset = "7D" | "30D" | "90D" | "YTD" | "Custom"
 export const DATE_PRESETS: DatePreset[] = ["7D", "30D", "90D", "YTD", "Custom"]
 
-const selectCls = "h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+const selectCls = "h-9 rounded-lg border border-border bg-card px-2.5 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
 
 export function DashboardHeader(props: {
   projects: ProjectOption[]
@@ -39,15 +39,15 @@ export function DashboardHeader(props: {
   const stale = props.lastUpdated ? Date.now() - props.lastUpdated.getTime() > 5 * 60_000 : false
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-border bg-white/90 backdrop-blur">
       <div className="flex flex-wrap items-center gap-3 px-6 py-3">
         <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
             <BarChart3 className="h-5 w-5" />
           </span>
           <div>
-            <h1 className="text-lg font-bold leading-none text-slate-900">Reports</h1>
-            <p className="mt-0.5 text-[11px] text-slate-400">Analytics &amp; insights</p>
+            <h1 className="text-lg font-semibold leading-none text-foreground">Reports</h1>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Analytics &amp; insights</p>
           </div>
         </div>
 
@@ -77,14 +77,14 @@ export function DashboardHeader(props: {
           </select>
 
           {/* Date presets */}
-          <div className="flex overflow-hidden rounded-lg border border-slate-200">
+          <div className="flex overflow-hidden rounded-lg border border-border">
             {DATE_PRESETS.map((p) => (
               <button
                 key={p}
                 onClick={() => props.onPreset(p)}
                 className={cn(
                   "px-2.5 py-1.5 text-xs font-semibold transition-colors",
-                  props.preset === p ? "bg-indigo-600 text-white" : "text-slate-500 hover:bg-slate-50"
+                  props.preset === p ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/50"
                 )}
               >
                 {p}
@@ -94,7 +94,7 @@ export function DashboardHeader(props: {
           {props.preset === "Custom" && (
             <div className="flex items-center gap-1">
               <input type="date" value={props.from} onChange={(e) => props.onFrom(e.target.value)} className={selectCls} />
-              <span className="text-xs text-slate-400">→</span>
+              <span className="text-xs text-muted-foreground">→</span>
               <input type="date" value={props.to} onChange={(e) => props.onTo(e.target.value)} className={selectCls} />
             </div>
           )}
@@ -110,7 +110,7 @@ export function DashboardHeader(props: {
 
         <div className="ml-auto flex items-center gap-3">
           {/* Last updated / stale indicator */}
-          <div className="hidden items-center gap-1.5 text-[11px] text-slate-500 sm:flex">
+          <div className="hidden items-center gap-1.5 text-[11px] text-muted-foreground sm:flex">
             <span className={cn("h-2 w-2 rounded-full", props.isFetching ? "animate-pulse bg-amber-400" : stale ? "bg-amber-400" : "bg-emerald-500")} />
             {props.isFetching ? "Updating…" : props.lastUpdated ? `Updated ${formatDistanceToNow(props.lastUpdated, { addSuffix: true })}` : "—"}
           </div>
@@ -118,14 +118,14 @@ export function DashboardHeader(props: {
           <button
             onClick={props.onToggleAutoRefresh}
             title={props.autoRefresh ? "Auto-refresh on (60s)" : "Auto-refresh off"}
-            className={cn("rounded-lg border border-slate-200 p-2 hover:bg-slate-50", props.autoRefresh ? "text-indigo-600" : "text-slate-400")}
+            className={cn("rounded-lg border border-border p-2 hover:bg-muted/50", props.autoRefresh ? "text-primary" : "text-muted-foreground")}
           >
             <Settings className="h-4 w-4" />
           </button>
 
           <button
             onClick={props.onRefresh}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground hover:bg-muted/50"
           >
             <RefreshCw className={cn("h-4 w-4", props.isFetching && "animate-spin")} /> Refresh
           </button>

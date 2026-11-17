@@ -16,7 +16,7 @@ const levelColors: Record<string, string> = {
   error: "text-red-600",
   warning: "text-yellow-600",
   info: "text-blue-600",
-  debug: "text-gray-500",
+  debug: "text-muted-foreground",
 }
 
 export function ConsoleLogsPanel({ logs }: ConsoleLogsPanelProps) {
@@ -28,7 +28,7 @@ export function ConsoleLogsPanel({ logs }: ConsoleLogsPanelProps) {
     <div className="bg-gray-950 text-gray-100 rounded-lg p-4 font-mono text-xs max-h-64 overflow-y-auto">
       {logs.map((log) => (
         <div key={log.id} className="flex gap-2 py-0.5">
-          <span className="text-gray-500 shrink-0">
+          <span className="text-muted-foreground shrink-0">
             {new Date(log.timestamp).toLocaleTimeString()}
           </span>
           <span className={`shrink-0 ${levelColors[log.level] || ""}`}>

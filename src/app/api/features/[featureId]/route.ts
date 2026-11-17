@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 import { createAuditLog } from "@/lib/auth/audit"
 
@@ -22,7 +22,7 @@ async function loadOwnedFeature(featureId: string, userId: string) {
     }
   })
   if (!feature) return { error: "not_found" as const }
-  if (feature.project.userId !== userId) return { error: "forbidden" as const }
+  if (!(await canUseProject(feature.projectId, userId, "write"))) return { error: "forbidden" as const }
   return { feature }
 }
 

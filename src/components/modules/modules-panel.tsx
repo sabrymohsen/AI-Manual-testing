@@ -419,10 +419,10 @@ export function ModulesPanel({ projectId }: Props) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-            <Layers className="h-4 w-4 text-indigo-600" /> Modules
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+            <Layers className="h-4 w-4 text-primary" /> Modules
           </h2>
-          <p className="text-[10px] text-slate-400 font-medium max-w-xl leading-relaxed">
+          <p className="text-[10px] text-muted-foreground font-medium max-w-xl leading-relaxed">
             The modules test cases are filed under and defects are reported against. Renaming one
             here renames it in the test library, the bug list and the QA report — there is only one
             of each.
@@ -437,7 +437,7 @@ export function ModulesPanel({ projectId }: Props) {
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-[10px] text-slate-500"
+              className="h-7 text-[10px] text-muted-foreground"
               onClick={() => refreshLinked()}
               title="Re-read the names and nesting of modules linked to the tracker"
             >
@@ -450,11 +450,11 @@ export function ModulesPanel({ projectId }: Props) {
             { label: "Test cases", value: totals.cases },
             { label: "Open bugs", value: totals.openBugs },
           ].map(c => (
-            <div key={c.label} className="px-3 py-2 rounded-xl border border-slate-100 bg-slate-50/60 min-w-[76px]">
-              <div className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60">
+            <div key={c.label} className="px-3 py-2 rounded-xl border border-border bg-muted/60 min-w-[76px]">
+              <div className="text-[11px] font-medium text-muted-foreground/60">
                 {c.label}
               </div>
-              <div className="text-base font-extrabold text-slate-800">{c.value}</div>
+              <div className="text-base font-semibold text-foreground">{c.value}</div>
             </div>
           ))}
         </div>
@@ -467,20 +467,20 @@ export function ModulesPanel({ projectId }: Props) {
       )}
 
       {importNote && (
-        <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-[11px] text-indigo-700 font-semibold">
+        <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-primary/10 border border-primary/25 text-[11px] text-primary font-semibold">
           <span className="flex items-start gap-2">
             <Link2 className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {importNote}
           </span>
-          <button onClick={() => setImportNote(null)} className="text-indigo-400 hover:text-indigo-700">
+          <button onClick={() => setImportNote(null)} className="text-indigo-400 hover:text-primary">
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
       )}
 
       {/* Add */}
-      <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-slate-100 bg-slate-50/40">
+      <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-border bg-muted/40">
         <div className="space-y-1 flex-1 min-w-[180px]">
-          <label className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60">
+          <label className="text-[11px] font-medium text-muted-foreground/60">
             New module
           </label>
           <Input
@@ -494,7 +494,7 @@ export function ModulesPanel({ projectId }: Props) {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[9px] uppercase tracking-wider font-extrabold text-muted-foreground/60">
+          <label className="text-[11px] font-medium text-muted-foreground/60">
             Inside
           </label>
           <select
@@ -515,7 +515,7 @@ export function ModulesPanel({ projectId }: Props) {
           onClick={createModule}
           disabled={creating || !newName.trim()}
           size="sm"
-          className="h-9 text-[11px] font-bold"
+          className="h-9 text-[11px] font-semibold"
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" /> Add module
         </Button>
@@ -527,8 +527,8 @@ export function ModulesPanel({ projectId }: Props) {
           <Loader2 className="h-4 w-4 animate-spin" /> Loading modules…
         </div>
       ) : ordered.length === 0 ? (
-        <div className="p-10 border border-dashed rounded-2xl text-center space-y-1">
-          <p className="text-xs font-extrabold text-slate-700">No modules yet</p>
+        <div className="p-10 border border-dashed rounded-xl text-center space-y-1">
+          <p className="text-xs font-semibold text-foreground">No modules yet</p>
           <p className="text-[10px] text-muted-foreground font-medium">
             Add one above, and it becomes available when filing test cases and bugs.
           </p>
@@ -536,12 +536,12 @@ export function ModulesPanel({ projectId }: Props) {
       ) : (
         <div className="border rounded-xl overflow-x-auto">
           <table className="w-full text-[11px]">
-            <thead className="bg-slate-50">
+            <thead className="bg-muted/50">
               <tr className="text-left">
                 {["Module", "Test cases", "Pass %", "Bugs", "Open", "Order", ""].map(h => (
                   <th
                     key={h}
-                    className="px-3 py-2 font-extrabold uppercase tracking-wide text-[9px] text-muted-foreground/70 whitespace-nowrap"
+                    className="px-3 py-2 font-medium text-[11px] text-muted-foreground/70 whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -553,7 +553,7 @@ export function ModulesPanel({ projectId }: Props) {
                 const rate = passRate(row)
                 const isBusy = busyId === row.id
                 return (
-                  <tr key={row.id} className="border-t hover:bg-slate-50/50">
+                  <tr key={row.id} className="border-t hover:bg-muted/50">
                     <td className="px-3 py-2 min-w-[220px]">
                       {editingId === row.id ? (
                         <div className="flex items-center gap-1">
@@ -585,7 +585,7 @@ export function ModulesPanel({ projectId }: Props) {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 w-7 p-0 text-slate-400"
+                            className="h-7 w-7 p-0 text-muted-foreground"
                             onClick={() => setEditingId(null)}
                           >
                             <X className="h-3.5 w-3.5" />
@@ -593,7 +593,7 @@ export function ModulesPanel({ projectId }: Props) {
                         </div>
                       ) : (
                         <div
-                          className="flex items-center gap-1.5 font-bold text-slate-800"
+                          className="flex items-center gap-1.5 font-semibold text-foreground"
                           style={{ paddingInlineStart: row.depth * 16 }}
                         >
                           {row.depth > 0 && <span className="text-slate-300">└</span>}
@@ -605,7 +605,7 @@ export function ModulesPanel({ projectId }: Props) {
                               rel="noopener noreferrer"
                               onClick={e => { if (!row.externalUrl) e.preventDefault() }}
                               title={`${row.externalType || "Linked"} ${row.externalId} in ${row.externalProvider} — name and nesting follow the tracker`}
-                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-indigo-100 bg-indigo-50/70 text-[9px] font-extrabold text-indigo-600 hover:bg-indigo-100"
+                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-primary/25 bg-primary/10 text-[9px] font-semibold text-primary hover:bg-primary/15"
                             >
                               <Link2 className="h-2.5 w-2.5" />
                               {row.externalType || "Linked"}
@@ -615,7 +615,7 @@ export function ModulesPanel({ projectId }: Props) {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700"
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                             onClick={() => {
                               setEditingId(row.id)
                               setEditName(row.name)
@@ -631,19 +631,19 @@ export function ModulesPanel({ projectId }: Props) {
                       {row.caseCount > 0 ? (
                         <button
                           onClick={() => router.push(`/projects/${projectId}/test-cases?suite=${row.id}`)}
-                          className="flex items-center gap-1 font-bold text-indigo-600 hover:underline"
+                          className="flex items-center gap-1 font-semibold text-primary hover:underline"
                           title="Open these test cases"
                         >
                           <FileText className="h-3 w-3" /> {row.caseCount}
                         </button>
                       ) : (
-                        <span className="text-slate-400">0</span>
+                        <span className="text-muted-foreground">0</span>
                       )}
                     </td>
 
                     <td className="px-3 py-2">
                       {rate === null ? (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-muted-foreground">—</span>
                       ) : (
                         <span
                           className={`font-bold ${
@@ -659,18 +659,18 @@ export function ModulesPanel({ projectId }: Props) {
                       {row.bugCount > 0 ? (
                         <button
                           onClick={() => router.push(`/projects/${projectId}/bug-reports?suite=${row.id}`)}
-                          className="flex items-center gap-1 font-bold text-indigo-600 hover:underline"
+                          className="flex items-center gap-1 font-semibold text-primary hover:underline"
                           title="Open these bugs"
                         >
                           <Bug className="h-3 w-3" /> {row.bugCount}
                         </button>
                       ) : (
-                        <span className="text-slate-400">0</span>
+                        <span className="text-muted-foreground">0</span>
                       )}
                     </td>
 
                     <td className="px-3 py-2">
-                      <span className={row.openBugCount > 0 ? "font-extrabold text-rose-600" : "text-slate-400"}>
+                      <span className={row.openBugCount > 0 ? "font-semibold text-rose-600" : "text-muted-foreground"}>
                         {row.openBugCount}
                       </span>
                     </td>
@@ -682,7 +682,7 @@ export function ModulesPanel({ projectId }: Props) {
                           variant="ghost"
                           disabled={isBusy}
                           onClick={() => move(row, -1)}
-                          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                           title="Move up"
                         >
                           <ChevronUp className="h-3.5 w-3.5" />
@@ -692,7 +692,7 @@ export function ModulesPanel({ projectId }: Props) {
                           variant="ghost"
                           disabled={isBusy}
                           onClick={() => move(row, 1)}
-                          className="h-6 w-6 p-0 text-slate-400 hover:text-slate-700"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                           title="Move down"
                         >
                           <ChevronDown className="h-3.5 w-3.5" />
@@ -747,10 +747,10 @@ export function ModulesPanel({ projectId }: Props) {
       {/* Import picker — Epics and Features only, never Stories or Tasks. */}
       {importOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-2xl rounded-2xl shadow-xl p-6 space-y-4 max-h-[85vh] flex flex-col">
+          <div className="bg-card w-full max-w-2xl rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 space-y-4 max-h-[85vh] flex flex-col">
             <div className="space-y-1">
-              <h3 className="text-sm font-extrabold text-slate-800 flex items-center gap-2">
-                <DownloadCloud className="h-4 w-4 text-indigo-600" />
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <DownloadCloud className="h-4 w-4 text-primary" />
                 Import modules{provider ? ` from ${provider}` : ""}
               </h3>
               <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
@@ -771,13 +771,13 @@ export function ModulesPanel({ projectId }: Props) {
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between text-[10px] font-bold text-muted-foreground">
+                <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
                   <span>
                     {importableCount} available · {importable.length - importableCount} already
                     imported
                   </span>
                   <button
-                    className="text-indigo-600 hover:underline font-extrabold"
+                    className="text-primary hover:underline font-semibold"
                     onClick={() =>
                       setPicked(
                         picked.size === importableCount
@@ -792,7 +792,7 @@ export function ModulesPanel({ projectId }: Props) {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto rounded-xl border border-slate-100 divide-y">
+                <div className="flex-1 overflow-y-auto rounded-xl border border-border divide-y">
                   {importable.map(item => {
                     const already = !!item.linkedSuiteId
                     const checked = picked.has(item.externalId)
@@ -800,7 +800,7 @@ export function ModulesPanel({ projectId }: Props) {
                       <label
                         key={item.externalId}
                         className={`flex items-start gap-3 p-2.5 text-[11px] ${
-                          already ? "opacity-60" : "hover:bg-slate-50/70 cursor-pointer"
+                          already ? "opacity-60" : "hover:bg-muted/70 cursor-pointer"
                         }`}
                       >
                         <input
@@ -817,11 +817,11 @@ export function ModulesPanel({ projectId }: Props) {
                         />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-800 truncate" dir="auto">
+                            <span className="font-semibold text-foreground truncate" dir="auto">
                               {item.title}
                             </span>
                             {item.type && (
-                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-slate-100 text-[9px] font-extrabold text-slate-600">
+                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-muted text-[9px] font-semibold text-muted-foreground">
                                 {item.type}
                               </span>
                             )}
@@ -845,7 +845,7 @@ export function ModulesPanel({ projectId }: Props) {
                 variant="outline"
                 onClick={() => setImportOpen(false)}
                 disabled={importing}
-                className="h-8 text-[11px] font-bold"
+                className="h-8 text-[11px] font-semibold"
               >
                 Cancel
               </Button>
@@ -853,7 +853,7 @@ export function ModulesPanel({ projectId }: Props) {
                 size="sm"
                 onClick={runImport}
                 disabled={importing || picked.size === 0}
-                className="h-8 text-[11px] font-bold"
+                className="h-8 text-[11px] font-semibold"
               >
                 {importing ? "Importing…" : `Import ${picked.size || ""}`.trim()}
               </Button>
@@ -865,13 +865,13 @@ export function ModulesPanel({ projectId }: Props) {
       {/* Delete confirmation — real numbers, read from the server. */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4">
+          <div className="bg-card w-full max-w-md rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 space-y-4">
             <div className="flex items-start gap-3">
               <div className="h-9 w-9 rounded-full bg-rose-50 flex items-center justify-center shrink-0">
                 <AlertTriangle className="h-4 w-4 text-rose-600" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-sm font-extrabold text-slate-800">
+                <h3 className="text-sm font-semibold text-foreground">
                   Delete “{deleteTarget.name}”?
                 </h3>
                 <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
@@ -888,11 +888,11 @@ export function ModulesPanel({ projectId }: Props) {
                 { label: "Bugs unfiled", value: deleteTarget.bugsUnfiled },
                 ...(deleteTarget.visualTestsUnfiled ? [{ label: "Visual tests unfiled", value: deleteTarget.visualTestsUnfiled }] : []),
               ].map(c => (
-                <div key={c.label} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/60">
-                  <div className="text-[8px] uppercase tracking-wider font-extrabold text-muted-foreground/60">
+                <div key={c.label} className="p-2.5 rounded-xl border border-border bg-muted/60">
+                  <div className="text-[11px] font-medium text-muted-foreground/60">
                     {c.label}
                   </div>
-                  <div className="text-lg font-extrabold text-slate-800">{c.value}</div>
+                  <div className="text-lg font-semibold text-foreground">{c.value}</div>
                 </div>
               ))}
             </div>
@@ -910,7 +910,7 @@ export function ModulesPanel({ projectId }: Props) {
                 size="sm"
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
-                className="h-8 text-[11px] font-bold"
+                className="h-8 text-[11px] font-semibold"
               >
                 Cancel
               </Button>
@@ -918,7 +918,7 @@ export function ModulesPanel({ projectId }: Props) {
                 size="sm"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="h-8 text-[11px] font-bold bg-rose-600 hover:bg-rose-700 text-white"
+                className="h-8 text-[11px] font-semibold bg-rose-600 hover:bg-rose-700 text-white"
               >
                 {deleting ? "Deleting…" : "Delete module"}
               </Button>

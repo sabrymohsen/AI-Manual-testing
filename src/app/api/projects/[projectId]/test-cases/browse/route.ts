@@ -88,12 +88,14 @@ export async function GET(request: Request, { params }: { params: { projectId: s
     ...(tags.length ? { tags: { hasSome: tags } } : {}),
     // Orphan = covers no user story.
     ...(trace === "orphans" ? { requirements: { none: {} } } : {}),
-    // Broken = never executed, or failed without a bug filed against it.
+    // Broken = failed on its last run with nobody tracking it (no open bug).
+    // Never-run cases used to count too, which made every new case "broken"
+    // and duplicated the "not run" chip.
     // The old client-side version also flagged "not synced to OpenProject"
     // unconditionally, so on any project without that integration every single
     // case was reported broken. Sync state is reported per-row below instead.
     ...(trace === "broken"
-      ? { OR: [{ lastStatus: "NotExecuted" }, { AND: [{ lastStatus: "Failed" }, { openBugCount: 0 }] }] }
+      ? { lastStatus: "Failed", openBugCount: 0 }
       : {}),
   }
 

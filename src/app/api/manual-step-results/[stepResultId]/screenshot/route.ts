@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { saveFile } from "@/lib/storage"
 import { z } from "zod"
 
@@ -47,7 +47,7 @@ export async function POST(
       return notFoundResponse("Manual step result not found")
     }
 
-    if (stepResult.sessionCase.session.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(stepResult.sessionCase.session.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

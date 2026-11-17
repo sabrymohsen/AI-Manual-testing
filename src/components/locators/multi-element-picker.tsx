@@ -226,14 +226,14 @@ export function MultiElementPicker({
   return (
     <div className="border rounded-xl bg-card/50 p-5 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="text-lg font-bold flex items-center gap-2">
-          <Layers className="h-5 w-5 text-indigo-500" /> Multi-Element Session
-          <span className="text-[10px] font-bold uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 px-2 py-0.5 rounded">New</span>
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Layers className="h-5 w-5 text-primary" /> Multi-Element Session
+          <span className="text-[11px] font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 px-2 py-0.5 rounded">New</span>
         </h3>
         {session && (
           <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
             session.status === "Active" ? "bg-emerald-100 text-emerald-700" :
-            session.status === "Paused" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+            session.status === "Paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
           }`}>{session.status} · {mergedElements.length} elements</span>
         )}
       </div>
@@ -259,7 +259,7 @@ export function MultiElementPicker({
               {credentials.map((c) => <option key={c.id} value={c.id}>{c.roleName}</option>)}
             </select>
           </div>
-          <Button onClick={startSession} disabled={starting} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 h-10">
+          <Button onClick={startSession} disabled={starting} className="bg-primary hover:bg-primary/90 text-white gap-1.5 h-10">
             {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
             Start Session
           </Button>
@@ -288,7 +288,7 @@ export function MultiElementPicker({
       {/* Live / draft element list */}
       {session && mergedElements.length > 0 && (
         <div className="border rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-2 bg-accent/30 px-3 py-2 text-[10px] font-bold uppercase text-muted-foreground">
+          <div className="grid grid-cols-12 gap-2 bg-accent/30 px-3 py-2 text-[11px] font-medium text-muted-foreground">
             <div className="col-span-4">Name</div>
             <div className="col-span-2">Action</div>
             <div className="col-span-4">Locator</div>
@@ -304,8 +304,8 @@ export function MultiElementPicker({
                   onChange={(ev) => setEdits((p) => ({ ...p, [e.id]: { ...p[e.id], actionType: ev.target.value } }))}>
                   {ACTION_TYPES.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
-                <div className="col-span-4 font-mono text-[10px] truncate text-indigo-600" title={`${e.locatorType}=${e.locatorValue}`}>{e.locatorType}={e.locatorValue}</div>
-                <div className={`col-span-1 text-center font-bold ${e.reliabilityScore >= 80 ? "text-emerald-600" : e.reliabilityScore >= 50 ? "text-amber-600" : "text-red-600"}`}>{e.reliabilityScore}</div>
+                <div className="col-span-4 font-mono text-[10px] truncate text-primary" title={`${e.locatorType}=${e.locatorValue}`}>{e.locatorType}={e.locatorValue}</div>
+                <div className={`col-span-1 text-center font-semibold ${e.reliabilityScore >= 80 ? "text-emerald-600" : e.reliabilityScore >= 50 ? "text-amber-600" : "text-red-600"}`}>{e.reliabilityScore}</div>
                 <div className="col-span-1 flex justify-end gap-1">
                   <button title="Create bug" onClick={() => { setBugFor(e); setBugTitle(`Element issue: ${e.suggestedName}`) }} className="text-red-500"><Bug className="h-3.5 w-3.5" /></button>
                   {isLive && <button title="Remove" onClick={() => command("remove-element", { elementId: e.id })} className="text-muted-foreground"><X className="h-3.5 w-3.5" /></button>}
@@ -318,7 +318,7 @@ export function MultiElementPicker({
 
       {/* Saved Collections */}
       <div className="space-y-2 pt-2 border-t">
-        <h4 className="text-sm font-bold flex items-center gap-2"><Layers className="h-4 w-4 text-muted-foreground" /> Saved Collections ({collections.length})</h4>
+        <h4 className="text-sm font-semibold flex items-center gap-2"><Layers className="h-4 w-4 text-muted-foreground" /> Saved Collections ({collections.length})</h4>
         {collections.length === 0 ? (
           <p className="text-xs text-muted-foreground">No collections yet. Pick elements and save a collection to reuse them in test cases.</p>
         ) : collections.map((c) => (
@@ -351,7 +351,7 @@ export function MultiElementPicker({
       {saveOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setSaveOpen(false)}>
           <div className="bg-background rounded-xl p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold">Save as Collection</h3>
+            <h3 className="font-semibold">Save as Collection</h3>
             <Input placeholder="Collection name" value={collName} onChange={(e) => setCollName(e.target.value)} />
             <Input placeholder="Description (optional)" value={collDesc} onChange={(e) => setCollDesc(e.target.value)} />
             <p className="text-xs text-muted-foreground">{mergedElements.length} elements will be saved.</p>
@@ -367,7 +367,7 @@ export function MultiElementPicker({
       {bugFor && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setBugFor(null)}>
           <div className="bg-background rounded-xl p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
-            <h3 className="font-bold flex items-center gap-2"><Bug className="h-4 w-4 text-red-500" /> Create Bug from Element</h3>
+            <h3 className="font-semibold flex items-center gap-2"><Bug className="h-4 w-4 text-red-500" /> Create Bug from Element</h3>
             <p className="text-[11px] text-muted-foreground font-mono">{bugFor.locatorType}={bugFor.locatorValue}</p>
             <Input placeholder="Bug title" value={bugTitle} onChange={(e) => setBugTitle(e.target.value)} />
             <p className="text-xs text-muted-foreground">{session?.sessionId ? "Screenshot + DOM snapshot will be captured from the live browser." : "Live browser closed — a basic bug will be created without a fresh snapshot."}</p>

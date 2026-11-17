@@ -63,11 +63,11 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div id={id} className="flex flex-col rounded-2xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow" role="figure" aria-label={ariaLabel || title}>
+    <div id={id} className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow" role="figure" aria-label={ariaLabel || title}>
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-          {subtitle && <p className="text-[11px] text-slate-400">{subtitle}</p>}
+          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+          {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -77,7 +77,7 @@ function ChartCard({
         ) : empty ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-300">
             <Inbox className="h-8 w-8" />
-            <span className="text-xs text-slate-400">{emptyText || "No data available"}</span>
+            <span className="text-xs text-muted-foreground">{emptyText || "No data available"}</span>
           </div>
         ) : (
           children
@@ -247,11 +247,11 @@ export const TeamPerformanceChart = memo(function TeamPerformanceChart({ data, l
   }, [members])
 
   const toggle = (
-    <div className="flex overflow-hidden rounded-lg border border-slate-200 text-[11px]">
-      <button onClick={() => setMode("radar")} className={`flex items-center gap-1 px-2 py-1 ${mode === "radar" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>
+    <div className="flex overflow-hidden rounded-lg border border-border text-[11px]">
+      <button onClick={() => setMode("radar")} className={`flex items-center gap-1 px-2 py-1 ${mode === "radar" ? "bg-primary text-white" : "text-muted-foreground"}`}>
         <RadarIcon className="h-3 w-3" /> Radar
       </button>
-      <button onClick={() => setMode("bar")} className={`flex items-center gap-1 px-2 py-1 ${mode === "bar" ? "bg-indigo-600 text-white" : "text-slate-500"}`}>
+      <button onClick={() => setMode("bar")} className={`flex items-center gap-1 px-2 py-1 ${mode === "bar" ? "bg-primary text-white" : "text-muted-foreground"}`}>
         <LineIcon className="h-3 w-3" /> Bar
       </button>
     </div>
@@ -338,7 +338,7 @@ export const ExecutionFunnelChart = memo(function ExecutionFunnelChart({ data, l
             title={`${s.label}: ${s.count} (${s.pctOfTotal}% of total, ${s.conversion}% of previous)`}
           >
             <span className="truncate text-xs font-semibold">{s.label}</span>
-            <span className="ml-2 shrink-0 text-xs font-bold tabular-nums">
+            <span className="ml-2 shrink-0 text-xs font-semibold tabular-nums">
               {s.count}
               <span className="ml-1 font-normal opacity-80">{s.pctOfTotal}%</span>
             </span>

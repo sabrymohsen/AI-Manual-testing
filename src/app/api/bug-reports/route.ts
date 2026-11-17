@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { createBugReportSchema } from "@/schemas"
-import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse, memberProjectWhere } from "@/lib/api-guards"
 import { withBugModule } from "@/lib/bug-reports/module"
 
 export async function GET(request: NextRequest) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   try {
     // 1. Get user's projects to ensure strict isolation
     const userProjects = await prisma.project.findMany({
-      where: { userId: auth.session!.user.id },
+      where: memberProjectWhere(auth.session!.user.id),
       select: { id: true }
     })
     const projectIds = userProjects.map(p => p.id)

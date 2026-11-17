@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
 import { computeRequirementCoverage } from "@/lib/coverage"
 import { createAuditLog } from "@/lib/auth/audit"
@@ -73,7 +73,7 @@ export async function GET(
       return notFoundResponse("Requirement not found")
     }
 
-    if (requirement.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(requirement.projectId, auth.session!.user.id, "read"))) {
       return unauthorizedResponse("Access denied")
     }
 
@@ -121,7 +121,7 @@ export async function PUT(
       return notFoundResponse("Requirement not found")
     }
 
-    if (requirement.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(requirement.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 
@@ -244,7 +244,7 @@ export async function DELETE(
       return notFoundResponse("Requirement not found")
     }
 
-    if (requirement.project.userId !== auth.session!.user.id) {
+    if (!(await canUseProject(requirement.projectId, auth.session!.user.id, "write"))) {
       return unauthorizedResponse("Access denied")
     }
 

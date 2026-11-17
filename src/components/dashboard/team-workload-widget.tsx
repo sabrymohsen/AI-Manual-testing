@@ -74,10 +74,10 @@ export function TeamWorkloadWidget({ projectId }: { projectId: string }) {
   const maxTasks = useMemo(() => Math.max(1, ...members.map((m) => m.openTasks)), [members])
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-card shadow-sm">
+    <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex items-center gap-2 border-b px-5 py-3">
-        <Users className="h-4 w-4 text-indigo-600" />
-        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700">Team Workload</span>
+        <Users className="h-4 w-4 text-primary" />
+        <span className="text-xs font-medium text-foreground">Team Workload</span>
       </div>
 
       <div className="p-4">
@@ -106,29 +106,29 @@ export function TeamWorkloadWidget({ projectId }: { projectId: string }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={member.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                     ) : (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-50 text-[9px] font-bold text-indigo-600">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
                         {(member.name || member.email || "?")[0]?.toUpperCase()}
                       </span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="truncate text-xs font-semibold text-slate-700">
+                      <span className="truncate text-xs font-semibold text-foreground">
                         {member.name || member.email}
                         {isOverloaded && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-500">
+                      <span className="text-[10px] font-semibold text-muted-foreground">
                         {member.openTasks} open
                         {member.inProgressTasks > 0 && (
                           <span className="text-blue-500"> · {member.inProgressTasks} in prog</span>
                         )}
                       </span>
                     </div>
-                    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                       <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          isOverloaded ? "bg-amber-500" : "bg-indigo-500"
+                          isOverloaded ? "bg-amber-500" : "bg-primary"
                         )}
                         style={{ width: `${percent}%` }}
                       />

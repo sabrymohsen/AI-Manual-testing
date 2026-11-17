@@ -149,9 +149,9 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Bot size={16} className="text-indigo-600" />
-        <h3 className="text-sm font-black text-slate-800">AI Providers</h3>
-        <span className="text-[11px] text-slate-400 font-semibold">
+        <Bot size={16} className="text-primary" />
+        <h3 className="text-sm font-semibold text-foreground">AI Providers</h3>
+        <span className="text-[11px] text-muted-foreground font-semibold">
           Configure and enable providers. The <Star size={10} className="inline text-amber-500 fill-amber-400" /> default is what the agent uses.
         </span>
       </div>
@@ -163,8 +163,8 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
           return (
             <div
               key={c.provider}
-              className={`bg-white border rounded-2xl p-4 shadow-sm space-y-3 transition-all ${
-                c.isDefault ? "border-indigo-300 ring-2 ring-indigo-100" : "border-slate-200"
+              className={`bg-card border rounded-2xl p-4 shadow-sm space-y-3 transition-all ${
+                c.isDefault ? "border-primary/25 ring-2 ring-indigo-100" : "border-border"
               }`}
             >
               {/* header */}
@@ -173,14 +173,14 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                   <span className="text-lg leading-none">{PROVIDER_EMOJI[c.provider] || "🤖"}</span>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="font-black text-slate-800 text-sm">{c.label}</span>
+                      <span className="font-semibold text-foreground text-sm">{c.label}</span>
                       {c.isDefault && (
-                        <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center gap-0.5">
+                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 flex items-center gap-0.5">
                           <Star size={8} className="fill-indigo-500" /> default
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400 font-semibold">{c.docsHint}</p>
+                    <p className="text-[10px] text-muted-foreground font-semibold">{c.docsHint}</p>
                   </div>
                 </div>
                 {/* enable toggle */}
@@ -189,14 +189,14 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 ${c.enabled ? "bg-emerald-500" : "bg-slate-300"}`}
                   title={c.enabled ? "Enabled" : "Disabled"}
                 >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${c.enabled ? "translate-x-6" : "translate-x-1"}`} />
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${c.enabled ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
               </div>
 
               {/* key */}
               {!c.local && (
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
                     <KeyRound size={10} /> API Key
                     {c.hasKey && (
                       <span className="text-emerald-600 normal-case ml-1">
@@ -210,12 +210,12 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                       value={keyInputs[c.provider] || ""}
                       onChange={(e) => setKeyInputs((p) => ({ ...p, [c.provider]: e.target.value }))}
                       placeholder={c.apiKeyMasked || "Paste API key..."}
-                      className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-slate-50 font-mono outline-none focus:ring-2 focus:ring-indigo-100"
+                      className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-muted/50 font-mono outline-none focus:ring-2 focus:ring-indigo-100"
                     />
                     <Button
                       onClick={() => saveKey(c)}
                       disabled={!keyInputs[c.provider] || savingKey === c.provider}
-                      className="h-8 px-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[10px] font-black disabled:opacity-40"
+                      className="h-8 px-2.5 bg-primary text-white hover:bg-primary/90 rounded-lg text-[10px] font-semibold disabled:opacity-40"
                     >
                       {savingKey === c.provider ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                     </Button>
@@ -225,11 +225,11 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
 
               {/* model */}
               <div className="space-y-1">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Model</label>
+                <label className="text-[11px] font-medium text-muted-foreground">Model</label>
                 <select
                   value={c.model}
                   onChange={(e) => changeModel(c, e.target.value)}
-                  className="h-8 w-full rounded-lg border px-2.5 text-[11px] font-black bg-white text-slate-700 outline-none focus:ring-2 focus:ring-indigo-100"
+                  className="h-8 w-full rounded-lg border px-2.5 text-[11px] font-semibold bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
                 >
                   {models.map((m) => (
                     <option key={m} value={m}>
@@ -246,24 +246,24 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                   variant="outline"
                   onClick={() => runTest(c)}
                   disabled={t?.loading}
-                  className="h-8 rounded-lg bg-white border-slate-200 text-slate-600 text-[10px] font-black gap-1"
+                  className="h-8 rounded-lg bg-card border-border text-muted-foreground text-[10px] font-semibold gap-1"
                 >
                   {t?.loading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />} Test
                 </Button>
                 <button
                   onClick={() => setDefault(c.provider)}
                   disabled={c.isDefault}
-                  className={`h-8 px-2.5 rounded-lg text-[10px] font-black flex items-center gap-1 border transition-colors ${
+                  className={`h-8 px-2.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 border transition-colors ${
                     c.isDefault
-                      ? "bg-indigo-50 text-indigo-400 border-indigo-100 cursor-default"
-                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                      ? "bg-primary/10 text-indigo-400 border-primary/25 cursor-default"
+                      : "bg-card text-muted-foreground border-border hover:bg-muted/50"
                   }`}
                 >
                   <Star size={12} className={c.isDefault ? "fill-indigo-300" : ""} /> {c.isDefault ? "Default" : "Set default"}
                 </button>
 
                 {t && !t.loading && (
-                  <span className={`ml-auto text-[10px] font-bold flex items-center gap-1 ${t.ok ? "text-emerald-600" : "text-rose-600"}`}>
+                  <span className={`ml-auto text-[10px] font-semibold flex items-center gap-1 ${t.ok ? "text-emerald-600" : "text-rose-600"}`}>
                     {t.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
                     {t.ok ? `OK${t.latencyMs ? ` ${t.latencyMs}ms` : ""}` : "Failed"}
                   </span>
@@ -381,19 +381,19 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Terminal size={16} className="text-indigo-600" />
-        <h3 className="text-sm font-black text-slate-800">Command Library</h3>
-        <span className="text-[11px] text-slate-400 font-semibold">
-          One click sends the command to the assistant. <span className="text-emerald-600 font-bold">●</span> = runs a real engine tool.
+        <Terminal size={16} className="text-primary" />
+        <h3 className="text-sm font-semibold text-foreground">Command Library</h3>
+        <span className="text-[11px] text-muted-foreground font-semibold">
+          One click sends the command to the assistant. <span className="text-emerald-600 font-semibold">●</span> = runs a real engine tool.
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {COMMAND_LIBRARY.map((cat, ci) => (
-          <div key={cat.title} className="bg-white border rounded-2xl p-4 shadow-sm space-y-2.5">
+          <div key={cat.title} className="bg-card border rounded-xl p-4 shadow-sm space-y-2.5">
             <div className="flex items-center gap-2 border-b pb-2">
-              <cat.icon size={14} className="text-indigo-600" />
-              <span className="text-xs font-black text-slate-700">{cat.title}</span>
+              <cat.icon size={14} className="text-primary" />
+              <span className="text-xs font-semibold text-foreground">{cat.title}</span>
             </div>
             <div className="space-y-1.5">
               {cat.commands.map((c, cmi) => {
@@ -403,7 +403,7 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
                     <button
                       onClick={() => fire(c, ci, cmi)}
                       disabled={sending}
-                      className="w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors disabled:opacity-50 group"
+                      className="w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50 group"
                     >
                       {c.native ? (
                         <span className="text-emerald-500 text-[8px] shrink-0" title="Runs a real engine tool">●</span>
@@ -412,9 +412,9 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
                       )}
                       <span className="flex-1 truncate">{c.label}</span>
                       {c.template ? (
-                        <span className="text-[8px] text-slate-300 font-black uppercase">param</span>
+                        <span className="text-[11px] text-slate-300 font-medium">param</span>
                       ) : (
-                        <Send size={11} className="text-slate-300 group-hover:text-indigo-500 shrink-0" />
+                        <Send size={11} className="text-slate-300 group-hover:text-primary shrink-0" />
                       )}
                     </button>
                     {isActive && (
@@ -425,9 +425,9 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
                           onChange={(e) => setParamValue(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && submitParam()}
                           placeholder={param!.label}
-                          className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-100"
+                          className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
                         />
-                        <Button onClick={submitParam} disabled={!paramValue.trim()} className="h-8 px-2.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[10px] font-black disabled:opacity-40">
+                        <Button onClick={submitParam} disabled={!paramValue.trim()} className="h-8 px-2.5 bg-primary text-white hover:bg-primary/90 rounded-lg text-[10px] font-semibold disabled:opacity-40">
                           <Send size={12} />
                         </Button>
                       </div>
@@ -530,23 +530,23 @@ export function UsagePrivacyPanel() {
 
       {/* BUDGET BAR */}
       {budget > 0 && (
-        <div className="bg-white border rounded-2xl p-4 shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-bold">
-            <span className="text-slate-500 flex items-center gap-1.5">
-              <DollarSign size={13} className="text-indigo-600" /> Monthly budget
+        <div className="bg-card border rounded-xl p-4 shadow-sm space-y-2">
+          <div className="flex items-center justify-between text-[11px] font-semibold">
+            <span className="text-muted-foreground flex items-center gap-1.5">
+              <DollarSign size={13} className="text-primary" /> Monthly budget
             </span>
-            <span className={budgetPct >= 100 ? "text-rose-600" : budgetPct >= 80 ? "text-amber-600" : "text-slate-600"}>
+            <span className={budgetPct >= 100 ? "text-rose-600" : budgetPct >= 80 ? "text-amber-600" : "text-muted-foreground"}>
               ${spend.toFixed(2)} / ${budget.toFixed(2)}
             </span>
           </div>
-          <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
+          <div className="h-2.5 rounded-full bg-muted overflow-hidden">
             <div
-              className={`h-full rounded-full transition-all ${budgetPct >= 100 ? "bg-rose-500" : budgetPct >= 80 ? "bg-amber-500" : "bg-indigo-600"}`}
+              className={`h-full rounded-full transition-all ${budgetPct >= 100 ? "bg-rose-500" : budgetPct >= 80 ? "bg-amber-500" : "bg-primary"}`}
               style={{ width: `${budgetPct}%` }}
             />
           </div>
           {budgetPct >= 100 && (
-            <p className="text-[10px] text-rose-600 font-bold flex items-center gap-1">
+            <p className="text-[10px] text-rose-600 font-semibold flex items-center gap-1">
               <ShieldAlert size={11} /> Budget reached — paid provider calls are paused until next month.
             </p>
           )}
@@ -555,28 +555,28 @@ export function UsagePrivacyPanel() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* USAGE CHART */}
-        <div className="lg:col-span-2 bg-white border rounded-2xl p-4 shadow-sm">
+        <div className="lg:col-span-2 bg-card border rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-black text-slate-700">Daily token usage · 30 days</h3>
-            <span className="text-[10px] text-slate-400 font-semibold">tokens/day</span>
+            <h3 className="text-xs font-semibold text-foreground">Daily token usage · 30 days</h3>
+            <span className="text-[10px] text-muted-foreground font-semibold">tokens/day</span>
           </div>
           <UsageBarChart daily={usage.daily} />
         </div>
 
         {/* PER PROVIDER */}
-        <div className="bg-white border rounded-2xl p-4 shadow-sm">
-          <h3 className="text-xs font-black text-slate-700 mb-3 flex items-center gap-1.5">
-            <Server size={13} className="text-indigo-600" /> By provider
+        <div className="bg-card border rounded-xl p-4 shadow-sm">
+          <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
+            <Server size={13} className="text-primary" /> By provider
           </h3>
           {usage.byProvider.length === 0 ? (
-            <p className="text-[11px] text-slate-400 font-semibold py-8 text-center">No provider usage recorded yet.</p>
+            <p className="text-[11px] text-muted-foreground font-semibold py-8 text-center">No provider usage recorded yet.</p>
           ) : (
             <div className="space-y-2.5">
               {usage.byProvider.map((p) => (
                 <div key={p.provider} className="flex items-center justify-between text-[11px]">
-                  <span className="font-black text-slate-700">{PROVIDER_EMOJI[p.provider] || "🤖"} {p.provider}</span>
-                  <span className="text-slate-500 font-semibold">
-                    {formatTokens(p.tokens)} · <span className="text-indigo-600 font-black">${p.cost.toFixed(2)}</span> · {p.calls} calls
+                  <span className="font-semibold text-foreground">{PROVIDER_EMOJI[p.provider] || "🤖"} {p.provider}</span>
+                  <span className="text-muted-foreground font-semibold">
+                    {formatTokens(p.tokens)} · <span className="text-primary font-semibold">${p.cost.toFixed(2)}</span> · {p.calls} calls
                   </span>
                 </div>
               ))}
@@ -586,9 +586,9 @@ export function UsagePrivacyPanel() {
       </div>
 
       {/* CONSENT & PRIVACY */}
-      <div className="bg-white border rounded-2xl p-4 shadow-sm space-y-3">
-        <h3 className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-          <ShieldCheck size={14} className="text-indigo-600" /> Consent & Privacy
+      <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3">
+        <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+          <ShieldCheck size={14} className="text-primary" /> Consent & Privacy
         </h3>
         <ToggleRow
           label="Allow AI to access test data"
@@ -606,24 +606,24 @@ export function UsagePrivacyPanel() {
         />
         <div className="flex items-center justify-between gap-3 pt-1">
           <div>
-            <p className="text-[11px] font-bold text-slate-700">Monthly budget limit (USD)</p>
-            <p className="text-[9.5px] text-slate-400 font-semibold">0 = unlimited. Paid calls pause when the month's estimated spend hits this.</p>
+            <p className="text-[11px] font-semibold text-foreground">Monthly budget limit (USD)</p>
+            <p className="text-[9.5px] text-muted-foreground font-semibold">0 = unlimited. Paid calls pause when the month's estimated spend hits this.</p>
           </div>
           <div className="flex gap-1.5 shrink-0">
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[11px] font-bold">$</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-[11px] font-semibold">$</span>
               <input
                 type="number"
                 min={0}
                 value={budgetInput}
                 onChange={(e) => setBudgetInput(e.target.value)}
-                className="w-28 h-8 rounded-lg border pl-5 pr-2.5 text-[11px] font-black bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-28 h-8 rounded-lg border pl-5 pr-2.5 text-[11px] font-semibold bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
             <Button
               onClick={() => savePolicy({ monthlyBudgetUsd: Number(budgetInput) || 0 })}
               disabled={savingPolicy}
-              className="h-8 px-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-[10px] font-black"
+              className="h-8 px-3 bg-primary text-white hover:bg-primary/90 rounded-lg text-[10px] font-semibold"
             >
               Set
             </Button>
@@ -632,29 +632,29 @@ export function UsagePrivacyPanel() {
       </div>
 
       {/* DATA ACCESS AUDIT */}
-      <div className="bg-white border rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 border-b bg-slate-50 text-xs font-black text-slate-700 flex items-center gap-2">
+      <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
+        <div className="px-4 py-2.5 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
           <ShieldCheck size={13} /> Data Access Audit
-          <span className="text-[10px] text-slate-400 font-semibold ml-1">what was sent to (or withheld from) a provider</span>
+          <span className="text-[10px] text-muted-foreground font-semibold ml-1">what was sent to (or withheld from) a provider</span>
         </div>
         <div className="max-h-72 overflow-auto divide-y">
           {log.length === 0 ? (
-            <div className="p-6 text-center text-[11px] text-slate-400 font-semibold">
+            <div className="p-6 text-center text-[11px] text-muted-foreground font-semibold">
               No AI data-access events yet. They appear here once the agent runs with a provider configured.
             </div>
           ) : (
             log.map((r) => (
               <div key={r.id} className="px-4 py-2 text-[11px] flex items-center gap-2">
-                <span className="font-black text-slate-700 w-20 shrink-0">{r.provider}</span>
-                <span className="font-mono text-slate-500 truncate flex-1">{r.dataSummary}</span>
+                <span className="font-semibold text-foreground w-20 shrink-0">{r.provider}</span>
+                <span className="font-mono text-muted-foreground truncate flex-1">{r.dataSummary}</span>
                 {r.withheld ? (
-                  <span className="text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200">withheld</span>
+                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">withheld</span>
                 ) : r.redacted ? (
-                  <span className="text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">redacted</span>
+                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">redacted</span>
                 ) : (
-                  <span className="text-[8.5px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">sent</span>
+                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">sent</span>
                 )}
-                <span className="text-slate-400 font-semibold whitespace-nowrap">{new Date(r.createdAt).toLocaleTimeString()}</span>
+                <span className="text-muted-foreground font-semibold whitespace-nowrap">{new Date(r.createdAt).toLocaleTimeString()}</span>
               </div>
             ))
           )}
@@ -692,18 +692,18 @@ export function SkillsPanel() {
       .catch(() => setError("Couldn't load skills"))
   }, [])
 
-  if (!skills) return error ? <p className="text-xs text-rose-600 font-bold">{error}</p> : <PanelLoader label="Loading skills..." />
+  if (!skills) return error ? <p className="text-xs text-rose-600 font-semibold">{error}</p> : <PanelLoader label="Loading skills..." />
 
   return (
     <div className="space-y-4">
-      <div className="bg-white border rounded-2xl p-4 shadow-sm">
-        <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-          <GraduationCap size={16} className="text-indigo-600" /> QA skills
-          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+      <div className="bg-card border rounded-xl p-4 shadow-sm">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+          <GraduationCap size={16} className="text-primary" /> QA skills
+          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
             {skills.length} always on
           </span>
         </h3>
-        <p className="text-[11px] text-slate-500 font-semibold mt-1">
+        <p className="text-[11px] text-muted-foreground font-semibold mt-1">
           Testing know-how the AI applies to every feature: generating test cases, writing bug reports, rating severity,
           explaining failures and the chat. Each feature gets only the skills that fit it (up to 3), whichever provider is set up.
         </p>
@@ -711,29 +711,29 @@ export function SkillsPanel() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {skills.map((s) => (
-          <div key={s.id} className="bg-white border rounded-2xl p-4 shadow-sm space-y-2">
+          <div key={s.id} className="bg-card border rounded-xl p-4 shadow-sm space-y-2">
             <div>
-              <p className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+              <p className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
                 <CheckCircle2 size={12} className="text-emerald-600" /> {s.name}
               </p>
-              <p className="text-[9.5px] text-slate-400 font-semibold">{s.description}</p>
+              <p className="text-[9.5px] text-muted-foreground font-semibold">{s.description}</p>
             </div>
             <div className="flex flex-wrap gap-1">
               {s.usedBy.map((u) => (
-                <span key={u} className="text-[9.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
+                <span key={u} className="text-[9.5px] font-semibold text-primary bg-primary/10 border border-primary/25 rounded-full px-2 py-0.5">
                   {u}
                 </span>
               ))}
             </div>
             <button
               onClick={() => setOpen(open === s.id ? null : s.id)}
-              className="text-[10px] font-bold text-slate-500 hover:text-indigo-700 flex items-center gap-1"
+              className="text-[10px] font-semibold text-muted-foreground hover:text-primary flex items-center gap-1"
             >
               <ChevronDown size={12} className={`transition-transform ${open === s.id ? "rotate-180" : ""}`} />
               {open === s.id ? "Hide" : "Show"} what the AI is told
             </button>
             {open === s.id && (
-              <p className="text-[11px] leading-relaxed text-slate-600 bg-slate-50 border rounded-xl p-3">{s.instructions}</p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground bg-muted/50 border rounded-xl p-3">{s.instructions}</p>
             )}
           </div>
         ))}
@@ -751,7 +751,7 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
 
   if (daily.every((d) => d.tokens === 0)) {
     return (
-      <div className="h-[160px] flex items-center justify-center text-[11px] text-slate-400 font-semibold">
+      <div className="h-[160px] flex items-center justify-center text-[11px] text-muted-foreground font-semibold">
         No usage in the last 30 days — token usage appears here after the agent talks to a provider.
       </div>
     )
@@ -770,7 +770,7 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
               onMouseLeave={() => setHover(null)}
             >
               <div
-                className={`w-full rounded-t transition-colors ${hover === i ? "bg-indigo-500" : "bg-indigo-600/85"}`}
+                className={`w-full rounded-t transition-colors ${hover === i ? "bg-primary" : "bg-primary/85"}`}
                 style={{ height: `${h}px`, minHeight: d.tokens > 0 ? 3 : 0 }}
               />
             </div>
@@ -778,14 +778,14 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
         })}
       </div>
       {/* baseline */}
-      <div className="h-px bg-slate-200 mt-0" />
-      <div className="flex justify-between mt-1 text-[8.5px] text-slate-400 font-bold">
+      <div className="h-px bg-muted mt-0" />
+      <div className="flex justify-between mt-1 text-[8.5px] text-muted-foreground font-semibold">
         <span>{daily[0]?.date.slice(5)}</span>
         <span>{daily[Math.floor(n / 2)]?.date.slice(5)}</span>
         <span>{daily[n - 1]?.date.slice(5)}</span>
       </div>
       {hover !== null && daily[hover] && (
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-bold rounded-lg px-2.5 py-1.5 shadow-lg pointer-events-none whitespace-nowrap">
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-semibold rounded-lg px-2.5 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none whitespace-nowrap">
           {daily[hover].date} · {formatTokens(daily[hover].tokens)} tok · ${daily[hover].cost.toFixed(3)} · {daily[hover].calls} calls
         </div>
       )}
@@ -796,12 +796,12 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
 // ---- shared bits ----
 function StatTile({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string; hint?: string }) {
   return (
-    <div className="bg-white border rounded-2xl p-3.5 shadow-sm">
-      <div className="flex items-center gap-1.5 text-[9.5px] font-black uppercase tracking-wider text-slate-400">
-        <Icon size={12} className="text-indigo-500" /> {label}
+    <div className="bg-card border rounded-xl p-3.5 shadow-sm">
+      <div className="flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <Icon size={12} className="text-primary" /> {label}
       </div>
-      <div className="text-xl font-black text-slate-800 mt-1">{value}</div>
-      {hint && <div className="text-[9.5px] text-slate-400 font-semibold">{hint}</div>}
+      <div className="text-xl font-semibold text-foreground mt-1">{value}</div>
+      {hint && <div className="text-[9.5px] text-muted-foreground font-semibold">{hint}</div>}
     </div>
   )
 }
@@ -810,15 +810,15 @@ function ToggleRow({ label, hint, on, disabled, onChange }: { label: string; hin
   return (
     <div className="flex items-center justify-between gap-3 py-1">
       <div>
-        <p className="text-[11px] font-bold text-slate-700">{label}</p>
-        <p className="text-[9.5px] text-slate-400 font-semibold">{hint}</p>
+        <p className="text-[11px] font-semibold text-foreground">{label}</p>
+        <p className="text-[9.5px] text-muted-foreground font-semibold">{hint}</p>
       </div>
       <button
         onClick={() => onChange(!on)}
         disabled={disabled}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 disabled:opacity-50 ${on ? "bg-indigo-600" : "bg-slate-300"}`}
+        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 disabled:opacity-50 ${on ? "bg-primary" : "bg-slate-300"}`}
       >
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
+        <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${on ? "translate-x-6" : "translate-x-1"}`} />
       </button>
     </div>
   )
@@ -826,9 +826,9 @@ function ToggleRow({ label, hint, on, disabled, onChange }: { label: string; hin
 
 function PanelLoader({ label }: { label: string }) {
   return (
-    <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-white rounded-2xl shadow-sm">
-      <Loader2 className="animate-spin text-indigo-600" size={28} />
-      <span className="font-extrabold text-slate-400 uppercase tracking-widest text-[9.5px]">{label}</span>
+    <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
+      <Loader2 className="animate-spin text-primary" size={28} />
+      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-[9.5px]">{label}</span>
     </div>
   )
 }

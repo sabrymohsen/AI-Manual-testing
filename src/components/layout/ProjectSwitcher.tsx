@@ -12,10 +12,10 @@ interface SwitcherProject {
 }
 
 const ROLE_BADGE: Record<string, string> = {
-  Owner: "bg-purple-100 text-purple-700",
-  Admin: "bg-blue-100 text-blue-700",
-  Member: "bg-slate-100 text-slate-600",
-  Viewer: "bg-slate-50 text-slate-500",
+  Owner: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  Admin: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  Member: "bg-muted text-muted-foreground",
+  Viewer: "bg-muted text-muted-foreground",
 }
 
 // The project list is owned by the dashboard layout so that the selected
@@ -49,16 +49,15 @@ export function ProjectSwitcher({
   const active = projects.find((p) => p.id === activeProjectId)
 
   return (
-    <div className="p-4 border-b space-y-1.5 select-none" ref={ref}>
-      <span className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60">Selected Scope</span>
+    <div className="select-none px-2 pb-1" ref={ref}>
       <div className="relative">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex h-9 w-full items-center justify-between gap-2 rounded-lg border border-input bg-background px-3 text-xs hover:bg-accent/40 focus-visible:ring-1 focus-visible:ring-indigo-500"
+          className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex items-center gap-2 truncate">
-            <FolderKanban className="h-4 w-4 shrink-0 text-indigo-600" />
-            <span className="truncate font-semibold">
+            <FolderKanban className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate font-medium">
               {active?.name || (loading ? "Loading…" : projects.length === 0 ? "No projects" : "Select project")}
             </span>
           </span>
@@ -66,8 +65,8 @@ export function ProjectSwitcher({
         </button>
 
         {open && (
-          <div className="absolute left-0 right-0 top-10 z-50 max-h-80 overflow-y-auto rounded-lg border bg-popover shadow-lg py-1">
-            <div className="px-3 py-1 text-[9px] uppercase font-bold tracking-wider text-muted-foreground/60">
+          <div className="absolute left-0 right-0 top-9 z-50 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+            <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
               Your Projects
             </div>
             {projects.length === 0 && (
@@ -80,19 +79,19 @@ export function ProjectSwitcher({
                   onSelect(p.id)
                   setOpen(false)
                 }}
-                className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs hover:bg-accent/40 ${
-                  p.id === activeProjectId ? "bg-indigo-50" : ""
+                className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent ${
+                  p.id === activeProjectId ? "bg-primary/10" : ""
                 }`}
               >
                 <span className="flex items-center gap-1.5 truncate">
                   {p.id === activeProjectId ? (
-                    <Check className="h-3 w-3 shrink-0 text-indigo-600" />
+                    <Check className="h-3 w-3 shrink-0 text-primary" />
                   ) : (
                     <span className="w-3 shrink-0" />
                   )}
                   <span className="truncate font-medium">{p.name}</span>
                 </span>
-                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${ROLE_BADGE[p.role] || ROLE_BADGE.Member}`}>
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${ROLE_BADGE[p.role] || ROLE_BADGE.Member}`}>
                   {p.role}
                 </span>
               </button>
@@ -114,7 +113,7 @@ export function ProjectSwitcher({
                   router.push("/projects/new")
                   setOpen(false)
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-indigo-600 hover:bg-accent/40"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-primary hover:bg-accent/40"
               >
                 <Plus className="h-3.5 w-3.5" /> Create New Project
               </button>

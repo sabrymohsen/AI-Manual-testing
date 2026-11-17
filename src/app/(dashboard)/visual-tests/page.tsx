@@ -9,5 +9,5 @@ export default function VisualTestsRootPage() {
   useEffect(() => {
     router.push("/projects")
   }, [router])
-  return <div className="py-20 text-center text-xs font-semibold text-slate-400">Choose a project to see its visual tests…</div>
+  return <div className="py-20 text-center text-xs font-semibold text-muted-foreground">Choose a project to see its visual tests…</div>
 }

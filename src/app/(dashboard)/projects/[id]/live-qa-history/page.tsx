@@ -57,7 +57,7 @@ function fmtDuration(startISO: string, endISO: string | null): string {
 
 const STATUS_STYLES: Record<string, string> = {
   Finished: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
-  Cancelled: "bg-slate-100 text-slate-600 dark:bg-slate-500/15 dark:text-slate-400",
+  Cancelled: "bg-muted text-muted-foreground dark:bg-slate-500/15 dark:text-muted-foreground",
   Failed: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400",
 }
 
@@ -65,7 +65,7 @@ const SEVERITY_STYLES: Record<string, string> = {
   Critical: "bg-red-100 text-red-700",
   High: "bg-orange-100 text-orange-700",
   Medium: "bg-blue-100 text-blue-700",
-  Low: "bg-slate-100 text-slate-600",
+  Low: "bg-muted text-muted-foreground",
 }
 
 export default function LiveQAHistoryPage() {
@@ -126,28 +126,28 @@ export default function LiveQAHistoryPage() {
       />
 
       {loading ? (
-        <div className="text-center p-12 text-muted-foreground animate-pulse font-bold">Loading session history…</div>
+        <div className="text-center p-12 text-muted-foreground animate-pulse font-semibold">Loading session history…</div>
       ) : sessions.length === 0 ? (
-        <div className="p-16 border border-dashed rounded-3xl text-center space-y-4 max-w-xl mx-auto">
+        <div className="p-16 border border-dashed rounded-xl text-center space-y-4 max-w-xl mx-auto">
           <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
             <History className="h-6 w-6" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-100">No past sessions yet</h3>
+            <h3 className="font-semibold text-sm text-foreground dark:text-slate-100">No past sessions yet</h3>
             <p className="text-[11px] text-muted-foreground font-medium max-w-xs mx-auto leading-relaxed">
               Run a Live QA session and end it — it will appear here with its bugs, screenshots, and recordings.
             </p>
           </div>
-          <Button onClick={() => router.push(`/projects/${projectId}/live-qa-session`)} size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-9">
+          <Button onClick={() => router.push(`/projects/${projectId}/live-qa-session`)} size="sm" className="bg-primary hover:bg-primary/90 text-white font-semibold h-9">
             <Play className="h-3.5 w-3.5 mr-1.5" /> Start Live QA Session
           </Button>
         </div>
       ) : (
-        <div className="border border-slate-100 dark:border-border rounded-2xl bg-card overflow-hidden shadow-sm">
+        <div className="border border-border dark:border-border rounded-xl bg-card overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b bg-slate-500/[0.02] text-[10px] uppercase text-muted-foreground/80 tracking-wider">
+                <tr className="border-b bg-slate-500/[0.02] text-[11px] text-muted-foreground/80">
                   <th className="p-3">Session</th>
                   <th className="p-3">Started</th>
                   <th className="p-3">Duration</th>
@@ -161,23 +161,23 @@ export default function LiveQAHistoryPage() {
               </thead>
               <tbody className="divide-y">
                 {sessions.map((s) => (
-                  <tr key={s.id} onClick={() => openSession(s.id)} className="hover:bg-slate-50/50 dark:hover:bg-accent/30 cursor-pointer transition-colors">
+                  <tr key={s.id} onClick={() => openSession(s.id)} className="hover:bg-muted/50 dark:hover:bg-accent/30 cursor-pointer transition-colors">
                     <td className="p-3 max-w-xs">
-                      <span className="font-extrabold text-slate-800 dark:text-slate-100 truncate block" title={s.title}>{s.title}</span>
+                      <span className="font-semibold text-foreground dark:text-slate-100 truncate block" title={s.title}>{s.title}</span>
                       <span className="text-[10px] text-muted-foreground font-medium truncate block" title={s.startUrl}>{s.startUrl}</span>
                     </td>
                     <td className="p-3 text-muted-foreground whitespace-nowrap">{new Date(s.startedAt).toLocaleDateString()} {new Date(s.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</td>
                     <td className="p-3 text-muted-foreground whitespace-nowrap tabular-nums">{fmtDuration(s.startedAt, s.finishedAt)}</td>
                     <td className="p-3 text-muted-foreground whitespace-nowrap">{s.browserType} · {s.viewport}</td>
                     <td className="p-3 text-center">
-                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold tabular-nums ${s.bugCount > 0 ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400" : "text-muted-foreground"}`}>
+                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold tabular-nums ${s.bugCount > 0 ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400" : "text-muted-foreground"}`}>
                         <Bug className="h-2.5 w-2.5" /> {s.bugCount}
                       </span>
                     </td>
                     <td className="p-3 text-center text-muted-foreground tabular-nums">{s.screenshotCount}</td>
                     <td className="p-3 text-center text-muted-foreground tabular-nums">{s.recordingCount}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] ${STATUS_STYLES[s.status] || "bg-slate-100 text-slate-600"}`}>{s.status}</span>
+                      <span className={`px-2 py-0.5 rounded font-medium text-[11px] ${STATUS_STYLES[s.status] || "bg-muted text-muted-foreground"}`}>{s.status}</span>
                     </td>
                     <td className="p-3 text-muted-foreground"><ChevronRight className="h-4 w-4" /></td>
                   </tr>
@@ -191,11 +191,11 @@ export default function LiveQAHistoryPage() {
       {/* Session detail drawer */}
       {openId && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => { setOpenId(null); setDetail(null) }}>
-          <div className="w-full max-w-2xl bg-background h-full shadow-2xl border-l flex flex-col animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl bg-background h-full shadow-[0_8px_24px_rgba(0,0,0,0.08)] border-l flex flex-col animate-in slide-in-from-right duration-300" onClick={(e) => e.stopPropagation()}>
             <div className="p-5 border-b flex items-center justify-between bg-accent/15 shrink-0">
               <div className="min-w-0">
-                <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-100 truncate flex items-center gap-1.5">
-                  <History className="h-4 w-4 text-indigo-500 shrink-0" /> {detail?.title || "Session"}
+                <h3 className="font-semibold text-sm text-foreground dark:text-slate-100 truncate flex items-center gap-1.5">
+                  <History className="h-4 w-4 text-primary shrink-0" /> {detail?.title || "Session"}
                 </h3>
                 {detail && (
                   <p className="text-[10px] text-muted-foreground font-medium mt-0.5 flex items-center gap-2 flex-wrap">
@@ -213,14 +213,14 @@ export default function LiveQAHistoryPage() {
               ) : (
                 <>
                   {detail.startUrl && (
-                    <a href={detail.startUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline">
+                    <a href={detail.startUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-primary dark:text-indigo-400 hover:underline">
                       <Globe className="h-3.5 w-3.5" /> {detail.startUrl} <ExternalLink className="h-3 w-3" />
                     </a>
                   )}
 
                   {/* Bugs */}
                   <section className="space-y-2">
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Bug className="h-3.5 w-3.5 text-rose-500" /> Bugs ({detail.bugReports.length})</h4>
+                    <h4 className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5"><Bug className="h-3.5 w-3.5 text-rose-500" /> Bugs ({detail.bugReports.length})</h4>
                     {detail.bugReports.length === 0 ? (
                       <p className="text-[11px] text-muted-foreground italic">No bugs were filed during this session.</p>
                     ) : (
@@ -229,11 +229,11 @@ export default function LiveQAHistoryPage() {
                           <button
                             key={b.id}
                             onClick={() => router.push(`/projects/${projectId}/bug-reports?bug=${b.id}`)}
-                            className="w-full text-left p-2.5 border rounded-lg bg-background hover:border-indigo-300 hover:bg-indigo-50/40 dark:hover:bg-indigo-500/[0.06] transition-colors flex items-center gap-2"
+                            className="w-full text-left p-2.5 border rounded-lg bg-background hover:border-primary/25 hover:bg-primary/10 dark:hover:bg-indigo-500/[0.06] transition-colors flex items-center gap-2"
                           >
                             <span className="font-mono text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded font-extrabold shrink-0">{b.bugKey || "BUG"}</span>
-                            <span className="flex-1 truncate text-slate-800 dark:text-slate-100 font-bold" title={b.title}>{b.title}</span>
-                            <span className={`px-1.5 py-0.5 rounded font-bold uppercase text-[8px] shrink-0 ${SEVERITY_STYLES[b.severity] || "bg-slate-100 text-slate-600"}`}>{b.severity}</span>
+                            <span className="flex-1 truncate text-foreground dark:text-slate-100 font-semibold" title={b.title}>{b.title}</span>
+                            <span className={`px-1.5 py-0.5 rounded font-medium text-[11px] shrink-0 ${SEVERITY_STYLES[b.severity] || "bg-muted text-muted-foreground"}`}>{b.severity}</span>
                             <span className="text-[9px] text-muted-foreground shrink-0">{b.status}</span>
                             <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
                           </button>
@@ -244,7 +244,7 @@ export default function LiveQAHistoryPage() {
 
                   {/* Screenshots */}
                   <section className="space-y-2">
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Camera className="h-3.5 w-3.5 text-indigo-500" /> Screenshots ({detail.screenshots.length})</h4>
+                    <h4 className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5"><Camera className="h-3.5 w-3.5 text-primary" /> Screenshots ({detail.screenshots.length})</h4>
                     {detail.screenshots.length === 0 ? (
                       <p className="text-[11px] text-muted-foreground italic">No screenshots captured.</p>
                     ) : (
@@ -253,13 +253,13 @@ export default function LiveQAHistoryPage() {
                           <button
                             key={shot.id}
                             onClick={() => setLightbox(fileUrl(shot.filePath))}
-                            className="group relative border rounded-lg overflow-hidden aspect-[4/3] bg-muted/40 hover:ring-2 hover:ring-indigo-400 transition-all"
+                            className="group relative border rounded-lg overflow-hidden aspect-[4/3] bg-muted/40 hover:ring-2 hover:ring-primary transition-all"
                             title="Click to enlarge"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={fileUrl(shot.filePath)} alt={`Screenshot ${idx + 1}`} className="h-full w-full object-cover" />
                             {shot.annotatedFromId && (
-                              <span className="absolute top-1 left-1 bg-indigo-600 text-white text-[7px] font-bold px-1 py-0.5 rounded">Annotated</span>
+                              <span className="absolute top-1 left-1 bg-primary text-white text-[7px] font-semibold px-1 py-0.5 rounded">Annotated</span>
                             )}
                           </button>
                         ))}
@@ -269,7 +269,7 @@ export default function LiveQAHistoryPage() {
 
                   {/* Recordings */}
                   <section className="space-y-2">
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Video className="h-3.5 w-3.5 text-indigo-500" /> Recordings ({detail.recordings.length})</h4>
+                    <h4 className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5"><Video className="h-3.5 w-3.5 text-primary" /> Recordings ({detail.recordings.length})</h4>
                     {detail.recordings.length === 0 ? (
                       <p className="text-[11px] text-muted-foreground italic">No video recordings.</p>
                     ) : (
@@ -280,7 +280,7 @@ export default function LiveQAHistoryPage() {
                             <div className="px-2.5 py-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
                               <span>Clip {idx + 1}{clip.durationMs ? ` · ${Math.round(clip.durationMs / 1000)}s` : ""}</span>
                               {clip.filePath && (
-                                <a href={fileUrl(clip.filePath)} download={`recording-${idx + 1}.webm`} className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">Download</a>
+                                <a href={fileUrl(clip.filePath)} download={`recording-${idx + 1}.webm`} className="font-semibold text-primary dark:text-indigo-400 hover:underline">Download</a>
                               )}
                             </div>
                           </div>
@@ -299,7 +299,7 @@ export default function LiveQAHistoryPage() {
       {lightbox && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6" onClick={() => setLightbox(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={lightbox} alt="Screenshot" className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+          <img src={lightbox} alt="Screenshot" className="max-w-full max-h-full object-contain rounded-lg shadow-[0_8px_24px_rgba(0,0,0,0.08)]" />
           <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 text-white/80 hover:text-white"><X className="h-6 w-6" /></button>
         </div>
       )}

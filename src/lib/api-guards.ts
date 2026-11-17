@@ -207,6 +207,35 @@ export async function resolveProjectRole(
 }
 
 /**
+ * Team access to a project's day-to-day QA work (manual runs, step results).
+ * "read": any member, the creator, or a Global Admin. "write": the same minus
+ * Viewers. Replaces the old `project.userId === me` checks, which locked every
+ * Admin and Member out of runs they were assigned.
+ */
+export async function canUseProject(projectId: string, userId: string, mode: "read" | "write"): Promise<boolean> {
+  const resolved = await resolveProjectRole(projectId, userId)
+  if (!resolved || resolved.role === null) return false
+  if (mode === "read") return true
+  return resolved.role !== "Viewer" || resolved.globalRole === "Admin"
+}
+
+/** The subset of `projectIds` (deduplicated) the user may use in `mode`. */
+export async function usableProjectIds(userId: string, projectIds: string[], mode: "read" | "write"): Promise<Set<string>> {
+  const unique = Array.from(new Set(projectIds))
+  const checks = await Promise.all(unique.map((id) => canUseProject(id, userId, mode)))
+  return new Set(unique.filter((_, i) => checks[i]))
+}
+
+/**
+ * Prisma filter for "projects this user belongs to": the creator or any member.
+ * Use inside relation filters, e.g. `where: { id, project: memberProjectWhere(uid) }`,
+ * in place of the old creator-only `project: { userId: uid }`.
+ */
+export function memberProjectWhere(userId: string) {
+  return { OR: [{ userId }, { projectMembers: { some: { userId } } }] }
+}
+
+/**
  * Guard requiring a specific project permission. Mirrors the existing
  * {error, status, session} shape and additionally returns the resolved role.
  */

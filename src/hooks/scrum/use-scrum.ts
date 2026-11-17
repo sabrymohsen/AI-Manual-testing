@@ -5,12 +5,29 @@ import { toast } from "sonner"
 import { scrumApi, scrumKeys, http } from "@/lib/scrum/api"
 import type { ScrumTask, TaskFilters } from "@/types/scrum"
 
+// ── Live refresh ───────────────────────────────────────────────────────────
+// The board is shared by a team, but it used to load once and only change
+// after a reload: teammates' moves, new issues and comments never appeared.
+// Board data now refreshes every LIVE_MS while the tab is visible (React Query
+// pauses intervals in background tabs) and as soon as the tab regains focus.
+// Refreshing is paused while a card is being dragged, so it can't jump.
+const LIVE_MS = 10_000
+let dragging = false
+export function setBoardDragging(value: boolean) {
+  dragging = value
+}
+const live = {
+  refetchInterval: () => (dragging ? false : LIVE_MS),
+  refetchOnWindowFocus: true,
+} as const
+
 // ── Queries ────────────────────────────────────────────────────────────────
 
 export function useScrumTasks(projectId: string, filters: TaskFilters = {}) {
   return useQuery({
     queryKey: scrumKeys.tasks(projectId, filters),
     queryFn: () => scrumApi.listTasks(projectId, filters),
+    ...live,
   })
 }
 
@@ -19,19 +36,20 @@ export function useScrumTask(taskId: string | null) {
     queryKey: taskId ? scrumKeys.task(taskId) : ["scrum", "task", "none"],
     queryFn: () => scrumApi.getTask(taskId as string),
     enabled: !!taskId,
+    ...live,
   })
 }
 
 export function useScrumSprints(projectId: string) {
-  return useQuery({ queryKey: scrumKeys.sprints(projectId), queryFn: () => scrumApi.listSprints(projectId) })
+  return useQuery({ queryKey: scrumKeys.sprints(projectId), queryFn: () => scrumApi.listSprints(projectId), ...live })
 }
 
 export function useScrumEpics(projectId: string) {
-  return useQuery({ queryKey: scrumKeys.epics(projectId), queryFn: () => scrumApi.listEpics(projectId) })
+  return useQuery({ queryKey: scrumKeys.epics(projectId), queryFn: () => scrumApi.listEpics(projectId), ...live })
 }
 
 export function useBoardColumns(projectId: string) {
-  return useQuery({ queryKey: scrumKeys.columns(projectId), queryFn: () => scrumApi.listColumns(projectId) })
+  return useQuery({ queryKey: scrumKeys.columns(projectId), queryFn: () => scrumApi.listColumns(projectId), ...live })
 }
 
 /** Project name/boardKey for the board header breadcrumb. */
@@ -55,6 +73,7 @@ export function useScrumActivities(projectId: string, limit = 50) {
   return useQuery({
     queryKey: scrumKeys.activities(projectId),
     queryFn: () => scrumApi.listActivities(projectId, limit),
+    ...live,
   })
 }
 

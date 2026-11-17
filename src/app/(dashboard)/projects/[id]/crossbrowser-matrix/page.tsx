@@ -184,26 +184,26 @@ export default function CrossBrowserMatrixPage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-slate-800">
+    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-foreground">
       
       {/* Page Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap border-b pb-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
+          <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2">
             <LayoutGrid className="text-indigo-650 animate-pulse h-5 w-5" /> CrossBrowser Matrix
           </h1>
-          <p className="text-slate-500 font-medium mt-1">
+          <p className="text-muted-foreground font-medium mt-1">
             Browse automation test execution behaviors across multiple browser instances simultaneously.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-slate-400 font-mono text-[10px]">
+        <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px]">
           <span>Arguments: -DtargetBrowserName=chrome|firefox|edge</span>
         </div>
       </div>
 
       {/* Primary Content Rows */}
       {loading ? (
-        <div className="py-20 flex flex-col items-center justify-center gap-2 text-slate-400 border bg-white rounded-2xl">
+        <div className="py-20 flex flex-col items-center justify-center gap-2 text-muted-foreground border bg-card rounded-xl">
           <Loader2 className="animate-spin" size={24} />
           <span>Generating matrix grid data...</span>
         </div>
@@ -213,13 +213,13 @@ export default function CrossBrowserMatrixPage() {
           {/* Left Column: CrossBrowser Grid Map */}
           <div className="lg:col-span-8 space-y-6">
             
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Matrix Results Overview</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Matrix Results Overview</span>
               
               <div className="overflow-x-auto">
                 <table className="w-full text-center border-collapse">
                   <thead>
-                    <tr className="bg-slate-50 border-b text-[10px] font-bold text-slate-450 uppercase tracking-wider text-left">
+                    <tr className="bg-muted/50 border-b text-[11px] font-medium text-slate-450 text-left">
                       <th className="p-3.5 text-left w-52">Test Case Class</th>
                       {browserOptions.map(b => (
                         <th key={b} className="p-3.5 text-center">{b}</th>
@@ -228,8 +228,8 @@ export default function CrossBrowserMatrixPage() {
                   </thead>
                   <tbody className="divide-y text-slate-650 text-left">
                     {testOptions.map(t => (
-                      <tr key={t} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="p-3.5 font-extrabold text-slate-900 text-left truncate w-52">{t}</td>
+                      <tr key={t} className="hover:bg-muted/50 transition-colors">
+                        <td className="p-3.5 font-semibold text-foreground text-left truncate w-52">{t}</td>
                         {browserOptions.map(b => {
                           const cell = matrixMap[t][b]
                           let iconColor = "text-slate-300"
@@ -256,7 +256,7 @@ export default function CrossBrowserMatrixPage() {
                                 }`}
                               >
                                 <Icon className={`h-6 w-6 ${iconColor}`} />
-                                <span className="text-[7.5px] text-slate-400 font-mono font-medium block">
+                                <span className="text-[7.5px] text-muted-foreground font-mono font-medium block">
                                   {cell.status !== "not_run" 
                                     ? new Date(cell.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                     : "Not Run"
@@ -275,13 +275,13 @@ export default function CrossBrowserMatrixPage() {
 
             {/* Recommendation panel */}
             {recommendation && (
-              <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-3">
-                <div className="flex items-center gap-1 border-b pb-1.5 text-indigo-700">
+              <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-3">
+                <div className="flex items-center gap-1 border-b pb-1.5 text-primary">
                   <Sparkles size={13} />
-                  <span className="text-[10px] uppercase font-black tracking-wider">Cross-Browser Optimization Advice</span>
+                  <span className="text-[11px] font-medium">Cross-Browser Optimization Advice</span>
                 </div>
-                <div className="flex items-start gap-2.5 bg-indigo-50/50 border border-indigo-100 p-3.5 rounded-2xl">
-                  <Info className="text-indigo-600 shrink-0 mt-0.5" size={15} />
+                <div className="flex items-start gap-2.5 bg-primary/10 border border-primary/25 p-3.5 rounded-xl">
+                  <Info className="text-primary shrink-0 mt-0.5" size={15} />
                   <p className="text-slate-650 leading-relaxed font-medium">
                     {recommendation}
                   </p>
@@ -295,14 +295,14 @@ export default function CrossBrowserMatrixPage() {
           <div className="lg:col-span-4 space-y-6">
             
             {/* Batch Run Panel */}
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-4">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Batch Run Controls</span>
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Batch Run Controls</span>
               
               <div className="space-y-4">
                 
                 {/* Select tests */}
                 <div className="space-y-1.5">
-                  <label className="text-[9.5px] font-bold text-slate-450 block uppercase">1. Select Tests</label>
+                  <label className="text-[9.5px] font-semibold text-slate-450 block uppercase">1. Select Tests</label>
                   <div className="space-y-1">
                     {testOptions.map(t => (
                       <div key={t} className="flex items-center gap-2">
@@ -310,9 +310,9 @@ export default function CrossBrowserMatrixPage() {
                           type="checkbox"
                           checked={selectedTests.includes(t)}
                           onChange={() => toggleTestSelection(t)}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                          className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
                         />
-                        <span className="text-slate-700 font-bold font-mono text-[10px]">{t}</span>
+                        <span className="text-foreground font-semibold font-mono text-[10px]">{t}</span>
                       </div>
                     ))}
                   </div>
@@ -320,7 +320,7 @@ export default function CrossBrowserMatrixPage() {
 
                 {/* Select browsers */}
                 <div className="space-y-1.5">
-                  <label className="text-[9.5px] font-bold text-slate-450 block uppercase">2. Select Target Browsers</label>
+                  <label className="text-[9.5px] font-semibold text-slate-450 block uppercase">2. Select Target Browsers</label>
                   <div className="space-y-1">
                     {browserOptions.map(b => (
                       <div key={b} className="flex items-center gap-2">
@@ -328,9 +328,9 @@ export default function CrossBrowserMatrixPage() {
                           type="checkbox"
                           checked={selectedBrowsers.includes(b)}
                           onChange={() => toggleBrowserSelection(b)}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-indigo-650 focus:ring-indigo-500 cursor-pointer"
+                          className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
                         />
-                        <span className="text-slate-700 font-bold font-mono text-[10px]">{b}</span>
+                        <span className="text-foreground font-semibold font-mono text-[10px]">{b}</span>
                       </div>
                     ))}
                   </div>
@@ -339,17 +339,17 @@ export default function CrossBrowserMatrixPage() {
                 {runningBatch ? (
                   <div className="space-y-2 text-center py-2.5">
                     <Loader2 size={18} className="animate-spin text-indigo-650 mx-auto" />
-                    <span className="text-[10.5px] text-indigo-700 font-black">
+                    <span className="text-[10.5px] text-primary font-semibold">
                       Running {batchProgress} of {batchTotal} combinations...
                     </span>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
                       <div className="bg-indigo-650 h-full transition-all duration-300" style={{ width: `${(batchProgress / batchTotal) * 100}%` }} />
                     </div>
                   </div>
                 ) : (
                   <Button
                     onClick={handleRunBatchMatrix}
-                    className="bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl w-full h-9.5 font-black text-xs shadow-xs flex items-center justify-center gap-1.5"
+                    className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl w-full h-9.5 font-semibold text-xs shadow-xs flex items-center justify-center gap-1.5"
                   >
                     <Play size={12} className="fill-current" /> Execute Matrix Suite
                   </Button>
@@ -359,9 +359,9 @@ export default function CrossBrowserMatrixPage() {
             </div>
 
             {/* Legend guide */}
-            <div className="bg-white border rounded-2xl p-4 shadow-2xs space-y-3.5">
-              <span className="text-[10px] uppercase font-black text-slate-450 tracking-wider block border-b pb-2">Status Legend Guide</span>
-              <div className="grid grid-cols-2 gap-2 text-[10px] font-bold text-slate-650">
+            <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-3.5">
+              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Status Legend Guide</span>
+              <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold text-slate-650">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="text-emerald-500 h-4.5 w-4.5" />
                   <span>Pass</span>
@@ -389,12 +389,12 @@ export default function CrossBrowserMatrixPage() {
       {/* ---- MODAL: CELL RESULT DETAIL POPUP ---- */}
       {selectedCell && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-3xl border shadow-2xl p-6 w-full max-w-md space-y-4 text-slate-800">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-base font-black text-slate-900">Execution Diagnostics Overview</h3>
+              <h3 className="text-base font-semibold text-foreground">Execution Diagnostics Overview</h3>
               <button 
                 onClick={() => setSelectedCell(null)} 
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-muted-foreground hover:text-muted-foreground font-semibold"
               >
                 Close
               </button>
@@ -402,18 +402,18 @@ export default function CrossBrowserMatrixPage() {
             
             <div className="space-y-3">
               <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
-                <span className="text-slate-400 font-bold uppercase">Test Class</span>
-                <span className="col-span-2 font-mono font-bold text-slate-850">{selectedCell.testId}</span>
+                <span className="text-muted-foreground font-semibold uppercase">Test Class</span>
+                <span className="col-span-2 font-mono font-semibold text-slate-850">{selectedCell.testId}</span>
               </div>
 
               <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
-                <span className="text-slate-400 font-bold uppercase">Target Browser</span>
-                <span className="col-span-2 font-mono font-bold text-slate-850">{selectedCell.browserName}</span>
+                <span className="text-muted-foreground font-semibold uppercase">Target Browser</span>
+                <span className="col-span-2 font-mono font-semibold text-slate-850">{selectedCell.browserName}</span>
               </div>
 
               <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
-                <span className="text-slate-400 font-bold uppercase">Status</span>
-                <span className={`col-span-2 font-mono font-black uppercase ${
+                <span className="text-muted-foreground font-semibold uppercase">Status</span>
+                <span className={`col-span-2 font-mono font-semibold uppercase ${
                   selectedCell.status === "pass" ? "text-emerald-600" : selectedCell.status === "fail" ? "text-rose-600 animate-pulse" : "text-amber-600"
                 }`}>
                   {selectedCell.status}
@@ -421,26 +421,26 @@ export default function CrossBrowserMatrixPage() {
               </div>
 
               <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
-                <span className="text-slate-400 font-bold uppercase">Duration</span>
-                <span className="col-span-2 font-mono font-bold text-slate-850 flex items-center gap-1">
-                  <Clock size={11} className="text-slate-400" /> {selectedCell.duration}ms
+                <span className="text-muted-foreground font-semibold uppercase">Duration</span>
+                <span className="col-span-2 font-mono font-semibold text-slate-850 flex items-center gap-1">
+                  <Clock size={11} className="text-muted-foreground" /> {selectedCell.duration}ms
                 </span>
               </div>
 
               {selectedCell.errorMessage && (
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Error Message log</span>
-                  <div className="bg-rose-50/50 border border-rose-100 p-2.5 rounded-xl font-mono text-[9px] text-rose-700 select-all block break-all font-bold">
+                  <span className="text-[11px] font-medium text-muted-foreground">Error Message log</span>
+                  <div className="bg-rose-50/50 border border-rose-100 p-2.5 rounded-xl font-mono text-[9px] text-rose-700 select-all block break-all font-semibold">
                     {selectedCell.errorMessage}
                   </div>
                 </div>
               )}
 
               {/* Triage Screenshot Placeholder */}
-              <div className="aspect-video bg-slate-50 border rounded-2xl overflow-hidden flex items-center justify-center relative select-none">
+              <div className="aspect-video bg-muted/50 border rounded-xl overflow-hidden flex items-center justify-center relative select-none">
                 <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:12px_12px] flex flex-col justify-center items-center text-center p-2">
-                  <span className="text-[8.5px] font-black text-slate-450 uppercase">{selectedCell.browserName} rendering mock</span>
-                  <span className="text-[7.5px] text-slate-400 font-mono mt-0.5">Triage evidence screenshot</span>
+                  <span className="text-[8.5px] font-semibold text-slate-450 uppercase">{selectedCell.browserName} rendering mock</span>
+                  <span className="text-[7.5px] text-muted-foreground font-mono mt-0.5">Triage evidence screenshot</span>
                 </div>
               </div>
             </div>
@@ -449,13 +449,13 @@ export default function CrossBrowserMatrixPage() {
               <Button
                 variant="outline"
                 onClick={() => setSelectedCell(null)}
-                className="border-slate-200 text-slate-600 rounded-xl flex-1 text-xs h-9 font-bold"
+                className="border-border text-muted-foreground rounded-xl flex-1 text-xs h-9 font-semibold"
               >
                 Close
               </Button>
               <Button
                 onClick={() => handleReRunSingle(selectedCell)}
-                className="bg-indigo-650 text-white hover:bg-indigo-700 rounded-xl flex-1 text-xs h-9 font-black flex items-center justify-center gap-1"
+                className="bg-indigo-650 text-white hover:bg-primary/90 rounded-xl flex-1 text-xs h-9 font-semibold flex items-center justify-center gap-1"
               >
                 <ListRestart size={12} /> Re-run Result
               </Button>

@@ -41,7 +41,7 @@ export default function VisualTestDetailPage() {
 
   if (!data) {
     return (
-      <div className="flex items-center gap-2 p-10 text-sm text-slate-500">
+      <div className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading…
       </div>
     )
@@ -62,21 +62,21 @@ export default function VisualTestDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-5 p-6">
-      <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+      <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Visual tests
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">{test.name}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold text-foreground">{test.name}</h1>
+          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>{TEST_TYPE_LABEL[test.type]}</span>
             <span className="text-slate-300">·</span>
             {test.type === "Flow" ? (
-              <Link href={`/projects/${projectId}/test-cases/${test.testCase?.id}/edit`} className="text-indigo-700 hover:underline">
+              <Link href={`/projects/${projectId}/test-cases/${test.testCase?.id}/edit`} className="text-primary hover:underline">
                 {test.testCase?.title}
               </Link>
             ) : (
-              <a href={test.startUrl} target="_blank" rel="noreferrer" className="text-indigo-700 hover:underline">
+              <a href={test.startUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
                 {test.startUrl}
               </a>
             )}
@@ -115,7 +115,7 @@ export default function VisualTestDetailPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === key ? "border-indigo-600 text-indigo-700" : "border-transparent text-slate-500 hover:text-slate-800"}`}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
           >
             {label}
           </button>
@@ -146,17 +146,17 @@ export default function VisualTestDetailPage() {
 function RunsTab({ projectId, runs, baselineCount }: { projectId: string; runs: any[]; baselineCount: number }) {
   if (!runs.length) {
     return (
-      <div className="rounded-xl border border-dashed bg-white p-10 text-center text-sm text-slate-600">
+      <div className="rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
         This test has not run yet. The first run records the approved screenshots.
       </div>
     )
   }
   return (
     <div className="space-y-2">
-      <p className="text-xs text-slate-500">{baselineCount} approved screenshot(s) on file.</p>
-      <div className="overflow-x-auto rounded-xl border bg-white">
+      <p className="text-xs text-muted-foreground">{baselineCount} approved screenshot(s) on file.</p>
+      <div className="overflow-x-auto rounded-xl border bg-card">
         <table className="w-full text-sm">
-          <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
             <tr>
               <th className="px-4 py-3">Result</th>
               <th className="px-4 py-3">Started</th>
@@ -167,19 +167,19 @@ function RunsTab({ projectId, runs, baselineCount }: { projectId: string; runs: 
           </thead>
           <tbody>
             {runs.map(r => (
-              <tr key={r.id} className="border-b last:border-0 hover:bg-slate-50/60">
+              <tr key={r.id} className="border-b last:border-0 hover:bg-muted/60">
                 <td className="px-4 py-3">
                   <Link href={`/projects/${projectId}/visual-tests/runs/${r.id}`}>
                     <RunStatusBadge status={r.status} outcome={r.outcome} newCount={r.newCount} passedCount={r.passedCount} />
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">
-                  <Link href={`/projects/${projectId}/visual-tests/runs/${r.id}`} className="hover:text-indigo-700">
+                <td className="px-4 py-3 text-muted-foreground">
+                  <Link href={`/projects/${projectId}/visual-tests/runs/${r.id}`} className="hover:text-primary">
                     {formatDate(r.startedAt || r.createdAt)}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{formatDuration(r.startedAt, r.completedAt)}</td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-muted-foreground">{formatDuration(r.startedAt, r.completedAt)}</td>
+                <td className="px-4 py-3 text-muted-foreground">
                   {r.status === "Running" ? (
                     `${r.doneScreens} of ${r.totalScreens || "?"}`
                   ) : (
@@ -196,7 +196,7 @@ function RunsTab({ projectId, runs, baselineCount }: { projectId: string; runs: 
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-muted-foreground">
                   {r.addedPages || r.removedPages ? `+${r.addedPages} / −${r.removedPages}` : "—"}
                 </td>
               </tr>
@@ -256,31 +256,31 @@ function PagesTab({ test, pages, onChanged }: { test: any; pages: any[]; onChang
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {(["included", "excluded", "removed"] as const).map(s => (
-            <button key={s} onClick={() => setShow(s)} className={`rounded-full border px-3 py-1 text-sm ${show === s ? "border-indigo-400 bg-indigo-50 text-indigo-700" : "text-slate-600"}`}>
+            <button key={s} onClick={() => setShow(s)} className={`rounded-full border px-3 py-1 text-sm ${show === s ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground"}`}>
               {s === "included" ? "Being tested" : s === "excluded" ? "Left out" : "No longer in sitemap"}
             </button>
           ))}
           <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter" className="ml-auto h-8 w-48 rounded-md border px-2 text-sm" />
         </div>
         {test.type === "FullWebsite" && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Pages come from the sitemap and are refreshed on every run. Up to {test.maxUrls} pages are tested.
             {test.excludedFolders.length > 0 && ` Folders left out: ${test.excludedFolders.join(", ")}.`}
           </p>
         )}
-        <div className="max-h-[520px] overflow-y-auto rounded-xl border bg-white">
+        <div className="max-h-[520px] overflow-y-auto rounded-xl border bg-card">
           {rows.length === 0 ? (
-            <p className="p-6 text-center text-sm text-slate-500">Nothing here.</p>
+            <p className="p-6 text-center text-sm text-muted-foreground">Nothing here.</p>
           ) : (
             rows.map(p => (
               <div key={p.id} className="flex items-center gap-3 border-b px-4 py-2 text-sm last:border-0">
-                <a href={p.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-slate-700 hover:text-indigo-700" title={p.url}>
+                <a href={p.url} target="_blank" rel="noreferrer" className="flex-1 truncate text-foreground hover:text-primary" title={p.url}>
                   {pathOf(p.url)}
                 </a>
-                <span className="text-xs text-slate-400">{p.source}</span>
+                <span className="text-xs text-muted-foreground">{p.source}</span>
                 {show !== "removed" &&
                   (p.folderExcluded ? (
-                    <span className="text-xs text-slate-500">folder left out</span>
+                    <span className="text-xs text-muted-foreground">folder left out</span>
                   ) : (
                     <Button size="sm" variant="ghost" disabled={busy} onClick={() => setExcluded([p.id], !p.excluded)}>
                       {p.excluded ? <Eye /> : <EyeOff />} {p.excluded ? "Include" : "Leave out"}
@@ -291,8 +291,8 @@ function PagesTab({ test, pages, onChanged }: { test: any; pages: any[]; onChang
           )}
         </div>
       </div>
-      <div className="space-y-2 rounded-xl border bg-white p-4">
-        <p className="text-sm font-medium text-slate-800">Add pages</p>
+      <div className="space-y-2 rounded-xl border bg-card p-4">
+        <p className="text-sm font-medium text-foreground">Add pages</p>
         <textarea value={adding} onChange={e => setAdding(e.target.value)} rows={6} placeholder={"One address per line\n/pricing"} className="w-full rounded-md border p-2 font-mono text-xs" />
         <Button size="sm" onClick={add} disabled={busy || !adding.trim()}>
           <Plus /> Add
@@ -307,15 +307,15 @@ function RegionsTab({ regions, pages, environments, onChanged }: { regions: any[
   const envName = (key: string | null) => (key ? environments.find(e => e.key === key)?.name || key : "every browser & size")
   if (!regions.length) {
     return (
-      <div className="rounded-xl border border-dashed bg-white p-8 text-center text-sm text-slate-600">
+      <div className="rounded-xl border border-dashed bg-card p-8 text-center text-sm text-muted-foreground">
         No ignored areas. Draw one on a screenshot while reviewing a run, for example over a rotating banner or a clock.
       </div>
     )
   }
   return (
-    <div className="overflow-x-auto rounded-xl border bg-white">
+    <div className="overflow-x-auto rounded-xl border bg-card">
       <table className="w-full text-sm">
-        <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+        <thead className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
           <tr>
             <th className="px-4 py-3">Applies to</th>
             <th className="px-4 py-3">Area</th>
@@ -326,13 +326,13 @@ function RegionsTab({ regions, pages, environments, onChanged }: { regions: any[
         <tbody>
           {regions.map(r => (
             <tr key={r.id} className="border-b last:border-0">
-              <td className="px-4 py-3 text-slate-700">
+              <td className="px-4 py-3 text-foreground">
                 {pageName(r.screenKey)} · {envName(r.envKey)}
               </td>
-              <td className="px-4 py-3 text-slate-600">
+              <td className="px-4 py-3 text-muted-foreground">
                 {r.width}×{r.height} at ({r.x}, {r.y})
               </td>
-              <td className="px-4 py-3 text-slate-600">{r.note || "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{r.note || "—"}</td>
               <td className="px-4 py-3 text-right">
                 <Button
                   size="sm"
@@ -414,43 +414,43 @@ function SettingsTab({ projectId, test, onSaved }: { projectId: string; test: an
   }
 
   return (
-    <div className="space-y-6 rounded-xl border bg-white p-5">
+    <div className="space-y-6 rounded-xl border bg-card p-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="space-y-1 text-sm">
-          <span className="font-medium text-slate-800">Name</span>
+          <span className="font-medium text-foreground">Name</span>
           <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="h-9 w-full rounded-md border px-2" />
         </label>
         {test.type !== "Flow" && (
           <label className="space-y-1 text-sm">
-            <span className="font-medium text-slate-800">Web address</span>
+            <span className="font-medium text-foreground">Web address</span>
             <input value={form.startUrl} onChange={e => setForm(f => ({ ...f, startUrl: e.target.value }))} className="h-9 w-full rounded-md border px-2" />
           </label>
         )}
         {test.type === "FullWebsite" && (
           <>
             <label className="space-y-1 text-sm">
-              <span className="font-medium text-slate-800">Sitemap address</span>
+              <span className="font-medium text-foreground">Sitemap address</span>
               <input value={form.sitemapUrl} onChange={e => setForm(f => ({ ...f, sitemapUrl: e.target.value }))} placeholder="Found automatically" className="h-9 w-full rounded-md border px-2" />
             </label>
             <label className="space-y-1 text-sm">
-              <span className="font-medium text-slate-800">Most pages to test</span>
+              <span className="font-medium text-foreground">Most pages to test</span>
               <input type="number" value={form.maxUrls} onChange={e => setForm(f => ({ ...f, maxUrls: e.target.value }))} className="h-9 w-full rounded-md border px-2" />
             </label>
             <label className="space-y-1 text-sm sm:col-span-2">
-              <span className="font-medium text-slate-800">Folders to leave out</span>
+              <span className="font-medium text-foreground">Folders to leave out</span>
               <textarea value={form.excludedFolders} onChange={e => setForm(f => ({ ...f, excludedFolders: e.target.value }))} rows={3} placeholder={"/blog/\n/careers/"} className="w-full rounded-md border p-2 font-mono text-xs" />
             </label>
           </>
         )}
       </div>
       {test.type === "Flow" ? (
-        <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+        <p className="rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
           Checkpoints are captured in the browser and screen size the test case runs in, so there is nothing to choose here.
         </p>
       ) : (
         <div className="space-y-2">
-          <p className="text-sm font-medium text-slate-800">Browsers and screen sizes</p>
-          <p className="text-xs text-slate-500">Adding one gives it its own approved screenshots on the next run. Removing one keeps its history.</p>
+          <p className="text-sm font-medium text-foreground">Browsers and screen sizes</p>
+          <p className="text-xs text-muted-foreground">Adding one gives it its own approved screenshots on the next run. Removing one keeps its history.</p>
           <EnvironmentPicker value={settings.environments} onChange={environments => setSettings(s => ({ ...s, environments }))} />
         </div>
       )}

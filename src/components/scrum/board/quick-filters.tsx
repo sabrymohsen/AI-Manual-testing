@@ -39,8 +39,7 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
   const visibleFilters = expanded ? FILTERS : FILTERS.slice(0, 3)
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-wider text-[#6B778C]/60">Quick Filters</span>
+    <div className="flex items-center gap-1.5 whitespace-nowrap">
       {visibleFilters.map((f) => {
         const active = activeFilters.includes(f.key)
         return (
@@ -48,10 +47,10 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
             key={f.key}
             onClick={() => toggle(f.key)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors",
+              "inline-flex h-6 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
               active
-                ? "border-[#0052CC] bg-[#DEEBFF] text-[#0052CC]"
-                : "border-[#DFE1E6] bg-white text-[#6B778C] hover:bg-[#F4F5F7] hover:text-[#172B4D]"
+                ? "border-primary/30 bg-primary/10 text-foreground"
+                : "border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
             {f.icon}
@@ -63,7 +62,7 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
       {!expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="text-[10px] font-semibold text-[#0052CC] hover:text-[#0747A6] transition-colors"
+          className="h-6 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           + More
         </button>
@@ -71,9 +70,9 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
       {activeFilters.length > 0 && (
         <button
           onClick={clearAll}
-          className="text-[10px] font-semibold text-[#6B778C] hover:text-[#172B4D] transition-colors"
+          className="h-6 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          Clear all
+          Clear
         </button>
       )}
     </div>

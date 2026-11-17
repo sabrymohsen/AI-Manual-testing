@@ -250,10 +250,10 @@ export default function ReusableFlowsPage() {
         <div className="flex items-center gap-4">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Reusable Step Library
             </h1>
-            <p className="text-slate-500">
+            <p className="text-muted-foreground">
               Create and manage step workflows that can be reused across test cases.
             </p>
           </div>
@@ -273,49 +273,49 @@ export default function ReusableFlowsPage() {
       )}
 
       {isCreating || isEditing ? (
-        <form onSubmit={handleSave} className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-6 max-w-5xl mx-auto transition-all duration-200">
-          <h2 className="text-xl font-bold mb-6 text-slate-800 flex items-center gap-2 border-b pb-4">
+        <form onSubmit={handleSave} className="bg-card border border-border/80 rounded-xl shadow-sm p-6 max-w-5xl mx-auto transition-all duration-200">
+          <h2 className="text-xl font-semibold mb-6 text-foreground flex items-center gap-2 border-b pb-4">
             <Layers className="text-blue-500" />
             {isCreating ? "Create New Reusable Flow" : "Edit Reusable Flow"}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="md:col-span-2">
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Flow Name</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Flow Name</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Login as Administrator"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800"
+                className="w-full px-4 py-2.5 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground"
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Category</label>
+              <label className="block text-sm font-semibold text-foreground mb-2">Category</label>
               <input
                 type="text"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 placeholder="e.g. Authentication"
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800"
+                className="w-full px-4 py-2.5 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground"
               />
             </div>
           </div>
 
           <div className="mb-8">
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Description</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Provide context for when to use this reusable flow..."
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-800 h-20 resize-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground h-20 resize-none"
             />
           </div>
 
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                 Steps Sequence ({steps.length})
               </h3>
               <Button type="button" variant="outline" onClick={handleAddStep} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 border-blue-200 flex items-center gap-1.5 rounded-lg py-1.5 px-3">
@@ -325,16 +325,16 @@ export default function ReusableFlowsPage() {
 
             <div className="space-y-4">
               {steps.map((step, idx) => (
-                <div key={idx} className="p-4 bg-slate-50/50 border border-slate-200/60 rounded-xl relative flex flex-col gap-4 group hover:border-slate-300 transition-all duration-150">
+                <div key={idx} className="p-4 bg-muted/50 border border-border/60 rounded-xl relative flex flex-col gap-4 group hover:border-border transition-all duration-150">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm bg-slate-200 text-slate-700 rounded-full px-2.5 py-0.5">
+                    <span className="font-semibold text-sm bg-muted text-foreground rounded-full px-2.5 py-0.5">
                       Step {step.stepNumber}
                     </span>
                     <div className="flex items-center gap-1">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => handleMoveStep(idx, "up")} disabled={idx === 0} className="text-slate-400 hover:text-slate-700 p-1">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleMoveStep(idx, "up")} disabled={idx === 0} className="text-muted-foreground hover:text-foreground p-1">
                         <MoveUp size={16} />
                       </Button>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => handleMoveStep(idx, "down")} disabled={idx === steps.length - 1} className="text-slate-400 hover:text-slate-700 p-1">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => handleMoveStep(idx, "down")} disabled={idx === steps.length - 1} className="text-muted-foreground hover:text-foreground p-1">
                         <MoveDown size={16} />
                       </Button>
                       <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveStep(idx)} disabled={steps.length <= 1} className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1 rounded-md">
@@ -345,67 +345,67 @@ export default function ReusableFlowsPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Action Description</label>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Action Description</label>
                       <input
                         type="text"
                         required
                         value={step.actionDescription}
                         onChange={(e) => handleStepChange(idx, "actionDescription", e.target.value)}
                         placeholder="Click login, fill credentials, etc."
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                     <div className="md:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Expected Result (Optional)</label>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Expected Result (Optional)</label>
                       <input
                         type="text"
                         value={step.expectedResult || ""}
                         onChange={(e) => handleStepChange(idx, "expectedResult", e.target.value)}
                         placeholder="Expected outcome"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Action Type</label>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Action Type</label>
                       <select
                         value={step.actionType}
                         onChange={(e) => handleStepChange(idx, "actionType", e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-card text-foreground"
                       >
                         {ACTION_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Target Type</label>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Target Type</label>
                       <select
                         value={step.targetType}
                         onChange={(e) => handleStepChange(idx, "targetType", e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-slate-800"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-card text-foreground"
                       >
                         {TARGET_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Target Value (Optional)</label>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Target Value (Optional)</label>
                       <input
                         type="text"
                         value={step.targetValue || ""}
                         onChange={(e) => handleStepChange(idx, "targetValue", e.target.value)}
                         placeholder="Selector, role name, etc."
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-500 mb-1">Input Value (Optional)</label>
+                      <label className="block text-xs font-semibold text-muted-foreground mb-1">Input Value (Optional)</label>
                       <input
                         type="text"
                         value={step.inputValue || ""}
                         onChange={(e) => handleStepChange(idx, "inputValue", e.target.value)}
                         placeholder="Text to type / select value"
-                        className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                   </div>
@@ -415,7 +415,7 @@ export default function ReusableFlowsPage() {
           </div>
 
           <div className="flex items-center gap-3 border-t pt-6 justify-end">
-            <Button type="button" variant="outline" onClick={() => { setIsEditing(false); setIsCreating(false); }} className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50">
+            <Button type="button" variant="outline" onClick={() => { setIsEditing(false); setIsCreating(false); }} className="rounded-xl border-border text-muted-foreground hover:bg-muted/50">
               Cancel
             </Button>
             <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 rounded-xl flex items-center gap-1.5">
@@ -426,15 +426,15 @@ export default function ReusableFlowsPage() {
       ) : (
         <div>
           {loading ? (
-            <div className="flex flex-col items-center justify-center p-20 bg-slate-50/50 border border-slate-200/50 rounded-2xl">
+            <div className="flex flex-col items-center justify-center p-20 bg-muted/50 border border-border/50 rounded-xl">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-slate-500 text-sm">Loading Reusable Steps Library...</p>
+              <p className="text-muted-foreground text-sm">Loading Reusable Steps Library...</p>
             </div>
           ) : flows.length === 0 ? (
-            <div className="text-center p-16 bg-slate-50/50 border border-slate-200/60 rounded-2xl shadow-sm max-w-xl mx-auto">
-              <Layers size={48} className="mx-auto text-slate-400 mb-4" />
-              <h3 className="text-lg font-bold text-slate-800 mb-1">No Reusable Flows Yet</h3>
-              <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
+            <div className="text-center p-16 bg-muted/50 border border-border/60 rounded-xl shadow-sm max-w-xl mx-auto">
+              <Layers size={48} className="mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-1">No Reusable Flows Yet</h3>
+              <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">
                 Save common navigation steps, API login routines, or dashboard processes and use them inside test cases with one click.
               </p>
               <Button onClick={handleOpenCreate} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl flex items-center gap-2 mx-auto">
@@ -444,40 +444,40 @@ export default function ReusableFlowsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {flows.map((flow) => (
-                <div key={flow.id} className="bg-white border border-slate-200/70 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
+                <div key={flow.id} className="bg-card border border-border/70 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1">
                         <Folder size={12} /> {flow.category || "General"}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-muted-foreground">
                         {flow.steps.length} {flow.steps.length === 1 ? "step" : "steps"}
                       </span>
                     </div>
 
-                    <h3 className="font-bold text-lg text-slate-800 mb-1.5 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-semibold text-lg text-foreground mb-1.5 group-hover:text-blue-600 transition-colors">
                       {flow.name}
                     </h3>
-                    <p className="text-sm text-slate-500 line-clamp-2 mb-4">
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                       {flow.description || "No description provided for this reusable step flow."}
                     </p>
 
-                    <div className="bg-slate-50/60 border border-slate-100 rounded-xl p-3 mb-6 max-h-32 overflow-y-auto space-y-2">
+                    <div className="bg-muted/60 border border-border rounded-xl p-3 mb-6 max-h-32 overflow-y-auto space-y-2">
                       {flow.steps.map((step) => (
-                        <div key={step.id || step.stepNumber} className="flex gap-2 text-xs text-slate-600">
-                          <span className="font-semibold text-slate-400 min-w-4 text-right">{step.stepNumber}.</span>
+                        <div key={step.id || step.stepNumber} className="flex gap-2 text-xs text-muted-foreground">
+                          <span className="font-semibold text-muted-foreground min-w-4 text-right">{step.stepNumber}.</span>
                           <span className="truncate flex-1 font-medium">{step.actionDescription}</span>
-                          <span className="text-[10px] text-slate-400 italic bg-slate-200/50 rounded px-1">{step.actionType}</span>
+                          <span className="text-[10px] text-muted-foreground italic bg-muted/50 rounded px-1">{step.actionType}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-2 border-t pt-4">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(flow)} className="text-slate-600 hover:text-blue-600 hover:bg-blue-50/50 rounded-lg py-1 px-3.5 flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(flow)} className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50/50 rounded-lg py-1 px-3.5 flex items-center gap-1">
                       <Edit size={14} /> Edit
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(flow.id)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg py-1 px-3.5 flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(flow.id)} className="text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg py-1 px-3.5 flex items-center gap-1">
                       <Trash2 size={14} /> Delete
                     </Button>
                   </div>

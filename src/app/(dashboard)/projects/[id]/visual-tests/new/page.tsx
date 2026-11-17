@@ -36,18 +36,18 @@ function StepCard({
   children: React.ReactNode
 }) {
   return (
-    <section className={`rounded-xl border bg-white ${open ? "shadow-sm ring-1 ring-indigo-100" : ""}`}>
+    <section className={`rounded-xl border bg-card ${open ? "shadow-sm ring-1 ring-indigo-100" : ""}`}>
       <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 px-5 py-4 text-left">
         <span
-          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${done ? "bg-emerald-100 text-emerald-700" : open ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}
+          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${done ? "bg-emerald-100 text-emerald-700" : open ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
         >
           {done && !open ? <Check className="h-4 w-4" /> : n}
         </span>
         <span className="flex-1">
-          <span className="block font-semibold text-slate-900">{title}</span>
-          {!open && summary && <span className="block text-sm text-slate-500">{summary}</span>}
+          <span className="block font-semibold text-foreground">{title}</span>
+          {!open && summary && <span className="block text-sm text-muted-foreground">{summary}</span>}
         </span>
-        {open ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
       </button>
       {open && <div className="border-t px-5 py-5">{children}</div>}
     </section>
@@ -212,12 +212,12 @@ function Wizard() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6">
-      <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+      <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Visual tests
       </Link>
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{type === "FullWebsite" ? "Test a whole website" : "Test a list of pages"}</h1>
-        <p className="mt-1 text-sm text-slate-600">Answer one question at a time. Nothing is saved until the last step.</p>
+        <h1 className="text-2xl font-semibold text-foreground">{type === "FullWebsite" ? "Test a whole website" : "Test a list of pages"}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Answer one question at a time. Nothing is saved until the last step.</p>
       </div>
 
       <StepCard
@@ -230,25 +230,25 @@ function Wizard() {
       >
         <div className="space-y-4">
           <label className="block space-y-1 text-sm">
-            <span className="font-medium text-slate-800">{type === "FullWebsite" ? "Web address" : "Site address (optional, lets you write /pricing instead of the full address)"}</span>
+            <span className="font-medium text-foreground">{type === "FullWebsite" ? "Web address" : "Site address (optional, lets you write /pricing instead of the full address)"}</span>
             <input value={startUrl} onChange={e => setStartUrl(e.target.value)} placeholder="https://example.com" className="h-10 w-full rounded-md border px-3" autoFocus />
           </label>
 
           {type === "FullWebsite" ? (
             <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
               <label className="block space-y-1 text-sm">
-                <span className="font-medium text-slate-800">Sitemap address <span className="font-normal text-slate-500">(optional)</span></span>
+                <span className="font-medium text-foreground">Sitemap address <span className="font-normal text-muted-foreground">(optional)</span></span>
                 <input value={sitemapUrl} onChange={e => setSitemapUrl(e.target.value)} placeholder="Found automatically from robots.txt or /sitemap.xml" className="h-10 w-full rounded-md border px-3" />
               </label>
               <label className="block space-y-1 text-sm">
-                <span className="font-medium text-slate-800">Most pages to test</span>
+                <span className="font-medium text-foreground">Most pages to test</span>
                 <input type="number" min={1} max={2000} value={maxUrls} onChange={e => setMaxUrls(Math.max(1, Math.min(2000, Number(e.target.value) || 1)))} className="h-10 w-full rounded-md border px-3" />
               </label>
             </div>
           ) : (
             <div className="space-y-2">
               <label className="block space-y-1 text-sm">
-                <span className="font-medium text-slate-800">Pages, one per line</span>
+                <span className="font-medium text-foreground">Pages, one per line</span>
                 <textarea
                   value={urlsText}
                   onChange={e => setUrlsText(e.target.value)}
@@ -269,7 +269,7 @@ function Wizard() {
               {scanning ? <Loader2 className="animate-spin" /> : <Search />}
               {type === "FullWebsite" ? (scanning ? "Reading the site…" : "Find pages") : "Read the list"}
             </Button>
-            {scanning && type === "FullWebsite" && <span className="text-sm text-slate-500">This can take up to a minute on a large site.</span>}
+            {scanning && type === "FullWebsite" && <span className="text-sm text-muted-foreground">This can take up to a minute on a large site.</span>}
           </div>
           {scanNotes.map(n => (
             <p key={n} className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{n}</p>
@@ -288,8 +288,8 @@ function Wizard() {
         {pages && (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm text-slate-600">
-                <span className="font-semibold text-slate-900">{includedCount}</span> of {pages.length} pages included.{" "}
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{includedCount}</span> of {pages.length} pages included.{" "}
                 {type === "FullWebsite" && "Unticking a folder also leaves out pages added to it later."}
               </p>
               <input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter pages" className="h-8 w-56 rounded-md border px-2 text-sm" />
@@ -301,7 +301,7 @@ function Wizard() {
                 const open = openFolders.has(g.folder) || !!filter
                 return (
                   <div key={g.folder} className="border-b last:border-0">
-                    <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2 bg-muted/50 px-3 py-2 text-sm">
                       <input
                         type="checkbox"
                         checked={!folderExcluded && included > 0}
@@ -313,7 +313,7 @@ function Wizard() {
                       />
                       <button
                         type="button"
-                        className="flex flex-1 items-center gap-1 text-left font-medium text-slate-700"
+                        className="flex flex-1 items-center gap-1 text-left font-medium text-foreground"
                         onClick={() =>
                           setOpenFolders(s => {
                             const next = new Set(s)
@@ -323,15 +323,15 @@ function Wizard() {
                         }
                       >
                         {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        <Folder className="h-4 w-4 text-slate-400" /> {g.folder === "/" ? "Top-level pages" : g.folder}
-                        <span className="ml-1 font-normal text-slate-500">
+                        <Folder className="h-4 w-4 text-muted-foreground" /> {g.folder === "/" ? "Top-level pages" : g.folder}
+                        <span className="ml-1 font-normal text-muted-foreground">
                           {included}/{g.pages.length}
                         </span>
                       </button>
                     </div>
                     {open &&
                       g.pages.map(p => (
-                        <label key={p.key} className="flex items-center gap-2 px-9 py-1.5 text-sm hover:bg-slate-50">
+                        <label key={p.key} className="flex items-center gap-2 px-9 py-1.5 text-sm hover:bg-muted/50">
                           <input
                             type="checkbox"
                             checked={!isExcluded(p)}
@@ -345,7 +345,7 @@ function Wizard() {
                             }
                             className="h-4 w-4 accent-indigo-600"
                           />
-                          <span className="truncate text-slate-700" title={p.url}>
+                          <span className="truncate text-foreground" title={p.url}>
                             {pathOf(p.url)}
                           </span>
                         </label>
@@ -375,7 +375,7 @@ function Wizard() {
             Next
           </Button>
           {pages && settings.environments.length > 0 && (
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-muted-foreground">
               {includedCount} pages × {settings.environments.length} = {includedCount * settings.environments.length} screenshots per run
             </span>
           )}
@@ -399,10 +399,10 @@ function Wizard() {
       <StepCard n={5} title="Name it and start" open={step === 5} done={false} onOpen={() => pages && setStep(5)}>
         <div className="space-y-4">
           <label className="block space-y-1 text-sm">
-            <span className="font-medium text-slate-800">Test name</span>
+            <span className="font-medium text-foreground">Test name</span>
             <input value={name} onChange={e => setName(e.target.value)} placeholder={defaultName()} className="h-10 w-full rounded-md border px-3" />
           </label>
-          <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600">
+          <p className="rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
             The first run has nothing to compare with, so every screenshot becomes the approved one. From the second run on, you&apos;ll only be asked about what changed.
           </p>
           <div className="flex flex-wrap gap-2">

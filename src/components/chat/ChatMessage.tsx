@@ -151,13 +151,13 @@ export function ChatMessage({
           {message.sender.avatarUrl ? (
             <AvatarImage src={message.sender.avatarUrl} alt={message.sender.name || "Sender"} />
           ) : (
-            <AvatarFallback className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-bold text-xs">
+            <AvatarFallback className="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-semibold text-xs">
               {(message.sender.name || message.sender.email).slice(0, 2).toUpperCase()}
             </AvatarFallback>
           )}
         </Avatar>
       ) : (
-        <div className="w-9 flex-shrink-0 text-center opacity-0 group-hover:opacity-100 text-[10px] text-slate-400 select-none pt-0.5">
+        <div className="w-9 flex-shrink-0 text-center opacity-0 group-hover:opacity-100 text-[10px] text-muted-foreground select-none pt-0.5">
           {timeFormatted.split(" ")[0]}
         </div>
       )}
@@ -168,12 +168,12 @@ export function ChatMessage({
           <div className="flex items-baseline gap-2 mb-0.5">
             <span 
               onClick={() => onMention(message.sender.name || message.sender.email)}
-              className="text-sm font-semibold text-slate-900 dark:text-slate-100 cursor-pointer hover:underline"
+              className="text-sm font-semibold text-foreground dark:text-slate-100 cursor-pointer hover:underline"
             >
               {message.sender.name || message.sender.email}
             </span>
             <span 
-              className="text-[10px] text-slate-400 select-none"
+              className="text-[10px] text-muted-foreground select-none"
               title={fullDateTime}
             >
               {timeFormatted}
@@ -198,25 +198,25 @@ export function ChatMessage({
             <div className="flex gap-2 text-xs">
               <button 
                 onClick={handleEdit} 
-                className="text-indigo-600 dark:text-indigo-400 font-semibold"
+                className="text-primary dark:text-indigo-400 font-semibold"
               >
                 Save
               </button>
               <button 
                 onClick={() => setIsEditing(false)} 
-                className="text-slate-500"
+                className="text-muted-foreground"
               >
                 Cancel
               </button>
             </div>
           </div>
         ) : (
-          <div className="text-sm text-slate-700 dark:text-slate-300 break-words leading-relaxed select-text">
+          <div className="text-sm text-foreground dark:text-slate-300 break-words leading-relaxed select-text">
             {isDeleted ? (
-              <span className="italic text-slate-400 dark:text-slate-500">This message was deleted</span>
+              <span className="italic text-muted-foreground dark:text-muted-foreground">This message was deleted</span>
             ) : message.htmlContent ? (
               <div 
-                className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 text-sm leading-relaxed" 
+                className="prose dark:prose-invert max-w-none text-foreground dark:text-slate-300 text-sm leading-relaxed" 
                 dangerouslySetInnerHTML={{ __html: message.htmlContent }} 
               />
             ) : (
@@ -234,8 +234,8 @@ export function ChatMessage({
                     key={`${e.type}:${e.id}`}
                     href={e.url || "#"}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-bold transition-colors hover:brightness-95",
-                      ENTITY_CHIP[e.type] || "border-slate-200 bg-slate-100 text-slate-600"
+                      "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold transition-colors hover:brightness-95",
+                      ENTITY_CHIP[e.type] || "border-border bg-muted text-muted-foreground"
                     )}
                     title={e.label}
                   >
@@ -274,10 +274,10 @@ export function ChatMessage({
                       download
                       className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-2 text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     >
-                      <Paperclip className="h-4 w-4 text-slate-400" />
+                      <Paperclip className="h-4 w-4 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-slate-800 dark:text-slate-200 truncate">{file.name}</p>
-                        <p className="text-[10px] text-slate-400">{formatSize(file.size)}</p>
+                        <p className="font-medium text-foreground dark:text-slate-200 truncate">{file.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{formatSize(file.size)}</p>
                       </div>
                     </a>
                   )}

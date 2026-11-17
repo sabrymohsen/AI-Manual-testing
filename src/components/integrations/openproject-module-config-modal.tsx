@@ -277,11 +277,11 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-background border rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+      <div className="bg-background border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b">
           <div>
-            <h2 className="font-bold text-base">OpenProject Config</h2>
+            <h2 className="font-semibold text-base">OpenProject Config</h2>
             <p className="text-xs text-muted-foreground mt-0.5" dir="auto">{moduleName}</p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground p-1">

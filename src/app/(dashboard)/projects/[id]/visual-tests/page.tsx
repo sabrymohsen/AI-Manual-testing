@@ -97,10 +97,10 @@ export default function VisualTestsPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
-            <ScanEye className="h-6 w-6 text-indigo-600" /> Visual tests
+          <h1 className="flex items-center gap-2 text-2xl font-semibold text-foreground">
+            <ScanEye className="h-6 w-6 text-primary" /> Visual tests
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-600">
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Take screenshots of your pages, compare them with the last approved screenshots, and review only what changed.
           </p>
         </div>
@@ -110,10 +110,10 @@ export default function VisualTestsPage() {
       </div>
 
       {choosing && (
-        <div className="rounded-xl border bg-white p-5 shadow-sm">
+        <div className="rounded-xl border bg-card p-5 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-900">What would you like to test?</h2>
-            <button onClick={() => setChoosing(false)} className="rounded p-1 text-slate-500 hover:bg-slate-100" aria-label="Close">
+            <h2 className="font-semibold text-foreground">What would you like to test?</h2>
+            <button onClick={() => setChoosing(false)} className="rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Close">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -122,18 +122,18 @@ export default function VisualTestsPage() {
               const Icon = t.icon
               const content = (
                 <>
-                  <Icon className="h-6 w-6 text-indigo-600" />
-                  <span className="mt-3 block font-semibold text-slate-900">{t.title}</span>
-                  <span className="mt-1 block text-sm text-slate-600">{t.text}</span>
+                  <Icon className="h-6 w-6 text-primary" />
+                  <span className="mt-3 block font-semibold text-foreground">{t.title}</span>
+                  <span className="mt-1 block text-sm text-muted-foreground">{t.text}</span>
                 </>
               )
               return t.type === "Flow" ? (
-                <Link key={t.type} href={`/projects/${projectId}/test-cases`} className="rounded-lg border p-4 text-left transition hover:border-indigo-400 hover:bg-indigo-50/40">
+                <Link key={t.type} href={`/projects/${projectId}/test-cases`} className="rounded-lg border p-4 text-left transition hover:border-primary hover:bg-primary/10">
                   {content}
-                  <span className="mt-2 block text-xs font-medium text-indigo-700">Open test cases →</span>
+                  <span className="mt-2 block text-xs font-medium text-primary">Open test cases →</span>
                 </Link>
               ) : (
-                <Link key={t.type} href={`/projects/${projectId}/visual-tests/new?type=${t.type}`} className="rounded-lg border p-4 text-left transition hover:border-indigo-400 hover:bg-indigo-50/40">
+                <Link key={t.type} href={`/projects/${projectId}/visual-tests/new?type=${t.type}`} className="rounded-lg border p-4 text-left transition hover:border-primary hover:bg-primary/10">
                   {content}
                 </Link>
               )
@@ -143,24 +143,24 @@ export default function VisualTestsPage() {
       )}
 
       {tests === null ? (
-        <div className="flex items-center gap-2 py-16 text-sm text-slate-500">
+        <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading visual tests…
         </div>
       ) : tests.length === 0 ? (
         !choosing && (
-          <div className="rounded-xl border border-dashed bg-white p-10 text-center">
+          <div className="rounded-xl border border-dashed bg-card p-10 text-center">
             <ScanEye className="mx-auto h-10 w-10 text-slate-300" />
-            <p className="mt-3 font-medium text-slate-800">No visual tests yet</p>
-            <p className="mt-1 text-sm text-slate-500">Start with your whole website, or a short list of the pages you care about most.</p>
+            <p className="mt-3 font-medium text-foreground">No visual tests yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">Start with your whole website, or a short list of the pages you care about most.</p>
             <Button className="mt-4" onClick={() => setChoosing(true)}>
               <Plus /> New visual test
             </Button>
           </div>
         )
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-white">
+        <div className="overflow-x-auto rounded-xl border bg-card">
           <table className="w-full text-sm">
-            <thead className="border-b bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <thead className="border-b bg-muted/50 text-left text-xs text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">Test</th>
                 <th className="px-4 py-3">Type</th>
@@ -172,15 +172,15 @@ export default function VisualTestsPage() {
             </thead>
             <tbody>
               {tests.map(t => (
-                <tr key={t.id} className="border-b last:border-0 hover:bg-slate-50/60">
+                <tr key={t.id} className="border-b last:border-0 hover:bg-muted/60">
                   <td className="px-4 py-3">
-                    <Link href={`/projects/${projectId}/visual-tests/${t.id}`} className="font-medium text-slate-900 hover:text-indigo-700">
+                    <Link href={`/projects/${projectId}/visual-tests/${t.id}`} className="font-medium text-foreground hover:text-primary">
                       {t.name}
                     </Link>
-                    <div className="max-w-xs truncate text-xs text-slate-500">{t.type === "Flow" ? t.testCase?.title : t.startUrl}</div>
+                    <div className="max-w-xs truncate text-xs text-muted-foreground">{t.type === "Flow" ? t.testCase?.title : t.startUrl}</div>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{TEST_TYPE_LABEL[t.type]}</td>
-                  <td className="px-4 py-3 text-slate-600">{t.type === "Flow" ? "—" : t.pageCount}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{TEST_TYPE_LABEL[t.type]}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{t.type === "Flow" ? "—" : t.pageCount}</td>
                   <td className="px-4 py-3">
                     <EnvChips environments={t.environments} max={2} />
                   </td>
@@ -188,14 +188,14 @@ export default function VisualTestsPage() {
                     {t.lastRun ? (
                       <Link href={`/projects/${projectId}/visual-tests/runs/${t.lastRun.id}`} className="space-y-1">
                         <RunStatusBadge status={t.lastRun.status} outcome={t.lastRun.outcome} newCount={t.lastRun.newCount} passedCount={t.lastRun.passedCount} />
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           {t.lastRun.status === "Running"
                             ? `${t.lastRun.doneScreens} of ${t.lastRun.totalScreens || "?"} screens`
                             : `${formatDate(t.lastRun.createdAt)}${t.lastRun.unresolvedCount ? ` · ${t.lastRun.unresolvedCount} to review` : ""}`}
                         </div>
                       </Link>
                     ) : (
-                      <span className="text-xs text-slate-500">Never run</span>
+                      <span className="text-xs text-muted-foreground">Never run</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">

@@ -8,6 +8,7 @@ coverage/
 
 # next.js
 .next/
+.next-desktop/
 out/
 
 # production
@@ -80,3 +81,11 @@ public/videos/
 
 # Local Claude Code settings
 .claude/settings.local.json
+
+# Graphify knowledge graph of this repo (generated, local). Rebuild: graphify update .
+graphify-out/
+
+# Local scratch: brainstorm mockups, browser-test artifacts, side dev-server build
+.superpowers/
+.playwright-mcp/
+.next-verify/
