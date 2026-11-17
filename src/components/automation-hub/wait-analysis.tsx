@@ -87,7 +87,7 @@ export default function WaitAnalysisPanel() {
         <Timer size={26} className="text-slate-300 mx-auto" />
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No wait profiles yet</p>
         <p className="text-[9.5px] text-slate-400 font-medium max-w-md mx-auto">
-          The auto-wait profiler reads action timings from SHAFT trace bundles. Run a test in the Test Studio to generate a{" "}
+          The auto-wait profiler reads action timings from Playwright traces. Run a test in the Tests tab to generate a{" "}
           <span className="font-mono">shaft-trace.zip</span> and its wait breakdown appears here.
         </p>
       </div>

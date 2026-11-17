@@ -2382,9 +2382,15 @@ model TestScript {
   code                 String          @db.Text
   tags                 String[]
   accessibilityEnabled Boolean         @default(false) // run WCAG audit on execution (Section 1b)
+  // Owning project; null = a shared example every project sees.
+  projectId            String?
+  // Folder / suite in the hub's test list ("" = top level). Run a whole folder at once.
+  folder               String          @default("")
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   executions           TestExecution[]
+
+  @@index([projectId])
 }
 
 model TestExecution {
@@ -2398,7 +2404,13 @@ model TestExecution {
   duration        Int? // execution duration in milliseconds
   screenshotPath  String? // absolute path of the captured screenshot evidence
   executionTarget String? // name of the execution target it ran on (Section 1c), null = Local
+  // Per-test outcome parsed from Playwright's JSON report: [{ title, status, durationMs, error, screenshot, trace, video }]
+  results         Json?
+  // Shared by every execution started together (Run folder / Run all), null for a single run.
+  batchId         String?
   createdAt       DateTime   @default(now())
+
+  @@index([batchId])
 }
 
 // Section 1a: external SHAFT test data files (data-driven testing)

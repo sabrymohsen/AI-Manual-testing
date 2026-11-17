@@ -47,8 +47,8 @@ interface FoundArtifact {
   mtime: number
 }
 
-function scanArtifacts(since: number): FoundArtifact[] {
-  const roots = [RESULTS_DIR]
+function scanArtifacts(since: number, root: string = RESULTS_DIR): FoundArtifact[] {
+  const roots = [root]
   const found: FoundArtifact[] = []
 
   const walk = (dir: string, depth: number) => {
@@ -83,8 +83,10 @@ export async function harvestEvidence(opts: {
   scriptType: string
   browser: string
   targetUrl?: string
+  /** The run's own folder (runs/<executionId>); defaults to test-results. */
+  root?: string
 }): Promise<number> {
-  const artifacts = scanArtifacts(opts.since)
+  const artifacts = scanArtifacts(opts.since, opts.root)
 
   const rows = artifacts.map((a, i) => ({
     testExecutionId: opts.executionId,

@@ -668,7 +668,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
               </div>
             ))}
             {recurring.length === 0 && (
-              <p className="text-slate-400 italic text-center py-12">No recurring diagnostics detected in Allure history database logs.</p>
+              <p className="text-slate-400 italic text-center py-12">No recurring failures found in the run history.</p>
             )}
           </div>
         </div>

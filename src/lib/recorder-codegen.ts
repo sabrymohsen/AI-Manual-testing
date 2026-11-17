@@ -72,8 +72,12 @@ export function actionToPlaywrightLine(action: RecordedAction): string | null {
     }
     case "select":
       return loc ? `await ${loc}.selectOption("${escapeJs(action.value || "")}");` : null
-    case "press":
-      return loc ? `await ${loc}.press("${escapeJs(action.value || "Enter")}");` : null
+    case "press": {
+      if (!loc) return null
+      // Older recordings stored Selenium's "ENTER"; Playwright's key name is "Enter".
+      const key = /^enter$/i.test(action.value || "") ? "Enter" : action.value || "Enter"
+      return `await ${loc}.press("${escapeJs(key)}");`
+    }
     default:
       return null
   }
@@ -87,12 +91,20 @@ export function generatePlaywrightSpec(
   const lines: string[] = []
   let step = 0
 
+  let previous: RecordedAction | null = null
   for (const action of actions) {
-    const code = actionToPlaywrightLine(action)
+    // A page load right after a click or Enter is that action's result, not a
+    // separate step: check the URL instead of opening it again (re-opening it
+    // would hide a login or form that failed to submit).
+    const caused = action.kind === "navigate" && action.url && previous && (previous.kind === "click" || previous.kind === "press")
+    const code = caused
+      ? `await expect(page).toHaveURL("${escapeJs(action.url!)}");`
+      : actionToPlaywrightLine(action)
+    previous = action
     if (!code) continue
     step++
     const label = (action.label || "").replace(/\s+/g, " ").trim().slice(0, 60)
-    lines.push(`  // Step ${step}: ${action.kind} — ${label}`)
+    lines.push(`  // Step ${step}: ${caused ? "check page" : action.kind} — ${label}`)
     lines.push(`  ${code}`)
   }
 
@@ -101,10 +113,16 @@ export function generatePlaywrightSpec(
       ? lines.join("\n")
       : "  // No actions recorded yet — interact with the browser view to capture steps"
 
+  // A recording proves nothing until it checks something. Point at where the
+  // check goes, rather than emitting one that would pass no matter what.
+  const check = lines.length > 0
+    ? `\n\n  // TODO: check the result, for example:\n  // await expect(page.getByText("Welcome")).toBeVisible()`
+    : ""
+
   return `import { test, expect } from "@playwright/test"
 
 test("${title}", async ({ page }) => {
-${body}
+${body}${check}
 })
 `
 }

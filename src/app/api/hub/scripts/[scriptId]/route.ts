@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { cleanFolder, hubNameError } from "@/lib/hub-scripts"
 
 // GET /api/hub/scripts/{id} — get script code + recent executions
 export async function GET(
@@ -16,7 +17,8 @@ export async function GET(
       include: {
         executions: {
           orderBy: { createdAt: "desc" },
-          take: 20
+          take: 20,
+          select: { id: true, status: true, duration: true, createdAt: true, browser: true, batchId: true, results: true }
         }
       }
     })
@@ -42,16 +44,28 @@ export async function PUT(
 
   try {
     const body = await request.json()
-    const { name, type, code, tags, accessibilityEnabled } = body
+    const { type, code, tags, accessibilityEnabled } = body
+    const name = typeof body.name === "string" ? body.name.trim() : undefined
 
-    if (name && !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
-      return NextResponse.json({ error: "Script name must be a valid Java class name" }, { status: 400 })
+    if (name !== undefined) {
+      const nameError = hubNameError(name)
+      if (nameError) return NextResponse.json({ error: nameError }, { status: 400 })
+      const current = await prisma.testScript.findUnique({ where: { id: params.scriptId }, select: { projectId: true } })
+      const clash = await prisma.testScript.findFirst({
+        where: {
+          id: { not: params.scriptId },
+          name: { equals: name, mode: "insensitive" },
+          ...(current?.projectId ? { OR: [{ projectId: current.projectId }, { projectId: null }] } : {}),
+        },
+      })
+      if (clash) return NextResponse.json({ error: `A test named "${name}" already exists` }, { status: 409 })
     }
 
     const script = await prisma.testScript.update({
       where: { id: params.scriptId },
       data: {
         ...(name !== undefined && { name }),
+        ...(body.folder !== undefined && { folder: cleanFolder(body.folder) }),
         ...(type !== undefined && { type }),
         ...(code !== undefined && { code }),
         ...(tags !== undefined && { tags }),

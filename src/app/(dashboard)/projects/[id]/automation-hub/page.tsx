@@ -46,7 +46,8 @@ import {
   Route,
   Video
 } from "lucide-react"
-import TestStudioSection from "@/components/automation-hub/test-studio"
+import HubTestsSection from "@/components/automation-hub/hub-tests"
+import HubRunsSection from "@/components/automation-hub/hub-runs"
 import VisualRecorderSection from "@/components/automation-hub/visual-recorder"
 import EvidenceVaultSection from "@/components/automation-hub/evidence-vault"
 import TraceViewerSection from "@/components/automation-hub/trace-viewer"
@@ -130,8 +131,16 @@ export default function AutomationHubPage() {
 
   // Global Unified States
   const [activeTab, setActiveTab] = useState<
-    "Studio" | "Recorder" | "Evidence" | "Trace" | "Diagnosis" | "Heal" | "Flakes" | "Matrix" | "Visual" | "Video" | "Agent" | "DataConfig"
-  >("Studio")
+    "Tests" | "Runs" | "Recorder" | "Evidence" | "Trace" | "Diagnosis" | "Heal" | "Flakes" | "Matrix" | "Visual" | "Video" | "Agent" | "DataConfig"
+  >("Tests")
+  // A test's "Open trace" button opens that exact trace in the Trace Viewer.
+  const [pendingTraceId, setPendingTraceId] = useState<string | null>(null)
+  // A recording just saved: select it when the Tests tab opens.
+  const [focusTestName, setFocusTestName] = useState<string | null>(null)
+  const openTrace = (traceId: string) => {
+    setPendingTraceId(traceId)
+    setActiveTab("Trace")
+  }
 
   // Deep-link target: a Trace Viewer action can request an evidence file be
   // opened over in the Evidence Vault (Section 4 sync).
@@ -414,93 +423,88 @@ export default function AutomationHubPage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold select-none text-slate-800">
+    <div className="flex-1 space-y-5 text-xs font-semibold text-slate-800">
       
-      {/* HUB GLOBAL HEADER */}
-      <div className="flex items-center justify-between gap-4 border-b pb-4 flex-wrap">
+      {/* HUB HEADER */}
+      <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight flex items-center gap-2">
-            <Layers className="text-indigo-650 animate-pulse h-5.5 w-5.5" /> Automation Hub
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-900">
+            <Layers className="h-6 w-6 text-indigo-600" /> Automation Hub
           </h1>
-          <p className="text-slate-500 mt-1 font-medium">
-            Central Command Center. One unified dashboard for executing, recording, diagnosing, and optimizing automation suites.
+          <p className="mt-1 text-sm font-normal text-slate-500">
+            Write and run Playwright tests in JavaScript, record flows into code, and see exactly what failed.
           </p>
         </div>
+      </div>
 
-        {/* Global Test Selection Persisted Context Badge */}
-        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-150 p-2.5 rounded-2xl">
-          <Info className="text-indigo-600" size={14} />
-          <div className="space-y-0.5 text-left">
-            <span className="text-[9.5px] uppercase font-black text-indigo-700 tracking-wider block">Persistent Navigation Context</span>
-            <select
-              value={selectedTestName}
-              onChange={(e) => handleSelectContextTest(e.target.value)}
-              className="bg-transparent border-0 text-slate-800 text-xs font-black p-0 focus:ring-0 focus:outline-hidden cursor-pointer"
+      {/* TABS: the three everyday tabs, then the analysis tools in one menu */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-xl border bg-slate-100 p-1">
+          {[
+            { id: "Tests", label: "Tests", icon: Code },
+            { id: "Runs", label: "Runs", icon: ListRestart },
+            { id: "Recorder", label: "Recorder", icon: Camera },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
+                activeTab === tab.id ? "bg-white text-indigo-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+              }`}
             >
-              <option value="LoginFlowTest">LoginFlowTest (Web)</option>
-              <option value="ApiCrudTest">ApiCrudTest (API)</option>
-              <option value="DbQueryTest">DbQueryTest (Database)</option>
-              <option value="SearchFlowTest">SearchFlowTest (Web)</option>
-            </select>
-          </div>
+              <tab.icon size={15} />
+              {tab.label}
+            </button>
+          ))}
         </div>
-      </div>
-
-      {/* TABS SELECTOR SYSTEM */}
-      <div className="flex items-center gap-1.5 overflow-x-auto bg-slate-100 p-1 border rounded-2xl select-none scrollbar-none">
-        {[
-          { id: "Studio", label: "Test Studio", icon: Play },
-          { id: "Recorder", label: "Recorder", icon: Camera },
-          { id: "Evidence", label: "Evidence", icon: FolderOpen },
-          { id: "Trace", label: "Trace Viewer", icon: Route },
-          { id: "Diagnosis", label: "Diagnosis", icon: Sparkles },
-          { id: "Heal", label: "Heal Center", icon: Shield },
-          { id: "Flakes", label: "Flake Map", icon: Activity },
-          { id: "Matrix", label: "Browser Matrix", icon: LayoutGrid },
-          { id: "Visual", label: "Visual Diff", icon: Eye },
-          { id: "Video", label: "Video Lab", icon: Video },
-          { id: "Agent", label: "AI Agent (MCP)", icon: Bot },
-          { id: "DataConfig", label: "Data & Config", icon: Settings }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-black tracking-tight shrink-0 transition-all ${
-              activeTab === tab.id
-                ? "bg-white text-indigo-700 shadow-xs border border-indigo-100/50"
-                : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <SlidersHorizontal size={15} className="text-slate-400" />
+          <select
+            value={["Tests", "Runs", "Recorder"].includes(activeTab) ? "" : activeTab}
+            onChange={(e) => e.target.value && setActiveTab(e.target.value as any)}
+            className={`h-10 rounded-xl border px-3 text-sm font-semibold ${
+              ["Tests", "Runs", "Recorder"].includes(activeTab) ? "bg-white text-slate-600" : "border-indigo-200 bg-indigo-50 text-indigo-700"
             }`}
+            aria-label="More tools"
           >
-            <tab.icon size={13} />
-            {tab.label}
-          </button>
-        ))}
+            <option value="">More tools…</option>
+            <option value="Trace">Trace Viewer</option>
+            <option value="Evidence">Evidence (screenshots, videos, logs)</option>
+            <option value="Video">Video Lab</option>
+            <option value="Diagnosis">Failure diagnosis (AI)</option>
+            <option value="Heal">Self-healing & locator health</option>
+            <option value="Flakes">Flaky tests</option>
+            <option value="Matrix">Browser matrix</option>
+            <option value="Visual">Visual diff</option>
+            <option value="Agent">AI Agent</option>
+            <option value="DataConfig">Data & settings</option>
+          </select>
+        </label>
       </div>
 
-      {/* HUB MAIN WORKSPACE */}
-      {loading ? (
-        <div className="py-32 flex flex-col items-center justify-center gap-2 border bg-white rounded-2xl shadow-3xs">
-          <Loader2 className="animate-spin text-indigo-650" size={32} />
-          <span className="font-extrabold text-slate-450 uppercase tracking-widest text-[9.5px]">Hydrating Automation Hub Suite...</span>
+      {/* PRIMARY TABS: independent of the analysis tools' data below */}
+      {activeTab === "Tests" && (
+        <HubTestsSection projectId={projectId} onOpenTrace={openTrace} focusTestName={focusTestName} />
+      )}
+      {activeTab === "Runs" && <HubRunsSection projectId={projectId} onOpenTrace={openTrace} />}
+      {activeTab === "Recorder" && (
+        <VisualRecorderSection
+          projectId={projectId}
+          onSavedToStudio={(name) => {
+            setSelectedTestName(name)
+            setFocusTestName(name)
+          }}
+        />
+      )}
+
+      {/* HUB MAIN WORKSPACE (analysis tools) */}
+      {["Tests", "Runs", "Recorder"].includes(activeTab) ? null : loading ? (
+        <div className="py-32 flex flex-col items-center justify-center gap-2 border bg-white rounded-2xl shadow-sm">
+          <Loader2 className="animate-spin text-indigo-600" size={32} />
+          <span className="font-semibold text-slate-500 text-sm">Loading…</span>
         </div>
       ) : (
         <div className="transition-all duration-300">
-          
-          {/* TAB 1: TEST STUDIO */}
-          {activeTab === "Studio" && (
-            <TestStudioSection
-              selectedTestName={selectedTestName}
-              onSelectTest={handleSelectContextTest}
-            />
-          )}
-
-          {/* TAB 2: VISUAL RECORDER */}
-          {activeTab === "Recorder" && (
-            <VisualRecorderSection
-              onSavedToStudio={(name) => setSelectedTestName(name)}
-            />
-          )}
-
 
           {/* TAB 3: EVIDENCE VAULT */}
           {activeTab === "Evidence" && (
@@ -517,6 +521,8 @@ export default function AutomationHubPage() {
           {/* TAB 3b: TRACE VIEWER */}
           {activeTab === "Trace" && (
             <TraceViewerSection
+              key={pendingTraceId || "traces"}
+              initialTraceId={pendingTraceId}
               onOpenEvidence={(id) => {
                 setPendingEvidenceId(id)
                 setActiveTab("Evidence")
@@ -751,7 +757,7 @@ export default function AutomationHubPage() {
                     />
                   </div>
                   <span className="text-[8.5px] text-slate-400 block font-medium mt-1 leading-relaxed">
-                    Automatically instruments surefire test runs classes using Allure profiling interceptors trace.
+                    Builds the timing profile from each run's Playwright trace.
                   </span>
                 </div>
               </div>
@@ -938,8 +944,12 @@ export default function AutomationHubPage() {
           {activeTab === "Agent" && (
             <AiAgentSection
               onNavigate={(tab, testName) => {
-                if (testName) setSelectedTestName(testName)
-                setActiveTab(tab as any)
+                if (testName) {
+                  setSelectedTestName(testName)
+                  setFocusTestName(testName)
+                }
+                // The old "Test Studio" tab is now "Tests".
+                setActiveTab((tab === "Studio" ? "Tests" : tab) as any)
               }}
             />
           )}

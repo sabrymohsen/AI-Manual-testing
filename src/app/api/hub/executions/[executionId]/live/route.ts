@@ -55,7 +55,7 @@ export async function GET(
           sentLength = execution.logOutput.length
         }
 
-        if (execution.status !== "Running") {
+        if (execution.status !== "Running" && execution.status !== "Queued") {
           send("done", {
             execution: {
               id: execution.id,

@@ -14,8 +14,9 @@
  * Layout:
  *   <root>/hub-workspace/
  *     playwright.config.ts    generated, see writeConfig
- *     tests/<Script>.spec.ts   one file per Test Studio script
- *     test-results/            Playwright's own output: traces, video, shots
+ *     tests/<Script>.spec.js   one file per hub test (Playwright JavaScript)
+ *     test-results/            the run in progress: traces, video, shots, report.json
+ *     runs/<executionId>/      each finished run's test-results, kept for its evidence
  */
 import * as fs from "fs"
 import * as path from "path"
@@ -25,6 +26,36 @@ export const WORKSPACE_ROOT = path.resolve(STORAGE_ROOT, "hub-workspace")
 export const TESTS_DIR = path.join(WORKSPACE_ROOT, "tests")
 export const RESULTS_DIR = path.join(WORKSPACE_ROOT, "test-results")
 export const CONFIG_PATH = path.join(WORKSPACE_ROOT, "playwright.config.ts")
+/**
+ * Finished runs. test-results/ is wiped at the start of every run, and the
+ * Evidence Vault, Trace Viewer and Video Lab all point at files inside it — so
+ * every run's evidence used to vanish the moment the next run started. Each
+ * run's folder is moved here when it finishes instead.
+ */
+export const RUNS_DIR = path.join(WORKSPACE_ROOT, "runs")
+
+/** Where a finished run's artifacts live. */
+export function runDir(executionId: string): string {
+  return path.join(RUNS_DIR, executionId.replace(/[^A-Za-z0-9-]/g, ""))
+}
+
+/**
+ * Move test-results/ into runs/<executionId>/ and return the new folder.
+ * A rename is atomic and instant on the same volume; copy is the fallback.
+ */
+export function archiveResults(executionId: string): string {
+  const dest = runDir(executionId)
+  fs.mkdirSync(RUNS_DIR, { recursive: true })
+  fs.rmSync(dest, { recursive: true, force: true })
+  try {
+    fs.renameSync(RESULTS_DIR, dest)
+  } catch {
+    fs.cpSync(RESULTS_DIR, dest, { recursive: true })
+    fs.rmSync(RESULTS_DIR, { recursive: true, force: true })
+  }
+  fs.mkdirSync(RESULTS_DIR, { recursive: true })
+  return dest
+}
 
 /** Playwright's project name for a browser the UI offers. */
 export function projectForBrowser(browser: string): string {
@@ -35,9 +66,14 @@ export function projectForBrowser(browser: string): string {
 }
 
 /** A script name reduced to something safe to use as a file name. */
-export function specFileName(scriptName: string): string {
+export function specBaseName(scriptName: string): string {
   const base = (scriptName || "test").replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "")
-  return `${base || "test"}.spec.ts`
+  return base || "test"
+}
+
+/** Hub tests are Playwright JavaScript, so their files are .spec.js. */
+export function specFileName(scriptName: string): string {
+  return `${specBaseName(scriptName)}.spec.js`
 }
 
 export interface RunConfigOptions {
@@ -142,6 +178,8 @@ ${optional.join("\n")}
 /** Write a script's code as a spec and return its path relative to the root. */
 export function writeSpec(scriptName: string, code: string): string {
   fs.mkdirSync(TESTS_DIR, { recursive: true })
+  // Specs used to be written as .ts; drop a stale twin so it can't run too.
+  fs.rmSync(path.join(TESTS_DIR, `${specBaseName(scriptName)}.spec.ts`), { force: true })
   const file = path.join(TESTS_DIR, specFileName(scriptName))
   fs.writeFileSync(file, code, "utf8")
   return path.relative(WORKSPACE_ROOT, file)

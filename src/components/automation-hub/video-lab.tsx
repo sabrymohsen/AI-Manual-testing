@@ -344,7 +344,7 @@ export default function VideoLabSection({
             <div className="flex items-center justify-between p-3 border rounded-xl bg-slate-50/50">
               <div>
                 <span className="text-[10.5px] font-black text-slate-800 block">Enable Video Recording</span>
-                <span className="text-[8px] text-slate-400 font-medium">Writes videoParams.recordVideo to custom.properties</span>
+                <span className="text-[8px] text-slate-400 font-medium">Saved to the hub's run settings</span>
               </div>
               <button onClick={() => patchSettings({ recordVideo: !settings.recordVideo })} className={`h-6 w-11 rounded-full relative transition-colors ${settings.recordVideo ? "bg-indigo-600" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${settings.recordVideo ? "left-[22px]" : "left-0.5"}`} />

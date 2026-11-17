@@ -1,29 +1,30 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, requireProjectMember } from "@/lib/api-guards"
+import { cleanFolder, hubNameError, projectScriptsWhere } from "@/lib/hub-scripts"
 
 export const dynamic = "force-dynamic"
 
-// POST /api/hub/recorder/save — save the reviewed code into the Test Studio library
+// POST /api/hub/recorder/save — save a reviewed recording as a hub test.
+// { name, code, projectId?, folder?, tags? }
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const body = await request.json().catch(() => ({}))
+  const projectId: string | null = body.projectId || null
+  const auth = projectId ? await requireProjectMember(projectId) : await requireAuth()
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: (auth as any).status || 401 })
 
   try {
-    const body = await request.json()
-    const { name, code, tags } = body
+    const name = String(body.name || "").trim()
+    const { code, tags } = body
+    const nameError = hubNameError(name)
+    if (nameError) return NextResponse.json({ error: nameError }, { status: 400 })
+    if (!code) return NextResponse.json({ error: "Nothing recorded to save" }, { status: 400 })
 
-    if (!name || !code) {
-      return NextResponse.json({ error: "Missing required fields: name, code" }, { status: 400 })
-    }
-
-    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
-      return NextResponse.json({ error: "Script name must be a valid Java class name" }, { status: 400 })
-    }
-
-    const duplicate = await prisma.testScript.findFirst({ where: { name } })
+    const duplicate = await prisma.testScript.findFirst({
+      where: { name: { equals: name, mode: "insensitive" }, ...(projectId ? projectScriptsWhere(projectId) : {}) },
+    })
     if (duplicate) {
-      return NextResponse.json({ error: `A script named "${name}" already exists in Test Studio` }, { status: 409 })
+      return NextResponse.json({ error: `A test named "${name}" already exists` }, { status: 409 })
     }
 
     const script = await prisma.testScript.create({
@@ -31,10 +32,11 @@ export async function POST(request: NextRequest) {
         name,
         type: "Web",
         code,
-        tags: Array.isArray(tags) && tags.length > 0 ? tags : ["Web", "Recorded"]
-      }
+        projectId,
+        folder: cleanFolder(body.folder ?? "Recorded"),
+        tags: Array.isArray(tags) && tags.length > 0 ? tags : ["recorded"],
+      },
     })
-
     return NextResponse.json({ script }, { status: 201 })
   } catch (err: any) {
     console.error("POST recorder save error:", err)

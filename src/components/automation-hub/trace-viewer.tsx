@@ -156,9 +156,16 @@ function sourceHint(msg: string): string | null {
 
 // ---------- Component ----------
 
-export default function TraceViewerSection({ onOpenEvidence }: { onOpenEvidence?: (evidenceId: string) => void }) {
+export default function TraceViewerSection({
+  onOpenEvidence,
+  initialTraceId,
+}: {
+  onOpenEvidence?: (evidenceId: string) => void
+  /** Open this trace first (a test's "Open trace" button in a run's results). */
+  initialTraceId?: string | null
+}) {
   const [traces, setTraces] = useState<TraceSummary[]>([])
-  const [selectedId, setSelectedId] = useState("")
+  const [selectedId, setSelectedId] = useState(initialTraceId || "")
   const [data, setData] = useState<TraceData | null>(null)
   const [listLoading, setListLoading] = useState(true)
   const [traceLoading, setTraceLoading] = useState(false)
@@ -250,7 +257,7 @@ export default function TraceViewerSection({ onOpenEvidence }: { onOpenEvidence?
         <Route size={26} className="text-slate-300 mx-auto" />
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No trace bundles yet</p>
         <p className="text-[9.5px] text-slate-400 font-medium">
-          SHAFT writes a <span className="font-mono">shaft-trace.zip</span> per run. Execute a test in the Test Studio to
+          Every run saves a Playwright <span className="font-mono">trace.zip</span> per test. Run a test in the Tests tab to
           populate the Trace Viewer.
         </p>
       </div>
@@ -517,7 +524,7 @@ export default function TraceViewerSection({ onOpenEvidence }: { onOpenEvidence?
                     <CheckCircle2 size={24} className="text-emerald-400 mx-auto" />
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Full observability</p>
                     <p className="text-[9.5px] text-slate-400 font-medium">
-                      No unsupported-capability warnings — this browser exposed all observability signals SHAFT requested.
+                      No unsupported-capability warnings — this browser exposed every signal the trace records.
                     </p>
                   </div>
                 ) : (

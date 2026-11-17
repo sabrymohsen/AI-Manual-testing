@@ -123,7 +123,7 @@ export default function DataConfigSection() {
             Data &amp; Config
           </h2>
           <p className="text-[11px] text-slate-500 font-semibold">
-            Centralized SHAFT configuration, environment variables, test data, secrets &amp; engine logs.
+            Run settings, environment variables and secrets (available to tests as process.env), test data &amp; logs.
           </p>
         </div>
       </div>

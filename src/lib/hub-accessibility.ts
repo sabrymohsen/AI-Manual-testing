@@ -31,8 +31,8 @@ interface ParsedAudit {
 const SEVERITIES = ["critical", "serious", "moderate", "minor"] as const
 
 // Find JSON artifacts created after `since` that look like axe-core / accessibility output
-function findAccessibilityArtifacts(since: number): string[] {
-  const roots = [RESULTS_DIR]
+function findAccessibilityArtifacts(since: number, root: string = RESULTS_DIR): string[] {
+  const roots = [root]
   const hits: { file: string; mtime: number }[] = []
 
   const walk = (dir: string, depth: number) => {
@@ -105,8 +105,10 @@ export async function parseAndStoreAccessibility(opts: {
   executionId: string
   scriptId: string
   since: number
+  /** The run's own folder (runs/<executionId>); defaults to test-results. */
+  root?: string
 }): Promise<string | null> {
-  const files = findAccessibilityArtifacts(opts.since)
+  const files = findAccessibilityArtifacts(opts.since, opts.root)
 
   for (const file of files) {
     try {

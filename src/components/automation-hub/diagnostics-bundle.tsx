@@ -152,7 +152,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
         <FolderArchive size={22} className="text-slate-300 mx-auto" />
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No diagnostics bundle found</p>
         <p className="text-[9.5px] text-slate-400 font-medium max-w-md mx-auto">
-          SHAFT writes a <span className="font-mono">shaft-trace.zip</span> diagnostics bundle per run. No matching bundle
+          Every run saves a Playwright <span className="font-mono">trace.zip</span> per test. No matching bundle
           was found for <span className="font-mono">{testName}</span>.
         </p>
       </div>

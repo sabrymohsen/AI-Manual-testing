@@ -8,8 +8,10 @@
 
 import Anthropic from "@anthropic-ai/sdk"
 import { prisma } from "@/lib/db"
+import { withQaSkills } from "@/lib/ai/qa-skills"
 import { startScriptRun } from "@/lib/hub-runner"
-import { buildTemplateCode, HubScriptType } from "@/lib/hub-templates"
+import { buildTemplateCode, HubScriptType, isLegacyJavaScript } from "@/lib/hub-templates"
+import { cleanFolder, hubNameError } from "@/lib/hub-scripts"
 import {
   AiPolicyData,
   AiProvider,
@@ -102,7 +104,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "list_tests",
     description:
-      "List every test script in the Test Studio library with its type (Web/API/Database), tags, and last run status. Call this when the user asks what tests exist or before running tests by name.",
+      "List every test in the Automation Hub with its type (Web/API), folder, tags, and last run status. Call this when the user asks what tests exist or before running tests by name.",
     input_schema: { type: "object", properties: {}, required: [] }
   },
   {
@@ -138,7 +140,7 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "diagnose_failure",
     description:
-      "Fetch the latest FAILED execution of a test and extract the error/exception lines from its Maven log so the failure cause can be analyzed. Call this when the user asks why a test failed.",
+      "Fetch the latest FAILED execution of a test and extract the error lines from its Playwright run log so the failure cause can be analyzed. Call this when the user asks why a test failed.",
     input_schema: {
       type: "object",
       properties: {
@@ -162,13 +164,14 @@ const TOOLS: Anthropic.Tool[] = [
   {
     name: "save_test_script",
     description:
-      "Save a new Playwright TypeScript test script into the Test Studio library. Use after generating test code for the user. The name must be a valid Java class name matching the public class in the code.",
+      "Save a new Playwright JavaScript test into the Automation Hub. Use after generating test code for the user. The name is a readable title (letters, numbers, spaces, - or _).",
     input_schema: {
       type: "object",
       properties: {
-        name: { type: "string", description: "Java class name, e.g. CheckoutFlowTest" },
-        type: { type: "string", enum: ["Web", "API", "Database"] },
-        code: { type: "string", description: "Complete Java source for the test class" }
+        name: { type: "string", description: "Readable test name, e.g. Checkout with saved card" },
+        type: { type: "string", enum: ["Web", "API"] },
+        folder: { type: "string", description: "Optional folder, e.g. Smoke or Regression" },
+        code: { type: "string", description: "Complete Playwright JavaScript spec (import { test, expect } from \"@playwright/test\")" }
       },
       required: ["name", "type", "code"]
     }
@@ -283,15 +286,15 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
       for (let i = 0; i < 25; i++) {
         await new Promise((r) => setTimeout(r, 3000))
         execution = await prisma.testExecution.findUnique({ where: { id: executionId } })
-        if (execution && execution.status !== "Running") break
+        if (execution && execution.status !== "Running" && execution.status !== "Queued") break
       }
 
-      actions.push({ label: `Open ${testName} in Studio`, kind: "open_studio", payload: { test: testName } })
+      actions.push({ label: `Open ${testName}`, kind: "open_studio", payload: { test: testName } })
       if (execution?.allureLink) {
         actions.push({ label: "View Allure Report", kind: "open_url", payload: { url: execution.allureLink } })
       }
 
-      if (!execution || execution.status === "Running") {
+      if (!execution || execution.status === "Running" || execution.status === "Queued") {
         return JSON.stringify({
           test: testName,
           status: "still_running",
@@ -353,7 +356,7 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
       const errorLines = lines.filter((l) =>
         /ERROR|FAIL|Exception|AssertionError|Caused by|BUILD FAILURE|expected|Timed out/i.test(l)
       )
-      actions.push({ label: `Open ${testName} in Studio`, kind: "open_studio", payload: { test: testName } })
+      actions.push({ label: `Open ${testName}`, kind: "open_studio", payload: { test: testName } })
       return JSON.stringify({
         test: testName,
         executedAt: execution.createdAt,
@@ -408,21 +411,20 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
     }
 
     case "save_test_script": {
-      const name = String(input?.name || "")
-      const type = String(input?.type || "Web")
+      const name = String(input?.name || "").trim()
+      const type = String(input?.type || "Web") === "API" ? "API" : "Web"
       let code = String(input?.code || "")
-      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
-        return `"${name}" is not a valid Java class name — no script was saved.`
-      }
-      const duplicate = await prisma.testScript.findFirst({ where: { name } })
-      if (duplicate) return `A script named "${name}" already exists — pick a different class name.`
-      if (!code.trim()) code = buildTemplateCode(type as HubScriptType, name)
+      const nameError = hubNameError(name)
+      if (nameError) return `"${name}" can't be used as a test name (${nameError}) — no test was saved.`
+      const duplicate = await prisma.testScript.findFirst({ where: { name: { equals: name, mode: "insensitive" } } })
+      if (duplicate) return `A test named "${name}" already exists — pick a different name.`
+      if (!code.trim() || isLegacyJavaScript(code)) code = buildTemplateCode(type as HubScriptType, name)
 
       await prisma.testScript.create({
-        data: { name, type, code, tags: [type, "AI-Generated"] }
+        data: { name, type, code, folder: cleanFolder(input?.folder ?? "AI generated"), tags: ["ai-generated"] }
       })
-      actions.push({ label: `Open ${name} in Studio`, kind: "open_studio", payload: { test: name } })
-      return `Saved "${name}" (${type}) to the Test Studio library, tagged AI-Generated.`
+      actions.push({ label: `Open ${name}`, kind: "open_studio", payload: { test: name } })
+      return `Saved "${name}" (${type}) to the Automation Hub, in the "${cleanFolder(input?.folder ?? "AI generated")}" folder.`
     }
 
     case "coverage_report": {
@@ -436,7 +438,7 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
       const executed = scripts.filter((s) => s.executions.length > 0)
       const neverRun = scripts.filter((s) => s.executions.length === 0).map((s) => s.name)
       const passed = scripts.flatMap((s) => s.executions).filter((e) => e.status === "Passed").length
-      const finished = scripts.flatMap((s) => s.executions).filter((e) => e.status !== "Running").length
+      const finished = scripts.flatMap((s) => s.executions).filter((e) => e.status !== "Running" && e.status !== "Queued").length
       actions.push({ label: "Open Evidence Vault", kind: "open_tab", payload: { tab: "Evidence" } })
       return JSON.stringify({
         totalScripts: scripts.length,
@@ -458,13 +460,13 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
 
 const SYSTEM_PROMPT = `You are the QA automation assistant embedded in the Automation Hub — a test automation platform where users write and run Playwright (Java/TestNG/Selenium) tests, record browser flows, and review evidence.
 
-You have tools that operate on the REAL system: they run actual Maven/SHAFT test executions, read real execution logs, and write real scripts into the user's library. Use them rather than guessing — never invent test names, results, or log content.
+You have tools that operate on the REAL system: they run actual Playwright test executions, read real execution logs, and write real scripts into the user's library. Use them rather than guessing — never invent test names, results, or log content.
 
 Guidelines:
 - Before running or diagnosing a test by name, verify the name with list_tests if you are not certain it exists.
 - When diagnosing a failure, quote the decisive error line(s), explain the root cause in plain language, and suggest a concrete fix (e.g. a corrected locator or assertion).
-- When generating test code, write a complete @playwright/test spec in TypeScript (import { test, expect } from "@playwright/test"; one test() per scenario; role- or label-based locators before CSS) and save it with save_test_script unless the user only asked to see the code.
-- Keep responses concise and skimmable. Use markdown: short paragraphs, bullet lists, \`inline code\` for names/locators, and fenced \`\`\`ts blocks for code.
+- When generating test code, write a complete Playwright spec in plain JavaScript, no TypeScript types (import { test, expect } from "@playwright/test"; one test() per scenario; role- or label-based locators before CSS; await every action and expect) and save it with save_test_script unless the user only asked to see the code.
+- Keep responses concise and skimmable. Use markdown: short paragraphs, bullet lists, \`inline code\` for names/locators, and fenced \`\`\`js blocks for code.
 - If a tool reports a permission denial, tell the user which permission level is needed (Settings → Permission).
 
 Respond in the same language the user writes in.`
@@ -483,6 +485,9 @@ interface HistoryMessage {
 }
 
 const MAX_ITERATIONS = 6
+
+/** The agent's prompt plus the QA skills for "agent-chat" (always on). */
+const AGENT_SYSTEM_PROMPT = withQaSkills(SYSTEM_PROMPT, "agent-chat") || SYSTEM_PROMPT
 
 async function runAnthropicAgent(
   history: HistoryMessage[],
@@ -506,7 +511,7 @@ async function runAnthropicAgent(
     const r = await client.messages.create({
       model: settings.model || "claude-opus-4-8",
       max_tokens: 4096,
-      system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: AGENT_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
       tools: TOOLS,
       messages
     })
@@ -577,7 +582,7 @@ async function runOpenAICompatAgent(
   }))
 
   const messages: any[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: AGENT_SYSTEM_PROMPT },
     ...history.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
   ]
 
@@ -669,7 +674,7 @@ async function runOfflineAgent(
       const r = parse(raw)
       if (r?.status === "Passed") lines.push(`- ✅ \`${t}\` **Passed** in ${((r.durationMs || 0) / 1000).toFixed(1)}s`)
       else if (r?.status === "Failed") lines.push(`- ❌ \`${t}\` **Failed** in ${((r.durationMs || 0) / 1000).toFixed(1)}s — ask me *"why did ${t} fail?"*`)
-      else if (r?.status === "still_running") lines.push(`- ⏳ \`${t}\` still running — check the Test Studio for live logs`)
+      else if (r?.status === "still_running") lines.push(`- ⏳ \`${t}\` still running — follow it in the Runs tab`)
       else lines.push(`- ${raw.includes("Permission denied") ? "🔒" : "⚠️"} \`${t}\`: ${raw.slice(0, 160)}`)
     }
     if (targets.length > 5) lines.push(`\n(Capped at 5 tests per request in offline mode — ${targets.length - 5} skipped.)`)
@@ -720,7 +725,7 @@ async function runOfflineAgent(
     const desc = (genMatch[2] || "generated flow").trim().slice(0, 60)
     const className = `Ai${desc.replace(/[^a-zA-Z0-9]+/g, " ").split(" ").filter(Boolean).slice(0, 3).map((w) => w[0].toUpperCase() + w.slice(1)).join("") || "Generated"}Test`
     const result = await call("save_test_script", { name: className, type, code: "" })
-    return `${result}\n\nIn offline mode I scaffold from the ${type} template — open it in the Test Studio to fill in the specific steps for *"${desc}"*. With an AI provider key configured I would write the full test logic for you.${offlineNote}`
+    return `${result}\n\nIn offline mode I scaffold from the ${type} template — open it in the Tests tab to fill in the specific steps for *"${desc}"*. With an AI provider key configured I would write the full test logic for you.${offlineNote}`
   }
 
   if (q.includes("list") || q.includes("what tests") || q.includes("which tests")) {

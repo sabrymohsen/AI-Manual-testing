@@ -32,6 +32,8 @@ type Phase = "idle" | "starting" | "recording" | "review"
 
 interface VisualRecorderSectionProps {
   onSavedToStudio?: (scriptName: string) => void
+  /** Saved recordings belong to this project's test list. */
+  projectId?: string
 }
 
 export interface DeviceOption {
@@ -148,7 +150,7 @@ const ACTION_ICONS: Record<string, any> = {
   press: Keyboard
 }
 
-export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorderSectionProps) {
+export default function VisualRecorderSection({ onSavedToStudio, projectId }: VisualRecorderSectionProps) {
   const [phase, setPhase] = useState<Phase>("idle")
   const [url, setUrl] = useState("https://example.com")
   const [browser, setBrowser] = useState("Chrome")
@@ -374,21 +376,25 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
     navigator.clipboard.writeText(code)
   }
 
+  // The test's title, from `test("…"` in the code: a readable default name.
+  const titleFromCode = () => code.match(/\btest\(\s*["'`]([^"'`]+)["'`]/)?.[1]?.trim() || ""
+
   const handleDownload = () => {
-    const classMatch = code.match(/public\s+class\s+(\w+)/)
-    const blob = new Blob([code], { type: "text/x-java-source" })
+    const base = (saveName || titleFromCode() || "recorded-flow").replace(/[^A-Za-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+    const blob = new Blob([code], { type: "text/javascript" })
     const link = document.createElement("a")
     link.href = URL.createObjectURL(blob)
-    link.download = `${classMatch?.[1] || "RecordedFlowTest"}.java`
+    link.download = `${base || "recorded-flow"}.spec.js`
     link.click()
     URL.revokeObjectURL(link.href)
   }
 
   const handleSaveToStudio = () => {
+    const fromTitle = titleFromCode()
     const suggested =
-      code.match(/public\s+class\s+(\w+)/)?.[1] === "RecordedFlowTest"
-        ? `RecordedFlow${new Date().toISOString().slice(5, 10).replace("-", "")}Test`
-        : code.match(/public\s+class\s+(\w+)/)?.[1] || "RecordedFlowTest"
+      fromTitle && fromTitle !== "Recorded Flow Test"
+        ? fromTitle.slice(0, 80)
+        : `Recorded flow ${new Date().toISOString().slice(0, 16).replace("T", " ").replace(":", "-")}`
     setSaveName(suggested)
     setSaveError("")
     setSaveModalOpen(true)
@@ -396,31 +402,31 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
 
   const handleConfirmSave = async () => {
     const name = saveName.trim()
-    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name)) {
-      setSaveError("Invalid name — use a valid Java class name (letters, digits, _, no spaces).")
+    if (!/^[A-Za-z0-9][A-Za-z0-9 _-]{0,79}$/.test(name)) {
+      setSaveError("Use letters, numbers, spaces, - or _ (up to 80 characters).")
       return
     }
 
     setSaving(true)
     setSaveError("")
     try {
-      // keep the class declaration in sync with the chosen script name
-      const finalCode = code.replace(/public\s+class\s+\w+/, `public class ${name}`)
+      // Keep the test's title in step with the chosen name.
+      const finalCode = code.replace(/\btest\(\s*"[^"]*"/, `test(${JSON.stringify(name)}`)
       const res = await fetch("/api/hub/recorder/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, code: finalCode, tags: ["Web", "Recorded"] })
+        body: JSON.stringify({ name, code: finalCode, tags: ["recorded"], projectId, folder: "Recorded" })
       })
       const d = await res.json()
       if (!res.ok) {
-        setSaveError(d.error || "Failed to save to Test Studio")
+        setSaveError(d.error || "Couldn't save the test")
         return
       }
       setSaveModalOpen(false)
       setSavedName(name)
       onSavedToStudio?.(name)
     } catch (err: any) {
-      setSaveError(err.message || "Failed to save to Test Studio")
+      setSaveError(err.message || "Couldn't save the test")
     } finally {
       setSaving(false)
     }
@@ -840,7 +846,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
 
           {savedName && (
             <p className="text-emerald-700 text-[10px] font-black bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center gap-1.5">
-              <Play size={11} /> Saved as “{savedName}” in the Test Studio library — open the Test Studio tab to run it.
+              <Play size={11} /> Saved as “{savedName}” in the Recorded folder — open the Tests tab to run it.
             </p>
           )}
         </div>
@@ -852,7 +858,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
           <div className="bg-white rounded-3xl border shadow-2xl w-full max-w-md p-5 space-y-4 text-left">
             <div className="flex items-center justify-between border-b pb-2.5">
               <h3 className="text-sm font-black text-slate-900 flex items-center gap-2">
-                <Save size={14} className="text-indigo-600" /> Save to Test Studio
+                <Save size={14} className="text-indigo-600" /> Save as a test
               </h3>
               <button
                 onClick={() => setSaveModalOpen(false)}
@@ -864,7 +870,7 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 block uppercase">Java class name</label>
+              <label className="text-[10px] font-bold text-slate-500 block uppercase">Test name</label>
               <input
                 value={saveName}
                 onChange={(e) => {
@@ -874,13 +880,20 @@ export default function VisualRecorderSection({ onSavedToStudio }: VisualRecorde
                 onKeyDown={(e) => e.key === "Enter" && !saving && handleConfirmSave()}
                 autoFocus
                 disabled={saving}
-                placeholder="RecordedLoginFlowTest"
+                placeholder="Login with valid user"
                 className="w-full h-10 rounded-xl border px-3 text-xs bg-slate-50 font-mono font-bold disabled:opacity-60"
               />
               <p className="text-[9px] text-slate-400 font-medium leading-relaxed">
-                The script is saved into the Test Studio library under Web Tests (tagged “Recorded”). The class
-                declaration in the code is renamed to match.
+                Saved as Playwright JavaScript in this project's “Recorded” folder. The test's title in the code
+                is renamed to match.
               </p>
+              {code.includes("process.env.RECORDED_PASSWORD") && (
+                <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5 leading-relaxed">
+                  The password you typed is not saved in the test. Before running it, add a secret named{" "}
+                  <span className="font-mono font-bold">RECORDED_PASSWORD</span> under More tools → Data &amp; settings →
+                  Secrets.
+                </p>
+              )}
             </div>
 
             {saveError && (

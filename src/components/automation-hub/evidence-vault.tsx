@@ -875,7 +875,7 @@ function ExecutionLogViewer() {
           <div className="h-full flex flex-col items-center justify-center gap-1.5 text-slate-500">
             <FileText size={20} />
             <span className="text-[9px] uppercase font-bold tracking-wider">
-              {rawLines.length === 0 ? "No log output yet — run a test in Test Studio" : "No lines match these filters"}
+              {rawLines.length === 0 ? "No log output yet — run a test in the Tests tab" : "No lines match these filters"}
             </span>
           </div>
         ) : (
@@ -1164,7 +1164,7 @@ export default function EvidenceVaultSection({
             <div className="py-20 text-center bg-white border rounded-2xl space-y-2">
               <FolderOpen size={26} className="text-slate-300 mx-auto" />
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">No evidence matches these filters</p>
-              <p className="text-[9.5px] text-slate-400 font-medium">Run tests in the Test Studio — screenshots, videos, logs and HAR traces land here automatically.</p>
+              <p className="text-[9.5px] text-slate-400 font-medium">Run tests in the Tests tab — screenshots, videos, logs and HAR traces land here automatically.</p>
             </div>
           ) : (
             <>

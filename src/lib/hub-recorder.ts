@@ -159,15 +159,117 @@ export async function startSession(opts: {
       return parts.join(" > ")
     }
 
-    const javaLocator = (el: Element): string => {
-      if (el.id) return `By.id("${el.id}")`
-      const name = el.getAttribute("name")
-      if (name) return `By.name("${name}")`
-      const testId = el.getAttribute("data-testid") || el.getAttribute("data-test-id")
-      if (testId) return `By.cssSelector("[data-testid='${testId}']")`
-      const text = (el.textContent || "").trim()
-      if (el.tagName === "A" && text && text.length < 40) return `By.linkText("${text.replace(/"/g, '\\"')}")`
-      return `By.cssSelector("${buildCss(el).replace(/"/g, "'")}")`
+    // Playwright locators, most resilient first: test id, role + accessible
+    // name, label, placeholder, id, name, then a short CSS path. Each candidate
+    // is used only if it matches this one element on the page.
+    const q = (v: string) => JSON.stringify(v)
+    const clean = (v: string | null | undefined) => (v || "").replace(/\s+/g, " ").trim()
+    const implicitRole = (el: Element): string | null => {
+      const explicit = el.getAttribute("role")
+      if (explicit) return explicit.split(" ")[0]
+      const tag = el.tagName.toLowerCase()
+      const type = (el.getAttribute("type") || "text").toLowerCase()
+      if (tag === "a" && el.hasAttribute("href")) return "link"
+      if (tag === "button") return "button"
+      if (tag === "select") return (el as HTMLSelectElement).multiple ? "listbox" : "combobox"
+      if (tag === "textarea") return "textbox"
+      if (/^h[1-6]$/.test(tag)) return "heading"
+      if (tag === "input") {
+        if (["button", "submit", "reset", "image"].includes(type)) return "button"
+        if (type === "checkbox") return "checkbox"
+        if (type === "radio") return "radio"
+        if (type === "range") return "slider"
+        if (type === "number") return "spinbutton"
+        if (type === "search") return "searchbox"
+        if (["text", "email", "tel", "url"].includes(type)) return "textbox"
+      }
+      return null
+    }
+    const labelText = (el: Element): string => {
+      const labelledBy = el.getAttribute("aria-labelledby")
+      if (labelledBy) {
+        const t = labelledBy.split(" ").map((id) => clean(document.getElementById(id)?.textContent)).join(" ").trim()
+        if (t) return t
+      }
+      if (el.id) {
+        const forLabel = document.querySelector(`label[for="${esc(el.id)}"]`)
+        if (forLabel && clean(forLabel.textContent)) return clean(forLabel.textContent)
+      }
+      const wrap = el.closest("label")
+      if (wrap) {
+        const t = clean(wrap.textContent)
+        if (t) return t
+      }
+      return ""
+    }
+    const accessibleName = (el: Element): string => {
+      const aria = clean(el.getAttribute("aria-label"))
+      if (aria) return aria
+      const lbl = labelText(el)
+      if (lbl) return lbl
+      const tag = el.tagName.toLowerCase()
+      if (tag === "input") {
+        const type = (el.getAttribute("type") || "").toLowerCase()
+        if (["button", "submit", "reset"].includes(type)) return clean((el as HTMLInputElement).value) || (type === "submit" ? "Submit" : "")
+        return ""
+      }
+      const text = clean((el as HTMLElement).innerText || el.textContent)
+      if (text) return text
+      const img = el.querySelector("img[alt]")
+      return clean(img?.getAttribute("alt")) || clean(el.getAttribute("title"))
+    }
+    const countWhere = (selector: string, test: (c: Element) => boolean) =>
+      Array.from(document.querySelectorAll(selector)).filter(test).length
+    const ROLE_SELECTOR = "a[href], button, input, select, textarea, h1, h2, h3, h4, h5, h6, [role]"
+
+    // Playwright matches names case-insensitively by substring unless
+    // `exact: true`. The page's own text can differ from the accessible name
+    // Playwright computes (an icon drawn with CSS ::before is part of the name
+    // but not of innerText), so `exact` is only added when the plain match
+    // would hit more than one element.
+    const contains = (hay: string, needle: string) => hay.toLowerCase().includes(needle.toLowerCase())
+    const nameOpt = (name: string, matches: number) => (matches > 1 ? `{ name: ${q(name)}, exact: true }` : `{ name: ${q(name)} }`)
+    const textOpt = (matches: number) => (matches > 1 ? ", { exact: true }" : "")
+
+    const playwrightLocator = (el: Element): string => {
+      const testId = el.getAttribute("data-testid") || el.getAttribute("data-test-id") || el.getAttribute("data-test") || el.getAttribute("data-qa")
+      if (testId) {
+        const attr = el.hasAttribute("data-testid") ? "data-testid" : el.hasAttribute("data-test-id") ? "data-test-id" : el.hasAttribute("data-test") ? "data-test" : "data-qa"
+        if (attr === "data-testid") return `page.getByTestId(${q(testId)})`
+        return `page.locator(${q(`[${attr}="${testId}"]`)})`
+      }
+
+      const role = implicitRole(el)
+      const name = accessibleName(el)
+      if (role && name && name.length <= 60) {
+        const sameRole = Array.from(document.querySelectorAll(ROLE_SELECTOR)).filter((c) => implicitRole(c) === role)
+        const loose = sameRole.filter((c) => contains(accessibleName(c), name)).length
+        const exact = sameRole.filter((c) => accessibleName(c) === name).length
+        if (loose === 1 || exact === 1) return `page.getByRole(${q(role)}, ${nameOpt(name, loose)})`
+      }
+
+      const tag = el.tagName.toLowerCase()
+      if (["input", "textarea", "select"].includes(tag)) {
+        const fields = Array.from(document.querySelectorAll("input, textarea, select"))
+        const lbl = labelText(el) || clean(el.getAttribute("aria-label"))
+        if (lbl && lbl.length <= 60) {
+          const of = (c: Element) => labelText(c) || clean(c.getAttribute("aria-label"))
+          const loose = fields.filter((c) => contains(of(c), lbl)).length
+          if (loose === 1 || fields.filter((c) => of(c) === lbl).length === 1) return `page.getByLabel(${q(lbl)}${textOpt(loose)})`
+        }
+        const ph = clean(el.getAttribute("placeholder"))
+        if (ph) {
+          const loose = fields.filter((c) => contains(clean(c.getAttribute("placeholder")), ph)).length
+          if (loose === 1 || document.querySelectorAll(`[placeholder="${esc(ph)}"]`).length === 1) return `page.getByPlaceholder(${q(ph)}${textOpt(loose)})`
+        }
+      }
+
+      // Generated ids (react-select-3-input, ember123) change between builds.
+      if (el.id && !/\d{3,}|^[a-f0-9-]{16,}$|:r\w+:/i.test(el.id)) return `page.locator(${q("#" + esc(el.id))})`
+      const nm = el.getAttribute("name")
+      if (nm && document.querySelectorAll(`[name="${esc(nm)}"]`).length === 1) return `page.locator(${q(`${tag}[name="${nm}"]`)})`
+      if (role && name && name.length <= 60) return `page.getByRole(${q(role)}, { name: ${q(name)} }).first()`
+      return `page.locator(${q(buildCss(el))})`
     }
 
     const labelFor = (el: Element): string => {
@@ -202,7 +304,7 @@ export async function startSession(opts: {
           tag === "textarea" ||
           (tag === "input" && !["button", "submit", "checkbox", "radio", "reset"].includes(inputType))
         if (isTypable || tag === "select") return
-        record({ kind: "click", label: labelFor(el), locator: javaLocator(el), rect: rectOf(el) })
+        record({ kind: "click", label: labelFor(el), locator: playwrightLocator(el), rect: rectOf(el) })
       },
       true
     )
@@ -220,7 +322,7 @@ export async function startSession(opts: {
         record({
           kind: "type",
           label: labelFor(el),
-          locator: javaLocator(el),
+          locator: playwrightLocator(el),
           value: isPassword ? "[REDACTED]" : el.value,
           isPassword,
           rect: rectOf(el)
@@ -234,7 +336,7 @@ export async function startSession(opts: {
       (e) => {
         const el = e.target as HTMLSelectElement
         if (!el || el.tagName?.toLowerCase() !== "select") return
-        record({ kind: "select", label: labelFor(el), locator: javaLocator(el), value: el.value, rect: rectOf(el) })
+        record({ kind: "select", label: labelFor(el), locator: playwrightLocator(el), value: el.value, rect: rectOf(el) })
       },
       true
     )
@@ -247,7 +349,7 @@ export async function startSession(opts: {
         if (!el || !(el instanceof Element)) return
         const tag = el.tagName.toLowerCase()
         if (tag !== "input" && tag !== "textarea") return
-        record({ kind: "press", label: labelFor(el), locator: javaLocator(el), value: "ENTER", rect: rectOf(el) })
+        record({ kind: "press", label: labelFor(el), locator: playwrightLocator(el), value: "Enter", rect: rectOf(el) })
       },
       true
     )

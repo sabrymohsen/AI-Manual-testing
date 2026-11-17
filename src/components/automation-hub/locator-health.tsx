@@ -120,7 +120,7 @@ export default function LocatorHealthPanel() {
         <ShieldCheck size={26} className="text-emerald-400 mx-auto" />
         <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">No locator health signal yet</p>
         <p className="text-[9.5px] text-slate-400 font-medium max-w-md mx-auto">
-          Locator health is derived from self-healing history. Once SHAFT recovers a broken locator, it appears here with a
+          Locator health is derived from self-healing history. Once a broken locator is recovered, it appears here with a
           stability score and recommendations.
         </p>
       </div>
