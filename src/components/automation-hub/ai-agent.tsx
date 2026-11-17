@@ -21,7 +21,7 @@ import {
   Terminal,
   BarChart3
 } from "lucide-react"
-import { ProvidersPanel, CommandsPanel, UsagePrivacyPanel } from "@/components/automation-hub/ai-provider-management"
+import { ProvidersPanel, CommandsPanel, UsagePrivacyPanel, SkillsPanel } from "@/components/automation-hub/ai-provider-management"
 
 // ---------- Types ----------
 
@@ -179,7 +179,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
   const [showSidebar, setShowSidebar] = useState(true)
 
   // Section 11 sub-tabs: chat vs. the provider/command/usage management panels.
-  const [view, setView] = useState<"chat" | "commands" | "providers" | "usage">("chat")
+  const [view, setView] = useState<"chat" | "commands" | "skills" | "providers" | "usage">("chat")
 
   // Custom Toast State
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" | "info" } | null>(null)
@@ -381,6 +381,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
   const SUB_TABS: { id: typeof view; label: string; icon: any }[] = [
     { id: "chat", label: "Chat", icon: MessageSquare },
     { id: "commands", label: "Commands", icon: Terminal },
+    { id: "skills", label: "Skills", icon: Sparkles },
     { id: "providers", label: "Providers", icon: Bot },
     { id: "usage", label: "Usage & Privacy", icon: BarChart3 }
   ]
@@ -404,6 +405,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
       </div>
 
       {view === "commands" && <CommandsPanel sending={sending} onRun={(text) => { setView("chat"); handleSendMessage(text) }} />}
+      {view === "skills" && <SkillsPanel />}
       {view === "providers" && <ProvidersPanel onDefaultChanged={loadAgentData} />}
       {view === "usage" && <UsagePrivacyPanel />}
 

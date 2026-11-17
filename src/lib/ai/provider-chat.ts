@@ -21,6 +21,7 @@ import {
   type AiProvider,
 } from "@/lib/hub-ai-providers"
 import { getProjectAiCredentials } from "@/lib/ai/project-ai-config"
+import { withQaSkills } from "@/lib/ai/qa-skills"
 
 export interface ResolvedProvider {
   provider: AiProvider
@@ -227,6 +228,74 @@ async function callAnthropic(
   return text
 }
 
+/**
+ * Ollama through its native /api/chat instead of the /v1 OpenAI shim.
+ *
+ * Reasoning models (qwen3, deepseek-r1…) think before answering, and the /v1
+ * endpoint gives no way to switch that off: on a 16 GB laptop a one-word
+ * severity took 15s and a test case over a minute, sometimes running into the
+ * token ceiling with nothing written. /api/chat takes `think: false` and
+ * answered the same severity in under 3s. Set OLLAMA_THINK=true to keep it.
+ */
+async function callOllamaNative(
+  resolved: ResolvedProvider,
+  opts: ChatOptions
+): Promise<string> {
+  const base = (process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "")
+  const messages: any[] = []
+  if (opts.system) messages.push({ role: "system", content: opts.system })
+  messages.push({
+    role: "user",
+    content: opts.prompt,
+    ...(opts.imageBase64 ? { images: [opts.imageBase64] } : {}),
+  })
+  const limit = opts.maxTokens ?? 4000
+
+  const res = await fetch(`${base}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: resolved.model,
+      messages,
+      stream: false,
+      think: process.env.OLLAMA_THINK === "true",
+      ...(opts.json ? { format: "json" } : {}),
+      options: {
+        num_predict: limit,
+        ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+      },
+    }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 120_000),
+  })
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`Ollama API error ${res.status}: ${body.slice(0, 300)}`)
+  }
+
+  const data = await res.json()
+  await recordUsage(
+    resolved.provider,
+    resolved.model,
+    data.prompt_eval_count || 0,
+    data.eval_count || 0,
+    opts.command
+  )
+
+  const content = String(data.message?.content || "").trim()
+  if (!content) {
+    throw new Error(
+      data.done_reason === "length"
+        ? `Ollama (${resolved.model}) reached its ${limit}-token ceiling before writing any answer`
+        : `Ollama (${resolved.model}) returned an empty reply`
+    )
+  }
+  if (data.done_reason === "length") {
+    console.warn(`[provider-chat] Ollama (${resolved.model}) hit the ${limit}-token ceiling; the reply is cut off`)
+  }
+  return content
+}
+
 async function callOpenAiCompatible(
   resolved: ResolvedProvider,
   opts: ChatOptions
@@ -317,7 +386,14 @@ export async function chatWithConfiguredProvider(opts: ChatOptions): Promise<str
   const resolved = await resolveProvider(opts.projectId)
   if (!resolved) throw new Error("No AI provider is configured")
 
-  return resolved.provider === "Anthropic"
-    ? callAnthropic(resolved, opts)
-    : callOpenAiCompatible(resolved, opts)
+  // Attach the QA skills that match this call's command (always on; see qa-skills.ts).
+  const withSkills: ChatOptions = {
+    ...opts,
+    system: withQaSkills(opts.system, opts.command),
+  }
+
+  if (resolved.provider === "Anthropic") return callAnthropic(resolved, withSkills)
+  // A baseUrl override means a custom gateway that may only speak /v1.
+  if (resolved.provider === "Ollama" && !resolved.baseUrl) return callOllamaNative(resolved, withSkills)
+  return callOpenAiCompatible(resolved, withSkills)
 }

@@ -22,7 +22,9 @@ import {
   BarChart3,
   Link2,
   Send,
-  Save
+  Save,
+  GraduationCap,
+  ChevronDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -664,6 +666,82 @@ export function UsagePrivacyPanel() {
 
 // ---- Single-series daily bar chart (dataviz: one indigo hue, baseline-anchored,
 // 4px rounded tops, 2px gaps, per-bar hover; light-only to match the hub) ----
+// ───────────────────────── Skills ─────────────────────────
+
+interface SkillRow {
+  id: string
+  name: string
+  description: string
+  instructions: string
+  usedBy: string[]
+}
+
+/**
+ * The QA skills (src/lib/ai/qa-skills.ts) every AI feature applies: test
+ * design, bug writing, severity, diagnosis… Always on; this tab only shows them.
+ */
+export function SkillsPanel() {
+  const [skills, setSkills] = useState<SkillRow[] | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
+  const [error, setError] = useState("")
+
+  useEffect(() => {
+    fetch("/api/hub/agent/skills")
+      .then((r) => r.json())
+      .then((d) => (d.skills ? setSkills(d.skills) : setError(d.error || "Couldn't load skills")))
+      .catch(() => setError("Couldn't load skills"))
+  }, [])
+
+  if (!skills) return error ? <p className="text-xs text-rose-600 font-bold">{error}</p> : <PanelLoader label="Loading skills..." />
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border rounded-2xl p-4 shadow-sm">
+        <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
+          <GraduationCap size={16} className="text-indigo-600" /> QA skills
+          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+            {skills.length} always on
+          </span>
+        </h3>
+        <p className="text-[11px] text-slate-500 font-semibold mt-1">
+          Testing know-how the AI applies to every feature: generating test cases, writing bug reports, rating severity,
+          explaining failures and the chat. Each feature gets only the skills that fit it (up to 3), whichever provider is set up.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {skills.map((s) => (
+          <div key={s.id} className="bg-white border rounded-2xl p-4 shadow-sm space-y-2">
+            <div>
+              <p className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                <CheckCircle2 size={12} className="text-emerald-600" /> {s.name}
+              </p>
+              <p className="text-[9.5px] text-slate-400 font-semibold">{s.description}</p>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {s.usedBy.map((u) => (
+                <span key={u} className="text-[9.5px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-2 py-0.5">
+                  {u}
+                </span>
+              ))}
+            </div>
+            <button
+              onClick={() => setOpen(open === s.id ? null : s.id)}
+              className="text-[10px] font-bold text-slate-500 hover:text-indigo-700 flex items-center gap-1"
+            >
+              <ChevronDown size={12} className={`transition-transform ${open === s.id ? "rotate-180" : ""}`} />
+              {open === s.id ? "Hide" : "Show"} what the AI is told
+            </button>
+            {open === s.id && (
+              <p className="text-[11px] leading-relaxed text-slate-600 bg-slate-50 border rounded-xl p-3">{s.instructions}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost: number; calls: number }[] }) {
   const [hover, setHover] = useState<number | null>(null)
   const max = Math.max(1, ...daily.map((d) => d.tokens))
