@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from "vitest"
 
 // Provider clients are reached only by the AI paths, not by the fallback.
 vi.mock("axios", () => ({ default: { post: vi.fn(), get: vi.fn() } }))
-vi.mock("@/lib/ai/test-case-generator", () => ({ getOllamaModels: vi.fn(async () => []) }))
+vi.mock("@/lib/hub-ai-providers", () => ({
+  probeOllama: vi.fn(async () => ({ reachable: false, models: [], baseUrl: "http://localhost:11434" })),
+}))
+vi.mock("@/lib/db", () => ({ prisma: { aiProviderConfig: { findUnique: vi.fn(async () => null) } } }))
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: vi.fn(),
   hasConfiguredProvider: vi.fn(async () => false),

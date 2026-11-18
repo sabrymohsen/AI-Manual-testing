@@ -1,75 +1,109 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
+import Link from "next/link"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
+import { toast } from "sonner"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { CredentialsList } from "@/components/credentials/credentials-list"
 import { IntegrationConfig } from "@/components/integrations/integration-config"
 import { IntegrationConnectPanel } from "@/components/integrations/integration-connect-panel"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
-import {
-  Layers,
-  Key,
-  Globe,
-  Settings,
-  ShieldAlert,
-  Trash2,
-  Users,
-  Bot
-} from "lucide-react"
+import { Layers, Key, Globe, Settings, ShieldAlert, Trash2, Users, Bot, Loader2, Lock, AlertTriangle } from "lucide-react"
 import { TeamPanel } from "@/components/team/team-panel"
 import { ProjectAiPanel } from "@/components/ai/project-ai-panel"
 import { ModulesPanel } from "@/components/modules/modules-panel"
 
 type ProjectTab = "scope" | "credentials" | "integrations" | "ai" | "team" | "settings"
+const TABS: ProjectTab[] = ["scope", "credentials", "integrations", "ai", "team", "settings"]
+
+/** ?tab= value → tab. Accepts the old "general" alias and "modules". */
+function tabFromParam(value: string | null): ProjectTab {
+  if (value === "general") return "settings"
+  if (value === "modules") return "scope"
+  return TABS.includes(value as ProjectTab) ? (value as ProjectTab) : "scope"
+}
+
+interface Access {
+  globalRole: string
+  role: string | null
+  permissions: Record<string, boolean>
+}
+
+/** Shown in place of a tab the user isn't allowed to manage. */
+function AdminOnly({ what }: { what: string }) {
+  return (
+    <div className="p-6 border border-border rounded-xl bg-card flex items-start gap-3 text-[13px] text-muted-foreground">
+      <Lock className="h-4 w-4 mt-0.5 shrink-0" />
+      <p>Only the project&apos;s owner and admins can see or change {what}. Ask one of them if something here needs to change.</p>
+    </div>
+  )
+}
 
 export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const projectId = params.id as string
 
   // Connected tracker (Jira / Azure DevOps / ClickUp / OpenProject) for labels + gating.
   const { provider: integrationProvider, name: integrationName, connected: integrationConnected } =
     useProjectIntegration(projectId)
-  const integrationTabLabel = integrationConnected ? `${integrationName} Connection` : "Integrations"
+  const integrationTabLabel = integrationConnected ? `${integrationName} connection` : "Integrations"
 
-  // Deep-link support: ?tab=scope|credentials|integrations|general (general → settings tab).
-  const tabParam = searchParams.get("tab")
-  const initialTab: ProjectTab =
-    tabParam === "credentials" || tabParam === "integrations" || tabParam === "scope" || tabParam === "team"
-      ? tabParam
-      : tabParam === "general" || tabParam === "settings"
-        ? "settings"
-        : "scope"
+  const activeTab = tabFromParam(searchParams.get("tab"))
+  const setActiveTab = (tab: ProjectTab) => {
+    const next = new URLSearchParams(searchParams.toString())
+    next.set("tab", tab)
+    router.replace(`${pathname}?${next.toString()}`, { scroll: false })
+  }
 
   const [project, setProject] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<ProjectTab>(initialTab)
+  const [access, setAccess] = useState<Access | null>(null)
+  const [loadError, setLoadError] = useState<"not-found" | "failed" | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [deleteOpen, setDeleteOpen] = useState(false)
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      // `/hierarchy` used to be fetched here for the old read-only scope tree.
-      // That endpoint never existed, so it 404'd on every load and the tab
-      // always read "No modules defined"; the Modules tab now reads the
-      // project's real test suites instead.
-      const projRes = await fetch(`/api/projects/${projectId}`)
-      const projData = projRes.ok ? await projRes.json() : {}
-
+      const [projRes, accessRes] = await Promise.all([
+        fetch(`/api/projects/${projectId}`),
+        fetch(`/api/projects/${projectId}/membership`),
+      ])
+      if (projRes.status === 404 || projRes.status === 403) {
+        setLoadError("not-found")
+        return
+      }
+      if (!projRes.ok) {
+        setLoadError("failed")
+        return
+      }
+      const projData = await projRes.json()
       setProject(projData.project)
-    } catch (err) {
-      console.error("Error loading project dynamic details:", err)
+      setAccess(accessRes.ok ? await accessRes.json() : null)
+      setLoadError(null)
+    } catch {
+      setLoadError("failed")
     }
-  }
+  }, [projectId])
 
   useEffect(() => {
     loadData()
-  }, [projectId])
+  }, [loadData])
+
+  // Mirrors the server: settings/credentials/integrations/AI need project
+  // Owner or Admin (a global Admin counts as Admin).
+  const role = access?.role ?? null
+  const canManage = access?.globalRole === "Admin" || role === "Owner" || role === "Admin"
+  const perms = access?.permissions ?? {}
+  const canDeleteProject = !!perms.canDeleteProject
 
   async function handleGeneralSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -95,78 +129,103 @@ export default function ProjectDetailPage() {
         body: JSON.stringify(body),
       })
       if (res.ok) {
-        alert("Project settings updated successfully!")
+        toast.success("Project settings saved")
         loadData()
       } else {
-        const data = await res.json()
-        setError(data.error || "Failed to update project settings")
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || "Couldn't save the project settings")
       }
     } catch (err: any) {
-      setError(err?.message || "An unexpected error occurred.")
+      setError(err?.message || "Couldn't reach the server. Check your connection and try again.")
     } finally {
       setSaving(false)
     }
   }
 
+  // Throwing shows the message inside the confirm dialog.
   async function handleDeleteProject() {
-    if (!confirm("Are you absolutely sure you want to permanently delete this project? This will delete all test cases, runs, and bugs. This action is irreversible.")) {
-      return
+    const res = await fetch(`/api/projects/${projectId}`, { method: "DELETE" })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.error || "Couldn't delete the project")
     }
     try {
-      const res = await fetch(`/api/projects/${projectId}`, {
-        method: "DELETE"
-      })
-      if (res.ok) {
-        localStorage.removeItem("activeProjectId")
-        window.dispatchEvent(new Event("projectChanged"))
-        router.push("/projects")
-      } else {
-        alert("Failed to delete project.")
-      }
-    } catch (err) {
-      console.error(err)
-    }
+      if (localStorage.getItem("activeProjectId") === projectId) localStorage.removeItem("activeProjectId")
+    } catch {}
+    window.dispatchEvent(new Event("projectChanged"))
+    toast.success(`Deleted ${project.name}`)
+    router.push("/projects")
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full items-center justify-center p-6">
+        <div className="max-w-sm text-center space-y-3">
+          <AlertTriangle className="h-6 w-6 mx-auto text-muted-foreground" />
+          <h2 className="text-base font-semibold text-foreground">
+            {loadError === "not-found" ? "Project not found" : "Couldn't load this project"}
+          </h2>
+          <p className="text-[13px] text-muted-foreground">
+            {loadError === "not-found"
+              ? "It may have been deleted, or you aren't a member. Ask a project admin to invite you."
+              : "Something went wrong while loading. Check your connection and try again."}
+          </p>
+          <div className="flex justify-center gap-2">
+            {loadError === "failed" && (
+              <Button size="sm" variant="outline" onClick={() => { setLoadError(null); loadData() }}>
+                Try again
+              </Button>
+            )}
+            <Button size="sm" asChild>
+              <Link href="/projects">All projects</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (!project) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground animate-pulse font-semibold">
-        Loading project workspace scope details...
+      <div className="flex h-full items-center justify-center gap-2 text-[13px] text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" /> Loading project…
       </div>
     )
   }
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold select-none">
-      <AppPageHeader 
+    <div className="flex-1 space-y-6 text-[13px]">
+      <AppPageHeader
         title={project.name}
-        subtitle="Manage testing folders scope, view health summaries, configure authentication vault, and target integration settings."
+        subtitle="Modules, credentials, integrations, AI provider, team and settings for this project."
         breadcrumb={`Projects > ${project.name}`}
       />
 
       <ActiveProjectContextBar projectId={projectId} />
 
       {/* Tabs navigation */}
-      <div className="flex border-b pb-px overflow-x-auto gap-4">
+      <div className="flex border-b pb-px overflow-x-auto gap-4" role="tablist">
         {[
           { id: "scope", label: "Modules", icon: Layers },
-          { id: "credentials", label: "Credentials Vault", icon: Key },
+          { id: "credentials", label: "Credentials", icon: Key },
           { id: "integrations", label: integrationTabLabel, icon: Globe },
-          { id: "ai", label: "AI Provider", icon: Bot },
+          { id: "ai", label: "AI provider", icon: Bot },
           { id: "team", label: "Team", icon: Users },
-          { id: "settings", label: "General Settings", icon: Settings }
+          { id: "settings", label: "Settings", icon: Settings },
         ].map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
               onClick={() => setActiveTab(tab.id as ProjectTab)}
-              className={`flex items-center gap-1.5 pb-2.5 px-1.5 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+              className={`flex items-center gap-1.5 pb-2.5 px-1.5 text-[13px] font-medium border-b-2 transition-colors whitespace-nowrap ${
                 isActive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              <Icon className="h-4.5 w-4.5" />
+              <Icon className="h-4 w-4" />
               {tab.label}
             </button>
           )
@@ -178,41 +237,47 @@ export default function ProjectDetailPage() {
             are filed under and what the QA report groups by. */}
         {activeTab === "scope" && (
           <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
-            <ModulesPanel projectId={projectId} />
-          </div>
-        )}
-
-        {/* CREDENTIALS TAB */}
-        {activeTab === "credentials" && (
-          <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
-            <CredentialsList 
+            <ModulesPanel
               projectId={projectId}
-              credentials={project.credentials || []}
-              onUpdate={loadData}
+              canEdit={!!perms.canCreateStories}
+              canDelete={!!perms.canDeleteStories}
             />
           </div>
         )}
 
-        {/* INTEGRATIONS TAB */}
-        {activeTab === "integrations" && (
-          <div className="space-y-6">
+        {/* CREDENTIALS TAB — listing needs Owner/Admin on the server too */}
+        {activeTab === "credentials" &&
+          (canManage ? (
             <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
-              <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2 mb-4">Project-Management Integration</span>
-              <IntegrationConnectPanel projectId={projectId} />
+              <CredentialsList projectId={projectId} credentials={project.credentials || []} onUpdate={loadData} />
             </div>
-            {/* Advanced OpenProject controls (parent strategy, group/board sync,
-                custom fields) — only relevant when this project uses OpenProject. */}
-            {integrationProvider === "OpenProject" && (
-              <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
-                <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2 mb-4">OpenProject advanced settings</span>
-                <IntegrationConfig projectId={projectId} />
-              </div>
-            )}
-          </div>
-        )}
+          ) : (
+            <AdminOnly what="the test logins stored for this project" />
+          ))}
 
-        {/* AI PROVIDER TAB */}
-        {activeTab === "ai" && <ProjectAiPanel projectId={projectId} />}
+        {/* INTEGRATIONS TAB */}
+        {activeTab === "integrations" &&
+          (canManage ? (
+            <div className="space-y-6">
+              <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
+                <span className="text-[13px] font-medium text-muted-foreground block border-b pb-2 mb-4">Project-management integration</span>
+                <IntegrationConnectPanel projectId={projectId} />
+              </div>
+              {/* Advanced OpenProject controls (parent strategy, group/board sync,
+                  custom fields) — only relevant when this project uses OpenProject. */}
+              {integrationProvider === "OpenProject" && (
+                <div className="p-6 border border-border shadow-sm rounded-xl bg-card">
+                  <span className="text-[13px] font-medium text-muted-foreground block border-b pb-2 mb-4">OpenProject advanced settings</span>
+                  <IntegrationConfig projectId={projectId} />
+                </div>
+              )}
+            </div>
+          ) : (
+            <AdminOnly what="this project's tracker connection" />
+          ))}
+
+        {/* AI PROVIDER TAB — members see what's in use; owners/admins change it */}
+        {activeTab === "ai" && <ProjectAiPanel projectId={projectId} canManage={canManage} />}
 
         {/* TEAM TAB */}
         {activeTab === "team" && (
@@ -220,100 +285,125 @@ export default function ProjectDetailPage() {
             projectId={projectId}
             providerName={integrationName || integrationProvider}
             connected={integrationConnected}
+            canManage={canManage}
           />
         )}
 
         {/* SETTINGS TAB */}
         {activeTab === "settings" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="p-6 border border-border shadow-sm col-span-2 space-y-6 rounded-xl bg-card">
-              <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2">Target Scope Details</span>
-              {error && <p className="text-red-655 font-semibold">{error}</p>}
-              <form onSubmit={handleGeneralSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="name" className="text-muted-foreground">Project Name *</Label>
-                    <Input id="name" name="name" required defaultValue={project.name} className="h-9" />
+            <div className="p-6 border border-border shadow-sm lg:col-span-2 space-y-6 rounded-xl bg-card">
+              <span className="text-[13px] font-medium text-muted-foreground block border-b pb-2">Project details</span>
+              {!canManage && (
+                <p className="flex items-center gap-2 text-muted-foreground">
+                  <Lock className="h-3.5 w-3.5" /> Only the project&apos;s owner and admins can change these.
+                </p>
+              )}
+              {error && <p className="text-destructive font-medium">{error}</p>}
+              {/* key: re-seed the uncontrolled inputs after a save or reload */}
+              <form key={project.updatedAt} onSubmit={handleGeneralSubmit} className="space-y-4">
+                <fieldset disabled={!canManage || saving} className="space-y-4 disabled:opacity-80">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="name" className="text-muted-foreground">Project name *</Label>
+                      <Input id="name" name="name" required maxLength={200} defaultValue={project.name} className="h-9" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="webAppUrl" className="text-muted-foreground">Web app URL *</Label>
+                      <Input id="webAppUrl" name="webAppUrl" type="url" required defaultValue={project.webAppUrl} placeholder="https://app.example.com" className="h-9" />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="webAppUrl" className="text-muted-foreground">Web App URL *</Label>
-                    <Input id="webAppUrl" name="webAppUrl" type="url" required defaultValue={project.webAppUrl} className="h-9" />
-                  </div>
-                </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="description" className="text-muted-foreground">Description</Label>
-                  <Input id="description" name="description" defaultValue={project.description || ""} className="h-9" />
-                </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="description" className="text-muted-foreground">Description</Label>
+                    <Input id="description" name="description" defaultValue={project.description || ""} className="h-9" />
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="environment" className="text-muted-foreground">Environment</Label>
-                    <select id="environment" name="environment" defaultValue={project.environment} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
-                      <option value="Dev">Dev</option>
-                      <option value="Staging">Staging</option>
-                      <option value="UAT">UAT</option>
-                      <option value="Production">Production</option>
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="environment" className="text-muted-foreground">Environment</Label>
+                      <select id="environment" name="environment" defaultValue={project.environment} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-[13px]">
+                        <option value="Dev">Dev</option>
+                        <option value="Staging">Staging</option>
+                        <option value="UAT">UAT</option>
+                        <option value="Production">Production</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="browserType" className="text-muted-foreground">Browser</Label>
+                      <select id="browserType" name="browserType" defaultValue={project.browserType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-[13px]">
+                        <option value="Chromium">Chromium</option>
+                        <option value="Firefox">Firefox</option>
+                        <option value="WebKit">WebKit</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="viewport" className="text-muted-foreground">Viewport</Label>
+                      <select id="viewport" name="viewport" defaultValue={project.viewport} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-[13px]">
+                        <option value="Desktop">Desktop (1280×800)</option>
+                        <option value="Tablet">Tablet (768×1024)</option>
+                        <option value="Mobile">Mobile (375×667)</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="browserType" className="text-muted-foreground">Browser Type</Label>
-                    <select id="browserType" name="browserType" defaultValue={project.browserType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
-                      <option value="Chromium">Chromium</option>
-                      <option value="Firefox">Firefox</option>
-                      <option value="WebKit">WebKit</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="viewport" className="text-muted-foreground">Viewport Size</Label>
-                    <select id="viewport" name="viewport" defaultValue={project.viewport} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
-                      <option value="Desktop">Desktop (1280x800)</option>
-                      <option value="Tablet">Tablet (768x1024)</option>
-                      <option value="Mobile">Mobile (375x667)</option>
-                    </select>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="testType" className="text-muted-foreground">Test Execution Type</Label>
-                    <select id="testType" name="testType" defaultValue={project.testType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
-                      <option value="E2E">E2E Automated</option>
-                      <option value="API">API Backend</option>
-                      <option value="Manual">Manual QA</option>
-                    </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="testType" className="text-muted-foreground">Testing type</Label>
+                      <select id="testType" name="testType" defaultValue={project.testType} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-[13px]">
+                        <option value="E2E">End-to-end (automated)</option>
+                        <option value="API">API</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="figmaUrl" className="text-muted-foreground">Figma link</Label>
+                      <Input id="figmaUrl" name="figmaUrl" type="url" defaultValue={project.figmaUrl || ""} placeholder="https://www.figma.com/design/…" className="h-9" />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="figmaUrl" className="text-muted-foreground">Figma Prototype Link</Label>
-                    <Input id="figmaUrl" name="figmaUrl" defaultValue={project.figmaUrl || ""} className="h-9" />
-                  </div>
-                </div>
+                </fieldset>
 
-                <Button type="submit" disabled={saving} size="sm" className="h-9 px-4">
-                  {saving ? "Saving Configurations..." : "Save Settings"}
-                </Button>
+                {canManage && (
+                  <Button type="submit" disabled={saving} size="sm" className="h-9 px-4">
+                    {saving ? "Saving…" : "Save settings"}
+                  </Button>
+                )}
               </form>
             </div>
 
-            <div className="p-6 border border-red-100 bg-red-500/[0.01] shadow-sm space-y-4 rounded-xl">
-              <span className="text-[11px] font-medium text-red-600 flex items-center gap-1.5 border-b pb-2">
-                <ShieldAlert className="h-4 w-4" /> Danger Zone
-              </span>
-              <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
-                Permanently deletes the active workspace project database model. All stored test steps, execution logs, screenshot evidence, and sync maps will be destroyed.
-              </p>
-              <Button 
-                onClick={handleDeleteProject}
-                variant="destructive" 
-                size="sm"
-                className="w-full h-9 font-semibold flex items-center justify-center gap-1 bg-red-650 hover:bg-red-700"
-              >
-                <Trash2 className="h-4 w-4" /> Delete Project Scope
-              </Button>
-            </div>
+            {canDeleteProject && (
+              <div className="p-6 border border-destructive/30 bg-destructive/5 shadow-sm space-y-4 rounded-xl h-fit">
+                <span className="text-[13px] font-medium text-destructive flex items-center gap-1.5 border-b border-destructive/20 pb-2">
+                  <ShieldAlert className="h-4 w-4" /> Delete project
+                </span>
+                <p className="text-[13px] text-muted-foreground leading-relaxed">
+                  Deletes this project with its test cases, runs, bugs, evidence and settings for everyone.
+                  This can&apos;t be undone.
+                </p>
+                <Button
+                  onClick={() => setDeleteOpen(true)}
+                  variant="destructive"
+                  size="sm"
+                  className="w-full h-9 flex items-center justify-center gap-1"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete project…
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title={`Delete ${project.name}?`}
+        description="This permanently deletes the project's test cases, runs, bugs, evidence and settings for everyone. Type the project name to confirm."
+        confirmLabel="Delete project"
+        variant="danger"
+        requireTextConfirmation={project.name}
+        onConfirm={handleDeleteProject}
+        onCancel={() => setDeleteOpen(false)}
+      />
     </div>
   )
 }

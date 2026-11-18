@@ -24,7 +24,10 @@ export async function GET(
           updatedAt: true,
         },
       },
-      figmaConfig: true,
+      // Never the encrypted token itself — only whether one is saved.
+      figmaConfig: {
+        select: { id: true, fileKey: true, nodeId: true, visualTolerancePercent: true, lastFetchedAt: true, encryptedApiToken: true },
+      },
       _count: {
         select: {
           testCases: true,
@@ -41,7 +44,15 @@ export async function GET(
     return notFoundResponse("Project not found")
   }
 
-  return NextResponse.json({ project })
+  const { figmaConfig, ...rest } = project
+  return NextResponse.json({
+    project: {
+      ...rest,
+      figmaConfig: figmaConfig
+        ? { ...figmaConfig, encryptedApiToken: undefined, hasApiToken: !!figmaConfig.encryptedApiToken }
+        : null,
+    },
+  })
 }
 
 export async function PUT(

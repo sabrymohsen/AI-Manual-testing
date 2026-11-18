@@ -7,19 +7,22 @@
  */
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectOwner } from "@/lib/api-guards"
+import { prisma } from "@/lib/db"
 import { getProjectAiCredentials } from "@/lib/ai/project-ai-config"
-import { AI_PROVIDERS, testProviderConnection, type AiProvider } from "@/lib/hub-ai-providers"
+import { AI_PROVIDERS, ollamaUrlError, testProviderConnection, type AiProvider } from "@/lib/hub-ai-providers"
 
 const schema = z.object({
   provider: z.enum(AI_PROVIDERS),
   // Omit to test whatever is already stored for the project.
   apiKey: z.string().max(500).optional(),
+  // Ollama only: test this address instead of the stored one.
+  baseUrl: z.string().max(300).optional(),
 })
 
 export async function POST(req: Request, { params }: { params: { projectId: string } }) {
   const auth = await requireProjectOwner(params.projectId)
-  if (auth.error) return unauthorizedResponse(auth.error)
+  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   let body: unknown
   try {
@@ -40,6 +43,23 @@ export async function POST(req: Request, { params }: { params: { projectId: stri
     if (stored?.provider === provider) key = stored.apiKey
   }
 
-  const result = await testProviderConnection(provider, key)
+  let ollamaUrl: string | undefined
+  if (provider === "Ollama") {
+    const typed = parsed.data.baseUrl?.trim()
+    if (typed) {
+      const urlError = ollamaUrlError(typed)
+      if (urlError) return NextResponse.json({ ok: false, detail: urlError })
+      ollamaUrl = typed
+    } else {
+      // Same order the real calls use: project URL, then the workspace's.
+      const [own, workspace] = await Promise.all([
+        prisma.projectAiConfig.findUnique({ where: { projectId: params.projectId }, select: { baseUrl: true } }),
+        prisma.aiProviderConfig.findUnique({ where: { provider: "Ollama" }, select: { baseUrl: true } }),
+      ])
+      ollamaUrl = own?.baseUrl || workspace?.baseUrl || undefined
+    }
+  }
+
+  const result = await testProviderConnection(provider, key, { ollamaUrl })
   return NextResponse.json(result)
 }

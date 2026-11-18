@@ -8,7 +8,7 @@
  */
 import { prisma } from "@/lib/db"
 import { encryptSecret, decryptSecret } from "@/lib/crypto"
-import { PROVIDER_CATALOG, type AiProvider } from "@/lib/hub-ai-providers"
+import { PROVIDER_CATALOG, defaultOllamaModel, type AiProvider } from "@/lib/hub-ai-providers"
 
 export interface ProjectAiSettings {
   provider: AiProvider
@@ -28,6 +28,8 @@ export interface ProjectAiSettings {
    * instead of inviting someone to paste the key in again every time.
    */
   keyUnreadable: boolean
+  /** Ollama only: this project's Ollama server URL ("" = workspace / server default). */
+  baseUrl: string
 }
 
 /** Can the stored key still be read with the key this server holds? */
@@ -55,6 +57,8 @@ export interface ProjectAiCredentials {
   provider: AiProvider
   model: string
   apiKey: string
+  /** Ollama only. */
+  ollamaUrl?: string
 }
 
 /** Settings for the project's AI tab. Never returns the key itself. */
@@ -67,6 +71,7 @@ export async function getProjectAiSettings(projectId: string): Promise<ProjectAi
     model: row.model,
     hasKey: !!row.apiKeyEncrypted,
     keyUnreadable: !!row.apiKeyEncrypted && !canDecrypt(row),
+    baseUrl: row.baseUrl,
   }
 }
 
@@ -107,6 +112,15 @@ export async function getProjectAiCredentials(
     if (!apiKey) return null
   }
 
+  if (row.provider === "Ollama") {
+    // Project URL, else the workspace Ollama card's URL, else OLLAMA_URL.
+    const workspace = await prisma.aiProviderConfig
+      .findUnique({ where: { provider: "Ollama" }, select: { baseUrl: true } })
+      .catch(() => null)
+    const ollamaUrl = row.baseUrl || workspace?.baseUrl || undefined
+    return { provider: "Ollama", model: row.model || (await defaultOllamaModel(ollamaUrl)), apiKey: "", ollamaUrl }
+  }
+
   return {
     provider: row.provider as AiProvider,
     model: row.model || meta.models[0],
@@ -120,6 +134,8 @@ export interface SaveProjectAiInput {
   model?: string
   /** Omit to keep the stored key; empty string clears it. */
   apiKey?: string | null
+  /** Ollama server URL; omit to keep, "" for the default. */
+  baseUrl?: string
 }
 
 export async function saveProjectAiConfig(
@@ -145,6 +161,7 @@ export async function saveProjectAiConfig(
     provider: input.provider,
     ...(input.enabled === undefined ? {} : { enabled: input.enabled }),
     ...(input.model === undefined ? {} : { model: input.model }),
+    ...(input.baseUrl === undefined ? {} : { baseUrl: input.baseUrl.trim() }),
     ...keyFields,
   }
 
@@ -161,6 +178,7 @@ export async function saveProjectAiConfig(
     hasKey: !!row.apiKeyEncrypted,
     // Just written with this server's key, so by definition readable.
     keyUnreadable: false,
+    baseUrl: row.baseUrl,
   }
 }
 

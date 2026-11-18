@@ -27,6 +27,7 @@ import {
   ChevronDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 // ============================================================
 // PROVIDERS PANEL
@@ -43,6 +44,9 @@ interface ProviderCard {
   apiKeyMasked: string
   hasKey: boolean
   envKey: boolean
+  /** Ollama only: saved server address ("" = default) and what the default is. */
+  baseUrl?: string
+  defaultBaseUrl?: string
 }
 
 interface TestState {
@@ -66,6 +70,7 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
   const [modelOptions, setModelOptions] = useState<Record<string, string[]>>({})
   const [tests, setTests] = useState<Record<string, TestState>>({})
   const [savingKey, setSavingKey] = useState<string | null>(null)
+  const [urlInput, setUrlInput] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -80,9 +85,10 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
       // Auto-detect Ollama models if that card exists.
       const ollama = list.find((c) => c.provider === "Ollama")
       if (ollama) {
+        // Installed models only — an empty list means Ollama is down or has none.
         fetch("/api/hub/agent/providers/models?provider=Ollama")
           .then((r) => r.json())
-          .then((m) => m.models && setModelOptions((prev) => ({ ...prev, Ollama: m.models })))
+          .then((m) => Array.isArray(m.models) && setModelOptions((prev) => ({ ...prev, Ollama: m.models })))
           .catch(() => {})
       }
     } finally {
@@ -95,12 +101,26 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
   }, [load])
 
   const patch = async (provider: string, body: Record<string, any>) => {
-    await fetch("/api/hub/agent/providers", {
+    const res = await fetch("/api/hub/agent/providers", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ provider, ...body })
     })
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      toast.error(d.error || "Couldn't save the provider settings")
+      return false
+    }
     await load()
+    return true
+  }
+
+  const saveOllamaUrl = async (c: ProviderCard) => {
+    if (urlInput === null) return
+    if (await patch(c.provider, { baseUrl: urlInput.trim() })) {
+      setUrlInput(null)
+      runTest({ ...c, baseUrl: urlInput.trim() })
+    }
   }
 
   const toggleEnabled = (c: ProviderCard) => patch(c.provider, { enabled: !c.enabled })
@@ -134,11 +154,16 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
       const res = await fetch("/api/hub/agent/providers/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: c.provider, apiKey: keyInputs[c.provider] || "" })
+        body: JSON.stringify({
+          provider: c.provider,
+          apiKey: keyInputs[c.provider] || "",
+          ...(c.provider === "Ollama" ? { baseUrl: urlInput ?? c.baseUrl ?? "" } : {})
+        })
       })
-      const d = await res.json()
-      setTests((p) => ({ ...p, [c.provider]: { loading: false, ok: d.ok, detail: d.detail, latencyMs: d.latencyMs } }))
-      if (d.provider === "Ollama" && d.models) setModelOptions((prev) => ({ ...prev, Ollama: d.models }))
+      const d = await res.json().catch(() => ({}))
+      setTests((p) => ({ ...p, [c.provider]: { loading: false, ok: d.ok, detail: d.detail || d.error, latencyMs: d.latencyMs } }))
+      // (The response has no provider field; this used to check d.provider and never matched.)
+      if (c.provider === "Ollama") setModelOptions((prev) => ({ ...prev, Ollama: Array.isArray(d.models) ? d.models : [] }))
     } catch (err: any) {
       setTests((p) => ({ ...p, [c.provider]: { loading: false, ok: false, detail: err.message } }))
     }
@@ -159,7 +184,8 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {cards.map((c) => {
           const t = tests[c.provider]
-          const models = modelOptions[c.provider] || c.models
+          // Ollama: only what's installed (never the catalog guess)
+          const models = c.provider === "Ollama" ? modelOptions.Ollama || [] : modelOptions[c.provider] || c.models
           return (
             <div
               key={c.provider}
@@ -223,9 +249,41 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                 </div>
               )}
 
+              {/* Ollama server address */}
+              {c.provider === "Ollama" && (
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">Ollama address</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      value={urlInput ?? c.baseUrl ?? ""}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      placeholder={c.defaultBaseUrl || "http://localhost:11434"}
+                      className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-muted/50 font-mono outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <Button
+                      onClick={() => saveOllamaUrl(c)}
+                      disabled={urlInput === null || urlInput.trim() === (c.baseUrl || "")}
+                      className="h-8 px-2.5 rounded-lg text-[10px] font-semibold disabled:opacity-40"
+                      title="Save address"
+                    >
+                      <Save size={12} />
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Must be reachable from the machine this app runs on. Install Ollama from ollama.com, then run{" "}
+                    <code className="font-mono">ollama pull qwen3:8b</code>.
+                  </p>
+                </div>
+              )}
+
               {/* model */}
               <div className="space-y-1">
                 <label className="text-[11px] font-medium text-muted-foreground">Model</label>
+                {c.provider === "Ollama" && models.length === 0 ? (
+                  <p className="h-8 flex items-center text-[11px] text-muted-foreground">
+                    No installed models found. Press Test for details.
+                  </p>
+                ) : (
                 <select
                   value={c.model}
                   onChange={(e) => changeModel(c, e.target.value)}
@@ -238,6 +296,7 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                   ))}
                   {!models.includes(c.model) && c.model && <option value={c.model}>{c.model}</option>}
                 </select>
+                )}
               </div>
 
               {/* actions */}

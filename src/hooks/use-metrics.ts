@@ -33,7 +33,8 @@ export function useProjectSummary(projectId: string | null) {
     testCasesCount: number
     openBugsCount: number
     passRate: number
-    opConnected: boolean
+    /** Any tracker (Jira / Azure DevOps / ClickUp / OpenProject) is connected. */
+    trackerConnected: boolean
   } | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -50,7 +51,9 @@ export function useProjectSummary(projectId: string | null) {
           fetch(`/api/projects/${projectId}`),
           fetch(`/api/projects/${projectId}/test-cases`),
           fetch(`/api/projects/${projectId}/bug-reports`),
-          fetch(`/api/projects/${projectId}/integrations/openproject`)
+          // Readable by every member, and covers every tracker — the OpenProject
+          // route is admin-only and ignored Jira/Azure/ClickUp.
+          fetch(`/api/projects/${projectId}/integrations/provider`)
         ])
 
         const projData = projRes.ok ? await projRes.json() : {}
@@ -63,12 +66,12 @@ export function useProjectSummary(projectId: string | null) {
 
         setSummary({
           name: projData.project?.name || "Active Project",
-          baseUrl: projData.project?.baseUrl || "",
+          baseUrl: projData.project?.webAppUrl || "",
           environment: projData.project?.environment || "Dev",
           testCasesCount: cases.length,
           openBugsCount: bugsList.filter((b: any) => b.status === "Open").length,
           passRate: projData.project?.passRate || 0,
-          opConnected: !!opData.integration?.hasToken
+          trackerConnected: !!opData.connected
         })
       } catch (err) {
         console.error("Error fetching project summary:", err)

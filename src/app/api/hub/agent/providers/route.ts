@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 import { requireHubAdmin } from "@/lib/hub-access"
-import { AI_PROVIDERS, PROVIDER_CATALOG, AiProvider } from "@/lib/hub-ai-providers"
+import { AI_PROVIDERS, PROVIDER_CATALOG, AiProvider, ollamaUrlError } from "@/lib/hub-ai-providers"
 
 export const dynamic = "force-dynamic"
 
@@ -36,7 +36,10 @@ export async function GET() {
       isDefault: cfg?.isDefault ?? false,
       apiKeyMasked: maskKey(cfg?.apiKey || ""),
       hasKey: !!cfg?.apiKey || envKey || meta.local,
-      envKey
+      envKey,
+      // Ollama only: the saved server address ("" = OLLAMA_URL / localhost)
+      baseUrl: cfg?.baseUrl || "",
+      defaultBaseUrl: p === "Ollama" ? process.env.OLLAMA_URL || "http://localhost:11434" : ""
     }
   })
 
@@ -62,6 +65,12 @@ export async function PUT(request: NextRequest) {
     if (body.model !== undefined) data.model = String(body.model).slice(0, 80)
     if (body.apiKey !== undefined && !String(body.apiKey).includes("•")) {
       data.apiKey = String(body.apiKey).trim().slice(0, 300)
+    }
+    if (body.baseUrl !== undefined && provider === "Ollama") {
+      const url = String(body.baseUrl).trim()
+      const urlError = ollamaUrlError(url)
+      if (urlError) return NextResponse.json({ error: urlError }, { status: 400 })
+      data.baseUrl = url
     }
 
     await prisma.aiProviderConfig.upsert({

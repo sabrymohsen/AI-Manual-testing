@@ -4,7 +4,10 @@ const chat = vi.fn()
 const resolve = vi.fn()
 
 vi.mock("axios", () => ({ default: { post: vi.fn(async () => { throw new Error("no ollama") }), get: vi.fn() } }))
-vi.mock("@/lib/ai/test-case-generator", () => ({ getOllamaModels: vi.fn(async () => []) }))
+vi.mock("@/lib/hub-ai-providers", () => ({
+  probeOllama: vi.fn(async () => ({ reachable: false, models: [], baseUrl: "http://localhost:11434" })),
+}))
+vi.mock("@/lib/db", () => ({ prisma: { aiProviderConfig: { findUnique: vi.fn(async () => null) } } }))
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: (...args: any[]) => chat(...args),
   hasConfiguredProvider: vi.fn(async () => false),

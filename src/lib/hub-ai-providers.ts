@@ -62,8 +62,9 @@ export const PROVIDER_CATALOG: Record<AiProvider, ProviderMeta> = {
     provider: "Ollama",
     label: "Ollama (local)",
     local: true,
-    models: ["llama3", "mistral", "codellama"],
-    docsHint: "Runs locally at http://localhost:11434 — no API key needed."
+    // Only a last resort: the real list is read from the Ollama server.
+    models: ["qwen3:8b", "llama3.2"],
+    docsHint: "Free models that run on your own computer. No API key needed."
   }
 }
 
@@ -82,15 +83,79 @@ export const MODEL_PRICING: Record<string, { in: number; out: number }> = {
   // real token counts with costUsd 0 — add entries here to enable cost estimates.
 }
 
+// ---------- Ollama ----------
+
+export const DEFAULT_OLLAMA_URL = "http://localhost:11434"
+
+/**
+ * Where to reach Ollama: an explicit URL (project or workspace setting), then
+ * the OLLAMA_URL server variable, then localhost. "localhost" means the
+ * machine this app runs on — on a hosted deployment that is the server, not
+ * the tester's computer.
+ */
+export function ollamaBaseUrl(override?: string | null): string {
+  const raw = (override || "").trim() || process.env.OLLAMA_URL || DEFAULT_OLLAMA_URL
+  return raw.replace(/\/+$/, "").replace(/\/(v1|api)$/, "")
+}
+
+/** Validate a user-entered Ollama URL. Returns an error message, or null when fine. */
+export function ollamaUrlError(raw: string): string | null {
+  if (!raw.trim()) return null
+  let u: URL
+  try {
+    u = new URL(raw.trim())
+  } catch {
+    return "Enter a full URL, e.g. http://localhost:11434"
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return "The Ollama URL must start with http:// or https://"
+  if (u.username || u.password) return "Don't put a username or password in the Ollama URL"
+  if (raw.length > 300) return "That URL is too long"
+  return null
+}
+
+export interface OllamaProbe {
+  reachable: boolean
+  models: string[]
+  baseUrl: string
+}
+
+/** Ask an Ollama server which models it has installed. Never throws. */
+export async function probeOllama(override?: string | null, timeoutMs = 3000): Promise<OllamaProbe> {
+  const baseUrl = ollamaBaseUrl(override)
+  try {
+    const res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(timeoutMs) })
+    if (!res.ok) return { reachable: false, models: [], baseUrl }
+    const data = await res.json().catch(() => null)
+    if (!data || !Array.isArray(data.models)) return { reachable: false, models: [], baseUrl }
+    const models = data.models.map((m: any) => String(m?.name || "").replace(/:latest$/, "")).filter(Boolean)
+    return { reachable: true, models, baseUrl }
+  } catch {
+    return { reachable: false, models: [], baseUrl }
+  }
+}
+
+/** Plain-language next step for an Ollama server that can't be used yet. */
+export function ollamaHelp(probe: OllamaProbe): string {
+  if (!probe.reachable) {
+    return (
+      `Can't reach Ollama at ${probe.baseUrl}. Install it from ollama.com, start it, ` +
+      `then download a model with "ollama pull qwen3:8b". ` +
+      `If this app runs on a server, Ollama on your own computer isn't reachable as "localhost" — ` +
+      `enter an address the server can reach instead.`
+    )
+  }
+  return `Ollama is running at ${probe.baseUrl} but has no models yet. Download one with "ollama pull qwen3:8b", then test again.`
+}
+
 /** Base URL for the providers that speak the OpenAI chat-completions shape. */
-export function openAiCompatBaseUrl(provider: AiProvider): string {
+export function openAiCompatBaseUrl(provider: AiProvider, ollamaUrl?: string | null): string {
   switch (provider) {
     case "Kimi":
       return KIMI_BASE_URL
     case "Gemini":
       return "https://generativelanguage.googleapis.com/v1beta/openai"
     case "Ollama":
-      return `${process.env.OLLAMA_URL || "http://localhost:11434"}/v1`
+      return `${ollamaBaseUrl(ollamaUrl)}/v1`
     default:
       return "https://api.openai.com/v1"
   }
@@ -157,16 +222,23 @@ export interface ConnectionResult {
 }
 
 /** Probe a provider for reachability + credential validity. Real network call. */
-export async function testProviderConnection(provider: AiProvider, apiKey: string): Promise<ConnectionResult> {
+export async function testProviderConnection(
+  provider: AiProvider,
+  apiKey: string,
+  opts: { ollamaUrl?: string | null } = {}
+): Promise<ConnectionResult> {
   const started = Date.now()
   const key = apiKey || process.env[PROVIDER_CATALOG[provider].keyEnv || ""] || ""
   try {
     if (provider === "Ollama") {
-      const res = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(2500) })
-      if (!res.ok) return { ok: false, detail: `Ollama responded ${res.status}` }
-      const data = await res.json()
-      const models = (data.models || []).map((m: any) => String(m.name).replace(/:latest$/, ""))
-      return { ok: true, detail: `Ollama reachable · ${models.length} model(s) installed`, latencyMs: Date.now() - started, models }
+      const probe = await probeOllama(opts.ollamaUrl)
+      if (!probe.reachable || probe.models.length === 0) return { ok: false, detail: ollamaHelp(probe) }
+      return {
+        ok: true,
+        detail: `Connected to Ollama at ${probe.baseUrl} · ${probe.models.length} model(s) installed`,
+        latencyMs: Date.now() - started,
+        models: probe.models,
+      }
     }
 
     if (!key) return { ok: false, detail: "No API key configured" }
@@ -207,15 +279,21 @@ export async function testProviderConnection(provider: AiProvider, apiKey: strin
   }
 }
 
-/** Auto-detect installed Ollama models; returns catalog fallback on failure. */
-export async function detectOllamaModels(): Promise<string[]> {
-  try {
-    const res = await fetch("http://localhost:11434/api/tags", { signal: AbortSignal.timeout(2500) })
-    if (!res.ok) return PROVIDER_CATALOG.Ollama.models
-    const data = await res.json()
-    const models = (data.models || []).map((m: any) => String(m.name).replace(/:latest$/, ""))
-    return models.length ? models : PROVIDER_CATALOG.Ollama.models
-  } catch {
-    return PROVIDER_CATALOG.Ollama.models
-  }
+/**
+ * Installed Ollama models. Empty when Ollama is down or has none — never a
+ * made-up list, which used to offer models that weren't installed.
+ */
+export async function detectOllamaModels(ollamaUrl?: string | null): Promise<string[]> {
+  return (await probeOllama(ollamaUrl, 2500)).models
 }
+
+/**
+ * With no model chosen, use one that is actually installed: the catalog
+ * default (qwen3:8b) may not be, and Ollama answers "model not found".
+ */
+export async function defaultOllamaModel(ollamaUrl?: string | null): Promise<string> {
+  const installed = await detectOllamaModels(ollamaUrl)
+  const preferred = PROVIDER_CATALOG.Ollama.models.find((m) => installed.includes(m))
+  return preferred || installed[0] || PROVIDER_CATALOG.Ollama.models[0]
+}
+

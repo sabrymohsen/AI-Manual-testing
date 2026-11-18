@@ -6,7 +6,14 @@ const ollamaModels = vi.fn()
 const axiosPost = vi.fn()
 
 vi.mock("axios", () => ({ default: { post: (...a: any[]) => axiosPost(...a), get: vi.fn() } }))
-vi.mock("@/lib/ai/test-case-generator", () => ({ getOllamaModels: () => ollamaModels() }))
+// The draft's Ollama fallback probes the server (at the saved workspace address) for installed models.
+vi.mock("@/lib/hub-ai-providers", () => ({
+  probeOllama: async () => {
+    const models = (await ollamaModels()) || []
+    return { reachable: models.length > 0, models, baseUrl: "http://localhost:11434" }
+  },
+}))
+vi.mock("@/lib/db", () => ({ prisma: { aiProviderConfig: { findUnique: vi.fn(async () => null) } } }))
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: (...a: any[]) => chat(...a),
   hasConfiguredProvider: vi.fn(async () => false),

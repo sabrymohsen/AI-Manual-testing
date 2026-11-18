@@ -18,6 +18,8 @@ import {
   PROVIDER_CATALOG,
   estimateCost,
   openAiCompatBaseUrl,
+  ollamaBaseUrl,
+  defaultOllamaModel,
   type AiProvider,
 } from "@/lib/hub-ai-providers"
 import { getProjectAiCredentials } from "@/lib/ai/project-ai-config"
@@ -33,6 +35,8 @@ export interface ResolvedProvider {
    * every other provider resolves its URL from the catalog as before.
    */
   baseUrl?: string
+  /** Ollama only: the server to call (project → workspace → OLLAMA_URL → localhost). */
+  ollamaUrl?: string
 }
 
 /**
@@ -98,7 +102,7 @@ export async function resolveProvider(projectId?: string): Promise<ResolvedProvi
   // being absent from the client at all — a database that has not been pushed
   // yet, or a caller that stubs @/lib/db. Provider resolution must degrade to
   // the env fallbacks in those cases, not throw and take the feature down.
-  let rows: Array<{ provider: string; apiKey: string; model: string }> = []
+  let rows: Array<{ provider: string; apiKey: string; model: string; baseUrl?: string }> = []
   try {
     rows = await prisma.aiProviderConfig.findMany({
       where: { enabled: true },
@@ -113,6 +117,10 @@ export async function resolveProvider(projectId?: string): Promise<ResolvedProvi
     if (!meta) continue
     const key = row.apiKey || (meta.keyEnv ? process.env[meta.keyEnv] || "" : "")
     if (!key && !meta.local) continue
+    if (row.provider === "Ollama") {
+      const ollamaUrl = row.baseUrl || undefined
+      return { provider: "Ollama", apiKey: "", model: row.model || (await defaultOllamaModel(ollamaUrl)), ollamaUrl }
+    }
     return {
       provider: row.provider as AiProvider,
       apiKey: key,
@@ -241,7 +249,7 @@ async function callOllamaNative(
   resolved: ResolvedProvider,
   opts: ChatOptions
 ): Promise<string> {
-  const base = (process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "")
+  const base = ollamaBaseUrl(resolved.ollamaUrl)
   const messages: any[] = []
   if (opts.system) messages.push({ role: "system", content: opts.system })
   messages.push({
@@ -269,8 +277,11 @@ async function callOllamaNative(
   })
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "")
-    throw new Error(`Ollama API error ${res.status}: ${body.slice(0, 300)}`)
+    // Only Ollama's own {"error": "..."} message: the URL may be user-supplied,
+    // so don't echo whatever some other server sent back.
+    const data = await res.json().catch(() => null)
+    const reason = typeof data?.error === "string" ? `: ${data.error.slice(0, 200)}` : ""
+    throw new Error(`Ollama at ${base} returned ${res.status}${reason}`)
   }
 
   const data = await res.json()
@@ -300,7 +311,7 @@ async function callOpenAiCompatible(
   resolved: ResolvedProvider,
   opts: ChatOptions
 ): Promise<string> {
-  const baseUrl = resolved.baseUrl || openAiCompatBaseUrl(resolved.provider)
+  const baseUrl = resolved.baseUrl || openAiCompatBaseUrl(resolved.provider, resolved.ollamaUrl)
   const userContent = opts.imageBase64
     ? [
         { type: "text", text: opts.prompt },

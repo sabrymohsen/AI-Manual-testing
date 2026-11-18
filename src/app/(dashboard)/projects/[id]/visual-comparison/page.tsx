@@ -924,7 +924,7 @@ ${selectedRunIssues.map((issue, idx) => `
                 <Input
                   id="figmaTokenInput"
                   type="password"
-                  placeholder={project?.figmaConfig?.encryptedApiToken ? "••••••••••••••••••••" : "figd_..."}
+                  placeholder={project?.figmaConfig?.hasApiToken ? "••••••••••••••••••••" : "figd_..."}
                   value={figmaToken}
                   onChange={(e) => setFigmaToken(e.target.value)}
                 />

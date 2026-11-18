@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 import { requireHubAdmin } from "@/lib/hub-access"
-import { AI_PROVIDERS, AiProvider, testProviderConnection } from "@/lib/hub-ai-providers"
+import { AI_PROVIDERS, AiProvider, ollamaUrlError, testProviderConnection } from "@/lib/hub-ai-providers"
 
 export const dynamic = "force-dynamic"
 
@@ -26,6 +26,18 @@ export async function POST(request: NextRequest) {
     apiKey = cfg?.apiKey || ""
   }
 
-  const result = await testProviderConnection(provider, apiKey)
+  let ollamaUrl: string | undefined
+  if (provider === "Ollama") {
+    const typed = String(body.baseUrl || "").trim()
+    if (typed) {
+      const urlError = ollamaUrlError(typed)
+      if (urlError) return NextResponse.json({ ok: false, detail: urlError })
+      ollamaUrl = typed
+    } else {
+      ollamaUrl = (await prisma.aiProviderConfig.findUnique({ where: { provider: "Ollama" }, select: { baseUrl: true } }))?.baseUrl || undefined
+    }
+  }
+
+  const result = await testProviderConnection(provider, apiKey, { ollamaUrl })
   return NextResponse.json(result)
 }

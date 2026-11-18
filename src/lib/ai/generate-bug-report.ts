@@ -1,5 +1,6 @@
 import axios from "axios"
-import { getOllamaModels } from "@/lib/ai/test-case-generator"
+import { probeOllama } from "@/lib/hub-ai-providers"
+import { prisma } from "@/lib/db"
 import {
   chatWithConfiguredProvider,
   resolveProvider,
@@ -183,10 +184,9 @@ Output valid JSON only.`
 async function callOllama(
   input: BugDraftInput,
   hasImage: boolean,
-  installed: string[]
+  installed: string[],
+  ollamaUrl: string
 ): Promise<string> {
-  const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434"
-
   // Pick a model: a vision model when we have an image and one is installed,
   // otherwise a small/fast TEXT model. Installed names carry a tag (e.g.
   // "llama3.2:latest"), so match by prefix rather than exact equality.
@@ -516,10 +516,15 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   // /api/tags gives a definitive yes/no in 5s. Without that probe a deployed
   // box, which has no Ollama and never will, still entered a call carrying a
   // 180s timeout on every single draft.
-  const installed = await getOllamaModels()
+  // The workspace Ollama card's address, else OLLAMA_URL / localhost.
+  const savedOllama = await prisma.aiProviderConfig
+    .findUnique({ where: { provider: "Ollama" }, select: { baseUrl: true } })
+    .catch(() => null)
+  const ollama = await probeOllama(savedOllama?.baseUrl, 5000)
+  const installed = ollama.models
   if (installed.length > 0) {
     try {
-      const out = await callOllama(input, hasImage, installed)
+      const out = await callOllama(input, hasImage, installed, ollama.baseUrl)
       const { data, repaired } = parseJson(out)
       if (data) {
         return normalize(

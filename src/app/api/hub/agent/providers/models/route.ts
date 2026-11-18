@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { prisma } from "@/lib/db"
 import { AI_PROVIDERS, PROVIDER_CATALOG, AiProvider, detectOllamaModels } from "@/lib/hub-ai-providers"
 
 export const dynamic = "force-dynamic"
@@ -17,8 +18,11 @@ export async function GET(request: NextRequest) {
   }
 
   if (provider === "Ollama") {
-    const models = await detectOllamaModels()
-    return NextResponse.json({ models, detected: true })
+    const saved = await prisma.aiProviderConfig.findUnique({ where: { provider: "Ollama" }, select: { baseUrl: true } })
+    const models = await detectOllamaModels(saved?.baseUrl)
+    // Empty means Ollama is down or has no models — the UI says so instead of
+    // offering models that aren't installed.
+    return NextResponse.json({ models, detected: true, reachable: models.length > 0 })
   }
   return NextResponse.json({ models: PROVIDER_CATALOG[provider].models, detected: false })
 }

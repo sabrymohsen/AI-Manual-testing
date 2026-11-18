@@ -48,18 +48,11 @@ export async function requireProjectMember(projectId: string): Promise<
     return { error: "Not authenticated", status: 401, session: null }
   }
 
-  const project = await prisma.project.findFirst({
-    where: {
-      id: projectId,
-      OR: [
-        { userId: session.user.id },
-        { projectMembers: { some: { userId: session.user.id } } }
-      ]
-    },
-    select: { id: true }
-  })
-
-  if (!project) {
+  // Same rule as canUseProject/requireProjectRole: creator, member, or a
+  // global Admin. This guard used to skip global Admins, so an admin could use
+  // a project's hub but its own page loaded forever on a 404.
+  const resolved = await resolveProjectRole(projectId, session.user.id)
+  if (!resolved || resolved.role === null) {
     return { error: "Project not found or access denied", status: 404, session: null }
   }
 

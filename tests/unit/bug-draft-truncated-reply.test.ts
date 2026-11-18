@@ -5,7 +5,13 @@ const resolve = vi.fn()
 const ollamaModels = vi.fn()
 
 vi.mock("axios", () => ({ default: { post: vi.fn(), get: vi.fn() } }))
-vi.mock("@/lib/ai/test-case-generator", () => ({ getOllamaModels: () => ollamaModels() }))
+vi.mock("@/lib/hub-ai-providers", () => ({
+  probeOllama: async () => {
+    const models = (await ollamaModels()) || []
+    return { reachable: models.length > 0, models, baseUrl: "http://localhost:11434" }
+  },
+}))
+vi.mock("@/lib/db", () => ({ prisma: { aiProviderConfig: { findUnique: vi.fn(async () => null) } } }))
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: (...a: any[]) => chat(...a),
   hasConfiguredProvider: vi.fn(async () => false),

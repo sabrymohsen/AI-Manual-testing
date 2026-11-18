@@ -2840,6 +2840,10 @@ model ProjectAiConfig {
   apiKeyAuthTag    String @default("")
   apiKeyKeyVersion String @default("v1")
 
+  /// Ollama only: where this project's Ollama server is (e.g. a tunnel to a
+  /// tester's machine). Empty = the workspace URL, then OLLAMA_URL.
+  baseUrl String @default("")
+
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
@@ -2854,6 +2858,8 @@ model AiProviderConfig {
   apiKey    String   @default("")
   model     String   @default("")
   isDefault Boolean  @default(false)
+  /// Ollama only: server URL for the workspace. Empty = OLLAMA_URL, then localhost.
+  baseUrl   String   @default("")
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }

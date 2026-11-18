@@ -623,7 +623,12 @@ async function runOpenAICompatAgent(
   usage: UsageAcc,
   policy?: AiPolicyData
 ): Promise<string> {
-  const baseUrl = openAiCompatBaseUrl(settings.provider as AiProvider)
+  // Ollama: use the address saved on the workspace Ollama card, if any.
+  const ollamaUrl =
+    settings.provider === "Ollama"
+      ? (await prisma.aiProviderConfig.findUnique({ where: { provider: "Ollama" }, select: { baseUrl: true } }).catch(() => null))?.baseUrl
+      : undefined
+  const baseUrl = openAiCompatBaseUrl(settings.provider as AiProvider, ollamaUrl)
   const openaiTools = TOOLS.map((t) => ({
     type: "function",
     function: { name: t.name, description: t.description, parameters: t.input_schema }

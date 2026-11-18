@@ -77,6 +77,10 @@ interface DeleteImpact {
 
 interface Props {
   projectId: string
+  /** May add, rename, move and re-nest modules (canCreateStories). Default true. */
+  canEdit?: boolean
+  /** May delete modules (canDeleteStories). Default true. */
+  canDelete?: boolean
 }
 
 /** Depth-first order with a depth for indentation, matching the library tree. */
@@ -107,7 +111,7 @@ function flatten(rows: ModuleRow[]): Array<ModuleRow & { depth: number }> {
   return out
 }
 
-export function ModulesPanel({ projectId }: Props) {
+export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Props) {
   const router = useRouter()
 
   const [rows, setRows] = useState<ModuleRow[]>([])
@@ -429,7 +433,7 @@ export function ModulesPanel({ projectId }: Props) {
           </p>
         </div>
         <div className="flex items-center gap-3 text-center">
-          <div className="flex flex-col gap-1.5">
+          {canEdit && <div className="flex flex-col gap-1.5">
             <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={openImport}>
               <DownloadCloud className="h-3.5 w-3.5 mr-1.5" />
               Import from tracker
@@ -444,10 +448,11 @@ export function ModulesPanel({ projectId }: Props) {
               <RefreshCw className="h-3 w-3 mr-1.5" />
               Refresh linked
             </Button>
-          </div>
+          </div>}
           {[
             { label: "Modules", value: rows.length },
-            { label: "Test cases", value: totals.cases },
+            // Only cases filed under a module; unfiled ones are counted in the note below.
+            { label: "Filed cases", value: totals.cases },
             { label: "Open bugs", value: totals.openBugs },
           ].map(c => (
             <div key={c.label} className="px-3 py-2 rounded-xl border border-border bg-muted/60 min-w-[76px]">
@@ -478,6 +483,7 @@ export function ModulesPanel({ projectId }: Props) {
       )}
 
       {/* Add */}
+      {canEdit ? (
       <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-border bg-muted/40">
         <div className="space-y-1 flex-1 min-w-[180px]">
           <label className="text-[11px] font-medium text-muted-foreground/60">
@@ -520,6 +526,9 @@ export function ModulesPanel({ projectId }: Props) {
           <Plus className="h-3.5 w-3.5 mr-1.5" /> Add module
         </Button>
       </div>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">You can view modules. Ask a project admin to add or change them.</p>
+      )}
 
       {/* Table */}
       {loading ? (
@@ -612,17 +621,20 @@ export function ModulesPanel({ projectId }: Props) {
                               <ExternalLink className="h-2.5 w-2.5 opacity-60" />
                             </a>
                           )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                            onClick={() => {
-                              setEditingId(row.id)
-                              setEditName(row.name)
-                            }}
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
+                          {canEdit && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                              title="Rename"
+                              onClick={() => {
+                                setEditingId(row.id)
+                                setEditName(row.name)
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -676,7 +688,7 @@ export function ModulesPanel({ projectId }: Props) {
                     </td>
 
                     <td className="px-3 py-2">
-                      <div className="flex items-center gap-0.5">
+                      {canEdit && <div className="flex items-center gap-0.5">
                         <Button
                           size="sm"
                           variant="ghost"
@@ -697,12 +709,12 @@ export function ModulesPanel({ projectId }: Props) {
                         >
                           <ChevronDown className="h-3.5 w-3.5" />
                         </Button>
-                      </div>
+                      </div>}
                     </td>
 
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1 justify-end">
-                        <select
+                        {canEdit && <select
                           value={row.parentId || ""}
                           disabled={isBusy}
                           onChange={e => patchModule(row.id, { parentId: e.target.value || null })}
@@ -716,8 +728,8 @@ export function ModulesPanel({ projectId }: Props) {
                               {m.name}
                             </option>
                           ))}
-                        </select>
-                        <Button
+                        </select>}
+                        {canDelete && <Button
                           size="sm"
                           variant="ghost"
                           disabled={isBusy}
@@ -726,7 +738,7 @@ export function ModulesPanel({ projectId }: Props) {
                           title="Delete this module"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </Button>}
                       </div>
                     </td>
                   </tr>
