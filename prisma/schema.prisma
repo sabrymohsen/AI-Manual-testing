@@ -544,6 +544,7 @@ model TestCase {
   versions           TestCaseVersion[]
   planLinks          TestPlanCase[]
   brdRequirementLinks BrdRequirementTestCase[]
+  hubScriptLinks      HubScriptTestCase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2464,6 +2465,63 @@ model TestScript {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   executions           TestExecution[]
+  testCaseLinks        HubScriptTestCase[]
+
+  @@index([projectId])
+}
+
+// Which manual test cases an automated script verifies. When the script runs,
+// those cases' last status (and so test-library and BRD coverage) follow it.
+model HubScriptTestCase {
+  scriptId   String
+  script     TestScript @relation(fields: [scriptId], references: [id], onDelete: Cascade)
+  testCaseId String
+  testCase   TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  linkedAt   DateTime   @default(now())
+
+  @@id([scriptId, testCaseId])
+  @@index([testCaseId])
+}
+
+// A recurring run: "every weekday at 02:00, run the regression folder".
+model HubSchedule {
+  id            String    @id @default(cuid())
+  projectId     String
+  name          String
+  // { scriptIds?: string[], folder?: string, tag?: string } — empty = all tests
+  scope         Json
+  browser       String    @default("Headless")
+  // daily | weekdays | hourly
+  frequency     String
+  // "HH:MM" in the server's local time for daily/weekdays
+  timeOfDay     String?
+  everyHours    Int?
+  enabled       Boolean   @default(true)
+  nextRunAt     DateTime?
+  lastRunAt     DateTime?
+  lastBatchId   String?
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([projectId])
+  @@index([enabled, nextRunAt])
+}
+
+// Token a CI pipeline uses to start runs. Only a SHA-256 hash is stored; the
+// token is shown once at creation.
+model HubTriggerToken {
+  id            String    @id @default(cuid())
+  projectId     String
+  name          String
+  tokenHash     String    @unique
+  prefix        String
+  createdById   String?
+  createdByName String?
+  lastUsedAt    DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime  @default(now())
 
   @@index([projectId])
 }
@@ -2483,9 +2541,17 @@ model TestExecution {
   results         Json?
   // Shared by every execution started together (Run folder / Run all), null for a single run.
   batchId         String?
+  // Project the run belongs to. Shared example scripts have no project of
+  // their own, so the run records which project started it.
+  projectId       String?
+  // manual | rerun | schedule | ci
+  triggerSource   String?
+  triggeredById   String?
+  triggeredByName String?
   createdAt       DateTime   @default(now())
 
   @@index([batchId])
+  @@index([projectId, createdAt])
 }
 
 // Section 1a: external SHAFT test data files (data-driven testing)
@@ -2537,7 +2603,12 @@ model AgentChatMessage {
   role      String // "user" | "assistant"
   content   String   @db.Text
   actions   Json? // embedded action buttons [{label, kind, payload}]
+  // Owner of the conversation. History used to be one thread shared by every
+  // user. Null = messages from before this field (shown to admins only).
+  userId    String?
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model AgentToolCall {
@@ -2674,9 +2745,15 @@ model VisualBaseline {
   provider    String             @default("shaft-opencv") // "shaft-opencv" | "applitools" | "shutterbug"
   width       Int?
   height      Int?
+  // Project the baseline belongs to; its comparisons inherit it. Baselines are
+  // screenshots of the app under test, so they must not be workspace-wide.
+  // Null = created before baselines had a project (admins only).
+  projectId   String?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   comparisons VisualComparison[]
+
+  @@index([projectId])
 }
 
 model VisualComparison {

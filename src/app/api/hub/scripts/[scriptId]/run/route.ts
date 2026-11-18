@@ -1,52 +1,37 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubScript } from "@/lib/hub-access"
 import { startScriptRun } from "@/lib/hub-runner"
+import { resolveTarget } from "@/lib/hub-runs"
+import { prisma } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
 
-// POST /api/hub/scripts/{id}/run — start an execution, return its id immediately.
-// Progress is streamed via GET /api/hub/executions/{id}/live
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { scriptId: string } }
-) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+// POST /api/hub/scripts/{id}/run  { projectId?, browser?, debug?, targetId? }
+// Starts a run and returns its id immediately; progress via /executions/{id}.
+// Running a test runs code on the server: project writers only, and a shared
+// example must be run inside a project (`projectId`).
+export async function POST(request: NextRequest, { params }: { params: { scriptId: string } }) {
+  const body = await request.json().catch(() => ({}))
+  const auth = await requireHubScript(params.scriptId, "run", body.projectId || null)
+  if (!auth.ok) return auth.response
 
   try {
-    const body = await request.json().catch(() => ({}))
-    const browser: string = body.browser || "Chrome"
-    const debug: boolean = Boolean(body.debug)
-    const targetId: string | undefined = body.targetId || undefined
-
-    const script = await prisma.testScript.findUnique({
-      where: { id: params.scriptId }
-    })
-
-    if (!script) {
-      return NextResponse.json({ error: "Test script not found" }, { status: 404 })
-    }
-
-    // Resolve the execution target (Section 1c). Omitted / "local" runs locally.
-    let target
-    if (targetId && targetId !== "local") {
-      const t = await prisma.executionTarget.findUnique({ where: { id: targetId } })
-      if (t) {
-        target = {
-          name: t.name,
-          type: t.type,
-          url: t.url,
-          platform: t.platform,
-          browser: t.browser,
-          headless: t.headless
-        }
+    const target = await resolveTarget(body.targetId)
+    const executionId = await startScriptRun(
+      auth.script,
+      String(body.browser || "Chrome"),
+      Boolean(body.debug),
+      target,
+      auth.script.accessibilityEnabled,
+      null,
+      {
+        projectId: auth.projectId,
+        triggerSource: "manual",
+        triggeredById: auth.session.user.id,
+        triggeredByName: auth.session.user.name || auth.session.user.email,
       }
-    }
-
-    const executionId = await startScriptRun(script, browser, debug, target, script.accessibilityEnabled)
+    )
     const execution = await prisma.testExecution.findUnique({ where: { id: executionId } })
-
     return NextResponse.json({ executionId, execution }, { status: 202 })
   } catch (err: any) {
     console.error("POST hub run error:", err)

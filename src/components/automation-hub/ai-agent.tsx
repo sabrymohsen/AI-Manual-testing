@@ -155,7 +155,7 @@ function Markdown({ text }: { text: string }) {
 
 // ---------- Component ----------
 
-export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
+export default function AiAgentSection({ onNavigate, projectId }: AiAgentSectionProps & { projectId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [mcpCalls, setMcpCalls] = useState<McpCallItem[]>([])
 
@@ -262,7 +262,7 @@ export default function AiAgentSection({ onNavigate }: AiAgentSectionProps) {
       const res = await fetch("/api/hub/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ message: text, projectId })
       })
 
       const data = await res.json()

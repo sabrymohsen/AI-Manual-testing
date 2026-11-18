@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
 
 // GET /api/hub/agent/mcp-log — the agent's real tool-call audit log
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Logs across every user and project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const calls = await prisma.agentToolCall.findMany({

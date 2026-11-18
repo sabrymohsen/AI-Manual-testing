@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { SETTINGS_PATH } from "@/lib/hub-properties"
 import * as fs from "fs"
 import * as path from "path"
@@ -63,8 +64,9 @@ export async function GET() {
 // PUT /api/hub/settings/gif — persist the toggle + quality/frame-rate into
 // custom.properties so the next SHAFT run records (or stops recording) GIFs.
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json().catch(() => ({}))

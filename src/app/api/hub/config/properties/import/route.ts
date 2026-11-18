@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 import { getCatalogProperty, readProps, writeProps, validateValue } from "@/lib/hub-properties"
 
@@ -9,8 +10,9 @@ export const dynamic = "force-dynamic"
 // Parse an uploaded .properties file and merge valid entries into
 // custom.properties, recording history for each changed catalog key.
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json().catch(() => ({}))

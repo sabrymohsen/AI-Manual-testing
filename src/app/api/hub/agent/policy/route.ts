@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { getAiPolicy } from "@/lib/hub-ai-providers"
 
 export const dynamic = "force-dynamic"
@@ -14,8 +15,9 @@ export async function GET() {
 
 // PUT /api/hub/agent/policy — update consent toggles + monthly budget.
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json().catch(() => ({}))

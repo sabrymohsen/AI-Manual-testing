@@ -133,6 +133,16 @@ export default function AutomationHubPage() {
   const [activeTab, setActiveTab] = useState<
     "Tests" | "Runs" | "Recorder" | "Evidence" | "Trace" | "Diagnosis" | "Heal" | "Flakes" | "Matrix" | "Visual" | "Video" | "Agent" | "DataConfig"
   >("Tests")
+  // ?tab=runs&run=<id> — links from bugs and test cases open that run. Read
+  // after mount so the server and first client render agree.
+  const [initialRunId, setInitialRunId] = useState<string | null>(null)
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search)
+    const t = sp.get("tab")
+    if (t === "runs") setActiveTab("Runs")
+    else if (t === "recorder") setActiveTab("Recorder")
+    setInitialRunId(sp.get("run"))
+  }, [])
   // A test's "Open trace" button opens that exact trace in the Trace Viewer.
   const [pendingTraceId, setPendingTraceId] = useState<string | null>(null)
   // A recording just saved: select it when the Tests tab opens.
@@ -486,7 +496,7 @@ export default function AutomationHubPage() {
       {activeTab === "Tests" && (
         <HubTestsSection projectId={projectId} onOpenTrace={openTrace} focusTestName={focusTestName} />
       )}
-      {activeTab === "Runs" && <HubRunsSection projectId={projectId} onOpenTrace={openTrace} />}
+      {activeTab === "Runs" && <HubRunsSection projectId={projectId} onOpenTrace={openTrace} initialRunId={initialRunId} />}
       {activeTab === "Recorder" && (
         <VisualRecorderSection
           projectId={projectId}
@@ -930,7 +940,7 @@ export default function AutomationHubPage() {
           )}
 
           {/* TAB 7b: VISUAL DIFF */}
-          {activeTab === "Visual" && <VisualDiffSection />}
+          {activeTab === "Visual" && <VisualDiffSection projectId={projectId} />}
 
           {/* TAB 7c: VIDEO LAB */}
           {activeTab === "Video" && (
@@ -943,6 +953,7 @@ export default function AutomationHubPage() {
           {/* TAB 8: AI AGENT (MCP) */}
           {activeTab === "Agent" && (
             <AiAgentSection
+              projectId={projectId}
               onNavigate={(tab, testName) => {
                 if (testName) {
                   setSelectedTestName(testName)

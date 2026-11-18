@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import {
   Images,
   Upload,
@@ -103,9 +104,15 @@ const statusMeta = (status: string) => {
   return { icon: AlertTriangle, cls: "bg-amber-50 text-amber-700 border-amber-100", label: status.toUpperCase() }
 }
 
+// Show the server's error message (e.g. a Viewer trying to change baselines).
+async function reportError(res: Response, fallback: string) {
+  const d = await res.json().catch(() => null)
+  toast.error(d?.error || fallback)
+}
+
 // ---------- Component ----------
 
-export default function VisualDiffSection() {
+export default function VisualDiffSection({ projectId }: { projectId: string }) {
   const [subTab, setSubTab] = useState<"baselines" | "compare" | "settings">("baselines")
   const [baselines, setBaselines] = useState<Baseline[]>([])
   const [screenshotOptions, setScreenshotOptions] = useState<ScreenshotOption[]>([])
@@ -136,7 +143,7 @@ export default function VisualDiffSection() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/hub/visual/baselines")
+      const res = await fetch(`/api/hub/visual/baselines?projectId=${encodeURIComponent(projectId)}`)
       if (res.ok) {
         const d = await res.json()
         setBaselines(d.baselines || [])
@@ -147,7 +154,7 @@ export default function VisualDiffSection() {
       setLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [projectId])
 
   useEffect(() => {
     load()
@@ -174,12 +181,14 @@ export default function VisualDiffSection() {
       const res = await fetch("/api/hub/visual/baselines", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, provider, source })
+        body: JSON.stringify({ ...form, provider, source, projectId })
       })
       if (res.ok) {
         setForm({ testName: "", pageName: "", browser: "chrome", versionTag: "", evidenceId: "", dataUrl: "" })
         setShowCreate(false)
         await load()
+      } else {
+        await reportError(res, "Couldn't create the baseline")
       }
     } finally {
       setCreating(false)
@@ -188,16 +197,18 @@ export default function VisualDiffSection() {
 
   const deleteBaseline = async (id: string) => {
     if (!confirm("Delete this baseline and its stored image?")) return
-    await fetch(`/api/hub/visual/baselines/${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/hub/visual/baselines/${id}`, { method: "DELETE" })
+    if (!res.ok) await reportError(res, "Couldn't delete the baseline")
     load()
   }
 
   const tagBaseline = async (id: string, versionTag: string) => {
-    await fetch(`/api/hub/visual/baselines/${id}`, {
+    const res = await fetch(`/api/hub/visual/baselines/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ versionTag })
     })
+    if (!res.ok) return reportError(res, "Couldn't tag the baseline")
     setBaselines((cur) => cur.map((b) => (b.id === id ? { ...b, versionTag } : b)))
   }
 
@@ -217,6 +228,8 @@ export default function VisualDiffSection() {
       if (res.ok) {
         const d = await res.json()
         setComparison(d.comparison)
+      } else {
+        await reportError(res, "Comparison failed")
       }
     } finally {
       setRunning(false)
@@ -235,6 +248,8 @@ export default function VisualDiffSection() {
         const d = await res.json()
         setComparison((c) => (c ? { ...c, status: d.comparison.status } : c))
         if (action === "approve") await load() // baseline image changed
+      } else {
+        await reportError(res, `Couldn't ${action} the comparison`)
       }
     } finally {
       setActing(false)

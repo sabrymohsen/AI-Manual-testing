@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAnyHubWriter } from "@/lib/hub-access"
 import { chromium } from "playwright"
 
 export const dynamic = "force-dynamic"
@@ -16,8 +17,9 @@ interface LocatorElement {
 // Loads the given URL headlessly, returns a screenshot plus the interactive
 // elements found on the page with ready-to-paste SHAFT locator code.
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Opens a browser on the server against any URL: project writers only.
+  const auth = await requireAnyHubWriter()
+  if (!auth.ok) return auth.response
 
   let browser
   try {

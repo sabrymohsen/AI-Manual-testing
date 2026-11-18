@@ -54,6 +54,8 @@ storage/hub-workspace/
 storage/story-agent-runs/
 # Visual test screenshots, baselines and diffs. Runtime output only.
 storage/visual-tests/
+# Automation Hub Visual Diff baselines/current/diffs (served by /api/hub/visual/image)
+storage/visual/
 # Local agent tooling state
 .claude-flow/
 .swarm/

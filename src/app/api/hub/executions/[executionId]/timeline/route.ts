@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubExecution } from "@/lib/hub-access"
 import { EXECUTION_LOG_SENTINEL } from "@/lib/hub-evidence"
 import * as fs from "fs"
 
@@ -12,8 +12,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { executionId: string } }
 ) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Only members of the run's project may see it.
+  const access = await requireHubExecution(params.executionId, "read")
+  if (!access.ok) return access.response
 
   try {
     const execution = await prisma.testExecution.findUnique({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
 
@@ -13,8 +14,9 @@ function toOrigin(raw: string): string {
 
 // POST /api/hub/targets/{id}/test-connection — probe the grid/hub status endpoint
 export async function POST(_request: NextRequest, { params }: { params: { targetId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const target = await prisma.executionTarget.findUnique({ where: { id: params.targetId } })

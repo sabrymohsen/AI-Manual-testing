@@ -10,6 +10,36 @@ import Anthropic from "@anthropic-ai/sdk"
 import { prisma } from "@/lib/db"
 import { withQaSkills } from "@/lib/ai/qa-skills"
 import { startScriptRun } from "@/lib/hub-runner"
+import { AsyncLocalStorage } from "node:async_hooks"
+import { canUseProject } from "@/lib/api-guards"
+import { projectScriptsWhere } from "@/lib/hub-scripts"
+import { readableProjectIds, visibleExecutionWhere } from "@/lib/hub-access"
+
+/**
+ * Who the agent is acting for. Every tool reads and runs only what this user
+ * may: before, list/run/diagnose/save worked across every project, and
+ * save_test_script created shared scripts that anyone could then run.
+ */
+export interface AgentContext {
+  userId: string
+  userName: string
+  /** Project the chat was opened from; required to run or save tests. */
+  projectId: string | null
+}
+export const agentContext = new AsyncLocalStorage<AgentContext>()
+
+async function scopes(ctx: AgentContext) {
+  const readable = await readableProjectIds(ctx.userId)
+  const scriptWhere: any = ctx.projectId
+    ? projectScriptsWhere(ctx.projectId)
+    : readable === "all"
+      ? {}
+      : { OR: [{ projectId: null }, { projectId: { in: readable } }] }
+  const execWhere: any = ctx.projectId
+    ? { OR: [{ projectId: ctx.projectId }, { projectId: null, script: { projectId: ctx.projectId } }] }
+    : await visibleExecutionWhere(ctx.userId)
+  return { scriptWhere, execWhere }
+}
 import { buildTemplateCode, HubScriptType, isLegacyJavaScript } from "@/lib/hub-templates"
 import { cleanFolder, hubNameError } from "@/lib/hub-scripts"
 import {
@@ -253,11 +283,15 @@ function logDataAccess(provider: string, dataSummary: string, redacted: boolean,
 }
 
 async function runTool(name: string, input: any, actions: AgentAction[]): Promise<string> {
+  const ctx = agentContext.getStore()
+  if (!ctx) return "The agent has no user context, so it can't use tools."
+  const { scriptWhere, execWhere } = await scopes(ctx)
   switch (name) {
     case "list_tests": {
       const scripts = await prisma.testScript.findMany({
+        where: scriptWhere,
         orderBy: { name: "asc" },
-        include: { executions: { orderBy: { createdAt: "desc" }, take: 1 } }
+        include: { executions: { where: execWhere, orderBy: { createdAt: "desc" }, take: 1 } }
       })
       return JSON.stringify(
         scripts.map((s) => ({
@@ -275,11 +309,19 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
       const testName = String(input?.test_name || "")
       const browser = String(input?.browser || "Headless")
       const script = await prisma.testScript.findFirst({
-        where: { name: { equals: testName, mode: "insensitive" } }
+        where: { AND: [scriptWhere, { name: { equals: testName, mode: "insensitive" } }] }
       })
       if (!script) return `No script named "${testName}" exists. Use list_tests to see valid names.`
+      const runIn = script.projectId ?? ctx.projectId
+      if (!runIn) return "Open the agent from a project to run shared example tests."
+      if (!(await canUseProject(runIn, ctx.userId, "write"))) return "You don't have permission to run tests in this project."
 
-      const executionId = await startScriptRun(script, browser, false, undefined, script.accessibilityEnabled)
+      const executionId = await startScriptRun(script, browser, false, undefined, script.accessibilityEnabled, null, {
+        projectId: runIn,
+        triggerSource: "manual",
+        triggeredById: ctx.userId,
+        triggeredByName: `${ctx.userName} (via AI agent)`,
+      })
 
       // Wait up to ~75s for the run to finish
       let execution = null
@@ -318,7 +360,7 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
       const limit = Math.min(Number(input?.limit) || 5, 15)
       const where = input?.test_name ? { script: { name: String(input.test_name) } } : {}
       const executions = await prisma.testExecution.findMany({
-        where,
+        where: { AND: [execWhere, where] },
         orderBy: { createdAt: "desc" },
         take: limit,
         include: { script: { select: { name: true, type: true } } }
@@ -338,13 +380,13 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
     case "diagnose_failure": {
       const testName = String(input?.test_name || "")
       const execution = await prisma.testExecution.findFirst({
-        where: { status: "Failed", script: { name: { equals: testName, mode: "insensitive" } } },
+        where: { AND: [execWhere, { status: "Failed", script: { name: { equals: testName, mode: "insensitive" } } }] },
         orderBy: { createdAt: "desc" },
         include: { script: { select: { name: true, code: true } } }
       })
       if (!execution) {
         const anyRun = await prisma.testExecution.findFirst({
-          where: { script: { name: { equals: testName, mode: "insensitive" } } },
+          where: { AND: [execWhere, { script: { name: { equals: testName, mode: "insensitive" } } }] },
           orderBy: { createdAt: "desc" }
         })
         return anyRun
@@ -369,7 +411,7 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
 
     case "check_flaky_tests": {
       const executions = await prisma.testExecution.findMany({
-        where: { status: { in: ["Passed", "Failed"] } },
+        where: { AND: [execWhere, { status: { in: ["Passed", "Failed"] } }] },
         orderBy: { createdAt: "asc" },
         include: { script: { select: { name: true } } }
       })
@@ -416,12 +458,16 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
       let code = String(input?.code || "")
       const nameError = hubNameError(name)
       if (nameError) return `"${name}" can't be used as a test name (${nameError}) — no test was saved.`
-      const duplicate = await prisma.testScript.findFirst({ where: { name: { equals: name, mode: "insensitive" } } })
+      if (!ctx.projectId) return "Open the agent from a project to save tests — they're saved into that project."
+      if (!(await canUseProject(ctx.projectId, ctx.userId, "write"))) return "You don't have permission to add tests to this project."
+      const duplicate = await prisma.testScript.findFirst({
+        where: { AND: [projectScriptsWhere(ctx.projectId), { name: { equals: name, mode: "insensitive" } }] },
+      })
       if (duplicate) return `A test named "${name}" already exists — pick a different name.`
       if (!code.trim() || isLegacyJavaScript(code)) code = buildTemplateCode(type as HubScriptType, name)
 
       await prisma.testScript.create({
-        data: { name, type, code, folder: cleanFolder(input?.folder ?? "AI generated"), tags: ["ai-generated"] }
+        data: { name, type, code, folder: cleanFolder(input?.folder ?? "AI generated"), tags: ["ai-generated"], projectId: ctx.projectId }
       })
       actions.push({ label: `Open ${name}`, kind: "open_studio", payload: { test: name } })
       return `Saved "${name}" (${type}) to the Automation Hub, in the "${cleanFolder(input?.folder ?? "AI generated")}" folder.`
@@ -429,9 +475,11 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
 
     case "coverage_report": {
       const [scripts, executions, evidenceCount] = await Promise.all([
-        prisma.testScript.findMany({ include: { executions: { select: { status: true } } } }),
-        prisma.testExecution.count(),
-        prisma.evidenceFile.count()
+        prisma.testScript.findMany({ where: scriptWhere, include: { executions: { where: execWhere, select: { status: true } } } }),
+        prisma.testExecution.count({ where: execWhere }),
+        prisma.testExecution
+          .findMany({ where: execWhere, select: { id: true } })
+          .then((rows) => prisma.evidenceFile.count({ where: { testExecutionId: { in: rows.map((r) => r.id) } } }))
       ])
       const byType: Record<string, number> = {}
       scripts.forEach((s) => (byType[s.type] = (byType[s.type] || 0) + 1))

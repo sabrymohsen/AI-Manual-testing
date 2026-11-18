@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, requireProjectMember } from "@/lib/api-guards"
+import { requireHubAdmin, requireHubProject } from "@/lib/hub-access"
 import { cleanFolder, hubNameError, projectScriptsWhere } from "@/lib/hub-scripts"
 
 export const dynamic = "force-dynamic"
@@ -10,8 +10,9 @@ export const dynamic = "force-dynamic"
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const projectId: string | null = body.projectId || null
-  const auth = projectId ? await requireProjectMember(projectId) : await requireAuth()
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: (auth as any).status || 401 })
+  // Same rule as creating a test: project writers, or an admin for a shared example.
+  const auth = projectId ? await requireHubProject(projectId, "write") : await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const name = String(body.name || "").trim()

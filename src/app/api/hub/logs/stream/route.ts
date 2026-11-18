@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { LOG4J_PATH, stripAnsi } from "@/lib/hub-logs"
 import * as fs from "fs"
 
@@ -11,8 +12,9 @@ export const dynamic = "force-dynamic"
 // SHAFT writes them, non-blocking. Chosen over WebSockets because the Next.js
 // App Router has no raw-socket host; SSE gives the same live push over HTTP.
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide data with no project attached: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   let offset = Math.max(0, Number(request.nextUrl.searchParams.get("offset")) || 0)
   const encoder = new TextEncoder()

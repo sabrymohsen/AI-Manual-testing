@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { canManageEnvVar } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 import { decryptSecret } from "@/lib/crypto"
 
@@ -13,6 +14,10 @@ export async function POST(_request: NextRequest, { params }: { params: { id: st
 
   const row = await prisma.environmentVariable.findUnique({ where: { id: params.id } })
   if (!row) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  // Revealing a value is as sensitive as changing it.
+  if (!(await canManageEnvVar(auth.session!.user.id, row, "write"))) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
 
   let value = ""
   if (row.isSecret) {

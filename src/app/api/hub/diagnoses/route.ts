@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { visibleExecutionIds } from "@/lib/hub-access"
 
 // Seed default diagnoses if empty
 const SEED_DIAGNOSES = [
@@ -67,13 +68,18 @@ const SEED_DIAGNOSES = [
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
   if (auth.error) return unauthorizedResponse(auth.error)
+  // Only diagnoses of runs in the caller's projects.
+  const visible = await visibleExecutionIds(auth.session!.user.id)
+  const visibleWhere = visible === "all" ? {} : { testExecutionId: { in: visible } }
 
   try {
-    let items = await prisma.diagnosis.findMany({
+    let items = await prisma.diagnosis.findMany({ where: visibleWhere,
       orderBy: { createdAt: "desc" }
     })
 
-    if (items.length === 0) {
+    // Demo rows only for a brand-new workspace — not whenever this user's
+    // projects have none, or every request would insert another copy.
+    if (items.length === 0 && (await prisma.diagnosis.count()) === 0) {
       await Promise.all(
         SEED_DIAGNOSES.map(item =>
           prisma.diagnosis.create({
@@ -93,7 +99,7 @@ export async function GET(request: NextRequest) {
           })
         )
       )
-      items = await prisma.diagnosis.findMany({
+      items = await prisma.diagnosis.findMany({ where: visibleWhere,
         orderBy: { createdAt: "desc" }
       })
     }

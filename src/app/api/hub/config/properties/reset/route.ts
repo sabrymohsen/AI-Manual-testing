@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 import { getCatalogProperty, readProps, writeProps, removeProp, CUSTOM_PROPS_PATH } from "@/lib/hub-properties"
 import * as fs from "fs"
@@ -10,8 +11,9 @@ export const dynamic = "force-dynamic"
 // Reset a single property (when `name` is given) or all catalog properties to
 // their built-in defaults by removing the override from custom.properties.
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json().catch(() => ({}))

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { canManageEnvVar, readableProjectIds } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 import { encryptSecret } from "@/lib/crypto"
 
@@ -12,7 +13,12 @@ export async function GET() {
   const auth = await requireAuth()
   if (auth.error) return unauthorizedResponse(auth.error)
 
-  const rows = await prisma.environmentVariable.findMany({ orderBy: { name: "asc" } })
+  // Global variables plus those of projects the caller belongs to.
+  const projects = await readableProjectIds(auth.session!.user.id)
+  const rows = await prisma.environmentVariable.findMany({
+    where: projects === "all" ? {} : { OR: [{ scope: "global" }, { projectId: { in: projects } }] },
+    orderBy: { name: "asc" },
+  })
 
   return NextResponse.json({
     variables: rows.map((r) => ({
@@ -42,6 +48,16 @@ export async function POST(request: NextRequest) {
     const scope = body.scope === "project" ? "project" : "global"
     const isSecret = Boolean(body.isSecret)
     const projectId = scope === "project" ? body.projectId || null : null
+
+    if (!(await canManageEnvVar(auth.session!.user.id, { scope, projectId }, "write"))) {
+      return NextResponse.json(
+        { error: scope === "global" ? "Only an admin can add global variables" : "You can't change this project's variables" },
+        { status: 403 }
+      )
+    }
+    if (scope === "project" && !projectId) {
+      return NextResponse.json({ error: "Choose the project this variable belongs to" }, { status: 400 })
+    }
 
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
       return NextResponse.json({ error: "Name must be a valid env var identifier (A-Z, 0-9, _)" }, { status: 400 })

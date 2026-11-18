@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { executionVisibleTo } from "@/lib/hub-access"
 import { createClip } from "@/lib/hub-video"
 
 export const dynamic = "force-dynamic"
@@ -15,6 +17,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     if (!body.sourceEvidenceId || body.startSec === undefined || body.endSec === undefined) {
       return NextResponse.json({ error: "sourceEvidenceId, startSec and endSec are required" }, { status: 400 })
+    }
+    const source = await prisma.evidenceFile.findUnique({ where: { id: String(body.sourceEvidenceId) }, select: { testExecutionId: true } })
+    if (!source || !(await executionVisibleTo(auth.session!.user.id, source.testExecutionId))) {
+      return NextResponse.json({ error: "Video not found" }, { status: 404 })
     }
     const clip = await createClip({
       sourceEvidenceId: body.sourceEvidenceId,

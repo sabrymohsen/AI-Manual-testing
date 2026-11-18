@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
 
@@ -70,8 +71,9 @@ function band(score: number): "green" | "yellow" | "orange" | "red" {
 }
 
 export async function GET() {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide data with no project attached: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const events = await prisma.healingEvent.findMany({ orderBy: { createdAt: "desc" } })

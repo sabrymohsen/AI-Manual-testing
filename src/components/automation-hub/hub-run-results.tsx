@@ -19,7 +19,11 @@ import {
   Route,
   Terminal,
   XCircle,
+  Bug,
+  Ban,
 } from "lucide-react"
+import Link from "next/link"
+import { toast } from "sonner"
 
 export interface HubTestResultView {
   title: string
@@ -36,7 +40,10 @@ export interface HubTestResultView {
 
 export interface HubExecutionView {
   id: string
-  status: string // Queued | Running | Passed | Failed
+  status: string // Queued | Running | Passed | Failed | Cancelled
+  /** Runs ahead of this one while Queued (0 = next). */
+  queuePosition?: number | null
+  projectId?: string | null
   logOutput?: string
   browser?: string | null
   duration?: number | null
@@ -60,6 +67,7 @@ export function StatusBadge({ status }: { status: string }) {
     Failed: "bg-rose-50 text-rose-700 border-rose-200",
     Running: "bg-primary/10 text-primary border-primary/25",
     Queued: "bg-amber-50 text-amber-700 border-amber-200",
+    Cancelled: "bg-muted text-muted-foreground border-border",
   }
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${map[status] || "bg-muted/50 text-muted-foreground border-border"}`}>
@@ -67,6 +75,7 @@ export function StatusBadge({ status }: { status: string }) {
       {status === "Queued" && <Clock className="h-3 w-3" />}
       {status === "Passed" && <CheckCircle2 className="h-3 w-3" />}
       {status === "Failed" && <XCircle className="h-3 w-3" />}
+      {status === "Cancelled" && <Ban className="h-3 w-3" />}
       {status}
     </span>
   )
@@ -144,7 +153,11 @@ export default function HubRunResults({
       {isActive(execution.status) && results.length === 0 && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          {execution.status === "Queued" ? "Waiting for the run before it to finish…" : "Running… results appear here when it finishes."}
+          {execution.status === "Queued"
+            ? execution.queuePosition
+              ? `Queued — ${execution.queuePosition} run${execution.queuePosition === 1 ? "" : "s"} ahead of this one.`
+              : "Queued — starts next."
+            : "Running… results appear here when it finishes."}
         </p>
       )}
 
@@ -224,6 +237,7 @@ export default function HubRunResults({
                         )}
                       </div>
                     </div>
+                    {!["passed", "skipped"].includes(r.status) && <FileBugButton executionId={execution.id} testIndex={i} />}
                     {video === i && r.video && (
                       <video src={artifactUrl(execution.id, i, "video")} controls autoPlay className="max-h-96 w-full rounded-md border bg-black" />
                     )}
@@ -255,5 +269,61 @@ export default function HubRunResults({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * Files a bug from one failed test: error, steps and screenshot are filled in
+ * server-side, and the bug links back to this run.
+ */
+function FileBugButton({ executionId, testIndex }: { executionId: string; testIndex: number }) {
+  const [busy, setBusy] = useState(false)
+  const [filed, setFiled] = useState<{ id: string; bugKey: string | null } | null>(null)
+  const [projectPath, setProjectPath] = useState<string | null>(null)
+
+  useEffect(() => {
+    const m = window.location.pathname.match(/^\/projects\/[^/]+/)
+    setProjectPath(m ? m[0] : null)
+  }, [])
+
+  async function file() {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/hub/executions/${executionId}/bug`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testIndex }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || "Couldn't file the bug")
+      setFiled(d.bug)
+      toast.success(`Filed ${d.bug.bugKey ?? "a bug"}`)
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (filed) {
+    return (
+      <Link
+        href={`${projectPath ?? ""}/bug-reports?bugId=${filed.id}`}
+        className="inline-flex items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700"
+      >
+        <Bug className="h-3.5 w-3.5" /> {filed.bugKey ?? "Bug"} filed — open it
+      </Link>
+    )
+  }
+  return (
+    <button
+      type="button"
+      onClick={file}
+      disabled={busy}
+      className="inline-flex items-center gap-1.5 rounded-md border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-rose-300 hover:text-rose-700 disabled:opacity-60"
+      title="Create a bug with this error, the steps and the screenshot"
+    >
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bug className="h-3.5 w-3.5" />} File bug
+    </button>
   )
 }

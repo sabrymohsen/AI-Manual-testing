@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAnyHubWriter } from "@/lib/hub-access"
 import { getActiveSession, captureFrame } from "@/lib/hub-recorder"
 
 export const dynamic = "force-dynamic"
 
 // GET /api/hub/recorder/status — current frame + recorded actions
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // The recorder drives a browser on the server: project writers only.
+  const access = await requireAnyHubWriter()
+  if (!access.ok) return access.response
 
   try {
     const session = getActiveSession()

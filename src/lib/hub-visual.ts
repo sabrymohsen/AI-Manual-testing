@@ -9,8 +9,12 @@ import * as path from "path"
 import { PNG } from "pngjs"
 import pixelmatch from "pixelmatch"
 
-export const VISUAL_URL_PREFIX = "/uploads/visual"
-export const VISUAL_ROOT = path.join(process.cwd(), "public/uploads/visual")
+import { STORAGE_ROOT } from "@/lib/storage-health"
+
+// Images live under STORAGE_ROOT (not public/): files written to public/ at
+// runtime aren't served by `next start`, and anything there skips the
+// project check. They are served by /api/hub/visual/image instead.
+export const VISUAL_ROOT = path.resolve(STORAGE_ROOT, "visual")
 
 export type VisualSubdir = "baselines" | "current" | "diffs"
 
@@ -20,10 +24,20 @@ export function ensureVisualDirs() {
   }
 }
 
-// Map a stored absolute path to its public URL (/uploads/visual/...).
-export function toPublicUrl(absPath: string): string {
-  const rel = path.relative(path.join(process.cwd(), "public"), absPath)
-  return "/" + rel.split(path.sep).join("/")
+/** True when the path is inside the managed visual store (safe to read/unlink). */
+export function inVisualStore(p: string): boolean {
+  const root = path.resolve(VISUAL_ROOT) + path.sep
+  return path.resolve(p).startsWith(root)
+}
+
+/** Access-checked image URL. `v` busts the cache when a baseline is overwritten on approve. */
+export function baselineImageUrl(b: { id: string; updatedAt?: Date | string | null }): string {
+  const v = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
+  return `/api/hub/visual/image?kind=baseline&id=${encodeURIComponent(b.id)}&v=${v}`
+}
+
+export function comparisonImageUrl(c: { id: string }, which: "current" | "diff"): string {
+  return `/api/hub/visual/image?kind=${which}&id=${encodeURIComponent(c.id)}`
 }
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47])

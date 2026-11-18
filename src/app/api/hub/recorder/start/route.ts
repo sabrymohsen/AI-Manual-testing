@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAnyHubWriter } from "@/lib/hub-access"
 import { startSession } from "@/lib/hub-recorder"
 
 export const dynamic = "force-dynamic"
@@ -7,8 +7,9 @@ export const maxDuration = 60
 
 // POST /api/hub/recorder/start — launch a capture session
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // The recorder drives a browser on the server: project writers only.
+  const access = await requireAnyHubWriter()
+  if (!access.ok) return access.response
 
   try {
     const body = await request.json()

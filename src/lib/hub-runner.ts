@@ -15,7 +15,9 @@
 // runs/<executionId>/ so its screenshots, traces and videos stay available.
 
 import { prisma } from "@/lib/db"
-import { spawn } from "child_process"
+import { spawn, type ChildProcess } from "child_process"
+import { cleanRunEnv } from "@/lib/hub-access"
+import { recalcMany } from "@/lib/test-cases/rollup"
 import * as fs from "fs"
 import * as path from "path"
 import { harvestEvidence, extractTargetUrl } from "@/lib/hub-evidence"
@@ -25,13 +27,10 @@ import { readRunReport, summarize, type HubTestResult } from "@/lib/hub-report"
 import { decryptSecret } from "@/lib/crypto"
 import {
   WORKSPACE_ROOT,
-  RESULTS_DIR,
-  archiveResults,
-  clearResults,
+  finishRunWorkspace,
+  prepareRunWorkspace,
   projectForBrowser,
   specFileName,
-  writeConfig,
-  writeSpec,
 } from "@/lib/hub-workspace"
 
 /** Hard stop for one run, so a hung browser can't block the queue forever. */
@@ -115,13 +114,103 @@ async function loadRunVariables(projectId?: string | null): Promise<{ env: Recor
 // ───────────────────────── queue ─────────────────────────
 // Kept on globalThis: in `next dev` every API route is its own bundle, and a
 // module-level variable would give each route a separate queue.
-interface QueueState {
-  tail: Promise<void>
-  waiting: number
-  recovered: boolean
+interface Job {
+  executionId: string
+  projectId: string | null
+  run: () => Promise<void>
 }
-const g = globalThis as unknown as { __hubRunQueue?: QueueState }
-const queue: QueueState = (g.__hubRunQueue ||= { tail: Promise.resolve(), waiting: 0, recovered: false })
+
+/**
+ * Run scheduler. Runs used to go strictly one at a time for the whole server,
+ * so one project's 15-minute batch blocked every other project. Now:
+ *   - up to HUB_MAX_PARALLEL_RUNS runs at once (default 3), each in its own
+ *     workspace folder (see prepareRunWorkspace)
+ *   - at most one run per project at a time, so a big batch in one project
+ *     can't take every slot — other projects' runs overtake it fairly
+ */
+interface QueueState {
+  waitingJobs: Job[]
+  /** executionId → projectId of runs in progress. */
+  runningJobs: Map<string, string | null>
+  recovered: boolean
+  /** Playwright processes by execution id, so a run can be cancelled. */
+  children: Map<string, ChildProcess>
+  /** Runs the user cancelled while they were running. */
+  cancelled: Set<string>
+  /** The run that currently owns the shared run.log (latest started). */
+  logOwner: string | null
+}
+const g = globalThis as unknown as { __hubRunQueue2?: QueueState }
+const queue: QueueState = (g.__hubRunQueue2 ||= {
+  waitingJobs: [],
+  runningJobs: new Map(),
+  recovered: false,
+  children: new Map(),
+  cancelled: new Set(),
+  logOwner: null,
+})
+
+const MAX_PARALLEL = Math.max(1, Number(process.env.HUB_MAX_PARALLEL_RUNS) || 3)
+const PER_PROJECT = Math.max(1, Number(process.env.HUB_MAX_RUNS_PER_PROJECT) || 1)
+
+function busyInProject(projectId: string | null) {
+  let n = 0
+  for (const p of queue.runningJobs.values()) if (p === projectId) n++
+  return n
+}
+
+/** Starts as many waiting runs as the limits allow. */
+function pump() {
+  while (queue.runningJobs.size < MAX_PARALLEL) {
+    const i = queue.waitingJobs.findIndex((j) => busyInProject(j.projectId) < PER_PROJECT)
+    if (i < 0) return
+    const [job] = queue.waitingJobs.splice(i, 1)
+    queue.runningJobs.set(job.executionId, job.projectId)
+    job
+      .run()
+      .catch((err) => console.error("[hub-runner] run failed:", err))
+      .finally(() => {
+        queue.runningJobs.delete(job.executionId)
+        pump()
+      })
+  }
+}
+
+/** 0 = running next / now; n = n runs ahead; null = not waiting. */
+export function queuePosition(executionId: string): number | null {
+  const i = queue.waitingJobs.findIndex((j) => j.executionId === executionId)
+  return i < 0 ? null : i
+}
+
+/**
+ * Cancels a run. A queued run is marked Cancelled and skipped when its turn
+ * comes; a running one has its Playwright process stopped. Returns false if
+ * the run already finished.
+ */
+export async function cancelRun(executionId: string, by?: string | null): Promise<boolean> {
+  const exec = await prisma.testExecution.findUnique({ where: { id: executionId }, select: { status: true, logOutput: true } })
+  if (!exec || !["Queued", "Running"].includes(exec.status)) return false
+  const note = `\n[Automation Hub] Cancelled${by ? ` by ${by}` : ""}.\n`
+  if (exec.status === "Queued") {
+    queue.waitingJobs = queue.waitingJobs.filter((j) => j.executionId !== executionId)
+    await prisma.testExecution.update({
+      where: { id: executionId },
+      data: { status: "Cancelled", logOutput: exec.logOutput + note },
+    })
+    return true
+  }
+  queue.cancelled.add(executionId)
+  const child = queue.children.get(executionId)
+  if (child) {
+    child.kill("SIGTERM")
+    // Browsers sometimes ignore SIGTERM; make sure the run ends.
+    setTimeout(() => child.kill("SIGKILL"), 5000).unref?.()
+  } else {
+    // Running but no process (e.g. still writing files): finish it as cancelled.
+    await prisma.testExecution.update({ where: { id: executionId }, data: { status: "Cancelled", logOutput: exec.logOutput + note } })
+  }
+  return true
+}
 
 /** Runs left "Queued"/"Running" by a server that stopped mid-run can never finish. */
 async function recoverInterruptedRuns() {
@@ -135,16 +224,13 @@ async function recoverInterruptedRuns() {
   } catch {}
 }
 
-function enqueue(job: () => Promise<void>): number {
-  const ahead = queue.waiting
-  queue.waiting++
-  queue.tail = queue.tail
-    .then(job)
-    .catch((err) => console.error("[hub-runner] run failed:", err))
-    .finally(() => {
-      queue.waiting--
-    })
-  return ahead
+/** Who/what started a run — stored on the execution. */
+export interface RunMeta {
+  /** Project the run belongs to (required for shared example scripts). */
+  projectId?: string | null
+  triggerSource?: "manual" | "rerun" | "schedule" | "ci"
+  triggeredById?: string | null
+  triggeredByName?: string | null
 }
 
 export interface StartRunOptions {
@@ -167,7 +253,8 @@ export async function startScriptRun(
   debug = false,
   target?: ExecutionTargetLike,
   accessibility = false,
-  batchId: string | null = null
+  batchId: string | null = null,
+  meta: RunMeta = {}
 ): Promise<string> {
   await recoverInterruptedRuns()
 
@@ -182,15 +269,29 @@ export async function startScriptRun(
       browser,
       executionTarget: remote ? target!.name : null,
       batchId,
+      projectId: meta.projectId ?? script.projectId ?? null,
+      triggerSource: meta.triggerSource ?? "manual",
+      triggeredById: meta.triggeredById ?? null,
+      triggeredByName: meta.triggeredByName ?? null,
     },
   })
 
-  const ahead = enqueue(() => executeRun(execution.id, script, { browser, debug, target, accessibility }))
-  if (ahead > 0) {
+  queue.waitingJobs.push({
+    executionId: execution.id,
+    projectId: execution.projectId,
+    run: () => executeRun(execution.id, script, { browser, debug, target, accessibility }),
+  })
+  pump()
+  const ahead = queuePosition(execution.id) ?? 0
+  if (queuePosition(execution.id) !== null && ahead >= 0) {
     await prisma.testExecution
       .update({
         where: { id: execution.id },
-        data: { logOutput: `[Automation Hub] Queued ${script.name} · waiting for ${ahead} earlier run(s) to finish\n` },
+        data: {
+          logOutput: ahead
+            ? `[Automation Hub] Queued ${script.name} · ${ahead} run(s) ahead of it\n`
+            : `[Automation Hub] Queued ${script.name} · starts when a slot frees up\n`,
+        },
       })
       .catch(() => {})
   }
@@ -200,11 +301,13 @@ export async function startScriptRun(
 /** Queue several scripts as one batch (Run folder / Run all). */
 export async function startBatchRun(
   scripts: (HubScriptLike & { accessibilityEnabled?: boolean })[],
-  opts: { browser: string; target?: ExecutionTargetLike; batchId: string }
+  opts: { browser: string; target?: ExecutionTargetLike; batchId: string; meta?: RunMeta }
 ): Promise<string[]> {
   const ids: string[] = []
   for (const s of scripts) {
-    ids.push(await startScriptRun(s, opts.browser, false, opts.target, Boolean(s.accessibilityEnabled), opts.batchId))
+    ids.push(
+      await startScriptRun(s, opts.browser, false, opts.target, Boolean(s.accessibilityEnabled), opts.batchId, opts.meta)
+    )
   }
   return ids
 }
@@ -214,9 +317,9 @@ async function executeRun(
   script: HubScriptLike,
   opts: { browser: string; debug?: boolean; target?: ExecutionTargetLike; accessibility?: boolean }
 ): Promise<void> {
-  // Deleted while it waited in the queue.
-  const stillThere = await prisma.testExecution.findUnique({ where: { id: executionId }, select: { id: true } })
-  if (!stillThere) return
+  // Deleted or cancelled while it waited in the queue.
+  const stillThere = await prisma.testExecution.findUnique({ where: { id: executionId }, select: { status: true } })
+  if (!stillThere || stillThere.status !== "Queued") return
 
   const { browser, debug, target, accessibility } = opts
   const remote = target && target.type !== "local"
@@ -225,14 +328,14 @@ async function executeRun(
   const headless = effectiveBrowser.toLowerCase() === "headless" || Boolean(target?.headless)
   const projectName = projectForBrowser(effectiveBrowser)
 
-  writeConfig({
+  // Own folder for this run, so parallel runs never share files.
+  const ws = prepareRunWorkspace(executionId, script, {
     headless,
     // grid/browserstack expose a websocket endpoint Playwright can attach to;
     // a docker target is reached the same way.
     remoteUrl: remote ? target!.url : null,
   })
-  const specRelPath = writeSpec(script.name, script.code)
-  clearResults()
+  const specRelPath = ws.specRelPath
 
   const targetLabel = remote ? target!.name : "Local"
   const header =
@@ -265,6 +368,9 @@ async function executeRun(
 
   // Tee to disk as well as the DB: the Evidence Vault's log viewer tails this
   // file by byte offset, so it can follow a run that is still going.
+  // The shared run.log follows the most recently started run only, so
+  // parallel runs don't interleave in it. Each run's full log is in the DB.
+  queue.logOwner = executionId
   try {
     fs.mkdirSync(WORKSPACE_ROOT, { recursive: true })
     fs.writeFileSync(RUN_LOG_PATH, header, "utf8")
@@ -273,9 +379,11 @@ async function executeRun(
   const append = (raw: string) => {
     const chunk = mask(raw)
     logBuffer += chunk
-    try {
-      fs.appendFileSync(RUN_LOG_PATH, chunk)
-    } catch {}
+    if (queue.logOwner === executionId) {
+      try {
+        fs.appendFileSync(RUN_LOG_PATH, chunk)
+      } catch {}
+    }
     flushLogs()
   }
 
@@ -283,16 +391,17 @@ async function executeRun(
   mask = (text: string) => vars.secrets.reduce((t, sec) => t.split(sec).join("***"), text)
 
   const args = ["playwright", "test", specRelPath, `--project=${projectName}`, "--reporter=list,json"]
-  const env = {
-    ...process.env,
+  // Never the server's own environment — see cleanRunEnv.
+  const env = cleanRunEnv({
     ...vars.env,
-    PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(RESULTS_DIR, "report.json"),
+    PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(ws.resultsDir, "report.json"),
     FORCE_COLOR: "0",
     ...(debug ? { DEBUG: "pw:api" } : {}),
-  }
+  })
 
   const exitCode: number | null = await new Promise((resolve) => {
-    const child = spawn("npx", args, { cwd: WORKSPACE_ROOT, env })
+    const child = spawn("npx", args, { cwd: ws.dir, env })
+    queue.children.set(executionId, child)
     const timer = setTimeout(() => {
       append(`\n[Automation Hub] Stopped after ${Math.round(RUN_TIMEOUT_MS / 60000)} minutes without finishing.\n`)
       child.kill("SIGTERM")
@@ -304,19 +413,20 @@ async function executeRun(
     })
     child.on("close", (code) => {
       clearTimeout(timer)
+      queue.children.delete(executionId)
       resolve(code)
     })
   })
 
   // Keep this run's artifacts: the next run clears test-results/.
-  let root = RESULTS_DIR
+  let root = ws.resultsDir
   try {
-    root = archiveResults(executionId)
+    root = finishRunWorkspace(executionId, ws.dir)
   } catch (err) {
     console.error("[hub-runner] could not archive run artifacts:", err)
   }
 
-  const results: HubTestResult[] = readRunReport(root, RESULTS_DIR)
+  const results: HubTestResult[] = readRunReport(root, ws.resultsDir)
   const sum = summarize(results)
   // The report is the source of truth when there is one; the exit code covers
   // runs that never got as far as running a test (syntax error, no browser).
@@ -328,8 +438,10 @@ async function executeRun(
   const firstFailure = results.find((r) => r.error)
   const screenshotPath = firstFailure?.screenshot || results.find((r) => r.screenshot)?.screenshot || findLatestScreenshot(root)
 
+  const wasCancelled = queue.cancelled.delete(executionId)
+  logBuffer += wasCancelled ? `\n[Automation Hub] Cancelled while running.\n` : ""
   logBuffer +=
-    `\n[Automation Hub] ${failed ? "FAILED" : "PASSED"}` +
+    `\n[Automation Hub] ${wasCancelled ? "CANCELLED" : failed ? "FAILED" : "PASSED"}` +
     (results.length ? ` · ${sum.passed} passed, ${sum.failed} failed${sum.skipped ? `, ${sum.skipped} skipped` : ""}${sum.flaky ? `, ${sum.flaky} flaky` : ""}` : "") +
     ` · ${((Date.now() - started) / 1000).toFixed(1)}s\n`
 
@@ -337,7 +449,7 @@ async function executeRun(
     await prisma.testExecution.update({
       where: { id: executionId },
       data: {
-        status: failed ? "Failed" : "Passed",
+        status: wasCancelled ? "Cancelled" : failed ? "Failed" : "Passed",
         logOutput: logBuffer,
         duration: Date.now() - started,
         screenshotPath,
@@ -359,6 +471,12 @@ async function executeRun(
 
     if (accessibility) {
       await parseAndStoreAccessibility({ executionId, scriptId: script.id, since: 0, root })
+    }
+
+    // Manual test cases this script verifies take its result as their last status.
+    if (!wasCancelled) {
+      const links = await prisma.hubScriptTestCase.findMany({ where: { scriptId: script.id }, select: { testCaseId: true } })
+      if (links.length) await recalcMany(links.map((l) => l.testCaseId))
     }
   } catch (err) {
     console.error("[hub-runner] could not store run results:", err)

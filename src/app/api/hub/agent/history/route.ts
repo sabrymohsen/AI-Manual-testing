@@ -10,7 +10,9 @@ export async function GET(request: NextRequest) {
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    // Your own conversation only.
     const messages = await prisma.agentChatMessage.findMany({
+      where: { userId: auth.session!.user.id },
       orderBy: { createdAt: "asc" },
       take: 200
     })
@@ -28,7 +30,8 @@ export async function DELETE(request: NextRequest) {
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    await prisma.agentChatMessage.deleteMany({})
+    // Clears the caller's conversation — it used to wipe everyone's.
+    await prisma.agentChatMessage.deleteMany({ where: { userId: auth.session!.user.id } })
     return NextResponse.json({ cleared: true })
   } catch (err: any) {
     console.error("DELETE agent history error:", err)

@@ -29,9 +29,15 @@ import {
   Trash2,
   Wand2,
   XCircle,
+  Ban,
+  Tag,
+  Link2,
+  X,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import HubRunResults, { isActive, type HubExecutionView } from "@/components/automation-hub/hub-run-results"
 import ExecutionTargetsModal from "@/components/automation-hub/execution-targets-modal"
 import AccessibilityPanel from "@/components/automation-hub/accessibility-panel"
@@ -49,6 +55,13 @@ interface HubTest {
   shared: boolean
   accessibilityEnabled: boolean
   lastExecution: null | { id: string; status: string; createdAt: string; passed: number; failed: number; total: number }
+  /** Manual test cases this script verifies; their status follows its runs. */
+  linkedTestCases?: { id: string; title: string; lastStatus: string }[]
+  /** Last finished runs, newest first. */
+  history?: string[]
+  passRate?: number | null
+  flaky?: boolean
+  flips?: number
 }
 
 const BROWSERS = [
@@ -99,6 +112,12 @@ export default function HubTestsSection({
   const [snippetsOpen, setSnippetsOpen] = useState(false)
   const [issues, setIssues] = useState<ReturnType<typeof lintPlaywrightJs>>([])
   const [a11yOpen, setA11yOpen] = useState(false)
+  const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [tagsText, setTagsText] = useState("")
+  const [pendingSwitch, setPendingSwitch] = useState<HubTest | null>(null)
+  const [pendingRunAnyway, setPendingRunAnyway] = useState(false)
+  const [pendingDelete, setPendingDelete] = useState(false)
+  const [runSettings, setRunSettings] = useState<{ retries: number; workers: number } | null>(null)
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
 
@@ -122,6 +141,13 @@ export default function HubTestsSection({
       const wanted = (focusTestName && list.find((t) => t.name === focusTestName)) || list[0]
       if (wanted) select(wanted)
     })
+    // Retries hide flaky failures — show the current setting next to Run.
+    api<{ properties: { name: string; value: string }[] }>("/api/hub/config/properties")
+      .then((d) => {
+        const v = (k: string, f: number) => Number(d.properties.find((p) => p.name === k)?.value ?? f) || f
+        setRunSettings({ retries: v("retries", 0), workers: v("workers", 1) })
+      })
+      .catch(() => {})
     api<{ targets: { id: string; name: string }[] }>("/api/hub/targets")
       .then((d) => setTargets(d.targets || []))
       .catch(() => {})
@@ -133,8 +159,16 @@ export default function HubTestsSection({
   }, [projectId, focusTestName])
 
   const select = (t: HubTest) => {
-    if (dirty && selected && !confirm(`Discard unsaved changes to “${selected.name}”?`)) return
+    if (dirty && selected && t.id !== selected.id) {
+      setPendingSwitch(t)
+      return
+    }
+    openTest(t)
+  }
+
+  const openTest = (t: HubTest) => {
     setSelectedId(t.id)
+    setTagsText(t.tags.join(", "))
     setCode(t.code)
     setName(t.name)
     setFolder(t.folder)
@@ -247,7 +281,7 @@ export default function HubTestsSection({
       await api(`/api/hub/scripts/${selected.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, name: name.trim(), folder }),
+        body: JSON.stringify({ code, name: name.trim(), folder, tags: parseTags(tagsText) }),
       })
       setDirty(false)
       await load()
@@ -260,9 +294,15 @@ export default function HubTestsSection({
     }
   }
 
-  const run = async (scope: { kind: "test" } | { kind: "folder"; folder: string } | { kind: "all" }) => {
+  const run = async (
+    scope: { kind: "test" } | { kind: "folder"; folder: string } | { kind: "tag"; tag: string } | { kind: "all" },
+    force = false
+  ) => {
     if (scope.kind === "test" && dirty && !(await save())) return
-    if (scope.kind === "test" && issues.some((i) => i.severity === "error") && !confirm("The editor shows errors. Run anyway?")) return
+    if (scope.kind === "test" && !force && issues.some((i) => i.severity === "error")) {
+      setPendingRunAnyway(true)
+      return
+    }
     try {
       localStorage.setItem("hub.browser", browser)
     } catch {}
@@ -272,12 +312,14 @@ export default function HubTestsSection({
         const d = await api<{ executionId: string }>(`/api/hub/scripts/${selected.id}/run`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ browser, targetId }),
+          // A shared example runs inside this project.
+          body: JSON.stringify({ browser, targetId, projectId }),
         })
         await loadExecution(d.executionId)
       } else {
         const body: any = { projectId, browser, targetId }
         if (scope.kind === "folder") body.folder = scope.folder
+        if (scope.kind === "tag") body.tag = scope.tag
         const d = await api<{ executionIds: string[] }>("/api/hub/runs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -306,11 +348,7 @@ export default function HubTestsSection({
       const t = list.find((x) => x.id === d.script.id)
       if (t) {
         setDirty(false)
-        setSelectedId(t.id)
-        setCode(t.code)
-        setName(t.name)
-        setFolder(t.folder)
-        setExecution(null)
+        openTest(t)
       }
     } catch (e: any) {
       toast.error(e.message)
@@ -337,19 +375,39 @@ export default function HubTestsSection({
     }
   }
 
+  const cancelRun = async () => {
+    if (!execution) return
+    try {
+      await api(`/api/hub/executions/${execution.id}/cancel`, { method: "POST" })
+      toast.success("Run cancelled")
+      loadExecution(execution.id)
+    } catch (e: any) {
+      toast.error(e.message)
+    }
+  }
+
+  const saveLinks = async (ids: string[]) => {
+    if (!selected) return
+    try {
+      await api(`/api/hub/scripts/${selected.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testCaseIds: ids }),
+      })
+      await load()
+    } catch (e: any) {
+      toast.error(e.message)
+    }
+  }
+
   const remove = async () => {
-    if (!selected || !confirm(`Delete “${selected.name}” and its run history? This can't be undone.`)) return
+    if (!selected) return
     try {
       await api(`/api/hub/scripts/${selected.id}`, { method: "DELETE" })
       setDirty(false)
       const list = await load()
       if (list[0]) {
-        setSelectedId(list[0].id)
-        setCode(list[0].code)
-        setName(list[0].name)
-        setFolder(list[0].folder)
-        setExecution(null)
-        if (list[0].lastExecution) loadExecution(list[0].lastExecution.id)
+        openTest(list[0])
       } else {
         setSelectedId(null)
       }
@@ -362,12 +420,16 @@ export default function HubTestsSection({
   const folders = useMemo(() => {
     const q = search.trim().toLowerCase()
     const list = (tests || []).filter(
-      (t) => !q || t.name.toLowerCase().includes(q) || t.folder.toLowerCase().includes(q) || t.tags.some((g) => g.toLowerCase().includes(q))
+      (t) =>
+        (!tagFilter || t.tags.includes(tagFilter)) &&
+        (!q || t.name.toLowerCase().includes(q) || t.folder.toLowerCase().includes(q) || t.tags.some((g) => g.toLowerCase().includes(q)))
     )
     const map = new Map<string, HubTest[]>()
     for (const t of list) map.set(t.folder || UNFILED, [...(map.get(t.folder || UNFILED) || []), t])
     return [...map.entries()].sort(([a], [b]) => (a === UNFILED ? 1 : b === UNFILED ? -1 : a.localeCompare(b)))
-  }, [tests, search])
+  }, [tests, search, tagFilter])
+  const allTags = useMemo(() => [...new Set((tests || []).flatMap((t) => t.tags))].sort(), [tests])
+  const flakyCount = (tests || []).filter((t) => t.flaky).length
   const folderNames = useMemo(() => [...new Set((tests || []).map((t) => t.folder).filter(Boolean))].sort(), [tests])
   const errors = issues.filter((i) => i.severity === "error").length
   const warnings = issues.filter((i) => i.severity === "warning").length
@@ -403,6 +465,32 @@ export default function HubTestsSection({
               className="h-9 w-full rounded-md border bg-muted/50 pl-8 pr-2 text-sm outline-none focus:border-primary focus:bg-card"
             />
           </div>
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1">
+              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+              {allTags.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setTagFilter(tagFilter === g ? null : g)}
+                  aria-pressed={tagFilter === g}
+                  className={`rounded-full border px-2 py-0.5 text-[11px] ${tagFilter === g ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          )}
+          {tagFilter && (
+            <Button size="sm" variant="outline" className="w-full" onClick={() => run({ kind: "tag", tag: tagFilter })} disabled={starting}>
+              <PlayCircle className="h-4 w-4" /> Run tests tagged “{tagFilter}”
+            </Button>
+          )}
+          {flakyCount > 0 && (
+            <p className="flex items-center gap-1 text-[11px] text-amber-700">
+              <AlertTriangle className="h-3 w-3" /> {flakyCount} flaky test{flakyCount === 1 ? "" : "s"} — results flip between runs
+            </p>
+          )}
         </div>
         <div className="flex-1 overflow-y-auto p-2">
           {folders.length === 0 && <p className="p-3 text-sm text-muted-foreground">No tests match “{search}”.</p>}
@@ -448,6 +536,14 @@ export default function HubTestsSection({
                           <XCircle className="h-3.5 w-3.5 shrink-0 text-rose-600" />
                         )}
                         <span className="flex-1 truncate">{t.name}</span>
+                        {t.flaky && (
+                          <span
+                            className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700"
+                            title={`Flaky: ${t.flips ?? 0} pass/fail flips in the last ${t.history?.length ?? 0} runs, or it passed only on retry`}
+                          >
+                            Flaky
+                          </span>
+                        )}
                         {t.type === "API" && <span className="rounded bg-muted px-1 text-[10px] font-semibold text-muted-foreground">API</span>}
                         {t.shared && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
                       </button>
@@ -509,9 +605,35 @@ export default function HubTestsSection({
                 <Button size="sm" variant="ghost" onClick={duplicate} title="Duplicate">
                   <Copy className="h-4 w-4" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={remove} title="Delete" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+                <Button size="sm" variant="ghost" onClick={() => setPendingDelete(true)} title="Delete" className="text-rose-600 hover:bg-rose-50 hover:text-rose-700">
                   <Trash2 className="h-4 w-4" />
                 </Button>
+              </div>
+
+              {/* tags + history */}
+              <div className="flex flex-wrap items-center gap-3 border-b px-3 py-2 text-xs">
+                <label className="flex min-w-[220px] flex-1 items-center gap-1.5 text-muted-foreground">
+                  <Tag className="h-3.5 w-3.5" />
+                  <input
+                    value={tagsText}
+                    onChange={(e) => {
+                      setTagsText(e.target.value)
+                      setDirty(true)
+                    }}
+                    placeholder="Tags, e.g. smoke, regression"
+                    aria-label="Tags"
+                    className="h-7 flex-1 rounded-md border px-2 text-xs text-foreground outline-none focus:border-primary"
+                  />
+                </label>
+                {selected.history && selected.history.length > 0 && (
+                  <span className="flex items-center gap-1 text-muted-foreground" title="Last runs, newest on the left">
+                    {selected.history.map((h, i) => (
+                      <span key={i} className={`h-2.5 w-2.5 rounded-full ${h === "Passed" ? "bg-emerald-500" : "bg-rose-500"}`} />
+                    ))}
+                    <span className="ml-1">{selected.passRate}% pass</span>
+                    {selected.flaky && <span className="ml-1 font-medium text-amber-700">· flaky</span>}
+                  </span>
+                )}
               </div>
 
               {/* run bar */}
@@ -538,6 +660,19 @@ export default function HubTestsSection({
                 <button type="button" onClick={() => setTargetsOpen(true)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary" title="Grid, Docker and BrowserStack targets">
                   <Server className="h-3.5 w-3.5" /> Targets
                 </button>
+                {running && (
+                  <Button size="sm" variant="ghost" onClick={cancelRun} className="text-rose-600 hover:bg-rose-50 hover:text-rose-700">
+                    <Ban className="h-4 w-4" /> Cancel
+                  </Button>
+                )}
+                {runSettings && (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    title="Change in More tools → Data & Config. Retries can hide flaky failures: a test that passes on retry is reported as flaky."
+                  >
+                    Retries {runSettings.retries} · Workers {runSettings.workers}
+                  </span>
+                )}
 
                 <div className="relative ml-auto">
                   <Button size="sm" variant="outline" onClick={() => setSnippetsOpen((v) => !v)}>
@@ -619,6 +754,8 @@ export default function HubTestsSection({
               </div>
             </div>
 
+            <LinkedCases projectId={projectId} test={selected} onSave={saveLinks} />
+
             <div className="rounded-xl border bg-card p-4">
               <h3 className="mb-3 text-sm font-semibold text-foreground">Last run</h3>
               {execution ? (
@@ -662,6 +799,45 @@ export default function HubTestsSection({
           </>
         )}
       </section>
+
+      <ConfirmDialog
+        open={pendingSwitch !== null}
+        title={`Discard unsaved changes to “${selected?.name}”?`}
+        description="Your edits to this test haven't been saved."
+        confirmLabel="Discard changes"
+        variant="danger"
+        onConfirm={() => {
+          if (pendingSwitch) {
+            setDirty(false)
+            openTest(pendingSwitch)
+          }
+          setPendingSwitch(null)
+        }}
+        onCancel={() => setPendingSwitch(null)}
+      />
+      <ConfirmDialog
+        open={pendingRunAnyway}
+        title="Run with errors?"
+        description="The editor shows errors in this test, so the run will probably fail before any check runs."
+        confirmLabel="Run anyway"
+        onConfirm={() => {
+          setPendingRunAnyway(false)
+          run({ kind: "test" }, true)
+        }}
+        onCancel={() => setPendingRunAnyway(false)}
+      />
+      <ConfirmDialog
+        open={pendingDelete}
+        variant="danger"
+        title={`Delete “${selected?.name}”?`}
+        description="The test and its run history are deleted. Linked test cases are unlinked. This can't be undone."
+        confirmLabel="Delete test"
+        onConfirm={async () => {
+          setPendingDelete(false)
+          await remove()
+        }}
+        onCancel={() => setPendingDelete(false)}
+      />
 
       {creating && <NewTestDialog folders={folderNames} onCancel={() => setCreating(false)} onCreate={create} />}
       <ExecutionTargetsModal
@@ -757,6 +933,109 @@ function NewTestDialog({
           </Button>
         </div>
       </div>
+    </div>
+  )
+}
+
+const parseTags = (text: string) =>
+  Array.from(new Set(text.split(",").map((t) => t.trim()).filter((t) => t && t.length <= 40))).slice(0, 20)
+
+/**
+ * The manual test cases this script verifies. Linked cases take the script's
+ * latest result as their own, so automation shows in the test library and in
+ * BRD coverage.
+ */
+function LinkedCases({
+  projectId,
+  test,
+  onSave,
+}: {
+  projectId: string
+  test: HubTest
+  onSave: (ids: string[]) => Promise<void>
+}) {
+  const [picking, setPicking] = useState(false)
+  const [q, setQ] = useState("")
+  const [rows, setRows] = useState<{ id: string; title: string }[]>([])
+  const linked = test.linkedTestCases ?? []
+
+  useEffect(() => {
+    if (!picking) return
+    const t = setTimeout(async () => {
+      try {
+        const d = await api<{ rows: { id: string; title: string }[] }>(
+          `/api/projects/${projectId}/test-cases/browse?limit=20${q.trim() ? `&q=${encodeURIComponent(q.trim())}` : ""}`
+        )
+        setRows(d.rows)
+      } catch {}
+    }, 250)
+    return () => clearTimeout(t)
+  }, [picking, q, projectId])
+
+  if (test.shared) {
+    return (
+      <div className="rounded-xl border bg-card px-4 py-3 text-xs text-muted-foreground">
+        Shared examples can&apos;t be linked to test cases — duplicate it into this project first.
+      </div>
+    )
+  }
+
+  return (
+    <div className="rounded-xl border bg-card px-4 py-3">
+      <div className="flex items-center gap-2">
+        <Link2 className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold text-foreground">Verifies test cases</h3>
+        <span className="text-xs text-muted-foreground">Their last status follows this test&apos;s runs.</span>
+        <Button size="sm" variant="outline" className="ml-auto" onClick={() => setPicking((v) => !v)}>
+          {picking ? "Done" : "Link test case"}
+        </Button>
+      </div>
+      {linked.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {linked.map((c) => (
+            <span key={c.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs">
+              <a href={`/projects/${projectId}/test-cases?case=${c.id}`} className="max-w-[260px] truncate hover:text-primary hover:underline" title={c.title}>
+                {c.title}
+              </a>
+              <span className="text-muted-foreground">{c.lastStatus === "NotExecuted" ? "not run" : c.lastStatus.toLowerCase()}</span>
+              <button
+                type="button"
+                onClick={() => onSave(linked.filter((x) => x.id !== c.id).map((x) => x.id))}
+                className="text-muted-foreground hover:text-rose-600"
+                aria-label={`Unlink ${c.title}`}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {picking && (
+        <div className="mt-2 rounded-lg border bg-muted/40 p-2">
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search test cases…"
+            className="h-8 w-full rounded-md border bg-card px-2 text-xs outline-none focus:border-primary"
+          />
+          <div className="mt-1 max-h-48 overflow-y-auto">
+            {rows
+              .filter((r) => !linked.some((l) => l.id === r.id))
+              .map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => onSave([...linked.map((l) => l.id), r.id])}
+                  className="block w-full truncate rounded px-2 py-1.5 text-left text-xs hover:bg-primary/10"
+                >
+                  {r.title}
+                </button>
+              ))}
+            {rows.length === 0 && <p className="px-2 py-1.5 text-xs text-muted-foreground">No test cases found.</p>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

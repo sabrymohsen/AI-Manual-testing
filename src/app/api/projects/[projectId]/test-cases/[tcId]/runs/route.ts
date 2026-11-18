@@ -24,7 +24,7 @@ export async function GET(request: Request, { params }: { params: { projectId: s
 
   const limit = Math.min(Math.max(Number(new URL(request.url).searchParams.get("limit")) || 10, 1), 50)
 
-  const [auto, manual] = await Promise.all([
+  const [auto, manual, hub] = await Promise.all([
     prisma.testRun.findMany({
       where: { testCaseId: params.tcId },
       orderBy: { createdAt: "desc" },
@@ -67,6 +67,22 @@ export async function GET(request: Request, { params }: { params: { projectId: s
           take: 1,
           select: { stepNumber: true, actionDescription: true, actualResult: true, notes: true },
         },
+      },
+    }),
+    // Automation Hub runs of scripts linked to this case.
+    prisma.testExecution.findMany({
+      where: { script: { testCaseLinks: { some: { testCaseId: params.tcId } } }, status: { in: ["Passed", "Failed", "Cancelled"] } },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        status: true,
+        browser: true,
+        duration: true,
+        createdAt: true,
+        results: true,
+        triggeredByName: true,
+        script: { select: { name: true } },
       },
     }),
   ])
@@ -112,6 +128,23 @@ export async function GET(request: Request, { params }: { params: { projectId: s
       bugCount: null as number | null,
       href: `/projects/${params.projectId}/manual-sessions/${m.session.id}`,
     })),
+    ...hub.map((h) => {
+      const fail = Array.isArray(h.results) ? (h.results as any[]).find((r) => ["failed", "timedOut", "interrupted"].includes(r.status)) : null
+      return {
+        id: h.id,
+        kind: "Automated" as const,
+        status: h.status,
+        name: `Automation Hub: ${h.script?.name ?? "script"}`,
+        environment: null as string | null,
+        browser: h.browser ?? "",
+        viewport: "",
+        at: new Date(h.createdAt.getTime() + (h.duration ?? 0)).toISOString(),
+        durationMs: h.duration ?? 0,
+        failedStep: fail ? { stepNumber: 0, action: String(fail.title), detail: fail.error?.message ? String(fail.error.message).split("\n")[0] : null } : null,
+        bugCount: null as number | null,
+        href: `/projects/${params.projectId}/automation-hub?tab=runs&run=${h.id}`,
+      }
+    }),
   ]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, limit)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { visibleExecutionIds } from "@/lib/hub-access"
 import * as fs from "fs"
 
 export const dynamic = "force-dynamic"
@@ -18,6 +19,8 @@ export async function GET(request: NextRequest) {
     const q = sp.get("q")?.trim()
 
     const where: any = { fileType: "video" }
+    const visible = await visibleExecutionIds(auth.session!.user.id)
+    if (visible !== "all") where.testExecutionId = { in: visible }
     if (status && status !== "all") where.status = status
 
     let videos = await prisma.evidenceFile.findMany({ where, orderBy: { createdAt: "desc" } })

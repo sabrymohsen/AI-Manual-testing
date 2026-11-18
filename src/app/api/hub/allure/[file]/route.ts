@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import * as fs from "fs"
 import * as path from "path"
 
@@ -12,8 +13,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { file: string } }
 ) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide data with no project attached: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   const fileName = decodeURIComponent(params.file)
 

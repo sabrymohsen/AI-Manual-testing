@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { pngDimensions } from "@/lib/hub-visual"
+import { requireVisualBaseline } from "@/lib/hub-access"
+import { pngDimensions, inVisualStore } from "@/lib/hub-visual"
 import * as fs from "fs"
 
 export const dynamic = "force-dynamic"
@@ -10,18 +10,20 @@ export const dynamic = "force-dynamic"
 // approve: promote the current image to be the new baseline.
 // reject:  keep the baseline, mark the comparison rejected (test failed).
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const comparison = await prisma.visualComparison.findUnique({ where: { id: params.id } })
+  if (!comparison) return NextResponse.json({ error: "Comparison not found" }, { status: 404 })
+  const access = await requireVisualBaseline(comparison.baselineId, "write")
+  if (!access.ok) {
+    // Don't reveal that the comparison exists to someone outside the project
+    return access.response.status === 404 ? NextResponse.json({ error: "Comparison not found" }, { status: 404 }) : access.response
+  }
+  const baseline = access.baseline
 
   try {
     const { action } = await request.json().catch(() => ({}))
-    const comparison = await prisma.visualComparison.findUnique({ where: { id: params.id } })
-    if (!comparison) return NextResponse.json({ error: "Comparison not found" }, { status: 404 })
 
     if (action === "approve") {
-      const baseline = await prisma.visualBaseline.findUnique({ where: { id: comparison.baselineId } })
-      if (!baseline) return NextResponse.json({ error: "Baseline not found" }, { status: 404 })
-      if (!fs.existsSync(comparison.currentFilePath)) {
+      if (!inVisualStore(comparison.currentFilePath) || !inVisualStore(baseline.filePath) || !fs.existsSync(comparison.currentFilePath)) {
         return NextResponse.json({ error: "Current image missing" }, { status: 404 })
       }
       // Promote current → baseline (overwrite the baseline PNG in place)

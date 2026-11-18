@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic"
 // GET /api/hub/config/env/audit — recent access/change audit trail for env vars
 // and secrets (create / update / delete / reveal).
 export async function GET() {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // The secrets audit trail spans every project: admins only.
+  const access = await requireHubAdmin()
+  if (!access.ok) return access.response
 
   const rows = await prisma.auditLog.findMany({
     where: { action: { startsWith: "secret." } },

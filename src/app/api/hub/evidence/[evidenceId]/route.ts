@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { executionVisibleTo } from "@/lib/hub-access"
 import { EXECUTION_LOG_SENTINEL } from "@/lib/hub-evidence"
 import * as fs from "fs"
 
@@ -19,6 +20,10 @@ export async function GET(
     const item = await prisma.evidenceFile.findUnique({ where: { id: params.evidenceId } })
     if (!item) {
       return NextResponse.json({ error: "Evidence not found" }, { status: 404 })
+    }
+    // Only members of the run's project may see it.
+    if (item && !(await executionVisibleTo(auth.session!.user.id, item.testExecutionId))) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
     const [execution, siblings] = await Promise.all([

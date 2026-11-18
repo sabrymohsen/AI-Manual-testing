@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { executionVisibleTo } from "@/lib/hub-access"
 import { findTraceForTest, resolveTraceZip, unzipEntry, sanitizeJsonControlChars } from "@/lib/hub-traces"
 
 export const dynamic = "force-dynamic"
@@ -15,6 +16,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   try {
     const video = await prisma.evidenceFile.findUnique({ where: { id: params.id } })
     if (!video) return NextResponse.json({ error: "Video not found" }, { status: 404 })
+    // Only members of the run's project may see it.
+    if (video && !(await executionVisibleTo(auth.session!.user.id, video.testExecutionId))) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
+    }
 
     const exec = await prisma.testExecution.findUnique({
       where: { id: video.testExecutionId },

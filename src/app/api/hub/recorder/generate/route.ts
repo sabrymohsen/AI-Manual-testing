@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAnyHubWriter } from "@/lib/hub-access"
 import { generatePlaywrightSpec } from "@/lib/recorder-codegen"
 import { getActiveSession } from "@/lib/hub-recorder"
 
@@ -9,8 +9,9 @@ export const dynamic = "force-dynamic"
 // Accepts an edited actions array (rows may have been deleted in review); falls
 // back to the active session's actions when none are provided.
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // The recorder drives a browser on the server: project writers only.
+  const access = await requireAnyHubWriter()
+  if (!access.ok) return access.response
 
   try {
     const body = await request.json().catch(() => ({}))

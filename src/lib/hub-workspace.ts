@@ -15,8 +15,10 @@
  *   <root>/hub-workspace/
  *     playwright.config.ts    generated, see writeConfig
  *     tests/<Script>.spec.js   one file per hub test (Playwright JavaScript)
- *     test-results/            the run in progress: traces, video, shots, report.json
+ *     active/<executionId>/    a run in progress — its own config, spec and
+ *                              test-results/, so several runs can go at once
  *     runs/<executionId>/      each finished run's test-results, kept for its evidence
+ *     test-results/            legacy single-run folder (older runs only)
  */
 import * as fs from "fs"
 import * as path from "path"
@@ -33,6 +35,9 @@ export const CONFIG_PATH = path.join(WORKSPACE_ROOT, "playwright.config.ts")
  * run's folder is moved here when it finishes instead.
  */
 export const RUNS_DIR = path.join(WORKSPACE_ROOT, "runs")
+
+/** In-progress runs, one isolated folder each. */
+export const ACTIVE_DIR = path.join(WORKSPACE_ROOT, "active")
 
 /** Where a finished run's artifacts live. */
 export function runDir(executionId: string): string {
@@ -91,8 +96,8 @@ export interface RunConfigOptions {
  * artifact the Trace Viewer already knows how to read — the format the SHAFT
  * integration was approximating.
  */
-export function writeConfig(opts: RunConfigOptions): void {
-  fs.mkdirSync(TESTS_DIR, { recursive: true })
+export function writeConfig(opts: RunConfigOptions, dir: string = WORKSPACE_ROOT): void {
+  fs.mkdirSync(path.join(dir, "tests"), { recursive: true })
 
   // Saved settings from Data & Config → Properties. Read lazily and by require
   // path rather than a top-level import, because hub-properties imports this
@@ -172,7 +177,47 @@ ${optional.join("\n")}
   ],
 })
 `
-  fs.writeFileSync(CONFIG_PATH, config, "utf8")
+  fs.writeFileSync(path.join(dir, "playwright.config.ts"), config, "utf8")
+}
+
+/**
+ * An isolated folder for one run: its own config, spec and test-results.
+ * Every run used to share tests/, playwright.config.ts and test-results/, so
+ * only one could run at a time across the whole server.
+ */
+export function prepareRunWorkspace(
+  executionId: string,
+  script: { name: string; code: string },
+  config: RunConfigOptions
+): { dir: string; resultsDir: string; specRelPath: string } {
+  const dir = path.join(ACTIVE_DIR, executionId.replace(/[^A-Za-z0-9-]/g, ""))
+  fs.rmSync(dir, { recursive: true, force: true })
+  fs.mkdirSync(path.join(dir, "tests"), { recursive: true })
+  writeConfig(config, dir)
+  const file = path.join(dir, "tests", specFileName(script.name))
+  fs.writeFileSync(file, script.code, "utf8")
+  const resultsDir = path.join(dir, "test-results")
+  fs.mkdirSync(resultsDir, { recursive: true })
+  return { dir, resultsDir, specRelPath: path.relative(dir, file) }
+}
+
+/** Moves a finished run's results to runs/<executionId>/ and removes its work folder. */
+export function finishRunWorkspace(executionId: string, dir: string): string {
+  const dest = runDir(executionId)
+  const results = path.join(dir, "test-results")
+  fs.mkdirSync(RUNS_DIR, { recursive: true })
+  fs.rmSync(dest, { recursive: true, force: true })
+  try {
+    fs.renameSync(results, dest)
+  } catch {
+    try {
+      fs.cpSync(results, dest, { recursive: true })
+    } catch {
+      fs.mkdirSync(dest, { recursive: true })
+    }
+  }
+  fs.rmSync(dir, { recursive: true, force: true })
+  return dest
 }
 
 /** Write a script's code as a spec and return its path relative to the root. */

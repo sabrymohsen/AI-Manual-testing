@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { writeDataFileToDisk, removeDataFileFromDisk, inferFields } from "@/lib/hub-testdata"
 
 export const dynamic = "force-dynamic"
@@ -22,8 +23,9 @@ export async function GET(_request: NextRequest, { params }: { params: { fileId:
 
 // PUT /api/hub/test-data/{id} — update content and/or linked scripts
 export async function PUT(request: NextRequest, { params }: { params: { fileId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json()
@@ -56,8 +58,9 @@ export async function PUT(request: NextRequest, { params }: { params: { fileId: 
 
 // DELETE /api/hub/test-data/{id}
 export async function DELETE(_request: NextRequest, { params }: { params: { fileId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const existing = await prisma.testDataFile.findUnique({ where: { id: params.fileId } })

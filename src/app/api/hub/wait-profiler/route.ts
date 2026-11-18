@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { buildWaitProfiles } from "@/lib/hub-waits"
 
 export const dynamic = "force-dynamic"
@@ -7,8 +8,9 @@ export const dynamic = "force-dynamic"
 // GET /api/hub/wait-profiler — per-test auto-wait profiles + suite summary,
 // derived from real shaft-trace action durations.
 export async function GET() {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide data with no project attached: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const data = await buildWaitProfiles()

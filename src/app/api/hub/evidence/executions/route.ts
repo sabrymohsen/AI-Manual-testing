@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { visibleExecutionIds } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
 
@@ -11,7 +12,10 @@ export async function GET(request: NextRequest) {
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
+    // Only runs in the caller's projects.
+    const visible = await visibleExecutionIds(auth.session!.user.id)
     const grouped = await prisma.evidenceFile.groupBy({
+      ...(visible === "all" ? {} : { where: { testExecutionId: { in: visible } } }),
       by: ["testExecutionId"],
       _count: { id: true }
     })

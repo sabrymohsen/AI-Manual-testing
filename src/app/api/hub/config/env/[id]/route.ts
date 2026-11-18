@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { canManageEnvVar } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 import { encryptSecret } from "@/lib/crypto"
 
@@ -12,6 +13,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
   try {
     const existing = await prisma.environmentVariable.findUnique({ where: { id: params.id } })
+    if (existing && !(await canManageEnvVar(auth.session!.user.id, existing, "write"))) {
+      return NextResponse.json({ error: "You can\'t change this variable" }, { status: 403 })
+    }
     if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
     const body = await request.json().catch(() => ({}))
@@ -48,6 +52,12 @@ export async function DELETE(_request: NextRequest, { params }: { params: { id: 
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const existing = await prisma.environmentVariable.findUnique({ where: { id: params.id } })
+
+  if (existing && !(await canManageEnvVar(auth.session!.user.id, existing, "write"))) {
+
+    return NextResponse.json({ error: "You can\'t change this variable" }, { status: 403 })
+
+  }
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   await prisma.environmentVariable.delete({ where: { id: params.id } })

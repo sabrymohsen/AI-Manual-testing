@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
 
 // PUT /api/hub/targets/{id} — edit an execution target
 export async function PUT(request: NextRequest, { params }: { params: { targetId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json()
@@ -43,8 +45,9 @@ export async function PUT(request: NextRequest, { params }: { params: { targetId
 
 // DELETE /api/hub/targets/{id}
 export async function DELETE(_request: NextRequest, { params }: { params: { targetId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     await prisma.executionTarget.delete({ where: { id: params.targetId } })

@@ -1,32 +1,20 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubExecution } from "@/lib/hub-access"
+import { queuePosition } from "@/lib/hub-runner"
 
 export const dynamic = "force-dynamic"
 
-// GET /api/hub/executions/{id} — get execution results
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { executionId: string } }
-) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
-
-  try {
-    const execution = await prisma.testExecution.findUnique({
-      where: { id: params.executionId },
-      include: {
-        script: { select: { id: true, name: true, type: true } }
-      }
-    })
-
-    if (!execution) {
-      return NextResponse.json({ error: "Execution not found" }, { status: 404 })
-    }
-
-    return NextResponse.json({ execution })
-  } catch (err: any) {
-    console.error("GET hub execution error:", err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
-  }
+// GET /api/hub/executions/{id} — one run with its log and results, plus its
+// place in the queue while it waits. Members of the run's project only.
+export async function GET(_request: NextRequest, { params }: { params: { executionId: string } }) {
+  const access = await requireHubExecution(params.executionId, "read")
+  if (!access.ok) return access.response
+  const { script, ...execution } = access.execution
+  return NextResponse.json({
+    execution: {
+      ...execution,
+      script: script ? { id: script.id, name: script.name, type: script.type, folder: script.folder } : null,
+      queuePosition: execution.status === "Queued" ? queuePosition(execution.id) : null,
+    },
+  })
 }

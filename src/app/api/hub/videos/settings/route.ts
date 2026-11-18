@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { readVideoSettings, writeVideoSettings, computeVideoStorage } from "@/lib/hub-video"
 
 export const dynamic = "force-dynamic"
@@ -20,8 +21,9 @@ export async function GET() {
 
 // PUT /api/hub/videos/settings — persist recording config to custom.properties
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json().catch(() => ({}))

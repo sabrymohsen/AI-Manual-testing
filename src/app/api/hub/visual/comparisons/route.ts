@@ -1,30 +1,40 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
-import { copyPngInto, saveDataUrlPng, computeDiff, toPublicUrl } from "@/lib/hub-visual"
+import { requireHubProject, requireVisualBaseline, evidenceInProject } from "@/lib/hub-access"
+import { copyPngInto, saveDataUrlPng, computeDiff, baselineImageUrl, comparisonImageUrl } from "@/lib/hub-visual"
 import { randomUUID } from "crypto"
 import * as fs from "fs"
+import * as path from "path"
 
 export const dynamic = "force-dynamic"
 
 function hydrate(c: any, baseline?: any) {
   return {
     ...c,
-    currentUrl: c.currentFilePath ? toPublicUrl(c.currentFilePath) : null,
-    diffUrl: c.diffFilePath ? toPublicUrl(c.diffFilePath) : null,
-    baselineUrl: baseline ? toPublicUrl(baseline.filePath) : c.baseline ? toPublicUrl(c.baseline.filePath) : null
+    currentUrl: c.currentFilePath ? comparisonImageUrl(c, "current") : null,
+    diffUrl: c.diffFilePath ? comparisonImageUrl(c, "diff") : null,
+    baselineUrl: baseline ? baselineImageUrl(baseline) : c.baseline ? baselineImageUrl(c.baseline) : null
   }
 }
 
-// GET /api/hub/visual/comparisons[?baselineId=] — comparison history
+// GET /api/hub/visual/comparisons?baselineId= | ?projectId= — comparison history
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const sp = request.nextUrl.searchParams
+  const baselineId = sp.get("baselineId")
+  let where: any
+  if (baselineId) {
+    const access = await requireVisualBaseline(baselineId, "read")
+    if (!access.ok) return access.response
+    where = { baselineId }
+  } else {
+    const access = await requireHubProject(sp.get("projectId"), "read")
+    if (!access.ok) return access.response
+    where = { baseline: { projectId: access.projectId } }
+  }
 
   try {
-    const baselineId = request.nextUrl.searchParams.get("baselineId") || undefined
     const comparisons = await prisma.visualComparison.findMany({
-      where: baselineId ? { baselineId } : {},
+      where,
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { baseline: true }
@@ -40,15 +50,15 @@ export async function GET(request: NextRequest) {
 // body: { baselineId, current:{type:"evidence"|"upload", evidenceId|dataUrl},
 //         threshold, colorSensitivity, ignoreAntiAliasing, ignoreRegions }
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  const body = await request.json().catch(() => ({}))
+  const access = await requireVisualBaseline(body.baselineId, "write")
+  if (!access.ok) return access.response
+  const baseline = access.baseline
 
   try {
-    const body = await request.json().catch(() => ({}))
-    const { baselineId, current, threshold, colorSensitivity, ignoreAntiAliasing, ignoreRegions } = body
+    const { current, threshold, colorSensitivity, ignoreAntiAliasing, ignoreRegions } = body
 
-    const baseline = await prisma.visualBaseline.findUnique({ where: { id: baselineId } })
-    if (!baseline || !fs.existsSync(baseline.filePath)) {
+    if (!fs.existsSync(baseline.filePath)) {
       return NextResponse.json({ error: "Baseline not found" }, { status: 404 })
     }
 
@@ -56,7 +66,7 @@ export async function POST(request: NextRequest) {
     const baseName = randomUUID()
     let currentPath: string
     if (current?.type === "evidence") {
-      const ev = await prisma.evidenceFile.findUnique({ where: { id: current.evidenceId } })
+      const ev = baseline.projectId ? await evidenceInProject(String(current.evidenceId || ""), baseline.projectId) : null
       if (!ev || !fs.existsSync(ev.filePath)) {
         return NextResponse.json({ error: "Current screenshot not found" }, { status: 404 })
       }
@@ -68,7 +78,7 @@ export async function POST(request: NextRequest) {
     }
 
     const thresholdPct = typeof threshold === "number" ? threshold : 5
-    const diffOutPath = currentPath.replace("/current/", "/diffs/").replace(/\.png$/, "-diff.png")
+    const diffOutPath = path.join(path.dirname(path.dirname(currentPath)), "diffs", path.basename(currentPath)).replace(/\.png$/, "-diff.png")
 
     const result = computeDiff(baseline.filePath, currentPath, diffOutPath, {
       colorSensitivity,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { AI_PROVIDERS, AiProvider, testProviderConnection } from "@/lib/hub-ai-providers"
 
 export const dynamic = "force-dynamic"
@@ -9,8 +10,9 @@ export const dynamic = "force-dynamic"
 // Real reachability + credential check. Uses the provided key, else the saved
 // key, else the env fallback (handled inside testProviderConnection).
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   const body = await request.json().catch(() => ({}))
   const provider = String(body.provider || "") as AiProvider

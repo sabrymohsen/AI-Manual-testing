@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { executionVisibleTo } from "@/lib/hub-access"
 import { buildBundleInfo } from "@/lib/hub-diagnostics"
 
 export const dynamic = "force-dynamic"
@@ -16,6 +17,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const diagnosis = await prisma.diagnosis.findUnique({ where: { id: params.id } })
     if (!diagnosis) {
       return NextResponse.json({ error: "Diagnosis not found" }, { status: 404 })
+    }
+    // Only members of the run's project may see it.
+    if (diagnosis && !(await executionVisibleTo(auth.session!.user.id, diagnosis.testExecutionId))) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
     const bundle = await buildBundleInfo(diagnosis.testName)

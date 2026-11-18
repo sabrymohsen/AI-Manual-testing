@@ -18,6 +18,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/storage/") ||
     pathname.startsWith("/api/exports/") ||
+    // CI pipelines call these with a project token instead of a session
+    // cookie; the routes verify the token themselves (src/lib/hub-ci.ts).
+    pathname.startsWith("/api/hub/ci/") ||
     // Public annotation share links (page + their statically-served images)
     pathname.startsWith("/share/") ||
     pathname.startsWith("/uploads/shares/")

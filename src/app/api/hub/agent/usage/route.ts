@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { getAiPolicy } from "@/lib/hub-ai-providers"
 
 export const dynamic = "force-dynamic"
@@ -9,8 +10,9 @@ export const dynamic = "force-dynamic"
 // daily series (last 30 days), rolling day/week/month totals, and a per-provider
 // breakdown. All derived from real AiUsageEvent rows.
 export async function GET() {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Logs across every user and project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   const now = new Date()
   const dayStart = new Date(now)

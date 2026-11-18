@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { executionVisibleTo } from "@/lib/hub-access"
 
 export async function POST(
   request: NextRequest,
@@ -16,6 +17,10 @@ export async function POST(
 
     if (!item) {
       return NextResponse.json({ error: "Diagnosis not found" }, { status: 404 })
+    }
+    // Only members of the run's project may see it.
+    if (item && !(await executionVisibleTo(auth.session!.user.id, item.testExecutionId))) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 })
     }
 
     // Get the first active project as fallback

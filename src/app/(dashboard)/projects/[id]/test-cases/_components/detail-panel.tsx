@@ -510,7 +510,8 @@ function RunsTab({ projectId, testCaseId }: { projectId: string; testCaseId: str
             </p>
             {r.failedStep && (
               <p className="mt-1.5 rounded bg-red-500/5 px-2 py-1 text-[11px] leading-snug text-red-700 dark:text-red-400">
-                Failed at step {r.failedStep.stepNumber}: {r.failedStep.action}
+                {r.failedStep.stepNumber > 0 ? `Failed at step ${r.failedStep.stepNumber}: ` : "Failed: "}
+                {r.failedStep.action}
                 {r.failedStep.detail && <span className="block opacity-80">{r.failedStep.detail}</span>}
               </p>
             )}

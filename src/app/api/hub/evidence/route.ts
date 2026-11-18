@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { visibleExecutionIds } from "@/lib/hub-access"
 import { EXECUTION_LOG_SENTINEL } from "@/lib/hub-evidence"
 import * as fs from "fs"
 
@@ -23,6 +24,8 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(48, Number(sp.get("pageSize")) || 24)
 
     const where: any = {}
+    const visible = await visibleExecutionIds(auth.session!.user.id)
+    if (visible !== "all") where.testExecutionId = { in: visible }
     if (type && type !== "all") where.fileType = type
     if (status && status !== "all") where.status = status
     if (tag) where.tags = { has: tag }

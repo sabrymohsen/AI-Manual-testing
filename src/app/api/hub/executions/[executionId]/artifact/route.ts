@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import * as fs from "fs"
 import * as path from "path"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubExecution } from "@/lib/hub-access"
 import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 
 export const dynamic = "force-dynamic"
@@ -19,8 +19,9 @@ const TYPES: Record<string, string> = {
 // Serves one test's screenshot, video or trace from the run's results. Only
 // paths recorded on the run and inside the hub workspace are ever served.
 export async function GET(request: NextRequest, { params }: { params: { executionId: string } }) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Only members of the run's project may see it.
+  const access = await requireHubExecution(params.executionId, "read")
+  if (!access.ok) return access.response
 
   const index = Number(request.nextUrl.searchParams.get("test"))
   const kind = request.nextUrl.searchParams.get("kind") || ""

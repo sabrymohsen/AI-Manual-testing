@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { executionVisibleTo } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
 
@@ -25,6 +26,10 @@ export async function GET(request: NextRequest) {
           where: { scriptId: scriptId! },
           orderBy: { createdAt: "desc" }
         })
+    // Only results from runs in the caller's projects.
+    if (result && !(await executionVisibleTo(auth.session!.user.id, result.testExecutionId))) {
+      return NextResponse.json({ result: null })
+    }
 
     return NextResponse.json({ result })
   } catch (err: any) {

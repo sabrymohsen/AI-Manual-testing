@@ -12,6 +12,8 @@ const nextConfig = {
   // doesn't need it: standalone copied 2.7 GB of the repo into the build.
   output: process.env.NEXT_DIST_DIR ? undefined : "standalone",
   experimental: {
+    // Enables src/instrumentation.ts (starts the Automation Hub scheduler).
+    instrumentationHook: true,
     // Next 14's key. (Next 15 renames this to top-level `serverExternalPackages`.)
     // pdf-parse pulls in pdfjs-dist, which webpack can't bundle (it crashes at
     // load with "Object.defineProperty called on non-object", taking down every

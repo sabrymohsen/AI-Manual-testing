@@ -18,6 +18,7 @@ import type { TestCaseStatus, ExecutionType } from "@prisma/client"
  *   2. a ManualSessionCase completes              → recalcTestCaseRollup
  *   3. a BugReport is created / closed / reopened → recalcOpenBugCount
  *   4. the backfill script                        → scripts/backfill-test-suites.ts
+ *   5. an Automation Hub run of a linked script    → hub-runner (recalcMany)
  *
  * All functions are best-effort: they never throw into the caller's request
  * path. A stale rollup is a cosmetic problem; a failed test run because the
@@ -64,7 +65,7 @@ export function toCaseStatus(raw: string | null | undefined): TestCaseStatus | n
  */
 export async function recalcTestCaseRollup(testCaseId: string): Promise<void> {
   try {
-    const [auto, manual] = await Promise.all([
+    const [auto, manual, hub] = await Promise.all([
       prisma.testRun.findFirst({
         where: { testCaseId, completedAt: { not: null } },
         orderBy: { completedAt: "desc" },
@@ -74,6 +75,15 @@ export async function recalcTestCaseRollup(testCaseId: string): Promise<void> {
         where: { testCaseId, completedAt: { not: null } },
         orderBy: { completedAt: "desc" },
         select: { id: true, status: true, completedAt: true },
+      }),
+      // Automation Hub runs of scripts linked to this case.
+      prisma.testExecution.findFirst({
+        where: {
+          status: { in: ["Passed", "Failed"] },
+          script: { testCaseLinks: { some: { testCaseId } } },
+        },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, status: true, createdAt: true, duration: true },
       }),
     ])
 
@@ -88,6 +98,11 @@ export async function recalcTestCaseRollup(testCaseId: string): Promise<void> {
       winner = { status: auto.status, at: auto.completedAt, runId: auto.id, source: "Automated" }
     } else if (manual?.completedAt) {
       winner = { status: manual.status, at: manual.completedAt, runId: manual.id, source: "Manual" }
+    }
+
+    if (hub) {
+      const at = new Date(hub.createdAt.getTime() + (hub.duration ?? 0))
+      if (!winner || at > winner.at) winner = { status: hub.status, at, runId: hub.id, source: "Automated" }
     }
 
     const mapped = winner ? toCaseStatus(winner.status) : null

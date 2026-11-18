@@ -1,13 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { visibleExecutionIds } from "@/lib/hub-access"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
   if (auth.error) return unauthorizedResponse(auth.error)
+  // Only diagnoses of runs in the caller's projects.
+  const visible = await visibleExecutionIds(auth.session!.user.id)
+  const visibleWhere = visible === "all" ? {} : { testExecutionId: { in: visible } }
 
   try {
-    const items = await prisma.diagnosis.findMany()
+    const items = await prisma.diagnosis.findMany({ where: visibleWhere })
 
     // Group items by errorMessage/signature
     const groups: Record<string, { signature: string; count: number; firstSeen: Date; lastSeen: Date; tests: string[] }> = {}

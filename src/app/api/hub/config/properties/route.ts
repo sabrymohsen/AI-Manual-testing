@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireHubAdmin } from "@/lib/hub-access"
 import { prisma } from "@/lib/db"
 import {
   PROPERTY_CATALOG,
@@ -62,8 +63,9 @@ export async function GET() {
 // Validates each value against the catalog, writes them to custom.properties,
 // and records a PropertyHistory entry + ShaftProperty row per change.
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth()
-  if (auth.error) return unauthorizedResponse(auth.error)
+  // Workspace-wide setting shared by every project: admins only.
+  const auth = await requireHubAdmin()
+  if (!auth.ok) return auth.response
 
   try {
     const body = await request.json().catch(() => ({}))
