@@ -6,8 +6,9 @@ import { resolveProjectRole } from "@/lib/api-guards"
 /**
  * Load a BRD and resolve the caller's role on its project. Pass `manage: true`
  * to require edit rights (canManageBrds); otherwise any project member may view.
+ * `unlocked: true` also refuses when the BRD is Final (locked).
  */
-export async function requireBrdAccess(brdId: string, opts: { manage?: boolean } = {}) {
+export async function requireBrdAccess(brdId: string, opts: { manage?: boolean; unlocked?: boolean } = {}) {
   const session = await getSession()
   if (!session) return { error: "Not authenticated", status: 401 as const, brd: null, resolved: null, session: null }
 
@@ -21,6 +22,9 @@ export async function requireBrdAccess(brdId: string, opts: { manage?: boolean }
   }
   if (opts.manage && !resolved.permissions.canManageBrds) {
     return { error: "Missing permission: canManageBrds", status: 403 as const, brd: null, resolved: null, session: null }
+  }
+  if (opts.unlocked && brd.status === "Final") {
+    return { error: "This BRD is Final and locked. Change its status first.", status: 403 as const, brd: null, resolved: null, session: null }
   }
   return { error: null, status: 200 as const, brd, resolved, session }
 }
@@ -138,4 +142,19 @@ export function serializeBrd(brd: any, boardKey?: string | null) {
       createdAt: a.createdAt,
     })),
   }
+}
+
+/**
+ * Access for test-design work on a BRD — tracking requirements, linking and
+ * generating test cases. Allowed for BRD managers AND for anyone who can write
+ * test cases (testers usually can't manage BRDs, but this is their job).
+ */
+export async function requireBrdTestAccess(brdId: string) {
+  const access = await requireBrdAccess(brdId)
+  if (access.error) return access
+  const p = access.resolved!.permissions
+  if (!p.canManageBrds && !p.canCreateStories) {
+    return { error: "Missing permission: canCreateStories", status: 403 as const, brd: null, resolved: null, session: null }
+  }
+  return access
 }

@@ -13,8 +13,16 @@ import {
   brdAudit,
   serializeBrd,
 } from "@/lib/brd/server"
+import { sniffBrdType, extractTextFromBuffer, ensureVersionText } from "@/lib/brd/content"
+import { purgeExpiredBrds, TRASH_DAYS } from "@/lib/brd/lifecycle"
 
-// GET /api/projects/:projectId/brds?search=&type=&status=&uploader=&sort=&includeArchived=
+/**
+ * GET /api/projects/:projectId/brds?search=&type=&status=&uploader=&sort=&includeArchived=&trash=
+ *
+ * `search` matches the name OR the text of the current version (full-text),
+ * and returns a snippet around the first hit. `trash=true` lists deleted BRDs
+ * still inside the 30-day window. Expired trash is purged here.
+ */
 export async function GET(request: Request, { params }: { params: { projectId: string } }) {
   const auth = await requireProjectMember(params.projectId)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
@@ -26,29 +34,91 @@ export async function GET(request: Request, { params }: { params: { projectId: s
   const uploader = url.searchParams.get("uploader")
   const sort = url.searchParams.get("sort") || "updated"
   const includeArchived = url.searchParams.get("includeArchived") === "true"
+  const trash = url.searchParams.get("trash") === "true"
 
-  const where: any = { projectId: params.projectId, isDeleted: false }
-  if (search) where.name = { contains: search, mode: "insensitive" }
-  if (type) where.fileType = type
-  if (status) where.status = status
-  else if (!includeArchived) where.status = { not: "Archived" }
-  if (uploader) where.uploaderId = uploader
+  await purgeExpiredBrds(params.projectId).catch((e) => console.error("BRD purge failed:", e))
 
   const orderBy =
     sort === "name" ? { name: "asc" as const }
     : sort === "created" ? { createdAt: "desc" as const }
     : { updatedAt: "desc" as const }
 
-  const [project, brds] = await Promise.all([
-    prisma.project.findUnique({ where: { id: params.projectId }, select: { boardKey: true } }),
+  const project = await prisma.project.findUnique({ where: { id: params.projectId }, select: { boardKey: true } })
+
+  if (trash) {
+    const deleted = await prisma.brdDocument.findMany({
+      where: { projectId: params.projectId, isDeleted: true },
+      orderBy: { deletedAt: "desc" },
+      include: { _count: { select: { links: true, versions: true, annotations: true } } },
+    })
+    return NextResponse.json({
+      brds: deleted.map((b) => ({
+        ...serializeBrd(b, project?.boardKey),
+        deletedAt: b.deletedAt,
+        daysLeft: b.deletedAt
+          ? Math.max(0, TRASH_DAYS - Math.floor((Date.now() - b.deletedAt.getTime()) / 86_400_000))
+          : TRASH_DAYS,
+      })),
+    })
+  }
+
+  const where: any = { projectId: params.projectId, isDeleted: false }
+  if (type) where.fileType = type
+  if (status) where.status = status
+  else if (!includeArchived) where.status = { not: "Archived" }
+  if (uploader) where.uploaderId = uploader
+
+  // Full-text: fill in text for current versions that predate text extraction
+  // (a few per request), then match name OR current-version text.
+  const snippets = new Map<string, string>()
+  if (search) {
+    const missing = await prisma.brdDocument.findMany({
+      where: { projectId: params.projectId, isDeleted: false, currentVersionId: { not: null } },
+      select: { currentVersionId: true },
+    })
+    const ids = missing.map((m) => m.currentVersionId!)
+    const untexted = await prisma.brdVersion.findMany({
+      where: { id: { in: ids }, textContent: null },
+      select: { id: true },
+      take: 10,
+    })
+    for (const v of untexted) await ensureVersionText(v.id)
+
+    const hits = await prisma.$queryRaw<{ id: string; text: string }[]>`
+      SELECT d.id, v."textContent" AS text
+      FROM "BrdDocument" d JOIN "BrdVersion" v ON v.id = d."currentVersionId"
+      WHERE d."projectId" = ${params.projectId} AND d."isDeleted" = false
+        AND v."textContent" ILIKE ${"%" + search.replace(/[%_\\]/g, "\\$&") + "%"}`
+    for (const h of hits) {
+      const i = h.text.toLowerCase().indexOf(search.toLowerCase())
+      const start = Math.max(0, i - 60)
+      snippets.set(
+        h.id,
+        (start > 0 ? "…" : "") + h.text.slice(start, i + search.length + 80).replace(/\s+/g, " ").trim() + "…"
+      )
+    }
+    where.OR = [{ name: { contains: search, mode: "insensitive" } }, { id: { in: Array.from(snippets.keys()) } }]
+  }
+
+  const [brds, archivedCount, trashCount] = await Promise.all([
     prisma.brdDocument.findMany({
       where,
       orderBy,
-      include: { _count: { select: { links: true, versions: true, annotations: true } } },
+      include: { _count: { select: { links: true, versions: true, annotations: true, requirements: true } } },
     }),
+    prisma.brdDocument.count({ where: { projectId: params.projectId, isDeleted: false, status: "Archived" } }),
+    prisma.brdDocument.count({ where: { projectId: params.projectId, isDeleted: true } }),
   ])
 
-  return NextResponse.json({ brds: brds.map((b) => serializeBrd(b, project?.boardKey)) })
+  return NextResponse.json({
+    brds: brds.map((b) => ({
+      ...serializeBrd(b, project?.boardKey),
+      requirementCount: b._count.requirements,
+      snippet: snippets.get(b.id) ?? null,
+    })),
+    archivedCount,
+    trashCount,
+  })
 }
 
 // POST /api/projects/:projectId/brds  (multipart: file, name?) -> upload a new BRD
@@ -68,8 +138,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 })
   }
-  const fileType = ALLOWED_UPLOAD_TYPES[file.type]
-  if (!fileType) {
+  if (!ALLOWED_UPLOAD_TYPES[file.type]) {
     return NextResponse.json({ error: "Only PDF and Word documents are supported" }, { status: 400 })
   }
   if (file.size > MAX_BRD_SIZE) {
@@ -89,6 +158,11 @@ export async function POST(request: Request, { params }: { params: { projectId: 
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
+  // The browser's MIME type is only a claim — check the bytes.
+  const fileType = sniffBrdType(buffer)
+  if (!fileType) {
+    return NextResponse.json({ error: "That file isn't a valid PDF or Word (.docx) document" }, { status: 400 })
+  }
 
   // Create master + v1 in a transaction, then write the file to storage.
   const brd = await prisma.brdDocument.create({
@@ -123,6 +197,7 @@ export async function POST(request: Request, { params }: { params: { projectId: 
       storagePath: relPath,
       fileType,
       fileSize: file.size,
+      textContent: await extractTextFromBuffer(buffer, fileType),
       changeSummary: "Initial upload",
       editorId: user.id,
       editorName: user.name || user.email,

@@ -543,6 +543,7 @@ model TestCase {
   scrumTaskLinks     TaskTestCase[]
   versions           TestCaseVersion[]
   planLinks          TestPlanCase[]
+  brdRequirementLinks BrdRequirementTestCase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3039,6 +3040,8 @@ model BrdDocument {
   links            BrdLink[]
   annotations      BrdAnnotation[]
   auditLogs        BrdAuditLog[]
+  requirements     BrdRequirement[]
+  reviews          BrdReview[]
   isDeleted        Boolean         @default(false)
   deletedAt        DateTime?
   createdAt        DateTime        @default(now())
@@ -3056,6 +3059,9 @@ model BrdVersion {
   fileType          String // "pdf" | "docx"
   fileSize          Int
   contentHtml       String?     @db.Text // editor-produced HTML (Word edits)
+  // Plain text of this version — powers full-text search, version compare and
+  // detecting which requirements changed. Filled at upload/save, backfilled lazily.
+  textContent       String?     @db.Text
   changeSummary     String?
   editorId          String?
   editorName        String?
@@ -3099,12 +3105,78 @@ model BrdAnnotation {
   parentId   String? // for threaded replies
   resolved   Boolean     @default(false)
   mentionIds String[]    @default([]) // team members @mentioned in this comment
+  // Version the comment was written against, so it can be flagged as outdated
+  // when its quoted text no longer appears in the current version.
+  versionNumber Int?
   authorId   String?
   authorName String?
   createdAt  DateTime    @default(now())
 
   @@index([brdId])
   @@index([parentId])
+}
+
+// A requirement found in (or added to) a BRD. Test cases link to requirements
+// so the hub can show coverage, and so a new BRD version can flag exactly the
+// tests whose requirement changed.
+model BrdRequirement {
+  id          String  @id @default(cuid())
+  brdId       String
+  brd         BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  key         String // e.g. REQ-3 or the document's own id (FR-12)
+  title       String
+  description String  @db.Text
+  type        String?
+  priority    String?
+  orderIndex  Int     @default(0)
+  // active | changed | removed — set when a new version no longer contains the text.
+  status      String  @default("active")
+  sourceVersionNumber Int?
+  changedInVersion    Int?
+  previousText        String? @db.Text
+
+  testCases BrdRequirementTestCase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brdId])
+}
+
+model BrdRequirementTestCase {
+  requirementId String
+  requirement   BrdRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  testCaseId    String
+  testCase      TestCase       @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  // Raised when the requirement changes in a new BRD version.
+  needsReview   Boolean        @default(false)
+  reviewReason  String?
+  linkedAt      DateTime       @default(now())
+
+  @@id([requirementId, testCaseId])
+  @@index([testCaseId])
+}
+
+// A review request for one version of a BRD. When every reviewer of the
+// current version approves, the BRD moves to Reviewed.
+model BrdReview {
+  id              String      @id @default(cuid())
+  brdId           String
+  brd             BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  versionId       String
+  versionNumber   Int
+  reviewerId      String
+  reviewerName    String
+  requestedById   String?
+  requestedByName String?
+  // Pending | Approved | ChangesRequested
+  decision        String      @default("Pending")
+  comment         String?     @db.Text
+  decidedAt       DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@index([brdId])
+  @@index([reviewerId])
 }
 
 // Immutable, non-deletable audit trail for a BRD.

@@ -73,6 +73,10 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
       text: d.text ?? null,
       quote: d.quote ?? null,
       parentId: d.parentId ?? null,
+      versionNumber: brd.currentVersionId
+        ? (await prisma.brdVersion.findUnique({ where: { id: brd.currentVersionId }, select: { versionNumber: true } }))
+            ?.versionNumber ?? null
+        : null,
       mentionIds,
       authorId: user.id,
       authorName: user.name || user.email,

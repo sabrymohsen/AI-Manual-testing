@@ -13,7 +13,11 @@ import {
   Link2,
   Clock,
   Layers,
+  RotateCcw,
+  ListChecks,
+  Archive,
 } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface Brd {
   id: string
@@ -24,7 +28,11 @@ interface Brd {
   uploaderName: string
   versionCount: number
   linkCount: number
+  requirementCount?: number
+  snippet?: string | null
   updatedAt: string
+  deletedAt?: string
+  daysLeft?: number
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -55,6 +63,10 @@ export default function BrdHubPage() {
   const [typeFilter, setTypeFilter] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [sort, setSort] = useState("updated")
+  const [view, setView] = useState<"active" | "trash">("active")
+  const [archivedCount, setArchivedCount] = useState(0)
+  const [trashCount, setTrashCount] = useState(0)
+  const [pendingDelete, setPendingDelete] = useState<Brd | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -73,12 +85,20 @@ export default function BrdHubPage() {
       if (statusFilter) qs.set("status", statusFilter)
       qs.set("sort", sort)
       if (statusFilter === "Archived") qs.set("includeArchived", "true")
+      if (view === "trash") qs.set("trash", "true")
       const res = await fetch(`/api/projects/${projectId}/brds?${qs}`)
-      if (res.ok) setBrds((await res.json()).brds)
+      if (res.ok) {
+        const d = await res.json()
+        setBrds(d.brds)
+        if (view === "active") {
+          setArchivedCount(d.archivedCount ?? 0)
+          setTrashCount(d.trashCount ?? 0)
+        }
+      }
     } finally {
       setLoading(false)
     }
-  }, [projectId, search, typeFilter, statusFilter, sort])
+  }, [projectId, search, typeFilter, statusFilter, sort, view])
 
   useEffect(() => {
     const t = setTimeout(load, 200)
@@ -119,15 +139,25 @@ export default function BrdHubPage() {
     }
   }
 
-  async function handleDelete(brd: Brd, e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!confirm(`Delete "${brd.name}"? It will be recoverable for 30 days.`)) return
+  async function handleDelete(brd: Brd) {
     const res = await fetch(`/api/brds/${brd.id}`, { method: "DELETE" })
     if (res.ok) {
       setBrds((prev) => prev.filter((b) => b.id !== brd.id))
-      toast.success("BRD deleted")
+      setTrashCount((n) => n + 1)
+      toast.success("Moved to trash — restorable for 30 days")
     } else {
       toast.error("Failed to delete")
+    }
+  }
+
+  async function handleRestore(brd: Brd) {
+    const res = await fetch(`/api/brds/${brd.id}/restore`, { method: "POST" })
+    if (res.ok) {
+      setBrds((prev) => prev.filter((b) => b.id !== brd.id))
+      setTrashCount((n) => Math.max(0, n - 1))
+      toast.success(`Restored "${brd.name}"`)
+    } else {
+      toast.error((await res.json().catch(() => ({}))).error || "Couldn't restore")
     }
   }
 
@@ -168,7 +198,7 @@ export default function BrdHubPage() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search documents…"
+            placeholder="Search names and document text…"
             className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -189,7 +219,37 @@ export default function BrdHubPage() {
           <option value="name">Name</option>
           <option value="created">Upload date</option>
         </select>
+        <div className="flex rounded-lg border p-0.5 text-xs font-medium">
+          <button
+            onClick={() => setView("active")}
+            aria-pressed={view === "active"}
+            className={`rounded-md px-2.5 py-1 ${view === "active" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+          >
+            Documents
+          </button>
+          <button
+            onClick={() => setView("trash")}
+            aria-pressed={view === "trash"}
+            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${view === "trash" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+          >
+            <Trash2 className="h-3 w-3" /> Trash{trashCount ? ` (${trashCount})` : ""}
+          </button>
+        </div>
       </div>
+
+      {view === "active" && archivedCount > 0 && statusFilter !== "Archived" && (
+        <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Archive className="h-3.5 w-3.5" /> {archivedCount} archived document{archivedCount === 1 ? " is" : "s are"} hidden.
+          <button onClick={() => setStatusFilter("Archived")} className="font-medium text-primary hover:underline">
+            Show archived
+          </button>
+        </p>
+      )}
+      {view === "trash" && (
+        <p className="mb-3 text-xs text-muted-foreground">
+          Deleted documents stay here for 30 days, then they are removed permanently.
+        </p>
+      )}
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border bg-card">
@@ -209,14 +269,18 @@ export default function BrdHubPage() {
         ) : brds.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <Layers className="h-10 w-10 text-slate-200" />
-            <p className="text-sm font-medium text-muted-foreground">No BRDs yet</p>
-            {canManage && <p className="text-xs text-muted-foreground/70">Click “Upload BRD” to add your first document.</p>}
+            <p className="text-sm font-medium text-muted-foreground">
+              {view === "trash" ? "The trash is empty" : search || typeFilter || statusFilter ? "No documents match" : "No BRDs yet"}
+            </p>
+            {canManage && view === "active" && !search && !typeFilter && !statusFilter && (
+              <p className="text-xs text-muted-foreground/70">Click “Upload BRD” to add your first document.</p>
+            )}
           </div>
         ) : (
           brds.map((b) => (
             <div
               key={b.id}
-              onClick={() => router.push(`/projects/${projectId}/brds/${b.id}`)}
+              onClick={() => view === "active" && router.push(`/projects/${projectId}/brds/${b.id}`)}
               className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-muted/50"
             >
               <div className="flex items-center gap-2.5 min-w-0">
@@ -230,7 +294,22 @@ export default function BrdHubPage() {
                         <Link2 className="h-3 w-3" /> {b.linkCount}
                       </span>
                     )}
+                    {!!b.requirementCount && (
+                      <span className="ml-2 inline-flex items-center gap-0.5" title="Tracked requirements">
+                        <ListChecks className="h-3 w-3" /> {b.requirementCount}
+                      </span>
+                    )}
+                    {view === "trash" && b.daysLeft != null && (
+                      <span className="ml-2 text-amber-700 dark:text-amber-400">
+                        deleted · {b.daysLeft} day{b.daysLeft === 1 ? "" : "s"} left
+                      </span>
+                    )}
                   </p>
+                  {b.snippet && (
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground" dir="auto" title={b.snippet}>
+                      {b.snippet}
+                    </p>
+                  )}
                 </div>
               </div>
               <span className="text-xs font-semibold uppercase text-muted-foreground">{b.fileType}</span>
@@ -245,13 +324,30 @@ export default function BrdHubPage() {
                 </span>
               </span>
               <span className="flex justify-end">
-                {canManage && (
+                {canManage && view === "active" && (
                   <button
-                    onClick={(e) => handleDelete(b, e)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPendingDelete(b)
+                    }}
                     className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                     title="Delete"
+                    aria-label={`Delete ${b.name}`}
                   >
                     <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+                {canManage && view === "trash" && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRestore(b)
+                    }}
+                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    title="Restore"
+                    aria-label={`Restore ${b.name}`}
+                  >
+                    <RotateCcw className="h-4 w-4" />
                   </button>
                 )}
               </span>
@@ -259,6 +355,19 @@ export default function BrdHubPage() {
           ))
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        variant="danger"
+        title={`Delete "${pendingDelete?.name}"?`}
+        description="It moves to the trash and can be restored for 30 days. After that it is deleted permanently."
+        confirmLabel="Move to trash"
+        onConfirm={async () => {
+          if (pendingDelete) await handleDelete(pendingDelete)
+          setPendingDelete(null)
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }

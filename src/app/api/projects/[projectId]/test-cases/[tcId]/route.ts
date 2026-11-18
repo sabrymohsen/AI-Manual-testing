@@ -41,6 +41,17 @@ export async function GET(
         select: { id: true, bugKey: true, title: true, status: true, severity: true, createdAt: true },
       },
       planLinks: { select: { plan: { select: { id: true, name: true } } } },
+      // BRD requirements this case verifies, with "needs review" when the BRD changed.
+      brdRequirementLinks: {
+        where: { requirement: { brd: { isDeleted: false } } },
+        select: {
+          needsReview: true,
+          reviewReason: true,
+          requirement: {
+            select: { id: true, key: true, title: true, status: true, brd: { select: { id: true, name: true } } },
+          },
+        },
+      },
       _count: { select: { versions: true } },
     },
   })

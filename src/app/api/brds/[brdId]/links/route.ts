@@ -14,7 +14,7 @@ const schema = z.object({
 
 // POST /api/brds/:brdId/links -> link this BRD to an Epic or User Story (Task)
 export async function POST(request: Request, { params }: { params: { brdId: string } }) {
-  const access = await requireBrdAccess(params.brdId, { manage: true })
+  const access = await requireBrdAccess(params.brdId, { manage: true, unlocked: true })
   if (access.error !== null) return NextResponse.json({ error: access.error }, { status: access.status })
   const brd = access.brd!
   const user = access.session!.user

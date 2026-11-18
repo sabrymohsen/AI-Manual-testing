@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { notify } from "@/lib/notifications"
 import { mkdir, writeFile } from "fs/promises"
 import path from "path"
 import { z } from "zod"
 import { requireBrdAccess, brdAudit, brdAbsDir, brdRelPath } from "@/lib/brd/server"
 import { htmlToDocxBuffer } from "@/lib/brd/docx"
+import { sanitizeBrdHtml } from "@/lib/brd/sanitize"
+import { htmlToText } from "@/lib/brd/content"
+import { afterNewVersion } from "@/lib/brd/lifecycle"
 
 const saveSchema = z.object({
-  contentHtml: z.string(),
+  contentHtml: z.string().max(10_000_000),
   changeSummary: z.string().min(1, "A change summary is required").max(500),
 })
 
@@ -45,9 +47,12 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
   })
   const nextNumber = (last?.versionNumber ?? 0) + 1
 
+  // Stored HTML is shown to every member — never keep it unsanitised.
+  const contentHtml = sanitizeBrdHtml(parsed.data.contentHtml)
+
   let buffer: Buffer
   try {
-    buffer = await htmlToDocxBuffer(parsed.data.contentHtml)
+    buffer = await htmlToDocxBuffer(contentHtml)
   } catch (e: any) {
     console.error("BRD docx build failed:", e?.message)
     return NextResponse.json({ error: "Could not build the Word document" }, { status: 500 })
@@ -69,7 +74,8 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
       storagePath: relPath,
       fileType: "docx",
       fileSize: buffer.length,
-      contentHtml: parsed.data.contentHtml,
+      contentHtml,
+      textContent: htmlToText(contentHtml),
       changeSummary: parsed.data.changeSummary,
       editorId: user.id,
       editorName: user.name || user.email,
@@ -82,29 +88,11 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
   })
   await brdAudit(brd.id, "version_saved", `v${nextNumber}: ${parsed.data.changeSummary}`, user)
 
-  // Notify project members that the BRD was updated.
-  const project = await prisma.project.findUnique({
-    where: { id: brd.projectId },
-    select: { userId: true, projectMembers: { select: { userId: true } } },
-  })
-  if (project) {
-    const recipients = [...new Set([project.userId, ...project.projectMembers.map((m) => m.userId)])].filter(
-      (id) => id !== user.id
-    )
-    notify(
-      recipients.map((userId) => ({
-        userId,
-        type: "SYSTEM" as const,
-        title: "BRD updated",
-        body: `BRD ${brd.name} updated to v${nextNumber}`,
-        projectId: brd.projectId,
-        actionUrl: `/projects/${brd.projectId}/brds/${brd.id}`,
-      }))
-    ).catch(() => {})
-  }
+  // Search text, requirement change detection, review reset and notifications.
+  const { changed, flagged } = await afterNewVersion(brd.id, version, user)
 
   return NextResponse.json(
-    { version: { id: version.id, versionNumber: nextNumber, changeSummary: version.changeSummary } },
+    { version: { id: version.id, versionNumber: nextNumber, changeSummary: version.changeSummary }, changed, flagged },
     { status: 201 }
   )
 }

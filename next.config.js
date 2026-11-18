@@ -13,7 +13,10 @@ const nextConfig = {
   output: process.env.NEXT_DIST_DIR ? undefined : "standalone",
   experimental: {
     // Next 14's key. (Next 15 renames this to top-level `serverExternalPackages`.)
-    serverComponentsExternalPackages: ["playwright"],
+    // pdf-parse pulls in pdfjs-dist, which webpack can't bundle (it crashes at
+    // load with "Object.defineProperty called on non-object", taking down every
+    // route that imports the document extractor). Load them from node_modules.
+    serverComponentsExternalPackages: ["playwright", "pdf-parse", "pdfjs-dist"],
   },
   images: {
     unoptimized: true,

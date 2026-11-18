@@ -22,6 +22,9 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
   return NextResponse.json({
     brd: serializeBrd(brd, project?.boardKey),
     canManage: access.resolved!.permissions.canManageBrds,
+    // Testers can track requirements and link/generate test cases even when
+    // they can't edit the document itself.
+    canTest: access.resolved!.permissions.canManageBrds || access.resolved!.permissions.canCreateStories,
   })
 }
 
@@ -46,6 +49,11 @@ export async function PATCH(request: Request, { params }: { params: { brdId: str
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 })
   const d = parsed.data
+
+  // Final means locked: only the status itself may change (to unlock it).
+  if (brd.status === "Final" && d.name && d.name !== brd.name && !(d.status && d.status !== "Final")) {
+    return NextResponse.json({ error: "This BRD is Final and locked. Change its status first." }, { status: 403 })
+  }
 
   const updated = await prisma.brdDocument.update({
     where: { id: brd.id },

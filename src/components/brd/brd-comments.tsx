@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { MessageSquarePlus, AtSign, Check, CheckCircle2, Trash2, CornerDownRight, Loader2, Quote, X } from "lucide-react"
+import { MessageSquarePlus, AtSign, Check, CheckCircle2, Trash2, CornerDownRight, Loader2, Quote, X, FileText } from "lucide-react"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { normalize } from "@/lib/brd/text-utils"
 
 interface Member { id: string; name: string | null; email: string }
 interface Comment {
@@ -16,6 +18,8 @@ interface Comment {
   authorName: string | null
   createdAt: string
   type: string
+  page: number | null
+  versionNumber: number | null
 }
 
 function timeAgo(d: string) {
@@ -42,17 +46,32 @@ function renderBody(text: string) {
  * Comments panel for a BRD: threaded comments anchored to a quoted section,
  * with @mentions that notify teammates. `getSelectedText` lets the caller pass
  * the current document text selection as the quote for a new comment.
+ *
+ * Anchoring: clicking a quote asks the document to scroll to and highlight it;
+ * when the quote no longer appears in the current text (`docText`), the
+ * comment is marked "Outdated" so reviewers know it refers to old wording.
+ * PDFs can't expose their text selection, so a PDF comment carries a page
+ * number instead and clicking it jumps the viewer to that page.
  */
 export function BrdCommentsPanel({
   brdId,
   projectId,
   currentUserId,
   getSelectedText,
+  docText,
+  onJumpToQuote,
+  isPdf,
+  onJumpToPage,
 }: {
   brdId: string
   projectId: string
   currentUserId: string
   getSelectedText?: () => string
+  /** Plain text of the version on screen; enables "Outdated" detection. */
+  docText?: string
+  onJumpToQuote?: (quote: string) => void
+  isPdf?: boolean
+  onJumpToPage?: (page: number) => void
 }) {
   const [comments, setComments] = useState<Comment[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -65,6 +84,10 @@ export function BrdCommentsPanel({
   const [replyText, setReplyText] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [mentionFor, setMentionFor] = useState<"new" | "reply" | null>(null)
+  const [page, setPage] = useState("")
+  const [pendingDelete, setPendingDelete] = useState<Comment | null>(null)
+  const normDoc = docText ? normalize(docText) : null
+  const isOutdated = (c: Comment) => !!(c.quote && normDoc !== null && !normDoc.includes(normalize(c.quote)))
 
   const load = useCallback(() => {
     fetch(`/api/brds/${brdId}/annotations`)
@@ -84,6 +107,7 @@ export function BrdCommentsPanel({
     const sel = getSelectedText?.() || ""
     setQuote(sel.slice(0, 300))
     setText("")
+    setPage("")
     setComposerOpen(true)
   }
 
@@ -101,7 +125,13 @@ export function BrdCommentsPanel({
       const res = await fetch(`/api/brds/${brdId}/annotations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "comment", text: bodyText.trim(), quote: q || null, parentId }),
+        body: JSON.stringify({
+          type: "comment",
+          text: bodyText.trim(),
+          quote: q || null,
+          parentId,
+          page: !parentId && isPdf && Number(page) > 0 ? Math.floor(Number(page)) : null,
+        }),
       })
       if (res.ok) {
         toast.success(parentId ? "Reply added" : "Comment added")
@@ -124,7 +154,6 @@ export function BrdCommentsPanel({
   }
 
   async function remove(c: Comment) {
-    if (!confirm("Delete this comment?")) return
     const res = await fetch(`/api/brds/${brdId}/annotations/${c.id}`, { method: "DELETE" })
     if (res.ok) load()
     else toast.error("Failed")
@@ -171,7 +200,21 @@ export function BrdCommentsPanel({
 
       {composerOpen && (
         <div className="border-b bg-muted/60 p-3">
-          {getSelectedText && (
+          {isPdf && (
+            <label className="mb-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+              <FileText className="h-3 w-3" /> Page
+              <input
+                type="number"
+                min={1}
+                value={page}
+                onChange={(e) => setPage(e.target.value)}
+                placeholder="e.g. 4"
+                className="h-6 w-20 rounded border bg-card px-1.5 text-xs"
+              />
+              <span>(optional — links the comment to a page)</span>
+            </label>
+          )}
+          {getSelectedText && !isPdf && (
             <div className="mb-2 flex items-start gap-1.5 rounded-md border-l-2 border-primary/25 bg-card px-2 py-1.5 text-[11px] text-muted-foreground">
               <Quote className="mt-0.5 h-3 w-3 shrink-0 text-indigo-400" />
               {quote ? <span className="line-clamp-2 italic">{quote}</span> : <span className="italic text-muted-foreground">Select text in the document to quote a section (optional).</span>}
@@ -210,7 +253,35 @@ export function BrdCommentsPanel({
             {roots.map((c) => (
               <div key={c.id} className={`rounded-lg border p-2.5 ${c.resolved ? "opacity-60" : ""}`}>
                 {c.quote && (
-                  <div className="mb-1.5 border-l-2 border-primary/25 pl-2 text-[11px] italic text-muted-foreground line-clamp-2">“{c.quote}”</div>
+                  <button
+                    type="button"
+                    onClick={() => !isOutdated(c) && onJumpToQuote?.(c.quote!)}
+                    title={isOutdated(c) ? "This text is no longer in the current version" : "Show in document"}
+                    className="mb-1.5 block w-full border-l-2 border-primary/25 pl-2 text-left text-[11px] italic text-muted-foreground line-clamp-2 hover:text-foreground"
+                  >
+                    “{c.quote}”
+                  </button>
+                )}
+                {(isOutdated(c) || c.page) && (
+                  <div className="mb-1.5 flex flex-wrap gap-1">
+                    {isOutdated(c) && (
+                      <span
+                        className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                        title="The quoted text was changed or removed in a later version"
+                      >
+                        Outdated{c.versionNumber ? ` · from v${c.versionNumber}` : ""}
+                      </span>
+                    )}
+                    {c.page && (
+                      <button
+                        type="button"
+                        onClick={() => onJumpToPage?.(c.page!)}
+                        className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        Page {c.page}
+                      </button>
+                    )}
+                  </div>
                 )}
                 <div className="flex items-center gap-1.5">
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-medium text-primary">{(c.authorName || "?")[0]}</span>
@@ -222,7 +293,7 @@ export function BrdCommentsPanel({
                       {c.resolved ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Check className="h-3.5 w-3.5" />}
                     </button>
                     {(c.authorId === currentUserId) && (
-                      <button onClick={() => remove(c)} title="Delete" className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => setPendingDelete(c)} title="Delete" className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600"><Trash2 className="h-3.5 w-3.5" /></button>
                     )}
                   </div>
                 </div>
@@ -237,7 +308,7 @@ export function BrdCommentsPanel({
                         <span className="text-xs font-semibold">{r.authorName}</span>
                         <span className="text-[10px] text-muted-foreground">{timeAgo(r.createdAt)}</span>
                         {r.authorId === currentUserId && (
-                          <button onClick={() => remove(r)} className="ml-auto rounded p-0.5 text-muted-foreground hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
+                          <button onClick={() => setPendingDelete(r)} className="ml-auto rounded p-0.5 text-muted-foreground hover:text-red-600"><Trash2 className="h-3 w-3" /></button>
                         )}
                       </div>
                       <p className="whitespace-pre-wrap text-sm text-foreground">{renderBody(r.text || "")}</p>
@@ -272,6 +343,19 @@ export function BrdCommentsPanel({
           Show resolved
         </label>
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        variant="danger"
+        title="Delete this comment?"
+        description="The comment and its text are removed for everyone."
+        confirmLabel="Delete comment"
+        onConfirm={async () => {
+          if (pendingDelete) await remove(pendingDelete)
+          setPendingDelete(null)
+        }}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }

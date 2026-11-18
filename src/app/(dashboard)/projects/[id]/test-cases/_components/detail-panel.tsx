@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import {
   useCaseDetail,
   useCaseRuns,
@@ -33,6 +35,8 @@ import {
 import { PRIORITY_META, REVIEW_META, REVIEW_ORDER, STATUS_META, formatMinutes, relativeTime } from "./config"
 import { cn } from "@/lib/utils"
 import {
+  AlertTriangle,
+  FileText,
   Bug,
   ChevronDown,
   ClipboardCheck,
@@ -321,6 +325,10 @@ export function DetailPanel({
                 </p>
               )}
             </Section>
+
+            {tc.brdRequirementLinks?.length > 0 && (
+              <BrdRequirementLinks projectId={projectId} testCaseId={tc.id} links={tc.brdRequirementLinks} />
+            )}
 
             {tc.planLinks?.length > 0 && (
               <Section title="In test plans">
@@ -665,6 +673,74 @@ function SyncTab({
       >
         Open sync console <ExternalLink className="h-3 w-3" />
       </Link>
+    </Section>
+  )
+}
+
+type BrdReqLink = {
+  needsReview: boolean
+  reviewReason: string | null
+  requirement: { id: string; key: string; title: string; status: string; brd: { id: string; name: string } }
+}
+
+/** BRD requirements this case verifies; a changed BRD flags them for re-checking. */
+function BrdRequirementLinks({ projectId, testCaseId, links }: { projectId: string; testCaseId: string; links: BrdReqLink[] }) {
+  const qc = useQueryClient()
+  const [busy, setBusy] = useState<string | null>(null)
+
+  async function markReviewed(l: BrdReqLink) {
+    setBusy(l.requirement.id)
+    try {
+      const res = await fetch(`/api/brds/${l.requirement.brd.id}/requirements/${l.requirement.id}/test-cases`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ testCaseId, needsReview: false }),
+      })
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Couldn't update")
+      qc.invalidateQueries({ queryKey: ["test-library", projectId, "detail", testCaseId] })
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <Section title="Verifies BRD requirements">
+      <div className="space-y-1.5">
+        {links.map((l) => (
+          <div
+            key={l.requirement.id}
+            className={cn("rounded-lg border p-2.5 text-xs", l.needsReview && "border-amber-500/40 bg-amber-500/5")}
+          >
+            <Link
+              href={`/projects/${projectId}/brds/${l.requirement.brd.id}?tab=coverage`}
+              className="flex items-center gap-2 hover:text-primary"
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0 text-blue-500" />
+              <span className="shrink-0 font-medium text-primary">{l.requirement.key}</span>
+              <span className="truncate" title={l.requirement.title}>
+                {l.requirement.title}
+              </span>
+            </Link>
+            <p className="mt-0.5 pl-5 text-[11px] text-muted-foreground">{l.requirement.brd.name}</p>
+            {l.needsReview && (
+              <div className="mt-1.5 flex items-center gap-2 pl-5">
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-3 w-3" /> {l.reviewReason ?? "Requirement changed"} — re-check this test
+                </span>
+                <button
+                  onClick={() => markReviewed(l)}
+                  disabled={busy === l.requirement.id}
+                  className="ml-auto rounded border bg-background px-1.5 py-0.5 text-[10px] font-medium hover:bg-accent disabled:opacity-60"
+                >
+                  Reviewed
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </Section>
   )
 }

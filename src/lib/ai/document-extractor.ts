@@ -1,5 +1,5 @@
 import mammoth from "mammoth";
-import * as pdfParse from "pdf-parse";
+import { PDFParse } from "pdf-parse";
 
 export interface ExtractedDocument {
   text: string;
@@ -29,9 +29,17 @@ export async function extractDocument(
   let pageCount: number | undefined;
 
   if (mimeType.includes("pdf") || fileName.endsWith(".pdf")) {
-    const pdfData = await (pdfParse as any)(buffer);
-    text = pdfData.text;
-    pageCount = pdfData.numpages;
+    // pdf-parse v2 exposes a PDFParse class. The old call treated the module
+    // as v1's function, which threw "not a function" for every PDF.
+    const parser = new PDFParse({ data: buffer });
+    try {
+      const result = await parser.getText();
+      // v2 appends "-- 1 of 3 --" page markers; they aren't document text.
+      text = result.text.replace(/^-- \d+ of \d+ --$/gm, "");
+      pageCount = result.total;
+    } finally {
+      await parser.destroy().catch(() => {});
+    }
   } else if (
     mimeType.includes("word") ||
     mimeType.includes("docx") ||

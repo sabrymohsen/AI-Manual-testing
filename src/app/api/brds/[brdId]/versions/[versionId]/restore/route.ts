@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { readFile, writeFile, mkdir } from "fs/promises"
 import path from "path"
 import { requireBrdAccess, brdAudit, brdAbsDir, brdRelPath, STORAGE_ROOT } from "@/lib/brd/server"
+import { afterNewVersion } from "@/lib/brd/lifecycle"
 
 // POST /api/brds/:brdId/versions/:versionId/restore
 // Copies the chosen version's content forward as a brand-new current version.
@@ -45,6 +46,7 @@ export async function POST(_req: Request, { params }: { params: { brdId: string;
       fileType: source.fileType,
       fileSize: source.fileSize,
       contentHtml: source.contentHtml,
+      textContent: source.textContent,
       changeSummary: `Restored from v${source.versionNumber}`,
       editorId: user.id,
       editorName: user.name || user.email,
@@ -53,9 +55,10 @@ export async function POST(_req: Request, { params }: { params: { brdId: string;
   })
   await prisma.brdDocument.update({
     where: { id: brd.id },
-    data: { currentVersionId: version.id, updatedAt: new Date() },
+    data: { currentVersionId: version.id, fileType: source.fileType, updatedAt: new Date() },
   })
   await brdAudit(brd.id, "version_restored", `Restored v${source.versionNumber} as v${nextNumber}`, user)
+  await afterNewVersion(brd.id, version, user, { notifyTitle: "BRD version restored" })
 
   return NextResponse.json({ version: { id: version.id, versionNumber: nextNumber } }, { status: 201 })
 }

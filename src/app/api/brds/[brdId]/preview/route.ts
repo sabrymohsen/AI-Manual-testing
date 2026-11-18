@@ -4,6 +4,7 @@ import { readFile } from "fs/promises"
 import path from "path"
 import mammoth from "mammoth"
 import { requireBrdAccess, STORAGE_ROOT } from "@/lib/brd/server"
+import { sanitizeBrdHtml } from "@/lib/brd/sanitize"
 
 // GET /api/brds/:brdId/preview?versionId= -> rendered HTML for a Word BRD.
 // Uses the editor-saved HTML when present, otherwise converts the .docx via
@@ -24,13 +25,18 @@ export async function GET(request: Request, { params }: { params: { brdId: strin
   if (!version) return NextResponse.json({ error: "Version not found" }, { status: 404 })
 
   if (version.contentHtml) {
-    return NextResponse.json({ html: version.contentHtml, versionNumber: version.versionNumber })
+    return NextResponse.json({ html: sanitizeBrdHtml(version.contentHtml), versionNumber: version.versionNumber })
   }
 
   try {
     const buffer = await readFile(path.join(STORAGE_ROOT, version.storagePath))
     const { value } = await mammoth.convertToHtml({ buffer })
-    return NextResponse.json({ html: value, versionNumber: version.versionNumber })
+    return NextResponse.json({
+      html: sanitizeBrdHtml(value),
+      versionNumber: version.versionNumber,
+      // The editor can't round-trip images into .docx; it warns before editing.
+      hasImages: /<img\b/i.test(value),
+    })
   } catch (e: any) {
     console.error("BRD preview conversion failed:", e?.message)
     return NextResponse.json({ error: "Could not render this document" }, { status: 500 })
