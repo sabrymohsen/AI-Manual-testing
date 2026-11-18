@@ -85,6 +85,12 @@ export async function GET(
     where.AND.push({ suiteId: suite })
   }
 
+  // Bugs filed against one test case — the test library's Bugs tab links here.
+  const testCaseId = searchParams.get("testCaseId")
+  if (testCaseId) {
+    where.AND.push({ testCaseId })
+  }
+
   // Triage filters. "Who has nothing assigned?" and "what's been reopened?" are
   // the two questions a triage session actually starts with, and neither was
   // expressible before.

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import {
-  requireProjectOwner,
   requireProjectMember,
   requireProjectPermission,
   unauthorizedResponse,
@@ -10,6 +9,7 @@ import {
 } from "@/lib/api-guards"
 import { updateTestCaseSchema } from "@/schemas"
 import { createAuditLog } from "@/lib/auth/audit"
+import { applyCaseEdit, deleteCasesSafely } from "@/lib/test-cases/authoring"
 
 export async function GET(
   _request: Request,
@@ -33,7 +33,15 @@ export async function GET(
         include: {
           requirement: true
         }
-      }
+      },
+      // Shown inline on the Bugs tab, newest first.
+      bugReports: {
+        orderBy: { createdAt: "desc" },
+        take: 50,
+        select: { id: true, bugKey: true, title: true, status: true, severity: true, createdAt: true },
+      },
+      planLinks: { select: { plan: { select: { id: true, name: true } } } },
+      _count: { select: { versions: true } },
     },
   })
 
@@ -41,7 +49,12 @@ export async function GET(
     return NextResponse.json({ error: "Test case not found" }, { status: 404 })
   }
 
-  return NextResponse.json({ testCase })
+  const sync = await prisma.externalSyncMapping.findFirst({
+    where: { projectId: params.projectId, localEntityType: "TestCase", localEntityId: testCase.id },
+    select: { externalId: true, externalUrl: true, lastSyncStatus: true, lastSyncedAt: true, lastSyncError: true },
+  })
+
+  return NextResponse.json({ testCase: { ...testCase, sync } })
 }
 
 export async function PUT(
@@ -56,134 +69,65 @@ export async function PUT(
   if (!parsed.success) {
     return badRequestResponse(parsed.error.errors.map(e => e.message).join(", "))
   }
-  // Hierarchy fields are legacy — classification now flows through linked
-  // user stories; strip and ignore anything the client still sends.
-  const { steps, moduleId, featureId, componentId, module: _legacyModule, requirementIds, ...testCaseData } = parsed.data as any
 
-  const testCase = await prisma.testCase.update({
-    where: { id: params.tcId },
-    data: {
-      ...testCaseData,
-      steps: steps
-        ? {
-            deleteMany: {},
-            create: steps.map((step: any, index: number) => ({
-              ...step,
-              stepNumber: index + 1,
-            })),
-          }
-        : undefined,
-      requirements: requirementIds && Array.isArray(requirementIds)
-        ? {
-            deleteMany: {},
-            create: requirementIds.map((reqId: string) => ({
-              requirementId: reqId
-            }))
-          }
-        : undefined
-    },
-    include: {
-      steps: { orderBy: { stepNumber: "asc" } },
-    },
+  const exists = await prisma.testCase.findFirst({
+    where: { id: params.tcId, projectId: params.projectId },
+    select: { id: true },
   })
+  if (!exists) return notFoundResponse("Test case not found")
 
-  return NextResponse.json({ testCase })
+  // Only editable fields reach the write; legacy hierarchy fields and anything
+  // else the client sends are ignored. applyCaseEdit snapshots the current
+  // state as a version first and keeps step ids stable.
+  const d = parsed.data
+  const changed = await applyCaseEdit(
+    params.tcId,
+    {
+      title: d.title,
+      priority: d.priority,
+      preconditions: d.preconditions,
+      executionType: d.executionType,
+      reviewState: d.reviewState,
+      estimatedMinutes: d.estimatedMinutes,
+      tags: d.tags,
+      assignee: d.assignee,
+      suiteId: d.suiteId,
+      requirementIds: d.requirementIds,
+      steps: d.steps as Record<string, unknown>[] | undefined,
+    },
+    { id: auth.session!.user.id, name: auth.session!.user.name, email: auth.session!.user.email }
+  )
+
+  const testCase = await prisma.testCase.findUnique({
+    where: { id: params.tcId },
+    include: { steps: { orderBy: { stepNumber: "asc" } } },
+  })
+  return NextResponse.json({ testCase, changed })
 }
 
+/**
+ * Deletes the case but never its bugs or automated run history — see
+ * deleteCasesSafely for exactly what is kept.
+ */
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: { projectId: string; tcId: string } }
 ) {
   const auth = await requireProjectPermission(params.projectId, "canDeleteStories")
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
-  // Load test case
-  const testCase = await prisma.testCase.findFirst({
-    where: { id: params.tcId, projectId: params.projectId },
-    include: {
-      testRuns: { select: { id: true } },
-      manualSessionCases: { select: { id: true } },
-    }
-  })
-
-  if (!testCase) {
-    return notFoundResponse("Test case not found")
-  }
-
   try {
-    await prisma.$transaction(async (tx) => {
-      const testRunIds = testCase.testRuns.map(r => r.id)
-      const manualSessionCaseIds = testCase.manualSessionCases.map(m => m.id)
-
-      // Delete visual comparison results
-      if (testRunIds.length > 0) {
-        await tx.visualComparisonResult.deleteMany({ where: { testRunId: { in: testRunIds } } })
-        await tx.log.deleteMany({ where: { testRunId: { in: testRunIds } } })
-        await tx.networkLog.deleteMany({ where: { testRunId: { in: testRunIds } } })
-        await tx.attachment.deleteMany({ where: { testRunId: { in: testRunIds } } })
-      }
-
-      // Find exclusive bug reports (linked only to this test case)
-      const linkedBugs = await tx.bugReport.findMany({
-        where: { OR: [
-          { testCaseId: params.tcId },
-          ...(testRunIds.length > 0 ? [{ testRunId: { in: testRunIds } }] : [])
-        ]},
-        select: { id: true, testCaseId: true }
-      })
-
-      const exclusiveBugIds = linkedBugs.filter(b => b.testCaseId === params.tcId).map(b => b.id)
-      const sharedBugIdsFromRuns = linkedBugs.filter(b => b.testCaseId !== params.tcId).map(b => b.id)
-
-      if (exclusiveBugIds.length > 0) {
-        await tx.bugAttachment.deleteMany({ where: { bugId: { in: exclusiveBugIds } } })
-        await tx.bugActivity.deleteMany({ where: { bugId: { in: exclusiveBugIds } } })
-        await tx.bugComment.deleteMany({ where: { bugId: { in: exclusiveBugIds } } })
-        await tx.bugReportRequirement.deleteMany({ where: { bugReportId: { in: exclusiveBugIds } } })
-        await tx.attachment.deleteMany({ where: { bugReportId: { in: exclusiveBugIds } } })
-        await tx.visualDifferenceIssue.updateMany({
-          where: { bugReportId: { in: exclusiveBugIds } },
-          data: { bugReportId: null }
-        })
-        await tx.bugReport.deleteMany({ where: { id: { in: exclusiveBugIds } } })
-      }
-
-      if (sharedBugIdsFromRuns.length > 0) {
-        await tx.bugReport.updateMany({
-          where: { id: { in: sharedBugIdsFromRuns } },
-          data: { testRunId: null }
-        })
-      }
-
-      // Delete manual session data
-      if (manualSessionCaseIds.length > 0) {
-        await tx.manualStepResult.deleteMany({ where: { sessionCaseId: { in: manualSessionCaseIds } } })
-        await tx.manualSessionCase.deleteMany({ where: { id: { in: manualSessionCaseIds } } })
-      }
-
-      // Delete step results, requirement links, jobs, runs, steps
-      if (testRunIds.length > 0) {
-        await tx.testStepResult.deleteMany({ where: { testRunId: { in: testRunIds } } })
-        await tx.testJob.deleteMany({ where: { testRunId: { in: testRunIds } } })
-        await tx.testRun.deleteMany({ where: { id: { in: testRunIds } } })
-      }
-
-      await tx.testCaseRequirement.deleteMany({ where: { testCaseId: params.tcId } })
-      await tx.testStep.deleteMany({ where: { testCaseId: params.tcId } })
-      await tx.testCase.delete({ where: { id: params.tcId } })
-    })
-
+    const { count, titles } = await deleteCasesSafely(params.projectId, [params.tcId])
+    if (count === 0) return notFoundResponse("Test case not found")
     await createAuditLog({
       action: "Delete Test Case",
-      details: `Deleted test case: ${testCase.title} (${testCase.testRuns.length} runs, cascade cleanup)`,
+      details: `Deleted test case: ${titles[0]} (bugs and run history kept)`,
       userId: auth.session!.user.id,
       projectId: params.projectId,
     })
-
     return NextResponse.json({ success: true })
   } catch (err: any) {
-    console.error("Error permanently deleting test case:", err)
+    console.error("Error deleting test case:", err)
     return NextResponse.json({ error: err.message || "Failed to delete test case" }, { status: 500 })
   }
 }
-

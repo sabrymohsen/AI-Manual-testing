@@ -117,6 +117,16 @@ enum TestCaseStatus {
   Skipped
 }
 
+// Authoring lifecycle of a test case, independent of its last run verdict.
+// Draft cases are still being written; Deprecated cases are retired and are
+// skipped when a test plan is run.
+enum TestCaseReviewState {
+  Draft
+  Ready
+  Approved
+  Deprecated
+}
+
 enum TestCaseSource {
   Manual
   AIGenerated
@@ -369,6 +379,7 @@ model Project {
   integrationConfig  IntegrationConfig?
   testCases          TestCase[]
   testSuites         TestSuite[]
+  testPlans          TestPlan[]
   testRuns           TestRun[]
   auditLogs          AuditLog[]
   elementLocators    ElementLocator[]
@@ -493,6 +504,12 @@ model TestCase {
   tags     String[]
   assignee String? // team-member id/name from the project's assignee pool (ProjectTeamMember)
 
+  // Authoring state. Existing and imported cases default to Ready so nothing
+  // already in use drops out of runs; the editor starts new cases as Draft.
+  reviewState      TestCaseReviewState @default(Ready)
+  // Tester's estimate of how long one manual execution takes, for planning.
+  estimatedMinutes Int?
+
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
@@ -524,6 +541,8 @@ model TestCase {
   bugReports         BugReport[]
   visualTest         VisualTest?
   scrumTaskLinks     TaskTestCase[]
+  versions           TestCaseVersion[]
+  planLinks          TestPlanCase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -537,6 +556,59 @@ model TestCase {
   // within a project, and browse-a-suite.
   @@index([projectId, lastStatus])
   @@index([projectId, suiteId])
+  @@index([projectId, assignee])
+}
+
+// A snapshot of a test case taken just before each edit, so any earlier
+// version can be inspected or restored. `snapshot` holds the editable fields
+// and the steps exactly as they were.
+model TestCaseVersion {
+  id         String   @id @default(uuid())
+  testCaseId String
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  version  Int
+  snapshot Json
+  // What the edit that REPLACED this version changed, e.g. "steps, priority".
+  summary  String?
+
+  changedById   String?
+  changedByName String?
+  createdAt     DateTime @default(now())
+
+  @@unique([testCaseId, version])
+  @@index([testCaseId])
+}
+
+// A saved, re-runnable set of test cases, e.g. "Sprint 14 regression".
+model TestPlan {
+  id          String  @id @default(uuid())
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+
+  createdById   String?
+  createdByName String?
+
+  cases TestPlanCase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model TestPlanCase {
+  planId     String
+  plan       TestPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  testCaseId String
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  orderIndex Int      @default(0)
+  addedAt    DateTime @default(now())
+
+  @@id([planId, testCaseId])
+  @@index([testCaseId])
 }
 
 /// A folder in the test library. Project-scoped, self-referencing tree.

@@ -23,7 +23,8 @@ export type CaseStatus = "NotExecuted" | "Passed" | "Failed" | "Blocked" | "Warn
 export type CasePriority = "Low" | "Medium" | "High" | "Critical"
 export type CaseExecutionType = "Manual" | "Automated"
 export type TraceFilter = "orphans" | "broken"
-export type SortKey = "updatedAt" | "createdAt" | "title" | "priority" | "lastRunAt"
+export type SortKey = "updatedAt" | "createdAt" | "title" | "priority" | "lastRunAt" | "estimatedMinutes"
+export type ReviewState = "Draft" | "Ready" | "Approved" | "Deprecated"
 
 export interface CaseRow {
   id: string
@@ -32,6 +33,9 @@ export interface CaseRow {
   source: string
   executionType: CaseExecutionType
   tags: string[]
+  assignee: string | null
+  reviewState: ReviewState
+  estimatedMinutes: number | null
   lastStatus: CaseStatus
   lastRunAt: string | null
   lastRunId: string | null
@@ -62,7 +66,10 @@ export interface Facets {
   byStatus: Record<string, number>
   byPriority: Record<string, number>
   byExecutionType: Record<string, number>
+  byReview: Record<string, number>
   bySuite: { suiteId: string | null; count: number }[]
+  tags: { tag: string; count: number }[]
+  assignees: { assignee: string; count: number }[]
 }
 
 export interface LibraryFilters {
@@ -72,6 +79,10 @@ export interface LibraryFilters {
   priority?: CasePriority[]
   executionType?: CaseExecutionType
   tag?: string[]
+  review?: ReviewState[]
+  /** Team member ids, plus "me" / "unassigned". */
+  assignee?: string[]
+  plan?: string
   trace?: TraceFilter
   sort?: SortKey
   dir?: "asc" | "desc"
@@ -82,7 +93,10 @@ export interface LibraryFilters {
 export const libraryKeys = {
   all: (projectId: string) => ["test-library", projectId] as const,
   browse: (projectId: string, f: LibraryFilters) => ["test-library", projectId, "browse", f] as const,
-  facets: (projectId: string) => ["test-library", projectId, "facets"] as const,
+  facets: (projectId: string, f: LibraryFilters) => ["test-library", projectId, "facets", f] as const,
+  plans: (projectId: string) => ["test-library", projectId, "plans"] as const,
+  runs: (projectId: string, tcId: string) => ["test-library", projectId, "runs", tcId] as const,
+  versions: (projectId: string, tcId: string) => ["test-library", projectId, "versions", tcId] as const,
   suites: (projectId: string) => ["test-library", projectId, "suites"] as const,
   detail: (projectId: string, tcId: string | null) =>
     ["test-library", projectId, "detail", tcId] as const,
@@ -110,7 +124,7 @@ async function sendJson<T>(url: string, method: string, body?: unknown): Promise
   return json
 }
 
-function toQuery(f: LibraryFilters, cursor?: string | null): string {
+export function toQuery(f: LibraryFilters, cursor?: string | null): string {
   const p = new URLSearchParams()
   if (f.q) p.set("q", f.q)
   if (f.suite) p.set("suite", f.suite)
@@ -118,6 +132,9 @@ function toQuery(f: LibraryFilters, cursor?: string | null): string {
   f.priority?.forEach((s) => p.append("priority", s))
   if (f.executionType) p.set("executionType", f.executionType)
   f.tag?.forEach((t) => p.append("tag", t))
+  f.review?.forEach((r) => p.append("review", r))
+  f.assignee?.forEach((a) => p.append("assignee", a))
+  if (f.plan) p.set("plan", f.plan)
   if (f.trace) p.set("trace", f.trace)
   if (f.sort) p.set("sort", f.sort)
   if (f.dir) p.set("dir", f.dir)
@@ -133,18 +150,31 @@ export function useCaseBrowse(projectId: string, filters: LibraryFilters) {
     queryKey: libraryKeys.browse(projectId, filters),
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
-      getJson<{ rows: CaseRow[]; nextCursor: string | null }>(
+      getJson<{ rows: CaseRow[]; nextCursor: string | null; total?: number }>(
         `/api/projects/${projectId}/test-cases/browse?${toQuery(filters, pageParam)}`
       ),
     getNextPageParam: (last) => last.nextCursor,
   })
 }
 
-export function useFacets(projectId: string) {
+/**
+ * Header counts within the current filters. Status and trace chips are left
+ * out of the key (and ignored server-side) so toggling a chip doesn't change
+ * the numbers on the chips themselves.
+ */
+export function useFacets(projectId: string, filters: LibraryFilters = {}) {
+  const { status: _s, trace: _t, sort: _so, dir: _d, ...scope } = filters
   return useQuery({
-    queryKey: libraryKeys.facets(projectId),
-    queryFn: () => getJson<Facets>(`/api/projects/${projectId}/test-cases/facets`),
+    queryKey: libraryKeys.facets(projectId, scope),
+    queryFn: () => getJson<Facets>(`/api/projects/${projectId}/test-cases/facets?${toQuery(scope)}`),
+    placeholderData: (prev) => prev,
   })
+}
+
+/** Every id matching the filters — for "select all N matching". */
+export async function fetchMatchingIds(projectId: string, filters: LibraryFilters) {
+  const { sort: _so, dir: _d, ...f } = filters
+  return getJson<{ ids: string[]; truncated: boolean }>(`/api/projects/${projectId}/test-cases/ids?${toQuery(f)}`)
 }
 
 export function useSuites(projectId: string) {
@@ -273,12 +303,13 @@ export function useBulkPriority(projectId: string) {
 /** Opens one manual run containing every selected case; resolves to the session id. */
 export function useBulkManualRun(projectId: string) {
   return useMutation({
-    mutationFn: async (testCaseIds: string[]) => {
+    mutationFn: async ({ testCaseIds, options, name }: { testCaseIds: string[]; options?: RunOptions; name?: string }) => {
       const res = await sendJson<{ sessions?: { id: string; projectId: string }[] }>(`/api/test-cases/bulk-run`, "POST", {
         testCaseIds,
         projectId,
         executionMode: "Manual Session",
-        name: `Manual run — ${testCaseIds.length} ${testCaseIds.length === 1 ? "case" : "cases"}`,
+        name: name ?? `Manual run — ${testCaseIds.length} ${testCaseIds.length === 1 ? "case" : "cases"}`,
+        ...(options ?? {}),
       })
       const id = res.sessions?.find((s) => s.projectId === projectId)?.id ?? res.sessions?.[0]?.id
       if (!id) throw new Error("Could not start the run")
@@ -324,4 +355,198 @@ export async function exportCasesCsv(testCaseIds: string[], fileName: string) {
   a.click()
   URL.revokeObjectURL(url)
   return data.testCases.length
+}
+
+// ── Bulk property edits ──────────────────────────────────────────────────────
+
+export interface BulkPatch {
+  priority?: CasePriority
+  executionType?: CaseExecutionType
+  reviewState?: ReviewState
+  assignee?: string | null
+  estimatedMinutes?: number | null
+  addTags?: string[]
+  removeTags?: string[]
+}
+
+export function useBulkUpdate(projectId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  return useMutation({
+    mutationFn: (vars: { testCaseIds: string[] } & BulkPatch) =>
+      sendJson<{ count: number }>(`/api/projects/${projectId}/test-cases/bulk-update`, "POST", vars),
+    onSuccess: (data, vars) => {
+      invalidate()
+      // Single-row inline edits stay quiet; bulk edits confirm.
+      if (vars.testCaseIds.length > 1) toast.success(`Updated ${data.count} ${data.count === 1 ? "case" : "cases"}`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useDuplicateCase(projectId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  return useMutation({
+    mutationFn: (tcId: string) =>
+      sendJson<{ testCase: { id: string; title: string } }>(
+        `/api/projects/${projectId}/test-cases/${tcId}/duplicate`,
+        "POST"
+      ),
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(`Created "${data.testCase.title}"`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Run history, versions, sync ──────────────────────────────────────────────
+
+export interface CaseRun {
+  id: string
+  kind: "Automated" | "Manual"
+  status: string
+  name: string
+  environment: string | null
+  browser: string
+  viewport: string
+  at: string
+  durationMs: number
+  failedStep: { stepNumber: number; action: string; detail: string | null } | null
+  bugCount: number | null
+  href: string
+}
+
+export function useCaseRuns(projectId: string, tcId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: libraryKeys.runs(projectId, tcId),
+    queryFn: () => getJson<{ runs: CaseRun[] }>(`/api/projects/${projectId}/test-cases/${tcId}/runs?limit=10`),
+    enabled,
+  })
+}
+
+export interface CaseVersion {
+  id: string
+  version: number
+  summary: string | null
+  changedByName: string | null
+  createdAt: string
+  snapshot: {
+    title: string
+    priority: string
+    preconditions: string | null
+    reviewState?: string
+    tags?: string[]
+    steps: { actionDescription?: string; expectedResult?: string }[]
+  }
+}
+
+export function useCaseVersions(projectId: string, tcId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: libraryKeys.versions(projectId, tcId),
+    queryFn: () => getJson<{ versions: CaseVersion[] }>(`/api/projects/${projectId}/test-cases/${tcId}/versions`),
+    enabled,
+  })
+}
+
+export function useRestoreVersion(projectId: string, tcId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  return useMutation({
+    mutationFn: (versionId: string) =>
+      sendJson<{ restored: number; changed: string[] }>(
+        `/api/projects/${projectId}/test-cases/${tcId}/versions/${versionId}/restore`,
+        "POST"
+      ),
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(data.changed.length ? `Restored version ${data.restored}` : "Already matches that version")
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+export function useSyncCase(projectId: string, tcId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  return useMutation({
+    mutationFn: () => sendJson<{ success?: boolean; error?: string }>(`/api/test-cases/${tcId}/sync/openproject`, "POST"),
+    onSuccess: () => {
+      invalidate()
+      toast.success("Synced to tracker")
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+}
+
+// ── Test plans ───────────────────────────────────────────────────────────────
+
+export interface TestPlanRow {
+  id: string
+  name: string
+  description: string | null
+  createdByName: string | null
+  updatedAt: string
+  caseCount: number
+  runnable: number
+  byStatus: Record<string, number>
+  totalMinutes: number
+  unestimated: number
+}
+
+export function usePlans(projectId: string) {
+  return useQuery({
+    queryKey: libraryKeys.plans(projectId),
+    queryFn: () => getJson<{ plans: TestPlanRow[] }>(`/api/projects/${projectId}/test-plans`),
+  })
+}
+
+export function usePlanMutations(projectId: string) {
+  const invalidate = useInvalidateLibrary(projectId)
+  const base = `/api/projects/${projectId}/test-plans`
+
+  const create = useMutation({
+    mutationFn: (vars: { name: string; description?: string; testCaseIds?: string[] }) =>
+      sendJson<{ plan: { id: string; name: string }; added: number }>(base, "POST", vars),
+    onSuccess: (data) => {
+      invalidate()
+      toast.success(`Plan "${data.plan.name}" created${data.added ? ` with ${data.added} cases` : ""}`)
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const rename = useMutation({
+    mutationFn: ({ planId, ...body }: { planId: string; name?: string; description?: string | null }) =>
+      sendJson(`${base}/${planId}`, "PATCH", body),
+    onSuccess: invalidate,
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const remove = useMutation({
+    mutationFn: (planId: string) => sendJson(`${base}/${planId}`, "DELETE"),
+    onSuccess: () => {
+      invalidate()
+      toast.success("Plan deleted — its test cases were not touched")
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  const editCases = useMutation({
+    mutationFn: ({ planId, ...body }: { planId: string; add?: string[]; remove?: string[] }) =>
+      sendJson<{ added: number; removed: number }>(`${base}/${planId}/cases`, "POST", body),
+    onSuccess: (data) => {
+      invalidate()
+      if (data.added) toast.success(`Added ${data.added} ${data.added === 1 ? "case" : "cases"} to the plan`)
+      else if (data.removed) toast.success(`Removed ${data.removed} from the plan`)
+      else toast.info("Those cases are already in the plan")
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  return { create, rename, remove, editCases }
+}
+
+// ── Run options ──────────────────────────────────────────────────────────────
+
+export interface RunOptions {
+  environment: "Dev" | "Staging" | "UAT" | "Production"
+  browserType: "Chromium" | "Firefox" | "WebKit"
+  viewport: "Desktop" | "Tablet" | "Mobile"
 }

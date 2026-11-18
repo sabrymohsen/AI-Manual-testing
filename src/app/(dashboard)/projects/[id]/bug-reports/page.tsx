@@ -507,6 +507,8 @@ export default function ProjectBugReportsPage() {
   // Seeded from ?suite= so the module counts on the project page can link
   // straight to the defects they are counting.
   const [filterModule, setFilterModule] = useState(() => searchParams.get("suite") || "all")
+  // Seeded from ?testCaseId= — the test library's "Open in Bug Reports" link.
+  const [filterTestCaseId, setFilterTestCaseId] = useState<string | null>(() => searchParams.get("testCaseId"))
   // The project's suite tree, shared by the filter, the drawer and bulk actions.
   const { modules: projectModules, refresh: refreshModules } = useProjectModules(projectId)
   // Triage filters — the two questions a triage session actually opens with.
@@ -701,6 +703,7 @@ export default function ProjectBugReportsPage() {
       if (filterStatus !== "all") qParams.push(`status=${filterStatus}`)
       if (filterSource !== "all") qParams.push(`source=${filterSource}`)
       if (filterModule !== "all") qParams.push(`suite=${encodeURIComponent(filterModule)}`)
+      if (filterTestCaseId) qParams.push(`testCaseId=${encodeURIComponent(filterTestCaseId)}`)
       if (debouncedSearch) qParams.push(`search=${encodeURIComponent(debouncedSearch)}`)
       if (filterUnassigned) qParams.push("assignee=unassigned")
       if (filterReopened) qParams.push("reopened=true")
@@ -731,7 +734,7 @@ export default function ProjectBugReportsPage() {
   useEffect(() => {
     loadBugsList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, filterModule, debouncedSearch, filterUnassigned, filterReopened])
+  }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, filterModule, filterTestCaseId, debouncedSearch, filterUnassigned, filterReopened])
 
   // Read query params on load to automatically open detail drawer
   useEffect(() => {
@@ -1755,6 +1758,22 @@ export default function ProjectBugReportsPage() {
             <option value="Manual">Manual</option>
             <option value="Auto">Auto Run</option>
           </select>
+
+          {filterTestCaseId && (
+            <button
+              type="button"
+              onClick={() => {
+                setFilterTestCaseId(null)
+                const p = new URLSearchParams(searchParams.toString())
+                p.delete("testCaseId")
+                router.replace(`?${p.toString()}`, { scroll: false })
+              }}
+              title="Showing only bugs filed against one test case — click to clear"
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary"
+            >
+              One test case only <span aria-hidden="true">×</span>
+            </button>
+          )}
 
           {/* Module/service filter — the suites the test library files cases
               under, so defects and their coverage line up under one heading. */}

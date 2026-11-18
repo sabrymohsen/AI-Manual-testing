@@ -27,7 +27,13 @@ export default function EditTestCasePage() {
           suiteId: tc.suiteId || tc.suite?.id || "",
           assignee: tc.assignee || "",
           requirementIds: (tc.requirements || []).map((r: { requirementId: string }) => r.requirementId),
+          tags: tc.tags || [],
+          reviewState: tc.reviewState || "Ready",
+          estimatedMinutes: tc.estimatedMinutes ?? "",
           steps: tc.steps.map((s: Record<string, unknown>) => ({
+            // Sent back on save so the step is updated in place and keeps its
+            // link to past run results.
+            id: s.id,
             actionDescription: s.actionDescription,
             expectedResult: s.expectedResult,
             actionType: s.actionType,
@@ -62,6 +68,9 @@ export default function EditTestCasePage() {
         suiteId: d.suiteId || null,
         steps: d.steps,
         requirementIds: d.requirementIds,
+        tags: d.tags,
+        reviewState: d.reviewState,
+        estimatedMinutes: d.estimatedMinutes === "" ? null : d.estimatedMinutes,
       }),
     })
     if (!res.ok) {

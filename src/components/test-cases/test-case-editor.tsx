@@ -15,7 +15,14 @@ import { AssigneeSelect } from "@/components/team/assignee-select"
 import { ModuleSelect } from "@/components/bug-reports/module-select"
 import { ComposerText } from "@/components/ui/issue-composer"
 import { cn } from "@/lib/utils"
-import { AlertCircle, ChevronRight, FlaskConical, Hand, Loader2, Zap } from "lucide-react"
+import { AlertCircle, ChevronRight, FlaskConical, Hand, Loader2, X, Zap } from "lucide-react"
+
+const REVIEW_STATES: { value: TestCaseDraft["reviewState"]; hint: string }[] = [
+  { value: "Draft", hint: "Still being written" },
+  { value: "Ready", hint: "Written and runnable" },
+  { value: "Approved", hint: "Reviewed and approved" },
+  { value: "Deprecated", hint: "Retired — skipped when a plan runs" },
+]
 
 export type EditorStep = {
   actionDescription: string
@@ -38,6 +45,10 @@ export interface TestCaseDraft {
   assignee: string
   requirementIds: string[]
   steps: EditorStep[]
+  tags: string[]
+  reviewState: "Draft" | "Ready" | "Approved" | "Deprecated"
+  /** Minutes for one manual execution; "" when not estimated. */
+  estimatedMinutes: number | ""
 }
 
 export const EMPTY_DRAFT: TestCaseDraft = {
@@ -49,12 +60,16 @@ export const EMPTY_DRAFT: TestCaseDraft = {
   assignee: "",
   requirementIds: [],
   steps: [],
+  tags: [],
+  // New cases start as drafts; mark them Ready once the steps are complete.
+  reviewState: "Draft",
+  estimatedMinutes: "",
 }
 
 const PRIORITIES: { value: TestCaseDraft["priority"]; dot: string }[] = [
   { value: "Critical", dot: "bg-red-500" },
   { value: "High", dot: "bg-orange-500" },
-  { value: "Medium", dot: "bg-amber-500" },
+  { value: "Medium", dot: "bg-blue-500" },
   { value: "Low", dot: "bg-slate-400" },
 ]
 
@@ -259,6 +274,43 @@ export function TestCaseEditor({
             </div>
           </Property>
 
+          <Property label="Review state" htmlFor="tc-review">
+            <select
+              id="tc-review"
+              value={draft.reviewState}
+              onChange={(e) => set("reviewState", e.target.value as TestCaseDraft["reviewState"])}
+              className="h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+            >
+              {REVIEW_STATES.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.value} — {r.hint}
+                </option>
+              ))}
+            </select>
+          </Property>
+
+          <Property label="Estimated time (minutes)" htmlFor="tc-estimate">
+            <input
+              id="tc-estimate"
+              type="number"
+              min={0}
+              max={10000}
+              inputMode="numeric"
+              value={draft.estimatedMinutes}
+              onChange={(e) => {
+                const v = e.target.value
+                set("estimatedMinutes", v === "" ? "" : Math.max(0, Math.min(10000, Math.round(Number(v)) || 0)))
+              }}
+              placeholder="e.g. 10"
+              className="h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+            />
+            <p className="mt-1 text-[11px] text-muted-foreground">How long one manual execution takes — used to size runs and plans.</p>
+          </Property>
+
+          <Property label="Tags" htmlFor="tc-tags">
+            <TagInput id="tc-tags" value={draft.tags} onChange={(v) => set("tags", v)} />
+          </Property>
+
           <Property label="Assignee" htmlFor="tc-assignee">
             <AssigneeSelect
               id="tc-assignee"
@@ -281,6 +333,54 @@ function Property({ label, htmlFor, children }: { label: string; htmlFor?: strin
         {label}
       </label>
       {children}
+    </div>
+  )
+}
+
+/** Type a tag and press Enter or comma; Backspace on an empty field removes the last one. */
+function TagInput({ id, value, onChange }: { id?: string; value: string[]; onChange: (v: string[]) => void }) {
+  const [text, setText] = useState("")
+  const commit = (raw: string) => {
+    const parts = raw.split(",").map((t) => t.trim()).filter((t) => t && t.length <= 40)
+    if (parts.length) onChange(Array.from(new Set([...value, ...parts])).slice(0, 30))
+    setText("")
+  }
+  return (
+    <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-card px-1.5 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)] focus-within:ring-2 focus-within:ring-primary/30">
+      {value.map((t) => (
+        <span key={t} className="inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 text-[11px]">
+          {t}
+          <button
+            type="button"
+            onClick={() => onChange(value.filter((x) => x !== t))}
+            className="rounded text-muted-foreground hover:text-foreground"
+            aria-label={`Remove tag ${t}`}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
+      <input
+        id={id}
+        value={text}
+        onChange={(e) => {
+          const v = e.target.value
+          if (v.endsWith(",")) commit(v)
+          else setText(v)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && text.trim()) {
+            // Enter adds the tag instead of submitting the form.
+            e.preventDefault()
+            commit(text)
+          } else if (e.key === "Backspace" && !text && value.length) {
+            onChange(value.slice(0, -1))
+          }
+        }}
+        onBlur={() => text.trim() && commit(text)}
+        placeholder={value.length ? "" : "smoke, regression…"}
+        className="h-6 min-w-[80px] flex-1 bg-transparent px-1 text-[13px] outline-none placeholder:text-muted-foreground/60"
+      />
     </div>
   )
 }

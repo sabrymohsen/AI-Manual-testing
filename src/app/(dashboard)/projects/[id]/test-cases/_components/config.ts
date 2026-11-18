@@ -7,7 +7,7 @@ import {
   AlertTriangle,
   type LucideIcon,
 } from "lucide-react"
-import type { CaseStatus, CasePriority } from "../_hooks/use-test-library"
+import type { CaseStatus, CasePriority, ReviewState } from "../_hooks/use-test-library"
 
 /**
  * Single source of truth for how a status or priority reads in the test
@@ -87,4 +87,45 @@ export function relativeTime(iso: string | null): string {
   const days = Math.round(hours / 24)
   if (days < 30) return `${days}d ago`
   return new Date(iso).toLocaleDateString()
+}
+
+/** Authoring lifecycle. Ready is the quiet default, so it gets no badge in rows. */
+export const REVIEW_META: Record<ReviewState, { label: string; chip: string; hint: string }> = {
+  Draft: {
+    label: "Draft",
+    chip: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+    hint: "Still being written",
+  },
+  Ready: {
+    label: "Ready",
+    chip: "bg-muted text-muted-foreground",
+    hint: "Written and runnable",
+  },
+  Approved: {
+    label: "Approved",
+    chip: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+    hint: "Reviewed and approved",
+  },
+  Deprecated: {
+    label: "Deprecated",
+    chip: "bg-muted text-muted-foreground line-through",
+    hint: "Retired — skipped when a plan runs",
+  },
+}
+
+export const REVIEW_ORDER: ReviewState[] = ["Draft", "Ready", "Approved", "Deprecated"]
+
+/** 95 → "1h 35m", 20 → "20m". */
+export function formatMinutes(min: number | null | undefined): string {
+  if (min == null) return "—"
+  if (min < 60) return `${min}m`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m ? `${h}h ${m}m` : `${h}h`
+}
+
+/** Two-letter initials for an assignee avatar. */
+export function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?"
 }

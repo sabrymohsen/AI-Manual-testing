@@ -41,12 +41,17 @@ export const createTestCaseSchema = z.object({
   source: z.enum(["Manual", "AIGenerated", "Imported", "Exploratory", "Recorder", "QAAgentBrain", "RequirementFile"]).optional(),
   executionType: z.enum(["Manual", "Automated"]).optional(),
   testData: z.any().optional().nullable(),
-  tags: z.array(z.string()).optional(),
+  tags: z.array(z.string().trim().min(1).max(40)).max(30).optional(),
   assignee: z.string().optional().nullable(),
   suiteId: z.string().optional().nullable(),
   requirementIds: z.array(z.string()).optional(),
+  reviewState: z.enum(["Draft", "Ready", "Approved", "Deprecated"]).optional(),
+  estimatedMinutes: z.number().int().min(0).max(10000).optional().nullable(),
   steps: z.array(
     z.object({
+      // Existing step id — sent on edit so the step keeps its identity (and
+      // its link to past run results) instead of being recreated.
+      id: z.string().optional(),
       actionDescription: z.string().min(1, "Action description is required"),
       expectedResult: z.string().optional().nullable(),
       actionType: z.string().optional(),

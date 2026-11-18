@@ -4,7 +4,7 @@ import { requireProjectPermission, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
 
 const schema = z.object({
-  testCaseIds: z.array(z.string()).min(1).max(500),
+  testCaseIds: z.array(z.string()).min(1).max(5000),
   // null files the cases as "Unfiled".
   suiteId: z.string().nullable(),
 })

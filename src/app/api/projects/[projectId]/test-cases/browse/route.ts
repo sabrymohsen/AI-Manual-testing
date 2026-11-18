@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { requireProjectMember, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 import { Prisma } from "@prisma/client"
 import { handleLibraryError } from "@/lib/test-cases/errors"
+import { buildCaseWhere, parseCaseFilters } from "@/lib/test-cases/filters"
 
 /**
  * GET /api/projects/:projectId/test-cases/browse
@@ -21,22 +22,22 @@ import { handleLibraryError } from "@/lib/test-cases/errors"
  *
  * Query params
  *   q              free text over title + preconditions
- *   suite          suite id, or "unfiled" for cases with no suite
+ *   suite          suite id (includes its sub-suites), or "unfiled"
  *   status         repeatable — TestCaseStatus
  *   priority       repeatable — Priority
  *   executionType  Manual | Automated
  *   tag            repeatable — matches any
  *   trace          orphans | broken
- *   sort           updatedAt | createdAt | title | priority | lastRunAt   (default updatedAt)
+ *   plan           test plan id — only cases in that plan
+ *   review         repeatable — Draft | Ready | Approved | Deprecated
+ *   assignee       repeatable — team member id, "me" or "unassigned"
+ *   sort           updatedAt | createdAt | title | priority | lastRunAt | estimatedMinutes
  *   dir            asc | desc                                            (default desc)
  *   cursor         id of the last row from the previous page
  *   limit          1..100                                                (default 50)
  */
 
-const STATUSES = ["NotExecuted", "Passed", "Failed", "Blocked", "Warning", "Skipped"] as const
-const PRIORITIES = ["Low", "Medium", "High", "Critical"] as const
-const EXECUTION_TYPES = ["Manual", "Automated"] as const
-const SORTABLE = ["updatedAt", "createdAt", "title", "priority", "lastRunAt"] as const
+const SORTABLE = ["updatedAt", "createdAt", "title", "priority", "lastRunAt", "estimatedMinutes"] as const
 
 const MAX_LIMIT = 100
 const DEFAULT_LIMIT = 50
@@ -53,17 +54,6 @@ export async function GET(request: Request, { params }: { params: { projectId: s
   const url = new URL(request.url)
   const p = url.searchParams
 
-  const pick = <T extends readonly string[]>(key: string, allowed: T) =>
-    p.getAll(key).filter((v): v is T[number] => (allowed as readonly string[]).includes(v))
-
-  const q = p.get("q")?.trim() || undefined
-  const suite = p.get("suite") || undefined
-  const statuses = pick("status", STATUSES)
-  const priorities = pick("priority", PRIORITIES)
-  const executionType = pick("executionType", EXECUTION_TYPES)[0]
-  const tags = p.getAll("tag").filter(Boolean)
-  const trace = p.get("trace")
-
   const sortRaw = p.get("sort") ?? "updatedAt"
   const sort = (SORTABLE as readonly string[]).includes(sortRaw) ? sortRaw : "updatedAt"
   const dir: Prisma.SortOrder = p.get("dir") === "asc" ? "asc" : "desc"
@@ -71,37 +61,21 @@ export async function GET(request: Request, { params }: { params: { projectId: s
   const cursor = p.get("cursor") || undefined
   const limit = Math.min(Math.max(Number(p.get("limit")) || DEFAULT_LIMIT, 1), MAX_LIMIT)
 
-  const where: Prisma.TestCaseWhereInput = {
-    projectId: params.projectId,
-    ...(q
-      ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" } },
-            { preconditions: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-    ...(suite ? (suite === "unfiled" ? { suiteId: null } : { suiteId: suite }) : {}),
-    ...(statuses.length ? { lastStatus: { in: statuses as any } } : {}),
-    ...(priorities.length ? { priority: { in: priorities as any } } : {}),
-    ...(executionType ? { executionType: executionType as any } : {}),
-    ...(tags.length ? { tags: { hasSome: tags } } : {}),
-    // Orphan = covers no user story.
-    ...(trace === "orphans" ? { requirements: { none: {} } } : {}),
-    // Broken = failed on its last run with nobody tracking it (no open bug).
-    // Never-run cases used to count too, which made every new case "broken"
-    // and duplicated the "not run" chip.
-    // The old client-side version also flagged "not synced to OpenProject"
-    // unconditionally, so on any project without that integration every single
-    // case was reported broken. Sync state is reported per-row below instead.
-    ...(trace === "broken"
-      ? { lastStatus: "Failed", openBugCount: 0 }
-      : {}),
+  let where: Prisma.TestCaseWhereInput
+  try {
+    where = await buildCaseWhere(params.projectId, parseCaseFilters(p), { user: auth.session!.user })
+  } catch (err) {
+    return handleLibraryError(err, "browse")
   }
 
   // `title` and `priority` are not unique, so pair every sort with id to keep
   // cursor pagination stable — otherwise rows can repeat or vanish across pages.
-  const orderBy: Prisma.TestCaseOrderByWithRelationInput[] = [{ [sort]: dir } as any, { id: "asc" }]
+  const orderBy: Prisma.TestCaseOrderByWithRelationInput[] = [
+    sort === "estimatedMinutes" || sort === "lastRunAt"
+      ? ({ [sort]: { sort: dir, nulls: "last" } } as any)
+      : ({ [sort]: dir } as any),
+    { id: "asc" },
+  ]
 
   try {
     return await listCases()
@@ -110,6 +84,8 @@ export async function GET(request: Request, { params }: { params: { projectId: s
   }
 
   async function listCases() {
+  // Total only on the first page — it drives "select all N matching".
+  const total = cursor ? undefined : await prisma.testCase.count({ where })
   const rows = await prisma.testCase.findMany({
     where,
     orderBy,
@@ -122,6 +98,9 @@ export async function GET(request: Request, { params }: { params: { projectId: s
       source: true,
       executionType: true,
       tags: true,
+      assignee: true,
+      reviewState: true,
+      estimatedMinutes: true,
       lastStatus: true,
       lastRunAt: true,
       lastRunId: true,
@@ -159,6 +138,7 @@ export async function GET(request: Request, { params }: { params: { projectId: s
       sync: syncById.get(r.id) ?? null,
     })),
     nextCursor: hasMore ? page[page.length - 1].id : null,
+    total,
   })
   }
 }

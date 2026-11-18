@@ -21,7 +21,7 @@ export function FacetBar({
   filters: LibraryFilters
   onChange: (next: LibraryFilters) => void
 }) {
-  const { data, isLoading } = useFacets(projectId)
+  const { data, isLoading } = useFacets(projectId, filters)
 
   const toggleStatus = (s: CaseStatus) => {
     const active = filters.status ?? []

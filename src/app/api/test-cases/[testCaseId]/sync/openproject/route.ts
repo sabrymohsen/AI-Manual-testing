@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, canUseProject } from "@/lib/api-guards"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
@@ -27,7 +27,8 @@ export async function POST(
     },
   })
 
-  if (!testCase) {
+  // Signed-in is not enough: the caller must be able to write to this project.
+  if (!testCase || !(await canUseProject(testCase.projectId, auth.session!.user.id, "write"))) {
     return NextResponse.json({ error: "Test case not found" }, { status: 404 })
   }
 
