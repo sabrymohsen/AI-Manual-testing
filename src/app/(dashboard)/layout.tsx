@@ -42,6 +42,8 @@ import { usePermissionStore } from "@/stores/permissionStore"
 import { PermissionGate, GlobalAdminGate } from "@/components/permissions/PermissionGate"
 import { ProjectSwitcher } from "@/components/layout/ProjectSwitcher"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
+import { DesktopAiBridge } from "@/components/desktop/desktop-ai-bridge"
+import { UpdateNotice } from "@/components/desktop/update-notice"
 import { Toaster } from "@/components/ui/sonner"
 import {
   DropdownMenu,
@@ -488,6 +490,8 @@ export default function DashboardLayout({
         {/* Top header: notifications + user menu */}
         <header className="flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border bg-card px-3">
           <NotificationBell token={token} />
+          <DesktopAiBridge token={token} />
+          <UpdateNotice />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

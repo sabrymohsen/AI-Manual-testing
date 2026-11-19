@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({ prisma: { aiProviderConfig: { findUnique: vi.fn(asy
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: (...a: any[]) => chat(...a),
   hasConfiguredProvider: vi.fn(async () => false),
+  hasLocalAi: vi.fn(async () => false),
   resolveProvider: (...a: any[]) => resolve(...a),
 }))
 

@@ -2,7 +2,9 @@ import axios from "axios";
 import {
   chatWithConfiguredProvider,
   hasConfiguredProvider,
+  hasLocalAi,
 } from "@/lib/ai/provider-chat";
+import { withQaSkills } from "@/lib/ai/qa-skills";
 import { TEST_DESIGN_CRAFT, LANGUAGE_RULE } from "@/lib/ai/qa-craft";
 
 export interface AIGeneratedTestCase {
@@ -71,7 +73,7 @@ export async function generateTestCasesFromRequirements(
   // a deployed box it always ended up on the offline path regardless of what
   // was configured in the hub.
   try {
-    if (await hasConfiguredProvider(opts.projectId)) {
+    if ((await hasConfiguredProvider(opts.projectId)) || (await hasLocalAi())) {
       const out = await chatWithConfiguredProvider({
         prompt,
         maxTokens: opts.maxTokens,
@@ -231,6 +233,8 @@ async function callOllama(prompt: string, opts: GenerateOptions): Promise<string
     {
       model,
       prompt,
+      // Same QA skills as every other AI call (qa-skills.ts).
+      system: withQaSkills(undefined, "generate-test-cases"),
       stream: false,
       options: {
         temperature: opts.temperature ?? 0.3,

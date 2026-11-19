@@ -5,13 +5,15 @@ const path = require("path")
 const { app } = require("electron")
 
 const SERVERS = {
+  online: { label: "QA Engine Online", url: "https://79-76-112-176.sslip.io" },
   local: { label: "This computer", url: "http://localhost:3000" },
   production: { label: "Production", url: "https://qa-engine.up.railway.app" },
   staging: { label: "Staging", url: "https://ai-manual-testing-staging.up.railway.app" },
 }
 
 const DEFAULTS = {
-  server: "local", // "local" | "production" | "staging" | "custom"
+  // New installs open the shared online server; "This computer" needs the project folder.
+  server: "online", // "online" | "local" | "production" | "staging" | "custom"
   repoPath: "", // project folder used by "This computer" mode
   customUrl: "",
   window: { width: 1440, height: 900, x: undefined, y: undefined, maximized: false },

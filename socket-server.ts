@@ -40,6 +40,43 @@ function startSocketServer() {
       });
       return;
     }
+
+    // Desktop AI relay (see src/lib/ai/desktop-relay.ts): forward one Ollama
+    // call to the user's open desktop app and return its reply.
+    if (req.method === "GET" && req.url?.startsWith("/internal/ai-bridge")) {
+      if (req.headers["x-internal-token"] !== JWT_SECRET) {
+        res.writeHead(401).end();
+        return;
+      }
+      const userId = new URL(req.url, "http://x").searchParams.get("userId") || "";
+      io?.in(`desktop-ai:${userId}`).fetchSockets().then((sockets) => {
+        const models = Array.from(new Set(sockets.flatMap((s) => (s.data.aiModels as string[]) || [])));
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ connected: sockets.length > 0, models }));
+      }).catch(() => res.writeHead(500).end());
+      return;
+    }
+    if (req.method === "POST" && req.url === "/internal/ai-relay") {
+      if (req.headers["x-internal-token"] !== JWT_SECRET) {
+        res.writeHead(401).end();
+        return;
+      }
+      let raw = "";
+      req.on("data", (chunk) => { raw += chunk; });
+      req.on("end", async () => {
+        const send = (status: number, body: unknown) =>
+          res.writeHead(status, { "Content-Type": "application/json" }).end(JSON.stringify(body));
+        try {
+          const { userId, path, body, timeoutMs } = JSON.parse(raw || "{}");
+          const sockets = (await io?.in(`desktop-ai:${userId}`).fetchSockets()) || [];
+          if (!sockets.length) return send(409, { error: "not_connected" });
+          const reply = await sockets[0].timeout(Math.min(Number(timeoutMs) || 120_000, 600_000)).emitWithAck("ai:relay", { path, body });
+          send(200, reply);
+        } catch (err: any) {
+          send(502, { error: `Desktop AI relay failed: ${String(err?.message || err).slice(0, 200)}` });
+        }
+      });
+      return;
+    }
     res.writeHead(404).end();
   });
 
@@ -94,6 +131,13 @@ function startSocketServer() {
 
     // Join user's individual room for direct notifications
     socket.join(`user:${userId}`);
+
+    // Desktop app: this socket can run AI on the user's own computer (Ollama).
+    socket.on("desktop-ai:ready", (info: { models?: unknown }) => {
+      socket.data.aiModels = Array.isArray(info?.models) ? info.models.filter((m) => typeof m === "string").slice(0, 100) : [];
+      socket.join(`desktop-ai:${userId}`);
+    });
+    socket.on("desktop-ai:off", () => socket.leave(`desktop-ai:${userId}`));
 
     // Join project room
     socket.on("join-project", async (projectId: string) => {

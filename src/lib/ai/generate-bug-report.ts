@@ -4,7 +4,9 @@ import { prisma } from "@/lib/db"
 import {
   chatWithConfiguredProvider,
   resolveProvider,
+  hasLocalAi,
 } from "@/lib/ai/provider-chat"
+import { withQaSkills } from "@/lib/ai/qa-skills"
 import {
   BUG_REPORT_CRAFT,
   LANGUAGE_RULE,
@@ -221,7 +223,10 @@ async function callOllama(
       `${ollamaUrl}/api/chat`,
       {
         model,
-        messages: [{ role: "user", content: prompt, images: [input.imageBase64] }],
+        messages: [
+          { role: "system", content: withQaSkills(undefined, "generate-bug-report") },
+          { role: "user", content: prompt, images: [input.imageBase64] },
+        ],
         stream: false,
         format: "json",
         options: { temperature: 0.3 },
@@ -236,6 +241,7 @@ async function callOllama(
     {
       model,
       prompt,
+      system: withQaSkills(undefined, "generate-bug-report"),
       stream: false,
       format: "json",
       options: { temperature: 0.3, num_predict: 800 },
@@ -438,8 +444,11 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
   // costing a second query and still leaving us unable to name the provider
   // that let the tester down.
   const resolved = await resolveProvider(input.projectId || undefined).catch(() => null)
-  if (resolved) {
-    reason = `the configured provider (${resolved.provider}) returned no usable draft`
+  if (resolved || (await hasLocalAi())) {
+    const who = resolved ? `${resolved.provider} (${resolved.model})` : "AI on your computer"
+    reason = resolved
+      ? `the configured provider (${who}) returned no usable draft`
+      : "AI on your computer returned no usable draft"
 
     const ask = (withImage: boolean) =>
       chatWithConfiguredProvider({
@@ -479,11 +488,11 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
             hasImage && !withImage
               ? "the screenshot timed out, so this was drafted from your note alone"
               : repaired
-                ? `${resolved.provider} ran out of room mid-reply, so the last fields may be short`
+                ? `${who} ran out of room mid-reply, so the last fields may be short`
                 : undefined
           return normalize(data, "provider", degraded)
         }
-        reason = `${resolved.provider} (${resolved.model}) replied with something that was not JSON`
+        reason = `${who} replied with something that was not JSON`
         console.warn(
           "[generate-bug-report] provider returned unparsable output:",
           out.slice(0, 300)
@@ -493,8 +502,8 @@ export async function generateBugReportDraft(input: BugDraftInput): Promise<BugD
       } catch (err) {
         const message = (err as any)?.message || "unknown error"
         reason = withImage
-          ? `${resolved.provider} failed: ${message}`
-          : `${resolved.provider} failed${hasImage ? ", with and without the screenshot" : ""}: ${message}`
+          ? `${who} failed: ${message}`
+          : `${who} failed${hasImage ? ", with and without the screenshot" : ""}: ${message}`
         if (withImage && isTimeout(err)) {
           console.warn(
             "[generate-bug-report] provider timed out with the screenshot attached, retrying text-only:",

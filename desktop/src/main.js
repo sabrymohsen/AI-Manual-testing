@@ -10,6 +10,8 @@ const path = require("path")
 const { app, BrowserWindow, Menu, shell, ipcMain, session, dialog, nativeTheme } = require("electron")
 const settings = require("./settings")
 const localStack = require("./local-stack")
+const localAi = require("./local-ai")
+const updater = require("./updater")
 
 const PARTITION = "persist:qa-engine" // keeps cookies (the login) across restarts
 const isMac = process.platform === "darwin"
@@ -297,6 +299,21 @@ ipcMain.handle("desktop:open-server-picker", () => openServerWindow())
 ipcMain.handle("desktop:choose-repo", () => chooseRepo())
 ipcMain.handle("desktop:get-stack-log", () => stackLog.slice())
 
+// Calls from the QA Engine page itself (our server's origin only).
+function fromAppPage(event) {
+  try {
+    return isAppUrl(event.senderFrame?.url || event.sender.getURL())
+  } catch {
+    return false
+  }
+}
+localAi.register(fromAppPage)
+ipcMain.handle("desktop:check-update", (event) => {
+  if (!fromAppPage(event)) throw new Error("Not allowed")
+  return updater.check(true)
+})
+ipcMain.handle("desktop:version", () => app.getVersion())
+
 // ── menu ───────────────────────────────────────────────────────────────────
 function buildMenu() {
   const current = settings.load().server
@@ -389,43 +406,9 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
 }
 
-// ── auto-update (GitHub Releases) ──────────────────────────────────────────
-let updaterReady = false
+// ── updates: see updater.js (our own server, works without code signing) ──
 function checkForUpdates(manual = false) {
-  if (!app.isPackaged) {
-    if (manual) dialog.showMessageBox({ message: "Updates are only checked in the installed app." })
-    return
-  }
-  let autoUpdater
-  try {
-    autoUpdater = require("electron-updater").autoUpdater
-  } catch {
-    return
-  }
-  if (!updaterReady) {
-    updaterReady = true
-    autoUpdater.autoDownload = true
-    autoUpdater.on("update-downloaded", async (info) => {
-      const { response } = await dialog.showMessageBox({
-        type: "info",
-        buttons: ["Restart now", "Later"],
-        defaultId: 0,
-        message: `QA Engine ${info.version} is ready to install.`,
-        detail: "Restart the app to finish updating.",
-      })
-      if (response === 0) autoUpdater.quitAndInstall()
-    })
-    autoUpdater.on("error", (err) => {
-      console.warn("[updater]", err?.message || err)
-      if (manual) dialog.showMessageBox({ type: "warning", message: "Couldn't check for updates.", detail: String(err?.message || err) })
-    })
-  }
-  autoUpdater
-    .checkForUpdates()
-    .then((r) => {
-      if (manual && (!r || !r.isUpdateAvailable)) dialog.showMessageBox({ message: "You're on the latest version." })
-    })
-    .catch(() => {})
+  return updater.check(manual)
 }
 
 // ── lifecycle ──────────────────────────────────────────────────────────────
@@ -436,7 +419,7 @@ app.whenReady().then(() => {
   configureSession()
   buildMenu()
   createMainWindow()
-  setTimeout(() => checkForUpdates(false), 5000)
+  updater.start()
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()

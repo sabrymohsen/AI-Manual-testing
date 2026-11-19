@@ -1,0 +1,22 @@
+# HTTPS certificates are issued automatically (Let's Encrypt) for both names.
+{$DOMAIN} {
+	encode gzip
+	# Live notifications / chat (socket.io). /internal/* on the socket server is NOT exposed.
+	handle /socket.io/* {
+		reverse_proxy socket:3001
+	}
+	# Desktop installers (copied to ~/qa-engine-downloads on the server).
+	handle_path /downloads/* {
+		root * /srv/downloads
+		header Content-Disposition attachment
+		file_server
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+# Live QA / recorder: the browser opens a WebSocket to this host directly.
+recorder.{$DOMAIN} {
+	reverse_proxy recorder:3847
+}

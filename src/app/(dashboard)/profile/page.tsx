@@ -7,6 +7,7 @@ import {
   User as UserIcon,
   Activity as ActivityIcon,
   ShieldCheck,
+  Cpu,
   FolderKanban,
   ClipboardList,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { LocalAiPanel } from "@/components/desktop/local-ai-panel"
 import { Textarea } from "@/components/ui/textarea"
 
 interface Profile {
@@ -85,7 +87,7 @@ const ACTIVITY_DOTS: Record<string, string> = {
   PASSWORD_CHANGED: "bg-slate-500",
 }
 
-type Tab = "general" | "activity" | "security"
+type Tab = "general" | "ai" | "activity" | "security"
 
 export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>("general")
@@ -256,6 +258,7 @@ export default function ProfilePage() {
 
   const tabs: { id: Tab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     { id: "general", label: "General", icon: UserIcon },
+    { id: "ai", label: "AI", icon: Cpu },
     { id: "activity", label: "Activity", icon: ActivityIcon },
     { id: "security", label: "Security", icon: ShieldCheck },
   ]
@@ -462,6 +465,13 @@ export default function ProfilePage() {
               ))}
             </ol>
           )}
+        </div>
+      )}
+
+      {/* ── AI ── */}
+      {tab === "ai" && (
+        <div className="mx-auto mt-6 max-w-2xl">
+          <LocalAiPanel />
         </div>
       )}
 

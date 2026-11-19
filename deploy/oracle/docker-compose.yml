@@ -1,0 +1,120 @@
+# QA Engine on one self-hosted server (Oracle Cloud Always Free, ARM64).
+# Run from the repo root on the server:
+#   docker compose -f deploy/oracle/docker-compose.yml --env-file deploy/oracle/.env up -d --build
+# deploy/oracle/.env is created on the server by setup.sh (secrets never leave it).
+
+x-app-env: &app-env
+  NODE_ENV: production
+  DATABASE_URL: postgresql://qa:${POSTGRES_PASSWORD}@postgres:5432/qa_engine
+  REDIS_URL: redis://redis:6379
+  NEXTAUTH_URL: https://${DOMAIN}
+  APP_URL: https://${DOMAIN}
+  NEXT_PUBLIC_APP_URL: https://${DOMAIN}
+  NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+  APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY}
+  APP_ENCRYPTION_KEY_VERSION: "1"
+  CSRF_SECRET: ${CSRF_SECRET}
+  STORAGE_ROOT: /data
+  SOCKET_INTERNAL_URL: http://socket:3001
+  RECORDER_WORKER_URL: https://recorder.${DOMAIN}
+  RECORDER_WORKER_SECRET: ${RECORDER_WORKER_SECRET}
+  PLAYWRIGHT_HEADLESS: "true"
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qa
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: qa_engine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qa -d qa_engine"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+        NEXT_PUBLIC_SOCKET_URL: https://${DOMAIN}
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+      HOSTNAME: 0.0.0.0
+    volumes:
+      - storage:/data
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  workers:
+    build:
+      context: ../..
+      dockerfile: Dockerfile.worker
+    image: qa-engine-node
+    restart: unless-stopped
+    environment: *app-env
+    volumes:
+      - storage:/data
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  recorder:
+    image: qa-engine-node
+    restart: unless-stopped
+    command: ["npm", "run", "recorder-worker"]
+    environment:
+      <<: *app-env
+      RECORDER_WORKER_PORT: "3847"
+    volumes:
+      - storage:/data
+    depends_on:
+      workers: { condition: service_started }
+
+  socket:
+    image: qa-engine-node
+    restart: unless-stopped
+    command: ["npx", "tsx", "socket-server.ts"]
+    environment:
+      <<: *app-env
+      SOCKET_PORT: "3001"
+    depends_on:
+      workers: { condition: service_started }
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /home/ubuntu/qa-engine-downloads:/srv/downloads:ro
+      - caddydata:/data
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  redisdata:
+  storage:
+  caddydata:

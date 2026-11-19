@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { BrandMark, TerminalMock } from "@/components/landing/qa-os"
 import { FlaskConical, GitBranch, Globe } from "lucide-react"
+import { DesktopDownloads } from "@/components/auth/desktop-downloads"
 
 /** Presentation-only shell for /login and /register: brand panel left, form right. */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
@@ -35,6 +36,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             <Link href="/"><BrandMark size="sm" /></Link>
           </div>
           {children}
+          <DesktopDownloads />
         </div>
       </div>
     </div>

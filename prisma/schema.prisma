@@ -9,7 +9,7 @@ generator client {
   // containers (Alpine app image / Debian worker + recorder images). Pinned
   // explicitly because Prisma's openssl auto-detection fails on Alpine and
   // would otherwise generate the wrong (linux-musl / openssl-1.1) engine.
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x", "linux-musl-arm64-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 enum Environment {
@@ -256,6 +256,9 @@ model User {
 
   // ── Scrum board (spec-literal parallel system) ──
   avatarUrl            String?
+  // Desktop app: Ollama model on this user's own computer, used for their AI
+  // requests while their desktop app is open (relayed via the socket server). null = off.
+  localAiModel         String?
   scrumTasks           Task[]           @relation("ScrumTaskAssignees")
   reportedScrumTasks   Task[]           @relation("ScrumTaskReporter")
   assignedSubtasks     Subtask[]        @relation("ScrumSubtaskAssignee")

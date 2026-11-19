@@ -5,6 +5,21 @@ const { contextBridge, ipcRenderer } = require("electron")
 const info = {
   isDesktop: true,
   platform: process.platform,
+  version: () => ipcRenderer.invoke("desktop:version"),
+  // Desktop app update: shows "Update now" when a newer version is out.
+  checkForUpdate: () => ipcRenderer.invoke("desktop:check-update"),
+  // AI on this computer (Ollama). The main process only answers our server's pages.
+  ai: {
+    status: () => ipcRenderer.invoke("desktop:ai-status"),
+    chat: (body) => ipcRenderer.invoke("desktop:ai-chat", body),
+    pull: (model) => ipcRenderer.invoke("desktop:ai-pull", model),
+    openDownload: () => ipcRenderer.invoke("desktop:ai-download"),
+    onPullProgress: (cb) => {
+      const h = (_e, p) => cb(p)
+      ipcRenderer.on("desktop:ai-pull-progress", h)
+      return () => ipcRenderer.removeListener("desktop:ai-pull-progress", h)
+    },
+  },
 }
 
 // Only the app's own bundled pages (offline screen, server picker) may change

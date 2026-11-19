@@ -24,6 +24,7 @@ import {
 } from "@/lib/hub-ai-providers"
 import { getProjectAiCredentials } from "@/lib/ai/project-ai-config"
 import { withQaSkills } from "@/lib/ai/qa-skills"
+import { relayToDesktop, DesktopNotConnectedError } from "@/lib/ai/desktop-relay"
 
 export interface ResolvedProvider {
   provider: AiProvider
@@ -84,6 +85,12 @@ export interface ChatOptions {
    * so callers sending whole document sections must raise it.
    */
   contextTokens?: number
+  /**
+   * Whose request this is. Used to run it on Ollama on that user's own computer
+   * when they turned on "AI on this computer" and their desktop app is open.
+   * Defaults to the signed-in user of the current request.
+   */
+  userId?: string
 }
 
 /**
@@ -253,9 +260,10 @@ async function callAnthropic(
  */
 async function callOllamaNative(
   resolved: ResolvedProvider,
-  opts: ChatOptions
+  opts: ChatOptions,
+  via?: { userId: string }
 ): Promise<string> {
-  const base = ollamaBaseUrl(resolved.ollamaUrl)
+  const base = via ? "the desktop app (this computer)" : ollamaBaseUrl(resolved.ollamaUrl)
   const messages: any[] = []
   if (opts.system) messages.push({ role: "system", content: opts.system })
   messages.push({
@@ -265,33 +273,41 @@ async function callOllamaNative(
   })
   const limit = opts.maxTokens ?? 4000
 
-  const res = await fetch(`${base}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: resolved.model,
-      messages,
-      stream: false,
-      think: process.env.OLLAMA_THINK === "true",
-      ...(opts.json ? { format: "json" } : {}),
-      options: {
-        num_predict: limit,
-        ...(opts.contextTokens ? { num_ctx: opts.contextTokens } : {}),
-        ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
-      },
-    }),
-    signal: AbortSignal.timeout(opts.timeoutMs ?? 120_000),
-  })
+  const body = {
+    model: resolved.model,
+    messages,
+    stream: false,
+    think: process.env.OLLAMA_THINK === "true",
+    ...(opts.json ? { format: "json" } : {}),
+    options: {
+      num_predict: limit,
+      ...(opts.contextTokens ? { num_ctx: opts.contextTokens } : {}),
+      ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+    },
+  }
+  const timeoutMs = opts.timeoutMs ?? 120_000
 
-  if (!res.ok) {
-    // Only Ollama's own {"error": "..."} message: the URL may be user-supplied,
-    // so don't echo whatever some other server sent back.
-    const data = await res.json().catch(() => null)
-    const reason = typeof data?.error === "string" ? `: ${data.error.slice(0, 200)}` : ""
-    throw new Error(`Ollama at ${base} returned ${res.status}${reason}`)
+  let reply: { ok: boolean; status: number; data: any }
+  if (via) {
+    reply = await relayToDesktop(via.userId, "/api/chat", body, timeoutMs)
+  } else {
+    const res = await fetch(`${base}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(timeoutMs),
+    })
+    reply = { ok: res.ok, status: res.status, data: await res.json().catch(() => null) }
   }
 
-  const data = await res.json()
+  if (!reply.ok) {
+    // Only Ollama's own {"error": "..."} message: the URL may be user-supplied,
+    // so don't echo whatever some other server sent back.
+    const reason = typeof reply.data?.error === "string" ? `: ${reply.data.error.slice(0, 200)}` : ""
+    throw new Error(`Ollama at ${base} returned ${reply.status}${reason}`)
+  }
+
+  const data = reply.data || {}
   await recordUsage(
     resolved.provider,
     resolved.model,
@@ -395,19 +411,58 @@ async function callOpenAiCompatible(
   return content
 }
 
+/** True when the calling user turned on "AI on this computer". */
+export async function hasLocalAi(userId?: string): Promise<boolean> {
+  return !!(await localAiFor(userId))
+}
+
+/** The calling user's "AI on this computer" model, if they turned it on. */
+async function localAiFor(userId?: string): Promise<{ userId: string; model: string } | null> {
+  try {
+    let id = userId
+    if (!id) {
+      // Outside a request (background jobs) there are no cookies; that's fine.
+      const { getSession } = await import("@/lib/auth")
+      id = (await getSession())?.user.id
+    }
+    if (!id) return null
+    const u = await prisma.user.findUnique({ where: { id }, select: { localAiModel: true } })
+    return u?.localAiModel ? { userId: id, model: u.localAiModel } : null
+  } catch {
+    return null
+  }
+}
+
 /**
  * Run a completion on the configured provider.
  * Throws when nothing is configured, so callers can fall back to their own
  * offline path rather than surfacing an error to the tester.
  */
 export async function chatWithConfiguredProvider(opts: ChatOptions): Promise<string> {
-  const resolved = await resolveProvider(opts.projectId)
-  if (!resolved) throw new Error("No AI provider is configured")
-
   // Attach the QA skills that match this call's command (always on; see qa-skills.ts).
   const withSkills: ChatOptions = {
     ...opts,
     system: withQaSkills(opts.system, opts.command),
+  }
+
+  // "AI on this computer": the user's own Ollama through their open desktop app.
+  const local = await localAiFor(opts.userId)
+  if (local) {
+    try {
+      return await callOllamaNative({ provider: "Ollama", apiKey: "", model: local.model }, withSkills, { userId: local.userId })
+    } catch (err) {
+      // App closed → fall through to the project/workspace provider.
+      if (!(err instanceof DesktopNotConnectedError)) throw err
+    }
+  }
+
+  const resolved = await resolveProvider(opts.projectId)
+  if (!resolved) {
+    throw new Error(
+      local
+        ? "No AI provider is configured, and AI on this computer needs the QA Engine desktop app to be open"
+        : "No AI provider is configured"
+    )
   }
 
   if (resolved.provider === "Anthropic") return callAnthropic(resolved, withSkills)
