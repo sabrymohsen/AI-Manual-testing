@@ -3980,3 +3980,25 @@ model ScrumSavedView {
   @@index([projectId])
   @@index([userId])
 }
+
+// Long AI work (e.g. generating test cases) run in the background, so the user
+// can keep using the app; a tray in the layout shows progress and the result.
+model AiJob {
+  id         String    @id @default(cuid())
+  userId     String
+  projectId  String?
+  kind       String // "generate-tests"
+  title      String
+  status     String    @default("running") // running | done | failed
+  /// Where "Open" goes when it's done.
+  link       String?
+  result     Json?
+  error      String?
+  /// The user saw the finished result (toast shown).
+  seen       Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}

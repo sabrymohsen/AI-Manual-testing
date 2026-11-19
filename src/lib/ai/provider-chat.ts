@@ -411,6 +411,20 @@ async function callOpenAiCompatible(
   return content
 }
 
+/**
+ * The user's "AI on this computer" as a provider, when it's on AND their
+ * desktop app is connected right now. For callers that pick a provider up
+ * front (BRD analysis) instead of per call.
+ */
+export async function localAiProvider(userId?: string | null): Promise<ResolvedProvider | null> {
+  if (!userId) return null
+  const local = await localAiFor(userId)
+  if (!local) return null
+  const { desktopBridgeStatus } = await import("@/lib/ai/desktop-relay")
+  if (!(await desktopBridgeStatus(userId)).connected) return null
+  return { provider: "Ollama", apiKey: "", model: local.model }
+}
+
 /** True when the calling user turned on "AI on this computer". */
 export async function hasLocalAi(userId?: string): Promise<boolean> {
   return !!(await localAiFor(userId))

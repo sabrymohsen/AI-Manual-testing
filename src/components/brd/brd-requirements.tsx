@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { AI_JOB_FINISHED, AI_JOB_STARTED } from "@/components/desktop/ai-jobs-tray"
 import {
   AlertTriangle,
   CheckCircle2,
@@ -152,20 +153,26 @@ export function BrdRequirements({
   async function generate(r: Requirement, count: number) {
     setGenerating(r.id)
     try {
-      const d = await send(`/api/brds/${brdId}/requirements/${r.id}/generate`, "POST", { count })
-      const n = d.testCases.length
-      toast.success(
-        `Drafted ${n} test case${n === 1 ? "" : "s"} for ${r.key}` +
-          (d.linkedToStory && r.story ? `, linked to story ${r.story.key}` : "") +
-          " — review them in the test library"
-      )
-      load()
+      // Runs on the server as a background job: the tray shows it on every page
+      // and tells the user when it's done, even after they leave this page.
+      await send(`/api/brds/${brdId}/requirements/${r.id}/generate`, "POST", { count, background: true })
+      window.dispatchEvent(new Event(AI_JOB_STARTED))
+      toast(`Generating ${count} test case${count === 1 ? "" : "s"} for ${r.key}…`, {
+        description: "This runs in the background — keep working, we'll tell you when it's done.",
+      })
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
       setGenerating(null)
     }
   }
+
+  // Refresh the counts when a generation for this BRD finishes.
+  useEffect(() => {
+    const onDone = () => load()
+    window.addEventListener(AI_JOB_FINISHED, onDone)
+    return () => window.removeEventListener(AI_JOB_FINISHED, onDone)
+  }, [load])
 
   const act = async (fn: () => Promise<unknown>, ok?: string) => {
     try {

@@ -9,10 +9,11 @@ vi.mock("@/lib/auth", async (orig) => ({
   getSession: vi.fn(async () => (sessionUser ? { user: sessionUser } : null)),
 }))
 
+const generator = vi.fn(async (..._a: any[]) => [
+  { title: "يقبل رقم هوية صحيح", priority: "High", steps: [{ actionDescription: "أدخل رقم الهوية", expectedResult: "تظهر البيانات" }] },
+])
 vi.mock("@/lib/ai/test-case-generator", () => ({
-  generateTestCasesFromRequirements: vi.fn(async () => [
-    { title: "يقبل رقم هوية صحيح", priority: "High", steps: [{ actionDescription: "أدخل رقم الهوية", expectedResult: "تظهر البيانات" }] },
-  ]),
+  generateTestCasesFromRequirements: (...a: any[]) => generator(...a),
 }))
 
 import { POST as sendToBoard } from "@/app/api/brds/[brdId]/board/route"
@@ -20,6 +21,8 @@ import { POST as generate } from "@/app/api/brds/[brdId]/requirements/[reqId]/ge
 import { POST as linkTests } from "@/app/api/brds/[brdId]/requirements/[reqId]/test-cases/route"
 import { GET as listRequirements } from "@/app/api/brds/[brdId]/requirements/route"
 import { resyncRequirements } from "@/lib/brd/lifecycle"
+import { GET as listJobs } from "@/app/api/ai-jobs/route"
+import { POST as markSeen } from "@/app/api/ai-jobs/[jobId]/seen/route"
 
 const json = (body: unknown) =>
   new Request("http://localhost/x", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
@@ -159,5 +162,49 @@ describe("BRD → Scrum board", () => {
     const res = await sendToBoard(json({}), p(brd.id))
     expect(res.status).toBe(403)
     expect(await prismaTest.task.count({ where: { projectId: project.id } })).toBe(0)
+  })
+
+  it("generates in the background: the job runs on, then shows its result once", async () => {
+    const { owner, project, brd, byKey } = await seed()
+    const req = byKey["US-1.01"]
+    as(owner)
+    const res = await generate(json({ count: 1, background: true }), p(brd.id, req.id))
+    expect(res.status).toBe(202)
+    const { job } = await res.json()
+    expect(job).toMatchObject({ status: "running", kind: "generate-tests", userId: owner.id })
+    let jobs: any[] = []
+    for (let i = 0; i < 50; i++) {
+      jobs = (await (await listJobs()).json()).jobs
+      if (jobs[0]?.status !== "running") break
+      await new Promise((r) => setTimeout(r, 20))
+    }
+    expect(jobs[0]).toMatchObject({ status: "done", link: `/projects/${project.id}/brds/${brd.id}?tab=coverage` })
+    expect(jobs[0].result.testCases).toHaveLength(1)
+    // The user's id reaches the AI call (so it can run on their own computer), with a long time limit.
+    expect(generator.mock.calls.at(-1)![2]).toMatchObject({ userId: owner.id, projectId: project.id, timeoutMs: 600_000 })
+    expect(await prismaTest.brdRequirementTestCase.count({ where: { requirementId: req.id } })).toBe(1)
+
+    await markSeen(new Request("http://localhost/x", { method: "POST" }), { params: { jobId: job.id } })
+    expect((await (await listJobs()).json()).jobs).toHaveLength(0)
+
+    // Someone else can't see it or mark it.
+    const other = await createTestUser("o@x.test", "password123", "O")
+    as(other)
+    expect((await (await listJobs()).json()).jobs).toHaveLength(0)
+  })
+
+  it("a failed background generation says why", async () => {
+    const { owner, brd, byKey } = await seed()
+    generator.mockRejectedValueOnce(new Error("Ollama at the desktop app (this computer) returned 404: model 'x' not found"))
+    as(owner)
+    await generate(json({ count: 2, background: true }), p(brd.id, byKey["US-9"].id))
+    let jobs: any[] = []
+    for (let i = 0; i < 50; i++) {
+      jobs = (await (await listJobs()).json()).jobs
+      if (jobs[0]?.status !== "running") break
+      await new Promise((r) => setTimeout(r, 20))
+    }
+    expect(jobs[0].status).toBe("failed")
+    expect(jobs[0].error).toMatch(/model 'x' not found/)
   })
 })

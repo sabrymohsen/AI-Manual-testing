@@ -23,7 +23,7 @@ import {
   type Priority,
   type RequirementKind,
 } from "@/lib/brd/analysis-types"
-import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
+import { chatWithConfiguredProvider, resolveProvider, localAiProvider } from "@/lib/ai/provider-chat"
 import { repairTruncatedJson } from "@/lib/ai/generate-bug-report"
 
 /**
@@ -574,7 +574,7 @@ export function criterionSupport(criterion: string, sourceWords: Set<string>): n
 
 export async function analyzeChunk(
   chunk: { text: string; paths: string[] },
-  ctx: { projectId: string; language: DocLanguage; system: string }
+  ctx: { projectId: string; language: DocLanguage; system: string; userId?: string }
 ): Promise<{ drafts: Draft[]; issues: Omit<AnalysisIssue, "id" | "verified" | "relatedKeys">[] }> {
   const prompt = [
     `Sections in this part: ${chunk.paths.join(" | ")}`,
@@ -593,6 +593,7 @@ export async function analyzeChunk(
     maxTokens,
     timeoutMs: CHUNK_TIMEOUT_MS,
     projectId: ctx.projectId,
+    userId: ctx.userId,
     command: "analyze-brd",
     contextTokens: contextFor(ctx.system.length + prompt.length, maxTokens),
   })
@@ -650,7 +651,7 @@ export async function analyzeChunk(
   return { drafts, issues }
 }
 
-async function summarize(projectId: string, language: DocLanguage, docOutline: string, candidates: AnalysisCandidate[]) {
+async function summarize(projectId: string, language: DocLanguage, docOutline: string, candidates: AnalysisCandidate[], userId?: string) {
   const lang = language === "ar" ? "Arabic" : language === "en" ? "English" : "the document's main language"
   const list = candidates
     .slice(0, 150)
@@ -671,6 +672,7 @@ async function summarize(projectId: string, language: DocLanguage, docOutline: s
     temperature: 0.2,
     timeoutMs: 180_000,
     projectId,
+    userId,
     command: "analyze-brd",
     contextTokens: 16384,
   })
@@ -728,7 +730,10 @@ export async function runBrdAnalysis(analysisId: string) {
     return
   }
 
-  const provider = analysis.method === "rules" ? null : await resolveProvider(brd.projectId)
+  // The user's own Ollama (desktop app) first, then the project/workspace provider.
+  const userId = analysis.createdById ?? undefined
+  const provider =
+    analysis.method === "rules" ? null : (await localAiProvider(userId)) ?? (await resolveProvider(brd.projectId))
   const index = indexDocument(doc.text)
   let drafts: Draft[] = []
   let rawIssues: Omit<AnalysisIssue, "id" | "verified" | "relatedKeys">[] = []
@@ -761,7 +766,7 @@ export async function runBrdAnalysis(analysisId: string) {
         const chunk = chunks[nextChunk++]
         for (let attempt = 0; attempt < 2 && !results[chunk.index]; attempt++) {
           try {
-            results[chunk.index] = await analyzeChunk(chunk, { projectId: brd.projectId, language: doc.language, system })
+            results[chunk.index] = await analyzeChunk(chunk, { projectId: brd.projectId, language: doc.language, system, userId })
           } catch (e: any) {
             if (attempt === 1) failures.push(`${chunk.paths[0] || `part ${chunk.index + 1}`}: ${String(e?.message || e).slice(0, 200)}`)
           }
@@ -824,7 +829,7 @@ export async function runBrdAnalysis(analysisId: string) {
 
   let summary: string | null = null
   if (method === "ai" && candidates.length) {
-    summary = await summarize(brd.projectId, doc.language, outline(doc.sections), candidates).catch(() => null)
+    summary = await summarize(brd.projectId, doc.language, outline(doc.sections), candidates, userId).catch(() => null)
   }
   const notes: string[] = []
   if (provider && method === "rules") notes.push(`The AI provider failed on every part (${failures[0] ?? "unknown error"}), so this is the rule-based result.`)

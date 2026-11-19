@@ -44,6 +44,7 @@ import { ProjectSwitcher } from "@/components/layout/ProjectSwitcher"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { DesktopAiBridge } from "@/components/desktop/desktop-ai-bridge"
 import { UpdateNotice } from "@/components/desktop/update-notice"
+import { AiJobsTray } from "@/components/desktop/ai-jobs-tray"
 import { Toaster } from "@/components/ui/sonner"
 import {
   DropdownMenu,
@@ -492,6 +493,7 @@ export default function DashboardLayout({
           <NotificationBell token={token} />
           <DesktopAiBridge token={token} />
           <UpdateNotice />
+          <AiJobsTray />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button

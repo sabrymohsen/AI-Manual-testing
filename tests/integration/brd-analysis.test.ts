@@ -15,6 +15,7 @@ let provider: any = { provider: "Kimi", apiKey: "k", model: "kimi-k2" }
 vi.mock("@/lib/ai/provider-chat", () => ({
   chatWithConfiguredProvider: (opts: any) => chat(opts),
   resolveProvider: async () => provider,
+  localAiProvider: async () => null,
 }))
 
 import { GET as getAnalysis, POST as startAnalysis } from "@/app/api/brds/[brdId]/analysis/route"

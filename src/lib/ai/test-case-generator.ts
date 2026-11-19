@@ -38,6 +38,10 @@ export interface GenerateOptions {
   includeNegativeCases?: boolean;
   includeEdgeCases?: boolean;
   includeExploratory?: boolean;
+  /** Whose request: lets it run on that user's own Ollama (desktop app) from a background job. */
+  userId?: string;
+  /** How long the AI may take (a local model can need minutes). */
+  timeoutMs?: number;
 }
 
 const DEFAULT_OPTIONS: GenerateOptions = {
@@ -67,27 +71,30 @@ export async function generateTestCasesFromRequirements(
   const prompt = buildPrompt(requirements, projectUrl, opts);
 
   let response: string;
+  // The configured provider's failure is the one worth telling the user; the
+  // legacy fallbacks below usually aren't set up on a deployed server.
+  let primaryError: string | null = null;
 
   // The workspace's configured provider (Section 11) comes first. Without this
   // the generator only ever tried a local Ollama and a HuggingFace token, so on
   // a deployed box it always ended up on the offline path regardless of what
   // was configured in the hub.
   try {
-    if ((await hasConfiguredProvider(opts.projectId)) || (await hasLocalAi())) {
+    if ((await hasConfiguredProvider(opts.projectId)) || (await hasLocalAi(opts.userId))) {
       const out = await chatWithConfiguredProvider({
         prompt,
         maxTokens: opts.maxTokens,
         temperature: opts.temperature,
         command: "generate-test-cases",
         projectId: opts.projectId,
+        userId: opts.userId,
+        timeoutMs: opts.timeoutMs,
       });
       if (out) return parseTestCasesFromResponse(out, opts);
     }
   } catch (error) {
-    console.warn(
-      "[test-case-generator] configured provider failed, falling back:",
-      (error as any)?.message
-    );
+    primaryError = (error as any)?.message || String(error);
+    console.warn("[test-case-generator] configured provider failed, falling back:", primaryError);
   }
 
   try {
@@ -99,10 +106,14 @@ export async function generateTestCasesFromRequirements(
   } catch (error) {
     console.warn(`Primary provider ${opts.provider} failed, trying fallback:`, error);
     // Try fallback
-    if (opts.provider === "ollama") {
-      response = await callHuggingFace(prompt, opts);
-    } else {
-      response = await callOllama(prompt, opts);
+    try {
+      if (opts.provider === "ollama") {
+        response = await callHuggingFace(prompt, opts);
+      } else {
+        response = await callOllama(prompt, opts);
+      }
+    } catch (fallbackError) {
+      throw new Error(primaryError || (fallbackError as any)?.message || "No AI provider could generate test cases");
     }
   }
 

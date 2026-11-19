@@ -3,16 +3,19 @@ import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireBrdTestAccess, brdAudit } from "@/lib/brd/server"
 import { generateTestCasesFromRequirements } from "@/lib/ai/test-case-generator"
+import { startAiJob } from "@/lib/ai-jobs"
 
 const schema = z.object({
   count: z.number().int().min(1).max(10).optional(),
   suiteId: z.string().nullable().optional(),
+  /** Run as a background job (202 + job); the page can be left meanwhile. */
+  background: z.boolean().optional(),
 })
 
 const VALID_PRIORITY = new Set(["Low", "Medium", "High", "Critical"])
 
 /**
- * POST /api/brds/:brdId/requirements/:reqId/generate  { count?, suiteId? }
+ * POST /api/brds/:brdId/requirements/:reqId/generate  { count?, suiteId?, background? }
  *
  * Drafts test cases for one requirement with the project's AI provider and
  * links them to it. They are created as Draft so a tester reviews them before
@@ -28,13 +31,50 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
 
   const parsed = schema.safeParse(await request.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "Validation failed" }, { status: 400 })
-  const { count = 3, suiteId } = parsed.data
+  const { count = 3, suiteId, background } = parsed.data
 
   if (suiteId) {
     const suite = await prisma.testSuite.findFirst({ where: { id: suiteId, projectId: brd.projectId }, select: { id: true } })
     if (!suite) return NextResponse.json({ error: "Suite not found" }, { status: 400 })
   }
 
+  const user = access.session!.user
+  const run = () => generateForRequirement(brd, req, count, suiteId ?? null, user, background ? 600_000 : undefined)
+
+  if (background) {
+    const job = await startAiJob(
+      {
+        userId: user.id,
+        projectId: brd.projectId,
+        kind: "generate-tests",
+        title: `Generating ${count} test case${count === 1 ? "" : "s"} for ${req.key}`,
+        link: `/projects/${brd.projectId}/brds/${brd.id}?tab=coverage`,
+      },
+      async () => {
+        const out = await run()
+        if ("error" in out) throw new Error(out.error)
+        return out
+      }
+    )
+    return NextResponse.json({ job }, { status: 202 })
+  }
+
+  const out = await run()
+  if ("error" in out) return NextResponse.json({ error: out.error }, { status: 502 })
+  return NextResponse.json(out, { status: 201 })
+}
+
+type Brd = { id: string; projectId: string }
+type Req = { id: string; key: string; title: string; description: string; taskId: string | null }
+
+async function generateForRequirement(
+  brd: Brd,
+  req: Req,
+  count: number,
+  suiteId: string | null,
+  user: { id: string; name?: string | null; email?: string },
+  timeoutMs?: number
+): Promise<{ error: string } | { testCases: { id: string; title: string }[]; linkedToStory: boolean }> {
   const project = await prisma.project.findUnique({ where: { id: brd.projectId }, select: { webAppUrl: true } })
   const text = `${req.key}: ${req.title}\n\n${req.description}`
   const arabic = /[؀-ۿ]/.test(text)
@@ -47,17 +87,16 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
       language: arabic ? "ar" : "en",
       includeNegativeCases: true,
       includeEdgeCases: true,
+      userId: user.id,
+      timeoutMs,
     })
   } catch (e: any) {
     console.error("BRD test generation failed:", e?.message)
-    return NextResponse.json(
-      { error: "The AI provider couldn't generate test cases. Check the project's AI settings and try again." },
-      { status: 502 }
-    )
+    return {
+      error: `The AI couldn't generate test cases${e?.message ? ` (${String(e.message).slice(0, 200)})` : ""}. Check the AI settings and try again.`,
+    }
   }
-  if (!generated?.length) {
-    return NextResponse.json({ error: "The AI returned no usable test cases. Try again." }, { status: 502 })
-  }
+  if (!generated?.length) return { error: "The AI returned no usable test cases. Try again." }
 
   const tag = req.key.toLowerCase()
   const created = await prisma.$transaction(async (tx) => {
@@ -92,6 +131,6 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
     return out
   })
 
-  await brdAudit(brd.id, "tests_generated", `Generated ${created.length} draft test case(s) for ${req.key}`, access.session!.user)
-  return NextResponse.json({ testCases: created, linkedToStory: !!req.taskId }, { status: 201 })
+  await brdAudit(brd.id, "tests_generated", `Generated ${created.length} draft test case(s) for ${req.key}`, user)
+  return { testCases: created, linkedToStory: !!req.taskId }
 }
