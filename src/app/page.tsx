@@ -1,605 +1,285 @@
 import Link from "next/link"
+import { ArrowRight, Check, ChevronDown, Download, Globe2, Languages, Sparkles, Zap } from "lucide-react"
 import { getSession } from "@/lib/auth"
-import { BrandMark, TerminalMock } from "@/components/landing/qa-os"
-import {
-  Activity,
-  ArrowRight,
-  Bell,
-  Bot,
-  Brain,
-  Bug,
-  Camera,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  Cpu,
-  Database,
-  Eye,
-  Figma,
-  FileSpreadsheet,
-  FileText,
-  FlaskConical,
-  FolderOpen,
-  Globe,
-  History,
-  LayoutDashboard,
-  LayoutGrid,
-  Layers,
-  LineChart,
-  ListChecks,
-  MessageSquare,
-  MousePointerClick,
-  Play,
-  Route,
-  Settings,
-  Shield,
-  Sparkles,
-  Trello,
-  UserCircle,
-  Users,
-  Video,
-  Wand2,
-  Zap
-} from "lucide-react"
+import { AppPreview } from "@/components/landing/app-preview"
+import { DesktopDownloadCards } from "@/components/auth/desktop-downloads"
+import { AI_POINTS, FAQ, FEATURE_GROUPS, FLOW } from "@/components/landing/features"
 
-/* ------------------------------------------------------------------ */
-/* Feature data — names match the real in-app page titles exactly.     */
-/* ------------------------------------------------------------------ */
+/* Public website: what QA Engine is, every feature (real page names), the AI,
+   and the desktop app downloads. Light first, on the app's own theme tokens. */
 
-type Feature = { icon: any; name: string; description: string }
+function Logo() {
+  return (
+    <span className="inline-flex items-center gap-2 text-[15px] font-semibold tracking-tight text-foreground">
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+        <Zap className="h-4 w-4" fill="currentColor" />
+      </span>
+      QA Engine
+    </span>
+  )
+}
 
-const PLAN_FEATURES: Feature[] = [
-  {
-    icon: Trello,
-    name: "Scrum Board",
-    description:
-      "Jira-style sprint planning: drag-and-drop backlog, kanban board, and a full task drawer with subtasks, work logs, attachments, watchers, and votes."
-  },
-  {
-    icon: Layers,
-    name: "Product Backlog",
-    description:
-      "A real Epic → Feature → Story hierarchy with workflow transitions, sprint start/complete, and a requirements kanban board alongside it."
-  },
-  {
-    icon: FileSpreadsheet,
-    name: "BRD Hub",
-    description:
-      "Upload, version, and preview business requirement documents (PDF + Word), edit them in a Word-style editor with docx export, and discuss sections with @mention comments."
-  },
-  {
-    icon: LineChart,
-    name: "Reports",
-    description:
-      "A live analytics dashboard: KPI tiles with sparklines, burndown, velocity, cumulative flow, defect trends, team radar, and a coverage funnel."
-  },
-  {
-    icon: Users,
-    name: "Members",
-    description:
-      "Two-tier access control — global admins plus per-project Owner, Admin, Member, and Viewer roles — with token-based email invitations."
-  },
-  {
-    icon: LayoutDashboard,
-    name: "Executive Monitoring Control",
-    description:
-      "The command dashboard: cross-project health, test and bug KPIs, and recent activity in one screen."
-  }
-]
-
-const MANUAL_FEATURES: Feature[] = [
-  {
-    icon: FlaskConical,
-    name: "Live QA Session",
-    description:
-      "Test inside an embedded browser streamed straight into the app. The whole session is video-recorded, and any moment becomes a bug with one click — annotated with arrows, highlights, and blur before it's filed."
-  },
-  {
-    icon: History,
-    name: "Live QA Session History",
-    description:
-      "Every ended session preserved with its recordings, screenshots, and the bugs it produced — each bug links back to the exact session it came from."
-  },
-  {
-    icon: FileText,
-    name: "Test Cases",
-    description:
-      "Manual and automated suites with priorities, structured steps, tags, bulk operations, and full execution history."
-  },
-  {
-    icon: Bug,
-    name: "Bug Reports",
-    description:
-      "Defects move through Open, In Progress, Ready for Retest, Reopened, and Closed — with severity, source, screenshots, repro steps, and bulk triage actions."
-  },
-  {
-    icon: Camera,
-    name: "Recorder Studio",
-    description:
-      "Click through your app in a real browser and replay the recording as an automated test on the local Playwright worker."
-  },
-  {
-    icon: ListChecks,
-    name: "Traceability Matrix",
-    description:
-      "Requirements Traceability as a live grid — every story linked to the tests that verify it, with untested requirements surfaced instantly."
-  }
-]
-
-const HUB_TOOLS: Feature[] = [
-  {
-    icon: Play,
-    name: "Test Studio",
-    description: "Author and launch automated suites with test data, accessibility checks, and execution targets."
-  },
-  {
-    icon: Camera,
-    name: "Recorder",
-    description: "Visual flow recorder that turns real browser sessions into repeatable automated tests."
-  },
-  {
-    icon: FolderOpen,
-    name: "Evidence",
-    description: "Evidence Vault: screenshots, animated GIFs with a frame viewer and highlighter, plus live-streamed execution logs."
-  },
-  {
-    icon: Route,
-    name: "Trace Viewer",
-    description: "Execution traces unpacked into timeline, network, console, and observability views."
-  },
-  {
-    icon: Sparkles,
-    name: "Diagnosis",
-    description: "AI failure diagnosis with a full diagnostics bundle — trace, environment metadata, and a redaction scan."
-  },
-  {
-    icon: Shield,
-    name: "Heal Center",
-    description: "Self-healing locators with a locator-health report and estimated resolution time per broken selector."
-  },
-  {
-    icon: Activity,
-    name: "Flake Map",
-    description: "Flaky-test detection plus a wait-analysis profiler that flags reducible waits from real trace timings."
-  },
-  {
-    icon: LayoutGrid,
-    name: "Browser Matrix",
-    description: "Local cross-browser grid plus Cloud & Parallel: BrowserStack config, Docker runs, and sequential-vs-parallel savings."
-  },
-  {
-    icon: Eye,
-    name: "Visual Diff",
-    description: "Pixel-level baseline comparisons with a baseline manager, comparison runs, and tunable thresholds."
-  },
-  {
-    icon: Video,
-    name: "Video Lab",
-    description: "Execution videos with trace-action markers, jump-to-failure, and ffmpeg clip export."
-  },
-  {
-    icon: Bot,
-    name: "AI Agent (MCP)",
-    description: "Chat with your suite: command library, per-provider setup, real token and cost tracking, consent and budgets."
-  },
-  {
-    icon: Settings,
-    name: "Data & Config",
-    description: "Engine properties editor, environment variables, AES-GCM encrypted secrets with an audit log, and live system logs."
-  }
-]
-
-const AI_FEATURES: Feature[] = [
-  {
-    icon: Wand2,
-    name: "AI Test Case Generator",
-    description:
-      "Generate structured test cases from your requirements — or straight from an uploaded document."
-  },
-  {
-    icon: Brain,
-    name: "QA Agent Brain",
-    description:
-      "An agent workspace that reasons over your project — requirements, tests, and bugs — to answer questions and draft work."
-  },
-  {
-    icon: Figma,
-    name: "Figma Visual QA",
-    description:
-      "Compare the live UI against your Figma designs and catch drift before users do."
-  },
-  {
-    icon: MousePointerClick,
-    name: "Element Locator Picker",
-    description:
-      "Point at any element in a live page and get a stable selector for your tests."
-  },
-  {
-    icon: Database,
-    name: "Test Data Manager",
-    description:
-      "Central datasets for your suites — shared between manual runs and the automation engine."
-  },
-  {
-    icon: Route,
-    name: "Reusable Step Library",
-    description:
-      "Author flows once, reuse them across test cases as shared building blocks."
-  }
-]
-
-const COLLAB_FEATURES: Feature[] = [
-  {
-    icon: MessageSquare,
-    name: "Team Chat",
-    description:
-      "Real-time channels and private DMs, scoped to your workspace — triage without leaving the app."
-  },
-  {
-    icon: Bell,
-    name: "Notification Center",
-    description:
-      "A real-time bell wired into everything: assignments, mentions, sync results, and run outcomes."
-  },
-  {
-    icon: UserCircle,
-    name: "Profiles",
-    description:
-      "Public member profiles with activity history, plus per-project teams and roles."
-  },
-  {
-    icon: Globe,
-    name: "OpenProject Sync",
-    description:
-      "Two-way sync pushes bugs and stories to OpenProject as work packages — with connection health, key mapping, and idempotent board placement. Team members sync from Jira, Azure DevOps, and OpenProject too."
-  }
-]
-
-const PIPELINE = [
-  "plan sprint",
-  "author tests",
-  "run live + automated",
-  "diagnose & heal",
-  "triage bugs",
-  "sync & report"
-]
-
-const NAV_SECTIONS = [
-  { href: "#plan", label: "Plan" },
-  { href: "#manual", label: "Manual QA" },
-  { href: "#automation", label: "Automation Hub" },
+const NAV = [
+  { href: "#features", label: "Features" },
   { href: "#ai", label: "AI" },
-  { href: "#collab", label: "Collaboration" }
+  { href: "#download", label: "Desktop app" },
+  { href: "#faq", label: "FAQ" },
 ]
 
-/* ------------------------------------------------------------------ */
-/* Building blocks                                                     */
-/* ------------------------------------------------------------------ */
-
-function SectionHeading({
-  kicker,
-  title,
-  blurb,
-  accent
-}: {
-  kicker: string
-  title: string
-  blurb: string
-  accent: string
-}) {
+function SectionTitle({ kicker, title, blurb, center }: { kicker: string; title: string; blurb?: string; center?: boolean }) {
   return (
-    <div className="max-w-2xl space-y-3">
-      <p className={`font-mono text-[11px] font-semibold uppercase tracking-[0.25em] ${accent}`}>{kicker}</p>
-      <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">{title}</h2>
-      <p className="text-[13.5px] text-muted-foreground leading-relaxed">{blurb}</p>
+    <div className={`max-w-2xl space-y-3 ${center ? "mx-auto text-center" : ""}`}>
+      <p className="text-[13px] font-medium text-primary">{kicker}</p>
+      <h2 className="text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[34px]">{title}</h2>
+      {blurb && <p className="text-[15px] leading-relaxed text-muted-foreground">{blurb}</p>}
     </div>
   )
 }
-
-function FeatureCard({ feature, accent }: { feature: Feature; accent: string }) {
-  return (
-    <div className="group rounded-xl border border-white/10 bg-white/[0.03] p-5 hover:border-violet-500/40 hover:bg-white/[0.05] transition-all">
-      <div className={`h-10 w-10 rounded-xl border flex items-center justify-center mb-4 ${accent}`}>
-        <feature.icon className="h-[18px] w-[18px]" />
-      </div>
-      <h3 className="font-semibold text-[14.5px] text-white mb-1.5">{feature.name}</h3>
-      <p className="text-[12.5px] text-muted-foreground leading-relaxed">{feature.description}</p>
-    </div>
-  )
-}
-
-/* ------------------------------------------------------------------ */
-/* Page                                                                */
-/* ------------------------------------------------------------------ */
 
 export default async function Home() {
   const session = await getSession()
-
-  const primaryCta = session
-    ? { href: "/dashboard", label: "Open Dashboard" }
-    : { href: "/register", label: "Get Started" }
-  const secondaryCta = session
-    ? { href: "/projects", label: "Projects" }
-    : { href: "/login", label: "Sign In" }
+  const primary = session ? { href: "/dashboard", label: "Open the app" } : { href: "/register", label: "Get started free" }
 
   return (
-    <div className="min-h-screen bg-[#060918] text-slate-100 font-sans antialiased selection:bg-violet-600 selection:text-white">
-      {/* ===== NAV ===== */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#060918]/85 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <BrandMark />
-          <nav className="hidden md:flex items-center gap-5 text-[13px] font-semibold text-muted-foreground">
-            {NAV_SECTIONS.map((s) => (
-              <a key={s.href} href={s.href} className="hover:text-white transition-colors">
-                {s.label}
+    <div className="min-h-screen bg-background font-sans text-foreground antialiased">
+      {/* ── Nav ── */}
+      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+          <Link href="/" aria-label="QA Engine home">
+            <Logo />
+          </Link>
+          <nav className="hidden items-center gap-6 text-[13px] text-muted-foreground md:flex">
+            {NAV.map((n) => (
+              <a key={n.href} href={n.href} className="transition-colors hover:text-foreground">
+                {n.label}
               </a>
             ))}
-            {session && (
-              <Link href="/dashboard" className="hover:text-white transition-colors">
-                Dashboard
-              </Link>
-            )}
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {!session && (
-              <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-xl text-[13px] font-semibold text-slate-300 hover:text-white h-10 px-4 transition-colors"
-              >
-                Sign In
+              <Link href="/login" className="rounded-md px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
+                Sign in
               </Link>
             )}
             <Link
-              href={primaryCta.href}
-              className="inline-flex items-center gap-1.5 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-[13px] font-semibold h-10 px-5 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
+              href={primary.href}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
             >
-              {primaryCta.label} <ArrowRight className="h-3.5 w-3.5" />
+              {primary.label}
             </Link>
           </div>
         </div>
       </header>
 
-      {/* ===== HERO ===== */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(139,92,246,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(139,92,246,0.06)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,#000_60%,transparent_100%)] pointer-events-none" />
-        <div className="absolute top-[-150px] left-1/2 -translate-x-1/2 h-[400px] w-[700px] bg-violet-600/20 rounded-full blur-[120px] pointer-events-none" />
-
-        <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-14 grid lg:grid-cols-2 gap-14 items-center">
-          <div className="space-y-7">
-            <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-[11px] font-semibold text-violet-300 font-mono uppercase tracking-widest">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> system online · v4
-            </span>
-
-            <h1 className="text-4xl sm:text-[3.4rem] font-semibold tracking-tight leading-[1.04] text-white">
-              The operating system for{" "}
-              <span className="bg-gradient-to-r from-violet-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent">
-                quality engineering
+      <main>
+        {/* ── Hero ── */}
+        <section className="relative overflow-hidden">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,hsl(var(--primary)/0.14),transparent)]" />
+          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:pt-24">
+            <div className="space-y-6">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[12px] text-muted-foreground shadow-sm">
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> AI that knows QA · Arabic &amp; English
               </span>
-            </h1>
-
-            <p className="text-[15px] text-muted-foreground leading-relaxed max-w-lg">
-              Plan sprints, run live QA sessions in an embedded browser, drive a 12-tool automation
-              hub with self-healing tests, generate cases with AI, and sync everything to
-              OpenProject — one workspace, end to end.
-            </p>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href={primaryCta.href}
-                className="inline-flex items-center gap-2 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold h-11 px-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
-              >
-                {primaryCta.label} <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href={secondaryCta.href}
-                className="inline-flex items-center gap-2 justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-semibold h-11 px-6 transition-all"
-              >
-                {secondaryCta.label}
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-[12.5px] text-muted-foreground font-medium pt-1">
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Local-first
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Real-browser execution
-              </span>
-              <span className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> Session video recording
-              </span>
-            </div>
-          </div>
-
-          <TerminalMock />
-        </div>
-
-        {/* Stats strip */}
-        <div className="relative border-t border-white/5 bg-white/[0.015]">
-          <div className="max-w-6xl mx-auto px-6 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
-            {[
-              ["28+", "platform modules"],
-              ["12", "automation hub tools"],
-              ["4", "AI providers — incl. free local"],
-              ["3", "trackers synced (OpenProject · Jira · Azure)"]
-            ].map(([stat, label]) => (
-              <div key={label} className="space-y-1">
-                <p className="text-2xl font-semibold text-white font-mono">{stat}</p>
-                <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+              <h1 className="text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-[54px]">
+                One workspace for your <span className="text-primary">whole QA process</span>
+              </h1>
+              <p className="max-w-xl text-[16px] leading-relaxed text-muted-foreground">
+                QA Engine takes you from the business requirements document to tested, tracked releases: AI finds the requirements, writes the
+                test cases and drafts the bugs — your team reviews, runs and ships.
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Link
+                  href={primary.href}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
+                >
+                  {primary.label} <ArrowRight className="h-4 w-4" />
+                </Link>
+                <a
+                  href="#download"
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition-colors hover:bg-accent"
+                >
+                  <Download className="h-4 w-4" /> Download the app
+                </a>
               </div>
-            ))}
+              <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-muted-foreground">
+                {["Works in the browser", "Mac & Windows app", "Free AI on your computer"].map((t) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5 text-emerald-500" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <AppPreview />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ===== PLAN & MANAGE ===== */}
-      <section id="plan" className="border-t border-white/5 scroll-mt-16">
-        <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
-          <SectionHeading
-            kicker="// 01 · plan & manage"
-            title="Sprints, requirements, and the paperwork — handled"
-            blurb="Everything upstream of the first test: scrum ceremonies, a real requirements hierarchy, business requirement documents, and analytics that read from live data."
-            accent="text-indigo-400"
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {PLAN_FEATURES.map((f) => (
-              <FeatureCard key={f.name} feature={f} accent="text-indigo-400 bg-primary/10 border-primary/20" />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== MANUAL TESTING ===== */}
-      <section id="manual" className="border-t border-white/5 bg-white/[0.015] scroll-mt-16">
-        <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
-          <SectionHeading
-            kicker="// 02 · manual testing"
-            title="Exploratory QA that leaves a paper trail"
-            blurb="A live embedded browser, structured test cases, and a bug lifecycle built for retesting — every finding traceable back to the session, the step, and the story."
-            accent="text-cyan-400"
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MANUAL_FEATURES.map((f) => (
-              <FeatureCard key={f.name} feature={f} accent="text-cyan-400 bg-cyan-500/10 border-cyan-500/20" />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== AUTOMATION HUB ===== */}
-      <section id="automation" className="border-t border-white/5 scroll-mt-16 relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 h-[300px] w-[600px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="relative max-w-6xl mx-auto px-6 py-16 space-y-10">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <SectionHeading
-              kicker="// 03 · automation hub"
-              title="Twelve tools. One engine."
-              blurb="The Automation Hub wraps the execution engine in a full toolchain — from authoring and evidence to AI diagnosis, self-healing, flake analysis, and cross-browser scale."
-              accent="text-violet-400"
-            />
-            <span className="inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3.5 py-1.5 text-[11px] font-semibold text-violet-300 font-mono uppercase tracking-widest">
-              <Cpu className="h-3.5 w-3.5" /> automation hub
-            </span>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {HUB_TOOLS.map((f, i) => (
-              <div
-                key={f.name}
-                className="group rounded-xl border border-white/10 bg-[#0A0E1F] p-4 hover:border-violet-500/40 transition-all"
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="h-9 w-9 rounded-lg border border-violet-500/20 bg-violet-500/10 text-violet-400 flex items-center justify-center">
-                    <f.icon className="h-4 w-4" />
-                  </div>
-                  <span className="font-mono text-[10px] font-semibold text-muted-foreground">
-                    {String(i + 1).padStart(2, "0")}
+        {/* ── The flow ── */}
+        <section className="border-y border-border bg-[hsl(var(--sidebar))]">
+          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+            <p className="mb-4 text-center text-[13px] text-muted-foreground">Everything connected, from the first document to the final report</p>
+            <ol className="flex flex-wrap items-center justify-center gap-2">
+              {FLOW.map((s, i) => (
+                <li key={s.label} className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[13px] font-medium shadow-sm">
+                    <s.icon className="h-3.5 w-3.5 text-primary" /> {s.label}
                   </span>
+                  {i < FLOW.length - 1 && <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/60" />}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        {/* ── Features ── */}
+        <section id="features" className="scroll-mt-16">
+          <div className="mx-auto max-w-6xl space-y-24 px-4 py-24 sm:px-6">
+            <SectionTitle
+              center
+              kicker="Features"
+              title="Everything a QA team needs"
+              blurb="Plan, test, automate, track and collaborate — each part below is a page in the app, with the same name."
+            />
+            {FEATURE_GROUPS.map((g) => (
+              <div key={g.id} id={g.id} className="scroll-mt-20 space-y-8">
+                <SectionTitle kicker={g.label} title={g.title} blurb={g.blurb} />
+                <div className={`grid gap-4 ${g.features.length === 1 ? "" : g.features.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+                  {g.features.map((f) => (
+                    <article key={f.name} className="rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
+                      <div className="mb-4 flex items-center gap-3">
+                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                          <f.icon className="h-[18px] w-[18px]" />
+                        </span>
+                        <h3 className="text-[16px] font-semibold">{f.name}</h3>
+                      </div>
+                      <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">{f.summary}</p>
+                      <ul className={`grid gap-2 ${g.features.length === 1 ? "sm:grid-cols-2" : ""}`}>
+                        {f.points.map((p) => (
+                          <li key={p} className="flex gap-2 text-[13px] text-foreground/90">
+                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" /> {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
                 </div>
-                <h3 className="font-semibold text-[13.5px] text-white mb-1">{f.name}</h3>
-                <p className="text-[12px] text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ===== AI ===== */}
-      <section id="ai" className="border-t border-white/5 bg-white/[0.015] scroll-mt-16">
-        <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
-          <SectionHeading
-            kicker="// 04 · ai copilots"
-            title="AI where it earns its keep"
-            blurb="Generation, diagnosis, and design comparison — powered by Ollama running locally, Hugging Face, or OpenAI, with a free rule-based mode that needs no key at all."
-            accent="text-emerald-400"
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {AI_FEATURES.map((f) => (
-              <FeatureCard key={f.name} feature={f} accent="text-emerald-400 bg-emerald-500/10 border-emerald-500/20" />
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] font-semibold text-muted-foreground">
-            <span className="uppercase tracking-widest text-muted-foreground">providers:</span>
-            {["Ollama (local)", "Hugging Face", "OpenAI", "rule-based · free"].map((p) => (
-              <span key={p} className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-slate-300">
-                {p}
+        {/* ── AI ── */}
+        <section id="ai" className="scroll-mt-16 border-y border-border bg-[hsl(var(--sidebar))]">
+          <div className="mx-auto max-w-6xl space-y-12 px-4 py-24 sm:px-6">
+            <SectionTitle
+              kicker="AI"
+              title="AI you can trust with your test plan"
+              blurb="Helpful where it saves time, careful where mistakes cost you — and always reviewed by a person before it counts."
+            />
+            <div className="grid gap-4 sm:grid-cols-2">
+              {AI_POINTS.map((p) => (
+                <div key={p.title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                  <p.icon className="mb-3 h-5 w-5 text-primary" />
+                  <h3 className="mb-1.5 text-[15px] font-semibold">{p.title}</h3>
+                  <p className="text-[14px] leading-relaxed text-muted-foreground">{p.text}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Languages className="h-4 w-4" /> Arabic and English documents
               </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== COLLABORATION & INTEGRATIONS ===== */}
-      <section id="collab" className="border-t border-white/5 scroll-mt-16">
-        <div className="max-w-6xl mx-auto px-6 py-16 space-y-10">
-          <SectionHeading
-            kicker="// 05 · collaboration & sync"
-            title="The whole team, in the loop"
-            blurb="Chat, notifications, and profiles built in — and a sync layer that meets your tracker where it already lives."
-            accent="text-sky-400"
-          />
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {COLLAB_FEATURES.map((f) => (
-              <FeatureCard key={f.name} feature={f} accent="text-sky-400 bg-sky-500/10 border-sky-500/20" />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ===== PIPELINE STRIP ===== */}
-      <section id="pipeline" className="border-t border-white/5 bg-white/[0.015] scroll-mt-16">
-        <div className="max-w-6xl mx-auto px-6 py-12 space-y-6">
-          <p className="text-center font-mono text-[11px] font-semibold text-violet-400 uppercase tracking-[0.25em]">
-            // the pipeline
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-2 font-mono text-[12px] font-semibold">
-            {PIPELINE.map((step, i) => (
-              <span key={step} className="flex items-center gap-2">
-                <span className="rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2 text-slate-300">
-                  {step}
-                </span>
-                {i < PIPELINE.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-violet-500" />}
+              <span className="flex items-center gap-1.5">
+                <Globe2 className="h-4 w-4" /> Ollama · Kimi · OpenAI · Anthropic · Gemini
               </span>
-            ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ===== CTA + FOOTER ===== */}
-      <section className="border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6 py-16 text-center space-y-6">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-500/30 mx-auto">
-            <Zap className="h-6 w-6" fill="currentColor" />
+        {/* ── Download ── */}
+        <section id="download" className="scroll-mt-16">
+          <div className="mx-auto max-w-6xl space-y-10 px-4 py-24 sm:px-6">
+            <SectionTitle
+              kicker="Desktop app"
+              title="QA Engine on your Mac or PC"
+              blurb="Its own window and dock icon, stays signed in, updates itself with one click — and uses Ollama on your computer for free, private AI."
+            />
+            <DesktopDownloadCards />
+            <div className="grid gap-4 text-[13px] text-muted-foreground sm:grid-cols-3">
+              <p>
+                <span className="font-medium text-foreground">1. Install.</span> Mac: open the file and drag QA Engine to Applications. Windows: run
+                the setup.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">2. First launch.</span> Mac: System Settings → Privacy &amp; Security → Open Anyway.
+                Windows: More info → Run anyway.
+              </p>
+              <p>
+                <span className="font-medium text-foreground">3. Sign in.</span> Use the same account as the website. If Ollama is installed, the
+                app finds it by itself.
+              </p>
+            </div>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">Boot up your QA engine</h2>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            {session
-              ? "Jump back into your workspace."
-              : "Create an account and run your first live QA session in minutes."}
-          </p>
-          <div className="flex justify-center gap-3">
-            <Link
-              href={primaryCta.href}
-              className="inline-flex items-center gap-2 justify-center rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold h-11 px-6 shadow-[0_4px_12px_rgba(0,0,0,0.06)] shadow-violet-600/30 transition-all"
-            >
-              {session ? "Open Dashboard" : "Create Free Account"} <ArrowRight className="h-4 w-4" />
-            </Link>
-            {!session && (
+        </section>
+
+        {/* ── FAQ ── */}
+        <section id="faq" className="scroll-mt-16 border-t border-border">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.4fr]">
+            <SectionTitle kicker="FAQ" title="Questions people ask" />
+            <div className="divide-y divide-border rounded-xl border border-border bg-card">
+              {FAQ.map((f) => (
+                <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[14px] font-medium">
+                    {f.q}
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                  </summary>
+                  <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Final call ── */}
+        <section className="px-4 pb-24 sm:px-6">
+          <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl bg-primary px-6 py-14 text-center text-primary-foreground shadow-lg sm:px-12">
+            <h2 className="text-[28px] font-semibold tracking-tight sm:text-[34px]">Start testing smarter today</h2>
+            <p className="mx-auto mt-3 max-w-xl text-[15px] opacity-90">
+              Create your account, upload your first BRD and get test cases in minutes.
+            </p>
+            <div className="mt-7 flex flex-wrap justify-center gap-2.5">
               <Link
-                href="/login"
-                className="inline-flex items-center justify-center rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 text-slate-200 text-sm font-semibold h-11 px-6 transition-all"
+                href={primary.href}
+                className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-[14px] font-medium text-primary shadow-sm transition-opacity hover:opacity-90"
               >
-                Sign In
+                {primary.label} <ArrowRight className="h-4 w-4" />
               </Link>
-            )}
+              <a
+                href="#download"
+                className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-white/10"
+              >
+                <Download className="h-4 w-4" /> Download the app
+              </a>
+            </div>
           </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-[13px] text-muted-foreground sm:flex-row sm:px-6">
+          <Logo />
+          <nav className="flex flex-wrap items-center gap-5">
+            {NAV.map((n) => (
+              <a key={n.href} href={n.href} className="hover:text-foreground">
+                {n.label}
+              </a>
+            ))}
+            <Link href="/login" className="hover:text-foreground">
+              Sign in
+            </Link>
+          </nav>
+          <p>© {new Date().getFullYear()} QA Engine</p>
         </div>
-        <footer className="border-t border-white/5 py-6 text-center">
-          <p className="text-[11px] font-mono text-muted-foreground">
-            © {new Date().getFullYear()} QA Engine — all systems nominal
-          </p>
-        </footer>
-      </section>
+      </footer>
     </div>
   )
 }
