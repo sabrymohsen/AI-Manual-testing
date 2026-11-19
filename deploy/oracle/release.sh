@@ -2,6 +2,7 @@
 # Ship a new version to the Oracle server and to every user's desktop app.
 #
 #   bash deploy/oracle/release.sh "What's new, one line per change"
+#   SKIP_SERVER=1 bash deploy/oracle/release.sh "..."   # installers only
 #
 # 1. Uploads the code and rebuilds the server (users get a "Reload" prompt).
 # 2. If desktop/package.json's version is newer than the published one, builds the
@@ -17,6 +18,7 @@ SSH=(ssh -i "$KEY" -o IdentitiesOnly=yes "$HOST")
 RSH="ssh -i $KEY -o IdentitiesOnly=yes"
 REMOTE="$HOST:"
 
+if [ "${SKIP_SERVER:-}" != "1" ]; then
 echo "▸ Uploading code"
 LIST="$(mktemp)"
 git ls-files -co --exclude-standard | grep -v '^desktop/' > "$LIST"
@@ -25,9 +27,12 @@ rm -f "$LIST"
 
 echo "▸ Rebuilding the server (about 10 minutes)"
 "${SSH[@]}" 'cd qa-engine/deploy/oracle && docker compose --env-file .env build && docker compose --env-file .env up -d && docker compose --env-file .env ps --format "{{.Service}}: {{.Status}}"'
+fi
 
 VERSION="$(node -p 'require("./desktop/package.json").version')"
-PUBLISHED="$(curl -fsS "$SITE/downloads/latest.json" 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).version)}catch{console.log("0.0.0")}})')"
+# Nothing published yet (or the server is still restarting) counts as "0.0.0".
+FEED_JSON="$(curl -fsS --retry 5 --retry-delay 5 --retry-all-errors "$SITE/downloads/latest.json" 2>/dev/null || true)"
+PUBLISHED="$(printf '%s' "$FEED_JSON" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).version)}catch{console.log("0.0.0")}})')"
 if [ "$VERSION" = "$PUBLISHED" ]; then
   echo "▸ Desktop app $VERSION is already published (bump desktop/package.json version to ship a new one)"
   exit 0

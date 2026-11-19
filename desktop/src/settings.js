@@ -5,15 +5,15 @@ const path = require("path")
 const { app } = require("electron")
 
 const SERVERS = {
-  online: { label: "QA Engine Online", url: "https://79-76-112-176.sslip.io" },
-  local: { label: "This computer", url: "http://localhost:3000" },
-  production: { label: "Production", url: "https://qa-engine.up.railway.app" },
-  staging: { label: "Staging", url: "https://ai-manual-testing-staging.up.railway.app" },
+  online: { label: "QA Engine", url: "https://79-76-112-176.sslip.io" },
+  local: { label: "This computer (developer)", url: "http://localhost:3000" },
 }
+// The old Railway servers ("production", "staging") are retired; anyone still
+// pointed at them is moved to the online server.
 
 const DEFAULTS = {
   // New installs open the shared online server; "This computer" needs the project folder.
-  server: "online", // "online" | "local" | "production" | "staging" | "custom"
+  server: "online", // "online" | "local" | "custom"
   repoPath: "", // project folder used by "This computer" mode
   customUrl: "",
   window: { width: 1440, height: 900, x: undefined, y: undefined, maximized: false },
@@ -32,6 +32,7 @@ function load() {
   } catch {
     cache = { ...DEFAULTS }
   }
+  if (cache.server !== "custom" && !SERVERS[cache.server]) cache.server = "online"
   return cache
 }
 
@@ -51,7 +52,7 @@ function serverUrl() {
   if (process.env.QA_ENGINE_URL) return normalize(process.env.QA_ENGINE_URL)
   const s = load()
   if (s.server === "custom" && s.customUrl) return normalize(s.customUrl)
-  return (SERVERS[s.server] || SERVERS.local).url
+  return (SERVERS[s.server] || SERVERS.online).url
 }
 
 function normalize(url) {

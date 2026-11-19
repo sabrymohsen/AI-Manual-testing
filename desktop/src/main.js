@@ -1,7 +1,7 @@
 // QA Engine desktop — main process.
 //
-// The window is a dedicated browser for the hosted QA Engine server (production
-// by default; switchable to staging or any custom URL from the Server menu).
+// The window is a dedicated browser for the hosted QA Engine server (the online
+// server by default; switchable to this computer or any custom URL from the Server menu).
 // Everything the web app does keeps working unchanged; this layer adds the
 // native parts: its own window and dock/taskbar icon, a remembered login,
 // links that leave the app opening in the system browser, an offline screen,
