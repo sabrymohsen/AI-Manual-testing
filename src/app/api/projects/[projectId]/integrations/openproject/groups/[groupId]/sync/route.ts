@@ -6,7 +6,7 @@
  * After syncing WPs, automatically applies board/version visibility so items appear on the board.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import {
   syncGroupTestCasesToOpenProject,
   syncGroupToBoard,
@@ -17,7 +17,7 @@ export async function POST(
   { params }: { params: { projectId: string; groupId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const result = await syncGroupTestCasesToOpenProject(params.projectId, params.groupId)

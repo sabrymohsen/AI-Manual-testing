@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { syncProjectTeam } from "@/lib/team/sync-team"
 
 /**
@@ -11,7 +11,7 @@ import { syncProjectTeam } from "@/lib/team/sync-team"
  * the tool no longer returns (manual members are never touched).
  */
 export async function POST(_req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const result = await syncProjectTeam(params.projectId)

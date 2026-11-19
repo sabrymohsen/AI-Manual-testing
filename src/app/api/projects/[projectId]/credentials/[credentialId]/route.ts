@@ -79,16 +79,19 @@ export async function DELETE(
     return notFoundResponse("Credential not found")
   }
 
-  await prisma.projectCredential.delete({
-    where: { id: params.credentialId, projectId: params.projectId },
-  })
-
+  // Log first: the entry points at the credential, and the delete then clears
+  // that link (onDelete: SetNull). Logging afterwards referenced a row that no
+  // longer existed, so every delete failed with a foreign-key error.
   await createAuditLog({
     action: "CREDENTIAL_DELETED",
     details: `Deleted credential "${credential.roleName}" from project ${params.projectId}`,
     userId: auth.session!.user.id,
     projectId: params.projectId,
     credentialId: credential.id,
+  })
+
+  await prisma.projectCredential.delete({
+    where: { id: params.credentialId, projectId: params.projectId },
   })
 
   return NextResponse.json({ success: true })

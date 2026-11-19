@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function POST(
@@ -14,7 +14,7 @@ export async function POST(
   { params }: { params: { projectId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const resolved = await resolveOpenProject(params.projectId)

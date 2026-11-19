@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +17,7 @@ const patchSchema = z.object({
 // Update fields, or start/complete a sprint. On "Completed", unfinished stories
 // (not Covered/Deprecated) are moved back to the backlog (sprintId = null).
 export async function PATCH(request: Request, { params }: { params: { projectId: string; sprintId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const sprint = await prisma.sprint.findFirst({ where: { id: params.sprintId, projectId: params.projectId } })

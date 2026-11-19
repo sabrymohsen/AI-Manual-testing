@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 
 const VALID_TARGET_TYPES = ["test_id", "role", "text", "label", "placeholder", "css", "xpath", "url", "none"]
 
@@ -46,7 +46,7 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string; collectionId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json().catch(() => ({}))

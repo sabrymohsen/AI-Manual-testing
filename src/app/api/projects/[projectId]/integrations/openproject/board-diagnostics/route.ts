@@ -14,14 +14,14 @@
  * can be aimed at the right side instead of guessed at.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
 export async function GET(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const resolved = await resolveOpenProject(params.projectId)

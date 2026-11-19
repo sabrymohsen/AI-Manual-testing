@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 import { recorderWorkerRequest, RecorderWorkerError } from "@/lib/recording/worker-client"
 
 function workerErrorResponse(err: unknown) {
@@ -29,7 +29,7 @@ export async function POST(request: Request, { params }: { params: { path: strin
   if (path.length === 1 && path[0] === "start") {
     const body = await request.json()
     if (!body?.projectId || !body?.url) return badRequestResponse("projectId and url are required")
-    const owner = await requireProjectOwner(body.projectId)
+    const owner = await requireProjectMember(body.projectId)
     if (owner.error) return unauthorizedResponse(owner.error)
     try {
       const state = await recorderWorkerRequest("/picker/start", { method: "POST", body: JSON.stringify(body) })

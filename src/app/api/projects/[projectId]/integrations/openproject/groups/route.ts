@@ -4,7 +4,7 @@
  * Returns all feature groups with OpenProject sync status + per-feature config state.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { getAllGroupsWithStatus } from "@/lib/integrations/openproject/openproject-group-sync"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { prisma } from "@/lib/db"
@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: { projectId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     // Project-level integration — from whichever row owns it (unified or legacy)

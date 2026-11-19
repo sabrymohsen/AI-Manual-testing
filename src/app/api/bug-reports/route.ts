@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { createBugReportSchema } from "@/schemas"
-import { requireAuth, requireProjectOwner, unauthorizedResponse, badRequestResponse, memberProjectWhere } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, memberProjectWhere, requireProjectMember } from "@/lib/api-guards"
 import { withBugModule } from "@/lib/bug-reports/module"
 
 export async function GET(request: NextRequest) {
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
   const sortDirection = searchParams.get("sortDirection") || "desc"
 
   if (projectId) {
-    const ownerAuth = await requireProjectOwner(projectId)
+    const ownerAuth = await requireProjectMember(projectId)
     if (ownerAuth.error) return unauthorizedResponse(ownerAuth.error)
   }
 
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
       requirementIds
     } = parsed.data
 
-    const auth = await requireProjectOwner(projectId)
+    const auth = await requireProjectMember(projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     // 1. Generate sequential bug key e.g., BUG-0001

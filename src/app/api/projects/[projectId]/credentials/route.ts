@@ -2,14 +2,14 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { encryptSecret } from "@/lib/crypto"
 import { createCredentialSchema } from "@/schemas"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 import { createAuditLog } from "@/lib/auth/audit"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const credentials = await prisma.projectCredential.findMany({

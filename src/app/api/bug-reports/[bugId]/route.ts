@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, notFoundResponse, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectOwner, notFoundResponse, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { checkTransition } from "@/lib/bug-reports/workflow"
 import { resolveBugSuiteId } from "@/lib/bug-reports/module"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
@@ -36,7 +36,7 @@ export async function GET(
       return notFoundResponse("Bug report not found")
     }
 
-    const auth = await requireProjectOwner(bug.project.id)
+    const auth = await requireProjectMember(bug.project.id)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const mapping = await prisma.externalSyncMapping.findUnique({
@@ -99,7 +99,7 @@ export async function PUT(
       return notFoundResponse("Bug report not found")
     }
 
-    const auth = await requireProjectOwner(existingBug.projectId!)
+    const auth = await requireProjectMember(existingBug.projectId!)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     // Enforce the status workflow. This route previously wrote `status as any`

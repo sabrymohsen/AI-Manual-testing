@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { generateTestCaseFromPrompt } from "@/lib/ai/generate-test-case"
 import { aiGenerateSchema } from "@/schemas"
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     const { prompt, projectId } = parsed.data
 
-    const projectAuth = await requireProjectOwner(projectId)
+    const projectAuth = await requireProjectMember(projectId)
     if (projectAuth.error) return unauthorizedResponse(projectAuth.error)
 
     const project = await prisma.project.findFirst({

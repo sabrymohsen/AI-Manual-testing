@@ -3,11 +3,11 @@
  * Detailed per-project report.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { getProjectReport } from "@/lib/reports/aggregate"
 
 export async function GET(req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const url = new URL(req.url)

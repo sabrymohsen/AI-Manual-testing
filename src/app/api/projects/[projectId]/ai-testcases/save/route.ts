@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireProjectOwner, notFoundResponse } from "@/lib/api-guards"
+import { notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 
 export async function POST(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) {
     return notFoundResponse("Project not found or access denied")
   }

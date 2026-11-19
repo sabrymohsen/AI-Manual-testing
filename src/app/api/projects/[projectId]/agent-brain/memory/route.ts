@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 import { getProjectMemory, recordUserCorrection } from "@/lib/agent-brain/memory"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const memory = await getProjectMemory(params.projectId)
@@ -17,7 +17,7 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   let body: any = {}

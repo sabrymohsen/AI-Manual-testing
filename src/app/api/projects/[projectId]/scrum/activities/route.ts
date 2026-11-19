@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner } from "@/lib/api-guards"
+import { requireProjectMember } from "@/lib/api-guards"
 
 // GET /api/projects/:projectId/scrum/activities  — recent activity feed
 export async function GET(request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const url = new URL(request.url)

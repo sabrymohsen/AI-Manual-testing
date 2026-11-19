@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 
 export async function GET(request: Request) {
   const auth = await requireAuth()
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const projectId = searchParams.get("projectId") || undefined
   if (projectId && projectId !== "All") {
-    const ownerAuth = await requireProjectOwner(projectId)
+    const ownerAuth = await requireProjectMember(projectId)
     if (ownerAuth.error) return unauthorizedResponse(ownerAuth.error)
   }
   const environment = searchParams.get("environment") || undefined

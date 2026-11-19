@@ -15,11 +15,11 @@
  * "already up to date" after a pull that never reached the tracker.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { pollInboundForProject } from "@/lib/integrations/core/poll"
 
 export async function POST(req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await req.json().catch(() => ({}))

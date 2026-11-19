@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 import { cancelQAAgentJob, qaAgentQueue } from "@/lib/queue"
 
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string; runId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const run = await prisma.qAAgentRun.findUnique({

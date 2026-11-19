@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 
 const VALID_LOCATOR_TYPES = ["test_id", "role", "text", "label", "placeholder", "css", "xpath", "url", "none"]
 
 export async function GET(_request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const collections = await prisma.elementCollection.findMany({
@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: { projectId: 
 
 // Save a picker session's elements as a reusable collection.
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json()

@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 
 export const dynamic = "force-dynamic"
 
 // GET /api/projects/[projectId]/sprints
 // All sprints for the project, ordered, each with a story summary (points/count).
 export async function GET(_request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const sprints = await prisma.sprint.findMany({
@@ -46,7 +46,7 @@ const createSchema = z.object({
 
 // POST /api/projects/[projectId]/sprints — create a Future sprint.
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const raw = await request.json().catch(() => ({}))

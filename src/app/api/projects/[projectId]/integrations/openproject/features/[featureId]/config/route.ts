@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { encryptSecret, decryptSecret } from "@/lib/crypto"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { z } from "zod"
@@ -32,7 +32,7 @@ const schema = z.object({
 type Params = { params: { projectId: string; featureId: string } }
 
 export async function GET(_req: Request, { params }: Params) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const cfg = await prisma.openProjectFeatureConfig.findUnique({

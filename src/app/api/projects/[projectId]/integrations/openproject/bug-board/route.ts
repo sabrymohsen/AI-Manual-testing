@@ -14,7 +14,7 @@
  * served by the same code.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { loadIntegration } from "@/lib/integrations/core/load-integration"
 import {
   createBugWorkflowBoard,
@@ -30,7 +30,7 @@ export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const loaded = await loadIntegration(params.projectId)
@@ -73,7 +73,7 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json().catch(() => ({}))

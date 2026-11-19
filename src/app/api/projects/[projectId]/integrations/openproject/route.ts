@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { encryptSecret, EncryptionKeyError } from "@/lib/crypto"
 import { z } from "zod"
 
@@ -45,7 +45,7 @@ export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const integration = await prisma.openProjectIntegration.findUnique({

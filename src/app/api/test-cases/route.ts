@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const projectId = searchParams.get("projectId") || undefined
 
   if (projectId) {
-    const projAuth = await requireProjectOwner(projectId)
+    const projAuth = await requireProjectMember(projectId)
     if (projAuth.error) {
       return notFoundResponse("Project not found or access denied")
     }

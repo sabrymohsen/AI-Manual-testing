@@ -6,14 +6,14 @@
  * of duplicated; stories pushed from this app are skipped.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { importUserStoriesFromOpenProject } from "@/lib/integrations/openproject/sync-requirement"
 
 export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, notFoundResponse, unauthorizedResponse, badRequestResponse, memberProjectWhere } from "@/lib/api-guards"
+import { notFoundResponse, unauthorizedResponse, badRequestResponse, memberProjectWhere, requireProjectMember } from "@/lib/api-guards"
 import fs from "node:fs"
 import path from "node:path"
 import { randomUUID } from "node:crypto"
@@ -47,7 +47,7 @@ export async function POST(
     return notFoundResponse("Bug report not found")
   }
 
-  const auth = await requireProjectOwner(existingBug.projectId!)
+  const auth = await requireProjectMember(existingBug.projectId!)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {

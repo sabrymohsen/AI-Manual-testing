@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { z } from "zod"
 
 const patchSchema = z.object({
@@ -14,7 +14,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: { projectId: string; memberId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const existing = await prisma.projectTeamMember.findFirst({

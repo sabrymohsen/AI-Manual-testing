@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
     const { projectId, title, steps } = rawBody
 
-    const auth = await requireProjectOwner(projectId)
+    const auth = await requireProjectMember(projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const existing = await prisma.testCase.findMany({

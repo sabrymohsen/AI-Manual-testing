@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 
 // GET /api/requirements/[requirementId]/subtasks
 export async function GET(_request: Request, { params }: { params: { requirementId: string } }) {
@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: { params: { requirement
   const req = await prisma.requirement.findUnique({ where: { id: params.requirementId }, select: { projectId: true } })
   if (!req) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const auth = await requireProjectOwner(req.projectId)
+  const auth = await requireProjectMember(req.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json().catch(() => ({}))

@@ -5,7 +5,7 @@
  * all synced test case WPs in this group.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { syncGroupToBoard } from "@/lib/integrations/openproject/openproject-group-sync"
 
 export async function POST(
@@ -13,7 +13,7 @@ export async function POST(
   { params }: { params: { projectId: string; groupId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const result = await syncGroupToBoard(params.projectId, params.groupId)

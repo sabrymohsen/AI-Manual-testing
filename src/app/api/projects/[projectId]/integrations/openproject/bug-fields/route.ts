@@ -6,12 +6,7 @@
  */
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import {
-  requireProjectMember,
-  requireProjectOwner,
-  unauthorizedResponse,
-  badRequestResponse,
-} from "@/lib/api-guards"
+import { requireProjectMember, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { loadIntegration } from "@/lib/integrations/core/load-integration"
 
@@ -63,7 +58,7 @@ export async function PUT(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const body = await request.json().catch(() => ({}))

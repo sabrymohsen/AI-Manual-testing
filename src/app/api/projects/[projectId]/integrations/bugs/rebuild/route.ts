@@ -8,14 +8,14 @@
  *        before their work item is destroyed.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 import { planBugRebuild, rebuildTrackerBugs } from "@/lib/integrations/core/rebuild-bugs"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {

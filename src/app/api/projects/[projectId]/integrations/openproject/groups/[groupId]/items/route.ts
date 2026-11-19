@@ -4,7 +4,7 @@
  * Returns all test cases in the group with their OpenProject sync status.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { getGroupSyncedItems } from "@/lib/integrations/openproject/openproject-group-sync"
 
 export async function GET(
@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: { projectId: string; groupId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const result = await getGroupSyncedItems(params.projectId, params.groupId)

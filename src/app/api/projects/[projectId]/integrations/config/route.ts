@@ -9,7 +9,7 @@ import { NextResponse } from "next/server"
 import crypto from "node:crypto"
 import { z } from "zod"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectOwner, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { encryptSecret, EncryptionKeyError } from "@/lib/crypto"
 import { providerLabels } from "@/lib/integrations/labels"
 import { syncProjectTeam } from "@/lib/team/sync-team"
@@ -34,7 +34,7 @@ const schema = z.object({
 })
 
 export async function GET(_req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const i = await prisma.projectIntegration.findUnique({ where: { projectId: params.projectId } })

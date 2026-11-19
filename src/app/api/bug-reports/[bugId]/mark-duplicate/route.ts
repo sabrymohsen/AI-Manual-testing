@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, notFoundResponse, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
+import { notFoundResponse, unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
 
 export async function POST(
   request: Request,
@@ -14,7 +14,7 @@ export async function POST(
     return notFoundResponse("Bug report not found")
   }
 
-  const auth = await requireProjectOwner(currentBug.projectId!)
+  const auth = await requireProjectMember(currentBug.projectId!)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {

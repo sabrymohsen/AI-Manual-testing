@@ -2,14 +2,14 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { addTestRunJob } from "@/lib/queue"
 import { createTestRunSchema } from "@/schemas"
-import { requireProjectOwner, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, badRequestResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const testRuns = await prisma.testRun.findMany({
@@ -29,7 +29,7 @@ export async function POST(
   request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   // Rate limit: 20 test runs per user per 10 minutes

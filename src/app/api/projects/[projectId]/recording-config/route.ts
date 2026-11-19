@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 
 export async function GET(
   _request: Request,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   const project = await prisma.project.findUnique({

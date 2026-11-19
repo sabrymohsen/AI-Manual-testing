@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
 
 async function guard(reqId: string) {
   const req = await prisma.requirement.findUnique({ where: { id: reqId }, select: { projectId: true } })
   if (!req) return { error: "Not found" }
-  const auth = await requireProjectOwner(req.projectId)
+  const auth = await requireProjectMember(req.projectId)
   if (auth.error) return { error: auth.error }
   return { ok: true }
 }

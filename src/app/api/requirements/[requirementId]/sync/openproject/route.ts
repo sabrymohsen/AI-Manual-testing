@@ -4,7 +4,7 @@
  * Push a user story (Requirement) to OpenProject as a work package.
  */
 import { NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, notFoundResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { syncRequirementToOpenProject } from "@/lib/integrations/openproject/sync-requirement"
 
@@ -18,7 +18,7 @@ export async function POST(
   })
   if (!requirement) return notFoundResponse("Requirement not found")
 
-  const auth = await requireProjectOwner(requirement.projectId)
+  const auth = await requireProjectMember(requirement.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {

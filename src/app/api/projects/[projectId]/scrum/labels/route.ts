@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner } from "@/lib/api-guards"
+import { requireProjectMember } from "@/lib/api-guards"
 
 // GET /api/projects/:projectId/scrum/labels
 // Returns the distinct label / component / version values used across the
 // project's tasks, for autocomplete in the detail drawer.
 export async function GET(_req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const tasks = await prisma.task.findMany({

@@ -9,7 +9,7 @@
  */
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { OpSyncItemResult } from "@/lib/integrations/openproject/openproject.client"
 import { persistLastSyncAt, resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 
@@ -59,7 +59,7 @@ export async function POST(
   { params }: { params: { projectId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     // Resolve from whichever row owns the config (unified ProjectIntegration

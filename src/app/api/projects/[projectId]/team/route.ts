@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireProjectMember, requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
 import { syncProjectTeam } from "@/lib/team/sync-team"
 import { z } from "zod"
 
@@ -66,7 +66,7 @@ const createSchema = z.object({
 
 // POST /api/projects/:projectId/team — manually add a member.
 export async function POST(request: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   let body: unknown

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import type { GeneratedTestCaseFromReq } from "@/lib/requirements/rule-based-generator"
 
@@ -24,7 +24,7 @@ export async function POST(
   request: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {

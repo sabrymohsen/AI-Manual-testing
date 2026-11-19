@@ -7,7 +7,7 @@
  */
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireProjectOwner } from "@/lib/api-guards"
+import { requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { getProjectAiCredentials } from "@/lib/ai/project-ai-config"
 import { AI_PROVIDERS, ollamaUrlError, testProviderConnection, type AiProvider } from "@/lib/hub-ai-providers"
@@ -21,7 +21,7 @@ const schema = z.object({
 })
 
 export async function POST(req: Request, { params }: { params: { projectId: string } }) {
-  const auth = await requireProjectOwner(params.projectId)
+  const auth = await requireProjectMember(params.projectId)
   if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   let body: unknown

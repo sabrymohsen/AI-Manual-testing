@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireProjectOwner, unauthorizedResponse } from "@/lib/api-guards"
+import { unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
 import { prisma } from "@/lib/db"
 import { decryptSecret } from "@/lib/crypto"
 
@@ -74,7 +74,7 @@ export async function POST(
   { params }: { params: { projectId: string } }
 ) {
   try {
-    const auth = await requireProjectOwner(params.projectId)
+    const auth = await requireProjectMember(params.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     const config = await prisma.integrationConfig.findUnique({
