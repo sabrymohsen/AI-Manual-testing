@@ -18,7 +18,7 @@ const nextConfig = {
     // pdf-parse pulls in pdfjs-dist, which webpack can't bundle (it crashes at
     // load with "Object.defineProperty called on non-object", taking down every
     // route that imports the document extractor). Load them from node_modules.
-    serverComponentsExternalPackages: ["playwright", "pdf-parse", "pdfjs-dist"],
+    serverComponentsExternalPackages: ["playwright", "pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
   },
   images: {
     unoptimized: true,

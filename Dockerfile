@@ -43,6 +43,15 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# pdf-parse loads @napi-rs/canvas (DOMMatrix etc.) with a runtime require that
+# Next's file tracing can't see, so the standalone build left it out and every
+# PDF upload failed with "DOMMatrix is not defined". Copy it (and its native
+# binary for this platform) explicitly.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@napi-rs ./node_modules/@napi-rs
+# Same for pdf-parse's worker (pdf.worker.mjs), also loaded at runtime: copy the
+# whole packages rather than the traced subset.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdf-parse ./node_modules/pdf-parse
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
 EXPOSE 3000
 ENV PORT=3000
 # We deliberately do NOT `USER nextjs` here. Railway mounts the persistent volume
