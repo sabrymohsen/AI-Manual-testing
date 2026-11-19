@@ -12,6 +12,7 @@ const settings = require("./settings")
 const localStack = require("./local-stack")
 const localAi = require("./local-ai")
 const updater = require("./updater")
+const pageTools = require("./page-tools")
 
 const PARTITION = "persist:qa-engine" // keeps cookies (the login) across restarts
 const isMac = process.platform === "darwin"
@@ -172,6 +173,9 @@ function createMainWindow() {
     return { action: "deny" }
   })
 
+  // Windows opened from the app follow the same rules as this one.
+  wc.on("did-create-window", (child) => hardenChildWindow(child))
+
   // A plain link to another site navigates the system browser, not this window.
   wc.on("will-navigate", (event, url) => {
     if (url.startsWith("file://")) return // our offline page
@@ -208,6 +212,33 @@ function createMainWindow() {
   })
 
   loadApp()
+}
+
+/**
+ * A second app window (link opened in a new window): outside links go to the
+ * browser, its own pop-ups follow the same rules, and a lost connection shows
+ * the offline page instead of a blank window.
+ */
+function hardenChildWindow(win) {
+  const cwc = win.webContents
+  cwc.setWindowOpenHandler(({ url }) => {
+    if (isAppUrl(url)) return { action: "allow" }
+    if (/^(blob|data):/i.test(url)) return { action: "allow" }
+    openExternal(url)
+    return { action: "deny" }
+  })
+  cwc.on("did-create-window", (grandchild) => hardenChildWindow(grandchild))
+  cwc.on("will-navigate", (event, url) => {
+    if (url.startsWith("file://")) return
+    if (!isAppUrl(url)) {
+      event.preventDefault()
+      openExternal(url)
+    }
+  })
+  cwc.on("did-fail-load", (_e, code, description, url, isMainFrame) => {
+    if (!isMainFrame || code === -3 || (url && url.startsWith("file://"))) return
+    showOffline(win, description)
+  })
 }
 
 function debounce(fn, ms) {
@@ -350,7 +381,21 @@ function buildMenu() {
         isMac ? { role: "close" } : { role: "quit" },
       ],
     },
-    { role: "editMenu" },
+    {
+      label: "Edit",
+      submenu: [
+        { role: "undo" },
+        { role: "redo" },
+        { type: "separator" },
+        { role: "cut" },
+        { role: "copy" },
+        { role: "paste" },
+        { role: "pasteAndMatchStyle" },
+        { role: "selectAll" },
+        { type: "separator" },
+        { label: "Find…", accelerator: "CmdOrCtrl+F", click: (_m, w) => pageTools.openFind(w) },
+      ],
+    },
     {
       label: "View",
       submenu: [
@@ -436,4 +481,7 @@ app.on("window-all-closed", () => {
 // Harden every web contents: no <webview>, no navigation to file:// from remote pages.
 app.on("web-contents-created", (_e, contents) => {
   contents.on("will-attach-webview", (event) => event.preventDefault())
+  // Right-click menu and find results on every page, in every window.
+  pageTools.attachContextMenu(contents, isAppUrl)
 })
+pageTools.registerFind()

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<title>Find</title>
+<style>
+  :root { --bg:#ffffff; --fg:#1b1b1f; --muted:#6b6b76; --border:#e6e6ea; --hover:rgba(0,0,0,.06); }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1c1d21; --fg:#ececef; --muted:#9a9aa5; --border:#2e2f34; --hover:rgba(255,255,255,.08); } }
+  html, body { margin:0; height:100%; background:transparent; }
+  .bar { box-sizing:border-box; height:100%; display:flex; align-items:center; gap:4px; padding:0 6px 0 10px;
+         background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:10px;
+         font:13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  input { flex:1; min-width:0; border:0; outline:0; background:transparent; color:inherit; font:inherit; }
+  .n { min-width:64px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; font-size:12px; }
+  button { border:0; background:transparent; color:inherit; cursor:pointer; width:24px; height:24px; border-radius:6px; font:inherit; }
+  button:hover { background:var(--hover); }
+</style>
+</head>
+<body>
+  <div class="bar" role="search">
+    <input id="q" placeholder="Find in page" aria-label="Find in page" autofocus>
+    <span class="n" id="n"></span>
+    <button id="prev" title="Previous (Shift+Enter)" aria-label="Previous">↑</button>
+    <button id="next" title="Next (Enter)" aria-label="Next">↓</button>
+    <button id="close" title="Close (Esc)" aria-label="Close">×</button>
+  </div>
+  <script src="find.js"></script>
+</body>
+</html>

@@ -38,6 +38,14 @@ contextBridge.exposeInMainWorld(
         chooseRepo: () => ipcRenderer.invoke("desktop:choose-repo"),
         onStackLog: (cb) => ipcRenderer.on("desktop:stack-log", (_e, line) => cb(line)),
         getStackLog: () => ipcRenderer.invoke("desktop:get-stack-log"),
+        // The find bar (pages/find.html).
+        find: {
+          search: (text, forward, findNext) => ipcRenderer.send("desktop:find", { text, forward, findNext }),
+          close: () => ipcRenderer.send("desktop:find-close"),
+          onResult: (cb) => ipcRenderer.on("desktop:find-result", (_e, r) => cb(r)),
+          onFocus: (cb) => ipcRenderer.on("desktop:find-focus", () => cb()),
+        },
       }
     : info
 )
+
