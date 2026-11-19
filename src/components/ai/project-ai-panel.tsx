@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Bot, KeyRound, Loader2, CheckCircle2, AlertTriangle, Trash2, Lock, Server, ExternalLink } from "lucide-react"
+import { Bot, KeyRound, Loader2, CheckCircle2, AlertTriangle, Trash2, Lock, Server, ExternalLink, Cpu } from "lucide-react"
+import { useLocalAi, bestLocalModel } from "@/components/desktop/use-local-ai"
 
 /**
  * The project's AI Provider tab: which model writes this project's bugs, test
@@ -59,6 +60,9 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+  // Ollama on THIS computer (desktop app only) — found automatically.
+  const local = useLocalAi()
+  const localFound = local.inDesktop && local.running === true && local.models.length > 0
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -139,11 +143,12 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
   const autoTested = useRef<string | null>(null)
   useEffect(() => {
     if (loading || !canManage || !isOllama) return
+    if (localFound && !(config?.baseUrl || baseUrl.trim())) return
     const key = `${provider}|${config?.baseUrl ?? ""}`
     if (autoTested.current === key) return
     autoTested.current = key
     handleTest(true)
-  }, [loading, canManage, isOllama, provider, config?.baseUrl, handleTest])
+  }, [loading, canManage, isOllama, provider, config?.baseUrl, baseUrl, localFound, handleTest])
 
   const handleSave = async () => {
     setSaving(true)
@@ -232,7 +237,11 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
           {effective.inherited ? " (the workspace default)" : " (this project's own setting)"}
         </span>
       ) : (
-        <span>No AI provider is set up, so generation uses simple built-in templates.</span>
+        <span>
+          {localFound && local.model
+            ? "No shared provider for this project: your requests use Ollama on this computer; teammates without it get simple built-in templates."
+            : "No AI provider is set up, so generation uses simple built-in templates."}
+        </span>
       )}
     </div>
   )
@@ -267,6 +276,47 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
             which is why the key seems to disappear after each one. Pasting it again only lasts until the
             next deploy; setting a permanent <code className="font-mono text-[12px]">APP_ENCRYPTION_KEY</code>
             on the host fixes it for good.
+          </p>
+        </div>
+      )}
+
+      {localFound && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-3 space-y-2">
+          <p className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400">
+            <Cpu className="h-3.5 w-3.5" /> Ollama found on this computer · {local.models.length} model
+            {local.models.length === 1 ? "" : "s"}
+          </p>
+          {local.model ? (
+            <p className="text-muted-foreground">
+              Your AI requests in every project run on it while this app is open — free and private. Nothing to set up here.
+            </p>
+          ) : (
+            <p className="text-muted-foreground">
+              {local.decided ? "You turned it off." : "Not in use yet."} Turn it on to run your AI requests on this computer for free.
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Model on this computer"
+              value={local.model || ""}
+              onChange={(e) => local.setModel(e.target.value || null)}
+              className="h-8 rounded-lg border bg-background px-2 text-[13px]"
+            >
+              <option value="">Off</option>
+              {local.models.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            {!local.model && (
+              <Button size="sm" className="h-8" onClick={() => local.setModel(bestLocalModel(local.models))}>
+                Use it
+              </Button>
+            )}
+          </div>
+          <p className="text-[12px] text-muted-foreground">
+            Teammates without the desktop app (or with it closed) use the provider below.
           </p>
         </div>
       )}
@@ -354,8 +404,9 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                   className="h-9 bg-background font-mono"
                 />
                 <p className="text-[12px] text-muted-foreground">
-                  Leave empty to use {ollamaDefaultUrl}. The address must be reachable from the machine this
-                  app runs on. On a hosted app, &quot;localhost&quot; is the server, not your computer.
+                  {localFound
+                    ? "You don't need this for your own Ollama: it's already used through the desktop app (see above). Only fill this in for a shared Ollama server the whole team can reach."
+                    : `Leave empty to use ${ollamaDefaultUrl}. The address must be reachable from the machine this app runs on. On a hosted app, "localhost" is the server, not your computer — use the desktop app to use Ollama on your computer.`}
                 </p>
               </div>
 

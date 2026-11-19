@@ -56,3 +56,14 @@ describe("AI on the user's own computer (desktop relay)", () => {
     await expect(chatWithConfiguredProvider({ prompt: "x", userId: "u1" })).rejects.toThrow(/not found/)
   })
 })
+
+import { bestLocalModel } from "@/components/desktop/use-local-ai"
+
+describe("picking the Ollama model found on the user's computer", () => {
+  it("prefers a mid-size text model over vision, embedding or huge ones", () => {
+    expect(bestLocalModel(["llava:7b", "nomic-embed-text:latest", "qwen3:8b"])).toBe("qwen3:8b")
+    expect(bestLocalModel(["llama3.1:70b", "llama3.2:3b"])).toBe("llama3.2:3b")
+    expect(bestLocalModel(["phi4-mini:latest"])).toBe("phi4-mini:latest")
+    expect(bestLocalModel([])).toBeNull()
+  })
+})

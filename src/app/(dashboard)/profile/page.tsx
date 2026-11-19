@@ -91,6 +91,10 @@ type Tab = "general" | "ai" | "activity" | "security"
 
 export default function ProfilePage() {
   const [tab, setTab] = useState<Tab>("general")
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab")
+    if (t === "ai" || t === "activity" || t === "security") setTab(t)
+  }, [])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [stats, setStats] = useState<Stats | null>(null)
   const [activity, setActivity] = useState<ActivityEntry[]>([])
