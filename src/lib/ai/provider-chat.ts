@@ -78,6 +78,12 @@ export interface ChatOptions {
    * still say "return only JSON" in the prompt and parse defensively.
    */
   json?: boolean
+  /**
+   * Ollama only: context window to ask for (num_ctx). Ollama's default is a
+   * few thousand tokens and it silently drops the start of a longer prompt,
+   * so callers sending whole document sections must raise it.
+   */
+  contextTokens?: number
 }
 
 /**
@@ -270,6 +276,7 @@ async function callOllamaNative(
       ...(opts.json ? { format: "json" } : {}),
       options: {
         num_predict: limit,
+        ...(opts.contextTokens ? { num_ctx: opts.contextTokens } : {}),
         ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
       },
     }),

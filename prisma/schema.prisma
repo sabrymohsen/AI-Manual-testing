@@ -3034,6 +3034,7 @@ model ScrumEpic {
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   tasks       Task[]
   brdLinks    BrdLink[]
+  brdRequirements BrdRequirement[]
   createdAt   DateTime  @default(now())
 
   @@index([projectId])
@@ -3090,6 +3091,7 @@ model Task {
   taskAttachments   TaskAttachment[]
   workLogs          WorkLog[]
   brdLinks          BrdLink[]
+  brdRequirements   BrdRequirement[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3124,6 +3126,7 @@ model BrdDocument {
   annotations      BrdAnnotation[]
   auditLogs        BrdAuditLog[]
   requirements     BrdRequirement[]
+  analyses         BrdAnalysis[]
   reviews          BrdReview[]
   isDeleted        Boolean         @default(false)
   deletedAt        DateTime?
@@ -3202,6 +3205,38 @@ model BrdAnnotation {
 // A requirement found in (or added to) a BRD. Test cases link to requirements
 // so the hub can show coverage, and so a new BRD version can flag exactly the
 // tests whose requirement changed.
+/// One AI (or rule-based) analysis run of a BRD version. Suggestions are
+/// reviewed before they become BrdRequirement rows.
+model BrdAnalysis {
+  id            String      @id @default(cuid())
+  brdId         String
+  brd           BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  versionNumber Int?
+  /// queued | running | done | failed | applied
+  status        String      @default("queued")
+  /// "ai" | "rules"
+  method        String      @default("ai")
+  provider      String?
+  model         String?
+  /// Dominant language of the document: "ar" | "en" | "mixed"
+  language      String?
+  progress      Int         @default(0)
+  totalChunks   Int         @default(0)
+  summary       String?     @db.Text
+  /// Suggested requirements (see src/lib/brd/analysis-types.ts)
+  candidates    Json?
+  /// Ambiguities, conflicts, gaps and open questions
+  issues        Json?
+  error         String?     @db.Text
+  createdById   String?
+  createdByName String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  finishedAt    DateTime?
+
+  @@index([brdId, createdAt])
+}
+
 model BrdRequirement {
   id          String  @id @default(cuid())
   brdId       String
@@ -3218,12 +3253,36 @@ model BrdRequirement {
   changedInVersion    Int?
   previousText        String? @db.Text
 
+  /// How it got here: "manual" | "rules" | "ai". Null = before this was tracked
+  /// (auto-found when sourceVersionNumber is set, hand-added otherwise).
+  origin             String?
+  /// Testable conditions (string[]), incl. field rules from the document's tables.
+  acceptanceCriteria Json?
+  /// Verbatim text from the document this requirement came from. Change
+  /// detection checks this, since AI-written titles are paraphrases.
+  sourceQuote        String? @db.Text
+  /// Heading path, e.g. "1. الملحمة : … › 1.01 قصة المستخدم: …"
+  section            String?
+  /// Key of the parent epic, when the document groups stories under one.
+  parentKey          String?
+  /// "ar" | "en" | "mixed"
+  language           String?
+  confidence         Float?
+
+  /// The Scrum story (or epic, for an epic requirement) made from this requirement.
+  taskId String?
+  task   Task?       @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  epicId String?
+  epic   ScrumEpic?  @relation(fields: [epicId], references: [id], onDelete: SetNull)
+
   testCases BrdRequirementTestCase[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([brdId])
+  @@index([taskId])
+  @@index([epicId])
 }
 
 model BrdRequirementTestCase {

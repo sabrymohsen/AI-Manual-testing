@@ -64,7 +64,9 @@ describe("diffText", () => {
 describe("text helpers", () => {
   it("normalize ignores case, punctuation and spacing (incl. Arabic)", () => {
     expect(normalize("  The User, MUST log-in! ")).toBe("the user must log in")
-    expect(normalize("يجب على المستخدم   تسجيل الدخول.")).toBe("يجب على المستخدم تسجيل الدخول")
+    // ى and ي are written interchangeably, so both normalise to ي (matching only; display is untouched).
+    expect(normalize("يجب على المستخدم   تسجيل الدخول.")).toBe("يجب علي المستخدم تسجيل الدخول")
+    expect(normalize("يجب على المستخدم")).toBe(normalize("يجب علي المستخدم"))
   })
 
   it("htmlToText keeps paragraph breaks", () => {

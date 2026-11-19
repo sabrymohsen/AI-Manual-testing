@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleDashed,
+  KanbanSquare,
   Link2,
   Loader2,
   Plus,
@@ -19,6 +20,8 @@ import {
   XCircle,
 } from "lucide-react"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { BrdAnalysis } from "@/components/brd/brd-analysis"
+import { BrdToBoard, boardSummary } from "@/components/brd/brd-to-board"
 import { cn } from "@/lib/utils"
 
 /**
@@ -49,6 +52,14 @@ interface Requirement {
   status: "active" | "changed" | "removed"
   changedInVersion: number | null
   previousText: string | null
+  acceptanceCriteria: string[]
+  sourceQuote: string | null
+  section: string | null
+  origin: "manual" | "rules" | "ai"
+  type: string | null
+  parentKey: string | null
+  story: { id: string; key: string; status: string } | null
+  epic: { id: string; title: string } | null
   coverage: Coverage
   testCases: LinkedCase[]
 }
@@ -104,12 +115,12 @@ export function BrdRequirements({
   const [summary, setSummary] = useState<Summary | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Filter>(initialFilter ?? "all")
-  const [extracting, setExtracting] = useState(false)
   const [adding, setAdding] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [newText, setNewText] = useState("")
   const [generating, setGenerating] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Requirement | null>(null)
+  const [toBoard, setToBoard] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/brds/${brdId}/requirements`)
@@ -124,19 +135,6 @@ export function BrdRequirements({
   useEffect(() => {
     load()
   }, [load])
-
-  async function extract() {
-    setExtracting(true)
-    try {
-      const d = await send(`/api/brds/${brdId}/requirements`, "POST", { action: "extract" })
-      toast.success(d.added ? `Found ${d.added} new requirement${d.added === 1 ? "" : "s"}` : "No new requirements found")
-      load()
-    } catch (e) {
-      toast.error((e as Error).message)
-    } finally {
-      setExtracting(false)
-    }
-  }
 
   async function addManual() {
     if (!newTitle.trim()) return
@@ -155,7 +153,12 @@ export function BrdRequirements({
     setGenerating(r.id)
     try {
       const d = await send(`/api/brds/${brdId}/requirements/${r.id}/generate`, "POST", { count })
-      toast.success(`Drafted ${d.testCases.length} test case${d.testCases.length === 1 ? "" : "s"} for ${r.key} — review them in the test library`)
+      const n = d.testCases.length
+      toast.success(
+        `Drafted ${n} test case${n === 1 ? "" : "s"} for ${r.key}` +
+          (d.linkedToStory && r.story ? `, linked to story ${r.story.key}` : "") +
+          " — review them in the test library"
+      )
       load()
     } catch (e) {
       toast.error((e as Error).message)
@@ -198,6 +201,8 @@ export function BrdRequirements({
 
   return (
     <div className="space-y-4">
+      <BrdAnalysis brdId={brdId} projectId={projectId} canEdit={canEdit} onApplied={load} />
+
       {/* Summary */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
         <div className="min-w-[160px]">
@@ -235,15 +240,15 @@ export function BrdRequirements({
         </div>
         {canEdit && (
           <div className="ml-auto flex gap-2">
-            <button
-              onClick={extract}
-              disabled={extracting}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
-              title="Scan the current version for numbered requirements, user stories and acceptance criteria"
-            >
-              {extracting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ScanSearch className="h-3.5 w-3.5" />}
-              Find requirements
-            </button>
+            {reqs.length > 0 && (
+              <button
+                onClick={() => setToBoard(!toBoard)}
+                className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium hover:bg-accent"
+                title="Create this BRD's epics and user stories on the Scrum board"
+              >
+                <KanbanSquare className="h-3.5 w-3.5" /> Create on Scrum board
+              </button>
+            )}
             <button
               onClick={() => setAdding(true)}
               className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
@@ -253,6 +258,8 @@ export function BrdRequirements({
           </div>
         )}
       </div>
+
+      {toBoard && <BrdToBoard brdId={brdId} projectId={projectId} reqs={reqs} onDone={load} onClose={() => setToBoard(false)} />}
 
       {adding && (
         <div className="space-y-2 rounded-lg border bg-muted/40 p-3">
@@ -291,7 +298,7 @@ export function BrdRequirements({
           <p className="mt-2 text-sm font-medium">No requirements tracked yet</p>
           <p className="mx-auto mt-1 max-w-sm text-xs text-muted-foreground">
             {canEdit
-              ? "Use “Find requirements” to pull them out of the document, then link or generate test cases for each one."
+              ? "Use “Analyze with AI” (or “Quick scan”) above to pull them out of the document, review them, then link or generate test cases for each one."
               : "Someone who writes test cases can pull requirements out of this document."}
           </p>
         </div>
@@ -308,6 +315,12 @@ export function BrdRequirements({
               canEdit={canEdit}
               generating={generating === r.id}
               onGenerate={(n) => generate(r, n)}
+              onCreateStory={() =>
+                act(async () => {
+                  const d = await send(`/api/brds/${brdId}/board`, "POST", { requirementIds: [r.id] })
+                  toast.success(boardSummary(d))
+                })
+              }
               onAccept={() => act(() => send(`/api/brds/${brdId}/requirements/${r.id}`, "PATCH", { status: "active" }), `${r.key} marked up to date`)}
               onRetire={() => act(() => send(`/api/brds/${brdId}/requirements/${r.id}`, "PATCH", { status: "removed" }), `${r.key} retired`)}
               onRestore={() => act(() => send(`/api/brds/${brdId}/requirements/${r.id}`, "PATCH", { status: "active" }))}
@@ -345,6 +358,7 @@ function RequirementCard({
   canEdit,
   generating,
   onGenerate,
+  onCreateStory,
   onAccept,
   onRetire,
   onRestore,
@@ -359,6 +373,7 @@ function RequirementCard({
   canEdit: boolean
   generating: boolean
   onGenerate: (count: number) => void
+  onCreateStory: () => void
   onAccept: () => void
   onRetire: () => void
   onRestore: () => void
@@ -377,7 +392,7 @@ function RequirementCard({
       <button onClick={() => setOpen(!open)} className="flex w-full items-start gap-3 p-3 text-left" aria-expanded={open}>
         <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{r.key}</span>
         <span className="min-w-0 flex-1">
-          <span className={cn("block text-sm font-medium", r.status === "removed" && "line-through")}>{r.title}</span>
+          <span dir="auto" className={cn("block text-sm font-medium", r.status === "removed" && "line-through")}>{r.title}</span>
           <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
             <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium", cov.chip)}>
               <CovIcon className="h-3 w-3" /> {cov.label}
@@ -391,6 +406,27 @@ function RequirementCard({
               {r.testCases.length} test case{r.testCases.length === 1 ? "" : "s"}
             </span>
             {r.priority && <span>· {r.priority}</span>}
+            {r.origin === "ai" && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">AI</span>}
+            {r.story && (
+              <Link
+                href={`/projects/${projectId}/scrum?task=${r.story.id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-700 hover:underline dark:text-violet-400"
+                title="The Scrum story made from this requirement"
+              >
+                <KanbanSquare className="h-3 w-3" /> {r.story.key}
+              </Link>
+            )}
+            {!r.story && r.epic && (
+              <Link
+                href={`/projects/${projectId}/scrum?view=backlog`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-700 hover:underline dark:text-violet-400"
+              >
+                <KanbanSquare className="h-3 w-3" /> Epic on board
+              </Link>
+            )}
+            {r.acceptanceCriteria.length > 0 && <span>· {r.acceptanceCriteria.length} criteria</span>}
           </span>
         </span>
         <ChevronDown className={cn("mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
@@ -398,8 +434,24 @@ function RequirementCard({
 
       {open && (
         <div className="space-y-3 border-t px-3 pb-3 pt-2.5">
+          {r.section && <p dir="auto" className="text-[11px] text-muted-foreground">{r.section}</p>}
           {r.description && r.description !== r.title && (
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{r.description}</p>
+            <p dir="auto" className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{r.description}</p>
+          )}
+          {r.acceptanceCriteria.length > 0 && (
+            <div>
+              <p className="mb-1 text-[11px] font-medium">Acceptance criteria</p>
+              <ul dir="auto" className="list-disc space-y-0.5 ps-5 text-xs text-muted-foreground">
+                {r.acceptanceCriteria.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {r.sourceQuote && r.origin !== "manual" && (
+            <blockquote dir="auto" className="border-s-2 border-primary/30 ps-2 text-xs italic text-muted-foreground" title="Text in the document this requirement came from">
+              {r.sourceQuote}
+            </blockquote>
           )}
 
           {r.status === "changed" && (
@@ -470,6 +522,15 @@ function RequirementCard({
                 <Link2 className="h-3.5 w-3.5" /> Link existing test
               </button>
               <GenerateButton generating={generating} onGenerate={onGenerate} />
+              {!r.story && !(/^(epic|ملحمة)$/i.test((r.type ?? "").trim()) && r.epic) && (
+                <button
+                  onClick={onCreateStory}
+                  className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                  title="Create this on the Scrum board"
+                >
+                  <KanbanSquare className="h-3.5 w-3.5" /> {/^(epic|ملحمة)$/i.test((r.type ?? "").trim()) ? "Create epic" : "Create story"}
+                </button>
+              )}
               <button
                 onClick={onRetire}
                 className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground"

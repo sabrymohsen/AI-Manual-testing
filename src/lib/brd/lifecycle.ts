@@ -5,6 +5,8 @@ import { notify } from "@/lib/notifications"
 import { extractRequirements } from "@/lib/ai/document-extractor"
 import { brdAbsDir, brdRelPath, brdAudit } from "@/lib/brd/server"
 import { ensureVersionText, extractTextFromBuffer, normalize } from "@/lib/brd/content"
+import { loadBrdDocument, rulesAnalysis } from "@/lib/brd/analyze"
+import { KIND_LABEL } from "@/lib/brd/analysis-types"
 
 /**
  * BRD lifecycle: new versions, requirement change detection, trash.
@@ -32,8 +34,15 @@ export async function projectRecipients(projectId: string, exceptUserId?: string
 
 // ── Requirements ─────────────────────────────────────────────────────────────
 
-/** Requirement text is "still there" if its normalised description (or title) appears in the version. */
-function stillPresent(req: { title: string; description: string }, normText: string) {
+/**
+ * Requirement text is "still there" if its verbatim source quote — or, for
+ * requirements without one, its normalised description (or title) — appears
+ * in the version. AI-found requirements are paraphrased, so only their quote
+ * can be looked up in the document.
+ */
+function stillPresent(req: { title: string; description: string; sourceQuote?: string | null }, normText: string) {
+  const q = req.sourceQuote ? normalize(req.sourceQuote) : ""
+  if (q.length >= 6) return normText.includes(q)
   const d = normalize(req.description)
   if (d.length >= 12 && normText.includes(d)) return true
   const t = normalize(req.title)
@@ -71,6 +80,12 @@ export async function resyncRequirements(brdId: string, versionNumber: number, t
         })
         flagged += res.count
       }
+      // Tell the story made from it, in its history.
+      if (r.taskId) {
+        await prisma.activity
+          .create({ data: { taskId: r.taskId, action: "BRD changed", details: `${r.key} changed in BRD v${versionNumber} — check the story and its tests`, userId: null } })
+          .catch(() => {})
+      }
     } else if (present && r.status === "changed") {
       await prisma.brdRequirement.update({ where: { id: r.id }, data: { status: "active", changedInVersion: null } })
     }
@@ -89,9 +104,21 @@ export async function extractBrdRequirements(brdId: string) {
     select: { currentVersionId: true, versions: { select: { id: true, versionNumber: true } } },
   })
   if (!brd?.currentVersionId) return { added: 0, total: 0 }
-  const text = await ensureVersionText(brd.currentVersionId)
   const versionNumber = brd.versions.find((v) => v.id === brd.currentVersionId)?.versionNumber ?? null
-  const { requirements } = extractRequirements(text)
+  // Structure-aware scan (epics, user stories, FR-n, acceptance criteria and
+  // field tables, Arabic and English) — the old line scan picked up the table
+  // of contents and missed stories.
+  const doc = await loadBrdDocument(brdId)
+  const scanned = doc ? rulesAnalysis(doc.sections, doc.language).drafts : []
+  const requirements = scanned.length
+    ? scanned.map((d) => ({ ...d, title: d.ref ? `${d.ref} ${d.title}` : d.title }))
+    : extractRequirements(await ensureVersionText(brd.currentVersionId)).requirements.map((r) => ({
+        ...r,
+        acceptanceCriteria: [] as string[],
+        sourceQuote: null as string | null,
+        section: null as string | null,
+        language: null as string | null,
+      }))
 
   const existing = await prisma.brdRequirement.findMany({ where: { brdId }, select: { key: true, description: true } })
   const seen = new Set(existing.map((e) => normalize(e.description)))
@@ -115,10 +142,15 @@ export async function extractBrdRequirements(brdId: string) {
       key,
       title: r.title.slice(0, 300),
       description: r.description || r.title,
-      type: r.type,
+      type: "kind" in r ? KIND_LABEL[r.kind as keyof typeof KIND_LABEL].en : r.type,
       priority: r.priority,
       orderIndex: existing.length + toAdd.length,
       sourceVersionNumber: versionNumber,
+      origin: "rules",
+      acceptanceCriteria: r.acceptanceCriteria.length ? (r.acceptanceCriteria as any) : undefined,
+      sourceQuote: r.sourceQuote,
+      section: r.section,
+      language: r.language,
     })
   }
   if (toAdd.length) await prisma.brdRequirement.createMany({ data: toAdd })

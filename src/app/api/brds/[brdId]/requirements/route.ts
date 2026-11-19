@@ -25,8 +25,11 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
         },
         orderBy: { linkedAt: "asc" },
       },
+      task: { select: { id: true, taskNumber: true, status: true } },
+      epic: { select: { id: true, title: true } },
     },
   })
+  const boardKey = (await prisma.project.findUnique({ where: { id: access.brd!.projectId }, select: { boardKey: true } }))?.boardKey
 
   const live = reqs.filter((r) => r.status !== "removed")
   const verdict = (r: (typeof reqs)[number]) => {
@@ -47,7 +50,17 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
     status: r.status,
     changedInVersion: r.changedInVersion,
     previousText: r.previousText,
+    acceptanceCriteria: Array.isArray(r.acceptanceCriteria) ? r.acceptanceCriteria : [],
+    sourceQuote: r.sourceQuote,
+    section: r.section,
+    parentKey: r.parentKey,
+    origin: r.origin ?? (r.sourceVersionNumber !== null ? "rules" : "manual"),
+    language: r.language,
     coverage: r.status === "removed" ? "removed" : verdict(r),
+    story: r.task
+      ? { id: r.task.id, key: boardKey ? `${boardKey}-${r.task.taskNumber}` : `#${r.task.taskNumber}`, status: r.task.status }
+      : null,
+    epic: r.epic ? { id: r.epic.id, title: r.epic.title } : null,
     testCases: r.testCases.map((l) => ({
       ...l.testCase,
       needsReview: l.needsReview,
@@ -107,6 +120,7 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
       description: d.description || d.title,
       priority: d.priority ?? null,
       orderIndex: count,
+      origin: "manual",
     },
   })
   await brdAudit(params.brdId, "requirement_added", `${key}: ${d.title}`, user)

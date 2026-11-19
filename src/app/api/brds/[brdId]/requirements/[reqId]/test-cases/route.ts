@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireBrdTestAccess } from "@/lib/brd/server"
+import { linkTestsToRequirementStory, unlinkTestsFromRequirementStory } from "@/lib/brd/to-board"
 
 const linkSchema = z.object({
   add: z.array(z.string()).max(500).optional(),
@@ -46,6 +47,9 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
     ? (await prisma.brdRequirementTestCase.deleteMany({ where: { requirementId: req.id, testCaseId: { in: remove } } }))
         .count
     : 0
+  // Keep the story made from this requirement in step.
+  await linkTestsToRequirementStory(req.id, owned.map((o) => o.id))
+  await unlinkTestsFromRequirementStory(req.id, remove)
   return NextResponse.json({ added, removed })
 }
 

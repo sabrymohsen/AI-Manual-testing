@@ -82,6 +82,8 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
             })),
           },
           brdRequirementLinks: { create: { requirementId: req.id } },
+          // Also on the story made from this requirement, so the board shows its tests.
+          ...(req.taskId ? { scrumTaskLinks: { create: { taskId: req.taskId } } } : {}),
         },
         select: { id: true, title: true },
       })
@@ -91,5 +93,5 @@ export async function POST(request: Request, { params }: { params: { brdId: stri
   })
 
   await brdAudit(brd.id, "tests_generated", `Generated ${created.length} draft test case(s) for ${req.key}`, access.session!.user)
-  return NextResponse.json({ testCases: created }, { status: 201 })
+  return NextResponse.json({ testCases: created, linkedToStory: !!req.taskId }, { status: 201 })
 }

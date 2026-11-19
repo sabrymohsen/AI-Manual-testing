@@ -114,6 +114,14 @@ export const QA_SKILLS: QaSkill[] = [
     commands: ["generate-test-cases-from-requirement", "agent-brain-plan", "agent-chat"],
   },
   {
+    id: "brd-analysis",
+    name: "BRD requirements analysis",
+    description: "Pulls testable requirements out of Arabic or English BRDs without inventing any, and flags vague or missing ones.",
+    instructions:
+      "A good requirement is atomic, testable and traceable: one behaviour, a measurable outcome, and the exact source text. Keep the document's language and terms (Arabic stays Arabic). Treat 'shall/must/يجب' as mandatory and 'should/ينبغي' as desirable. Flag vague words (fast, easy, appropriate, سريع، مناسب، حسب الحاجة), TBD items, undefined roles or statuses, missing validation, error handling and limits. Never fill a gap with an assumption — report it as a question for the business.",
+    commands: ["analyze-brd"],
+  },
+  {
     id: "duplicates",
     name: "Duplicate detection",
     description: "Judges duplicates by what is tested (feature, condition, outcome), not by similar wording.",
@@ -154,6 +162,7 @@ export const COMMAND_LABELS: Record<string, string> = {
   "explain-failure": "Explain failure",
   "diagnosis-chat": "Test Doctor chat",
   "detect-duplicate-test-case": "Duplicate check",
+  "analyze-brd": "BRD requirements analysis",
 }
 
 function matches(pattern: string, command: string): boolean {
