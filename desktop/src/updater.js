@@ -5,8 +5,49 @@
 // When it's newer than this app, the user gets "Update now": the installer is
 // downloaded with a progress bar and opened (Mac: the disk image; Windows: the setup).
 const fs = require("fs")
+const os = require("os")
 const path = require("path")
+const { execFile } = require("child_process")
 const { app, dialog, shell, BrowserWindow } = require("electron")
+
+const run = (cmd, args) =>
+  new Promise((resolve, reject) => execFile(cmd, args, (err, stdout) => (err ? reject(err) : resolve(stdout))))
+
+/**
+ * Mac: put the new version in place of this app and restart — no dragging.
+ * Works unsigned because the disk image was downloaded by the app itself (no
+ * quarantine flag). Returns false when it can't (e.g. no write access), and the
+ * caller falls back to opening the disk image.
+ */
+async function installMac(dmg, bundle = path.resolve(process.execPath, "..", "..", "..") /* …/QA Engine.app */) {
+  if (!bundle.endsWith(".app")) return false
+  const mount = fs.mkdtempSync(path.join(os.tmpdir(), "qa-engine-update-"))
+  try {
+    await run("hdiutil", ["attach", "-nobrowse", "-readonly", "-noautoopen", "-mountpoint", mount, dmg])
+    const appName = fs.readdirSync(mount).find((f) => f.endsWith(".app"))
+    if (!appName) return false
+    const staged = `${bundle}.new`
+    fs.rmSync(staged, { recursive: true, force: true })
+    await run("ditto", [path.join(mount, appName), staged])
+    const old = `${bundle}.old`
+    fs.rmSync(old, { recursive: true, force: true })
+    fs.renameSync(bundle, old)
+    try {
+      fs.renameSync(staged, bundle)
+    } catch (err) {
+      fs.renameSync(old, bundle) // put the working version back
+      throw err
+    }
+    fs.rmSync(old, { recursive: true, force: true })
+    return true
+  } catch (err) {
+    console.warn("[updater] in-place install failed:", err?.message || err)
+    return false
+  } finally {
+    await run("hdiutil", ["detach", mount, "-quiet"]).catch(() => {})
+    fs.rmSync(mount, { recursive: true, force: true })
+  }
+}
 
 // Updates always come from the online server, even when the app is pointed at "This computer".
 const FEED = process.env.QA_UPDATE_FEED || "https://79-76-112-176.sslip.io/downloads"
@@ -69,6 +110,7 @@ async function check(manual = false) {
     const { response } = await dialog.showMessageBox(win, {
       type: "info",
       buttons: ["Update now", "Later"],
+      // Mac and Windows both restart into the new version.
       defaultId: 0,
       cancelId: 1,
       message: `A new version of QA Engine is available (${info.version}).`,
@@ -85,6 +127,13 @@ async function check(manual = false) {
       setTimeout(() => app.quit(), 1500)
       return
     }
+    if (await installMac(dest)) {
+      fs.rmSync(dest, { force: true })
+      app.relaunch()
+      app.exit(0)
+      return
+    }
+    // Couldn't replace it (e.g. the app isn't in a folder we can write to).
     await shell.openPath(dest)
     await dialog.showMessageBox(win, {
       type: "info",
@@ -106,4 +155,4 @@ function start() {
   setInterval(() => check(false), 6 * 60 * 60 * 1000)
 }
 
-module.exports = { check, start }
+module.exports = { check, start, installMac }
