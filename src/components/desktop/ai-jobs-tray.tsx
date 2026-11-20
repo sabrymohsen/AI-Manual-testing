@@ -27,6 +27,10 @@ function elapsed(from: string) {
 }
 
 function summary(job: Job) {
+  if (job.kind === "automate-test-case") {
+    const r = job.result || {}
+    return `Automated as "${r.name}" (${r.stepCount} step${r.stepCount === 1 ? "" : "s"}${r.unclear ? `, ${r.unclear} to check` : ""})`
+  }
   if (job.kind === "generate-tests") {
     const n = job.result?.testCases?.length ?? 0
     return `Drafted ${n} test case${n === 1 ? "" : "s"}${job.result?.linkedToStory ? " and linked them to the story" : ""}`
@@ -55,7 +59,8 @@ export function AiJobsTray() {
         if (j.status === "running" || told.current.has(j.id)) continue
         told.current.add(j.id)
         const open = j.link ? { label: "Open", onClick: () => router.push(j.link!) } : undefined
-        if (j.status === "done") toast.success(`${summary(j)} — ${j.title.replace(/^Generating /, "")}`, { duration: 10000, action: open })
+        if (j.status === "done")
+          toast.success(j.kind === "generate-tests" ? `${summary(j)} — ${j.title.replace(/^Generating /, "")}` : summary(j), { duration: 10000, action: open })
         else toast.error(`${j.title} failed`, { description: j.error || undefined, duration: 15000, action: open })
         window.dispatchEvent(new CustomEvent(AI_JOB_FINISHED, { detail: j }))
         fetch(`/api/ai-jobs/${j.id}/seen`, { method: "POST" }).catch(() => {})

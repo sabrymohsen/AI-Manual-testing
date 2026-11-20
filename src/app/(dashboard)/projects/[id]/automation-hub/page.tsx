@@ -136,17 +136,21 @@ export default function AutomationHubPage() {
   // ?tab=runs&run=<id> — links from bugs and test cases open that run. Read
   // after mount so the server and first client render agree.
   const [initialRunId, setInitialRunId] = useState<string | null>(null)
+  // A recording just saved, or a ?test= link: select it when the Tests tab opens.
+  const [focusTestName, setFocusTestName] = useState<string | null>(null)
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search)
     const t = sp.get("tab")
     if (t === "runs") setActiveTab("Runs")
     else if (t === "recorder") setActiveTab("Recorder")
+    else if (t === "tests") setActiveTab("Tests")
     setInitialRunId(sp.get("run"))
+    // ?test=<name> — e.g. a test just made from a test case.
+    const test = sp.get("test")
+    if (test) setFocusTestName(test)
   }, [])
   // A test's "Open trace" button opens that exact trace in the Trace Viewer.
   const [pendingTraceId, setPendingTraceId] = useState<string | null>(null)
-  // A recording just saved: select it when the Tests tab opens.
-  const [focusTestName, setFocusTestName] = useState<string | null>(null)
   const openTrace = (traceId: string) => {
     setPendingTraceId(traceId)
     setActiveTab("Trace")

@@ -9,7 +9,7 @@
  * page outline instead of a screenshot, and a timeout well inside the route's
  * maxDuration so a slow answer is reported as slow rather than as a bare 502.
  */
-import { chatWithConfiguredProvider, hasConfiguredProvider } from "@/lib/ai/provider-chat"
+import { chatWithConfiguredProvider, hasConfiguredProvider, hasLocalAi } from "@/lib/ai/provider-chat"
 import { parseStep, STEP_TEMPLATES } from "./grammar"
 
 export const AI_TIMEOUT_MS = 200_000
@@ -51,8 +51,14 @@ export async function generateStepsFromIntent(opts: {
   pageOutline: string | null
   pageUrl: string | null
   previousSteps: string[]
+  /** Whose request: lets it run on their own Ollama (desktop app), e.g. from a background job. */
+  userId?: string
+  /** Extra guidance appended to the prompt (e.g. "turn each expected result into a Verify step"). */
+  extra?: string
+  maxSteps?: number
 }): Promise<{ steps: GeneratedStep[]; usedPage: boolean }> {
-  if (!(await hasConfiguredProvider(opts.projectId))) {
+  const max = opts.maxSteps ?? 25
+  if (!(await hasConfiguredProvider(opts.projectId)) && !(await hasLocalAi(opts.userId))) {
     throw Object.assign(new Error("No AI provider is set up for this project. Add one in the project's AI settings, or write the steps yourself."), { status: 400 })
   }
   const prompt = [
@@ -62,7 +68,8 @@ export async function generateStepsFromIntent(opts: {
     opts.pageOutline ? `Page outline:\n${opts.pageOutline}` : "No page outline is available; use the labels the task names.",
     GRAMMAR_GUIDE,
     `When the task describes a persona or data ("as a QA manager at Acme"), make up realistic, specific values that fit it and type them.`,
-    `Return ONLY JSON: {"steps": ["sentence", "sentence", ...]} with at most 25 steps.`,
+    opts.extra || null,
+    `Return ONLY JSON: {"steps": ["sentence", "sentence", ...]} with at most ${max} steps.`,
   ]
     .filter(Boolean)
     .join("\n\n")
@@ -76,12 +83,13 @@ export async function generateStepsFromIntent(opts: {
     json: true,
     command: "plain-english-generate-steps",
     timeoutMs: AI_TIMEOUT_MS,
+    userId: opts.userId,
   })
   const data = extractJson(reply)
   const raw: unknown[] = Array.isArray(data) ? data : Array.isArray(data?.steps) ? data.steps : []
   const steps = raw
     .filter((s): s is string => typeof s === "string" && !!s.trim())
-    .slice(0, 25)
+    .slice(0, max)
     .map(s => {
       const parsed = parseStep(s)
       return parsed.ok ? { text: parsed.text, ok: true, meaning: parsed.meaning } : { text: parsed.text, ok: false, error: parsed.error }

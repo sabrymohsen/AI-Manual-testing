@@ -1021,7 +1021,7 @@ function NewTestDialog({
   const [how, setHow] = useState<"steps" | "code">("steps")
   const [url, setUrl] = useState(projectUrl)
   const [busy, setBusy] = useState(false)
-  const valid = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,79}$/.test(name.trim())
+  const valid = /^[\p{L}\p{N}][\p{L}\p{N}\p{M} _-]{0,79}$/u.test(name.trim())
 
   const submit = async () => {
     if (!valid) return
@@ -1044,7 +1044,7 @@ function NewTestDialog({
             placeholder="Checkout with a saved card"
             className="h-10 w-full rounded-md border px-3 outline-none focus:border-primary"
           />
-          {name && !valid && <span className="text-xs text-rose-600">Letters, numbers, spaces, - or _ (up to 80).</span>}
+          {name && !valid && <span className="text-xs text-rose-600">Letters (any language), numbers, spaces, - or _ (up to 80).</span>}
         </label>
         <div className="space-y-1 text-sm">
           <span className="font-medium text-foreground">What does it test?</span>

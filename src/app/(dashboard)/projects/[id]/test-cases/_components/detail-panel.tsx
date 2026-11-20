@@ -34,6 +34,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { PRIORITY_META, REVIEW_META, REVIEW_ORDER, STATUS_META, formatMinutes, relativeTime } from "./config"
 import { cn } from "@/lib/utils"
+import { useRouter } from "next/navigation"
+import { Bot, Loader2 as Spinner } from "lucide-react"
+import { AI_JOB_STARTED } from "@/components/desktop/ai-jobs-tray"
 import {
   AlertTriangle,
   FileText,
@@ -77,6 +80,36 @@ export function DetailPanel({
 }) {
   const [tab, setTab] = useState<Tab>("details")
   const [pendingDelete, setPendingDelete] = useState(false)
+  const router = useRouter()
+  const [automating, setAutomating] = useState(false)
+
+  /** Make a no-code Automation Hub test from this case (background job). */
+  const automate = async (again = false) => {
+    if (!testCaseId) return
+    setAutomating(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/test-cases/${testCaseId}/automate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ again }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(d.error || "Couldn't start automating this case")
+      if (d.existing) {
+        toast(`Already automated as "${d.existing.name}"`, {
+          action: { label: "Open", onClick: () => router.push(d.existing.link) },
+          cancel: { label: "Make another", onClick: () => automate(true) },
+        })
+        return
+      }
+      window.dispatchEvent(new Event(AI_JOB_STARTED))
+      toast("Automating this test case…", { description: "Runs in the background — we'll tell you when the automated test is ready." })
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setAutomating(false)
+    }
+  }
   const { name: trackerName, provider } = useProjectIntegration(projectId)
   const { data, isLoading, isError, error } = useCaseDetail(projectId, testCaseId)
   const deleteCases = useDeleteCases(projectId)
@@ -249,9 +282,19 @@ export function DetailPanel({
 
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => automate()}
+            disabled={automating}
+            title="Turn this case into an automated (no-code) test in the Automation Hub"
+            className="ml-auto h-7 gap-1 rounded-lg px-2.5 text-[11px] font-semibold"
+          >
+            {automating ? <Spinner className="h-3 w-3 animate-spin" /> : <Bot className="h-3 w-3" />} Automate
+          </Button>
+          <Button
+            size="sm"
             onClick={() => onRun(tc)}
             title="Run (R)"
-            className="ml-auto h-7 gap-1 rounded-lg px-2.5 text-[11px] font-semibold"
+            className="h-7 gap-1 rounded-lg px-2.5 text-[11px] font-semibold"
           >
             <Play className="h-3 w-3 fill-current" /> Run
           </Button>

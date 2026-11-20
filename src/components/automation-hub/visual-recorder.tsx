@@ -402,7 +402,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
 
   const handleConfirmSave = async () => {
     const name = saveName.trim()
-    if (!/^[A-Za-z0-9][A-Za-z0-9 _-]{0,79}$/.test(name)) {
+    if (!/^[\p{L}\p{N}][\p{L}\p{N}\p{M} _-]{0,79}$/u.test(name)) {
       setSaveError("Use letters, numbers, spaces, - or _ (up to 80 characters).")
       return
     }

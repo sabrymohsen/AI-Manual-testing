@@ -6,12 +6,13 @@ import { prisma } from "@/lib/db"
 import { DEFAULT_HUB_TEMPLATES, isLegacyJavaScript, javascriptReplacementFor } from "@/lib/hub-templates"
 
 /** Readable names: letters, digits, spaces, "-" and "_", up to 80 characters. */
-export const HUB_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,79}$/
+// Any language (Arabic test case titles become test names), digits, spaces, - and _.
+export const HUB_NAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{N}\p{M} _-]{0,79}$/u
 
 export function hubNameError(name: unknown): string | null {
   if (typeof name !== "string" || !name.trim()) return "Give the test a name"
   if (!HUB_NAME_PATTERN.test(name.trim())) {
-    return "Use letters, numbers, spaces, - or _ (up to 80 characters), starting with a letter or number"
+    return "Use letters (any language), numbers, spaces, - or _ (up to 80 characters), starting with a letter or number"
   }
   return null
 }

@@ -24,9 +24,11 @@ export async function startAiJob<T>(job: StartJob, work: () => Promise<T>) {
   void (async () => {
     try {
       const result = await work()
+      // The work may decide where "Open" goes (e.g. the test it created).
+      const link = result && typeof (result as any).link === "string" ? (result as any).link : undefined
       await prisma.aiJob.update({
         where: { id: row.id },
-        data: { status: "done", result: (result ?? null) as any, finishedAt: new Date() },
+        data: { status: "done", result: (result ?? null) as any, finishedAt: new Date(), ...(link ? { link } : {}) },
       })
     } catch (e: any) {
       await prisma.aiJob

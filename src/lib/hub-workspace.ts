@@ -74,8 +74,18 @@ export function projectForBrowser(browser: string): string {
 
 /** A script name reduced to something safe to use as a file name. */
 export function specBaseName(scriptName: string): string {
-  const base = (scriptName || "test").replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "")
+  const name = scriptName || "test"
+  const base = name.replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "")
+  // Names in other scripts (Arabic…) lose most characters here; a short hash of
+  // the full name keeps two such tests from sharing one file.
+  if (/[^\x00-\x7F]/.test(name)) return `${base || "test"}_${shortHash(name)}`
   return base || "test"
+}
+
+function shortHash(s: string): string {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619)
+  return (h >>> 0).toString(36)
 }
 
 /** Hub tests are Playwright JavaScript, so their files are .spec.js. */
