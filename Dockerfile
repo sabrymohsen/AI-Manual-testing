@@ -1,5 +1,8 @@
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat openssl
+# Built on the official Playwright image (same version as package-lock and the
+# worker/recorder images): the web app itself launches browsers — Automation Hub
+# runs and recorder, locator picker, visual checks — and the old Alpine image had
+# none ("Executable doesn't exist … chromium_headless_shell").
+FROM mcr.microsoft.com/playwright:v1.60.0-jammy AS base
 
 FROM base AS deps
 WORKDIR /app
@@ -31,10 +34,8 @@ ENV NODE_ENV=production
 # Railway persistent volume mount path; the Railway service variable of the same
 # name overrides this if set.
 ENV STORAGE_ROOT=/data
-# su-exec lets us drop from root to the app user after fixing volume ownership.
-RUN apk add --no-cache su-exec
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
+# The app user (same uid/gid as before, so existing /data files stay owned by it).
+RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs --home /app nextjs
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
@@ -52,16 +53,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@napi-rs ./node_modu
 # whole packages rather than the traced subset.
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdf-parse ./node_modules/pdf-parse
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/pdfjs-dist ./node_modules/pdfjs-dist
+# Playwright whole (CLI + test runner): Automation Hub runs `playwright test`
+# in a workspace on the data volume, which resolves packages through the
+# node_modules link made at startup (see CMD).
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/playwright ./node_modules/playwright
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/playwright-core ./node_modules/playwright-core
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@playwright ./node_modules/@playwright
 EXPOSE 3000
 ENV PORT=3000
 # We deliberately do NOT `USER nextjs` here. Railway mounts the persistent volume
 # (STORAGE_ROOT, e.g. /data) owned by root, so a non-root process gets EACCES when
 # writing uploads there. Instead the container starts as root, ensures the volume
-# exists and is owned by the app user, then drops to nextjs via su-exec to run the
+# exists and is owned by the app user, then drops to nextjs via runuser to run the
 # server unprivileged.
 #
 # Then sync the DB to schema.prisma. We use `db push` (not `migrate deploy`)
 # because schema.prisma is the source of truth here — the migrations/ history is
 # incomplete (models like VisualBaseline/ShaftProperty and enum values were only
 # ever applied via db push). --accept-data-loss makes it non-interactive.
-CMD ["sh", "-c", "mkdir -p \"${STORAGE_ROOT:-/data}\" && chown -R nextjs:nodejs \"${STORAGE_ROOT:-/data}\" && node node_modules/prisma/build/index.js db push --accept-data-loss --skip-generate && exec su-exec nextjs:nodejs node server.js"]
+CMD ["sh", "-c", "mkdir -p \"${STORAGE_ROOT:-/data}\" && ln -sfn /app/node_modules \"${STORAGE_ROOT:-/data}/node_modules\" && chown -R nextjs:nodejs \"${STORAGE_ROOT:-/data}\" && node node_modules/prisma/build/index.js db push --accept-data-loss --skip-generate && exec runuser -u nextjs -- node server.js"]

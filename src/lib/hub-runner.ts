@@ -400,7 +400,10 @@ async function executeRun(
   })
 
   const exitCode: number | null = await new Promise((resolve) => {
-    const child = spawn("npx", args, { cwd: ws.dir, env })
+    // Run the installed Playwright directly. `npx` from the workspace (on the
+    // data volume, outside the app folder) could try to download it instead.
+    const cli = playwrightCli()
+    const child = cli ? spawn(process.execPath, [cli, ...args.slice(1)], { cwd: ws.dir, env }) : spawn("npx", args, { cwd: ws.dir, env })
     queue.children.set(executionId, child)
     const timer = setTimeout(() => {
       append(`\n[Automation Hub] Stopped after ${Math.round(RUN_TIMEOUT_MS / 60000)} minutes without finishing.\n`)
@@ -486,4 +489,13 @@ async function executeRun(
 /** Where a script's spec lives, for callers that show or open it. */
 export function specPathFor(scriptName: string): string {
   return path.join(WORKSPACE_ROOT, "tests", specFileName(scriptName))
+}
+
+/** The installed Playwright test CLI, or null to fall back to npx. */
+function playwrightCli(): string | null {
+  for (const rel of [["@playwright", "test", "cli.js"], ["playwright", "cli.js"]]) {
+    const p = path.join(process.cwd(), "node_modules", ...rel)
+    if (fs.existsSync(p)) return p
+  }
+  return null
 }
