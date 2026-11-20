@@ -60,6 +60,7 @@ interface HubTest {
   /** "steps" = no-code plain-English test (code is generated); "code" = JavaScript. */
   mode?: "steps" | "code"
   steps?: { text: string; expected?: string }[] | null
+  data?: { columns: string[]; rows: string[][] } | null
   lastExecution: null | { id: string; status: string; createdAt: string; passed: number; failed: number; total: number }
   /** Manual test cases this script verifies; their status follows its runs. */
   linkedTestCases?: { id: string; title: string; lastStatus: string }[]
@@ -78,6 +79,7 @@ const BROWSERS = [
 ]
 
 const UNFILED = ""
+const ENVIRONMENTS = ["Dev", "Staging", "UAT", "Production"]
 
 // Monaco is global per page; register the language extras once.
 let monacoReady = false
@@ -131,6 +133,8 @@ export default function HubTestsSection({
   const [pendingConvert, setPendingConvert] = useState(false)
   const [pendingRunUnclear, setPendingRunUnclear] = useState(false)
   const [projectUrl, setProjectUrl] = useState("")
+  const [environment, setEnvironment] = useState("")
+  const [data, setData] = useState<{ columns: string[]; rows: string[][] } | null>(null)
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
 
@@ -171,6 +175,8 @@ export default function HubTestsSection({
     try {
       const b = localStorage.getItem("hub.browser")
       if (b && BROWSERS.some((x) => x.value === b)) setBrowser(b)
+      const env = localStorage.getItem(`hub.env.${projectId}`)
+      if (env && ENVIRONMENTS.includes(env)) setEnvironment(env)
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, focusTestName])
@@ -191,6 +197,7 @@ export default function HubTestsSection({
     setMode(isSteps ? "steps" : "code")
     setView(isSteps ? "steps" : "code")
     setSteps(isSteps ? (t.steps || []).map((x) => ({ ...newPlainStep(x.text), expectedResult: x.expected || "" })) : [])
+    setData(t.data && t.data.columns?.length ? t.data : null)
     setName(t.name)
     setFolder(t.folder)
     setDirty(false)
@@ -304,7 +311,7 @@ export default function HubTestsSection({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           mode === "steps"
-            ? { steps: stepRows(steps), name: name.trim(), folder, tags: parseTags(tagsText) }
+            ? { steps: stepRows(steps), data, name: name.trim(), folder, tags: parseTags(tagsText) }
             : { code, name: name.trim(), folder, tags: parseTags(tagsText) }
         ),
       })
@@ -342,11 +349,11 @@ export default function HubTestsSection({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           // A shared example runs inside this project.
-          body: JSON.stringify({ browser, targetId, projectId }),
+          body: JSON.stringify({ browser, targetId, projectId, environment: environment || null }),
         })
         await loadExecution(d.executionId)
       } else {
-        const body: any = { projectId, browser, targetId }
+        const body: any = { projectId, browser, targetId, environment: environment || null }
         if (scope.kind === "folder") body.folder = scope.folder
         if (scope.kind === "tag") body.tag = scope.tag
         const d = await api<{ executionIds: string[] }>("/api/hub/runs", {
@@ -472,7 +479,7 @@ export default function HubTestsSection({
       const d = await api<{ executionId: string }>(`/api/hub/scripts/${selected.id}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ browser, targetId, projectId }),
+        body: JSON.stringify({ browser, targetId, projectId, environment: environment || null }),
       })
       await loadExecution(d.executionId)
     } catch (e: any) {
@@ -536,8 +543,8 @@ export default function HubTestsSection({
   const warnings = issues.filter((i) => i.severity === "warning").length
   const running = !!execution && isActive(execution.status)
   const generated = useMemo(
-    () => (mode === "steps" ? stepsToPlaywright({ name: name || "Untitled test", steps: steps.map((x) => x.actionDescription) }) : null),
-    [mode, steps, name]
+    () => (mode === "steps" ? stepsToPlaywright({ name: name || "Untitled test", steps: steps.map((x) => x.actionDescription), data }) : null),
+    [mode, steps, name, data]
   )
   const unclearSteps = generated?.errors.length ?? 0
 
@@ -764,6 +771,25 @@ export default function HubTestsSection({
                     </option>
                   ))}
                 </select>
+                <select
+                  value={environment}
+                  onChange={(e) => {
+                    setEnvironment(e.target.value)
+                    try {
+                      localStorage.setItem(`hub.env.${projectId}`, e.target.value)
+                    } catch {}
+                  }}
+                  aria-label="Environment"
+                  title="Test data (and baseUrl) from Test Data Manager for this environment"
+                  className="h-8 rounded-md border bg-card px-2 text-sm"
+                >
+                  <option value="">No environment</option>
+                  {ENVIRONMENTS.map((env) => (
+                    <option key={env} value={env}>
+                      {env}
+                    </option>
+                  ))}
+                </select>
                 <button type="button" onClick={() => setTargetsOpen(true)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary" title="Grid, Docker and BrowserStack targets">
                   <Server className="h-3.5 w-3.5" /> Targets
                 </button>
@@ -833,8 +859,17 @@ export default function HubTestsSection({
                   <PlainEnglishEditor
                     steps={steps}
                     projectId={projectId}
+                    knownVariables={(data?.columns || []).filter(Boolean)}
                     onChange={(next) => {
                       setSteps(next)
+                      setDirty(true)
+                    }}
+                  />
+                  <DataTable
+                    data={data}
+                    projectId={projectId}
+                    onChange={(next) => {
+                      setData(next)
                       setDirty(true)
                     }}
                   />
@@ -1167,6 +1202,134 @@ function NewTestDialog({
           </Button>
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Data-driven testing: a small table. Each column is a {variable} the steps can
+ * use; the test runs once per row. Values for every run of every test belong
+ * in Test Data Manager instead (per environment).
+ */
+function DataTable({
+  data,
+  projectId,
+  onChange,
+}: {
+  data: { columns: string[]; rows: string[][] } | null
+  projectId: string
+  onChange: (d: { columns: string[]; rows: string[][] } | null) => void
+}) {
+  if (!data) {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed px-3 py-2 text-xs text-muted-foreground">
+        <span>Run this test with several sets of data — e.g. different users or inputs.</span>
+        <button
+          type="button"
+          onClick={() => onChange({ columns: ["email", "password"], rows: [["", ""]] })}
+          className="font-medium text-primary hover:underline"
+        >
+          Add test data table
+        </button>
+        <span className="ml-auto">
+          Values shared by all tests (and per environment) go in{" "}
+          <a href={`/projects/${projectId}/test-data`} className="text-primary hover:underline">
+            Test Data Manager
+          </a>
+          .
+        </span>
+      </div>
+    )
+  }
+  const setCell = (r: number, c: number, v: string) => onChange({ ...data, rows: data.rows.map((row, i) => (i === r ? row.map((x, j) => (j === c ? v : x)) : row)) })
+  const setCol = (c: number, v: string) => onChange({ ...data, columns: data.columns.map((x, j) => (j === c ? v.replace(/[^A-Za-z0-9_-]/g, "") : x)) })
+  const filled = data.rows.filter((r) => r.some((v) => v.trim())).length
+  return (
+    <div className="space-y-2 rounded-lg border p-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold text-foreground">Test data</span>
+        <span className="text-muted-foreground">
+          Runs once per row ({filled} row{filled === 1 ? "" : "s"}). Use a column in a step as {"{"}name{"}"}, e.g. Type &quot;{"{"}
+          {data.columns[0] || "email"}
+          {"}"}&quot; in the &quot;Email&quot; field.
+        </span>
+        <button type="button" onClick={() => onChange(null)} className="ml-auto text-muted-foreground hover:text-rose-600">
+          Remove table
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr>
+              <th className="w-8" />
+              {data.columns.map((c, j) => (
+                <th key={j} className="p-1 text-left font-normal">
+                  <div className="flex items-center gap-1">
+                    <input
+                      value={c}
+                      onChange={(e) => setCol(j, e.target.value)}
+                      placeholder="column"
+                      aria-label={`Column ${j + 1} name`}
+                      className="h-7 w-full min-w-[90px] rounded border bg-muted/50 px-1.5 font-mono font-medium"
+                    />
+                    {data.columns.length > 1 && (
+                      <button
+                        type="button"
+                        aria-label={`Remove column ${c || j + 1}`}
+                        onClick={() => onChange({ columns: data.columns.filter((_, k) => k !== j), rows: data.rows.map((r) => r.filter((_, k) => k !== j)) })}
+                        className="text-muted-foreground hover:text-rose-600"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                </th>
+              ))}
+              <th className="w-20 p-1">
+                <button
+                  type="button"
+                  onClick={() => onChange({ columns: [...data.columns, ""], rows: data.rows.map((r) => [...r, ""]) })}
+                  className="text-primary hover:underline"
+                >
+                  + column
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.rows.map((row, i) => (
+              <tr key={i}>
+                <td className="p-1 text-right tabular-nums text-muted-foreground">{i + 1}</td>
+                {row.map((v, j) => (
+                  <td key={j} className="p-1">
+                    <input
+                      value={v}
+                      onChange={(e) => setCell(i, j, e.target.value)}
+                      aria-label={`Row ${i + 1}, ${data.columns[j] || `column ${j + 1}`}`}
+                      className="h-7 w-full min-w-[90px] rounded border bg-card px-1.5"
+                    />
+                  </td>
+                ))}
+                <td className="p-1">
+                  {data.rows.length > 1 && (
+                    <button
+                      type="button"
+                      aria-label={`Remove row ${i + 1}`}
+                      onClick={() => onChange({ ...data, rows: data.rows.filter((_, k) => k !== i) })}
+                      className="text-muted-foreground hover:text-rose-600"
+                    >
+                      ×
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" onClick={() => onChange({ ...data, rows: [...data.rows, data.columns.map(() => "")] })} className="text-xs font-medium text-primary hover:underline">
+        + row
+      </button>
     </div>
   )
 }

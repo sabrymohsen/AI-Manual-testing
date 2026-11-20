@@ -41,7 +41,7 @@ describe("Automation Hub — no-code (plain-English) tests", () => {
     expect(res.status).toBe(201)
     const { script } = await res.json()
     expect(script.mode).toBe("steps")
-    expect(script.code).toContain('await page.goto("https://shop.test")')
+    expect(script.code).toContain(`await page.goto(url("https://shop.test"))`)
 
     // Change the steps (and the name): the code follows; code sent alongside is ignored.
     const upd = await updateScript(

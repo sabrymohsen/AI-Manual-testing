@@ -70,7 +70,7 @@ export async function runDueSchedules(now = new Date()) {
     try {
       const res = await startScopedRun(s.projectId, (s.scope ?? {}) as RunScope, {
         browser: s.browser,
-        meta: { triggerSource: "schedule", triggeredByName: `Schedule “${s.name}”` },
+        meta: { triggerSource: "schedule", triggeredByName: `Schedule “${s.name}”`, environment: (s as any).environment ?? null },
       })
       if (!("error" in res)) {
         await prisma.hubSchedule.update({

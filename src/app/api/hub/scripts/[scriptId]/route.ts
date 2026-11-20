@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client"
-import { cleanSteps, compileHubSteps } from "@/lib/hub-steps"
+import { cleanSteps, cleanData, compileHubSteps } from "@/lib/hub-steps"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { cleanFolder, hubNameError } from "@/lib/hub-scripts"
@@ -64,14 +64,20 @@ export async function PUT(request: NextRequest, { params }: { params: { scriptId
 
     // No-code tests: the steps are the source; the code is regenerated from
     // them. mode "code" converts a steps test to hand-written code (one way).
-    const current = await prisma.testScript.findUnique({ where: { id: params.scriptId }, select: { name: true, mode: true, steps: true } })
-    let stepsData: { mode?: string; steps?: any; code?: string } = {}
+    const current = await prisma.testScript.findUnique({ where: { id: params.scriptId }, select: { name: true, mode: true, steps: true, data: true } })
+    let stepsData: { mode?: string; steps?: any; code?: string; data?: any } = {}
     if (body.mode === "code" && current?.mode === "steps") {
       stepsData = { mode: "code", steps: Prisma.DbNull }
-    } else if (body.steps !== undefined || (current?.mode === "steps" && name !== undefined)) {
+    } else if (body.steps !== undefined || body.data !== undefined || (current?.mode === "steps" && name !== undefined)) {
       const steps = cleanSteps(body.steps !== undefined ? body.steps : current?.steps ?? [])
       if (!steps) return NextResponse.json({ error: "Steps must be a list of sentences" }, { status: 400 })
-      stepsData = { mode: "steps", steps, code: compileHubSteps(name ?? current?.name ?? "Untitled test", steps).code }
+      const data = body.data !== undefined ? cleanData(body.data) : ((current?.data as any) ?? null)
+      stepsData = {
+        mode: "steps",
+        steps,
+        data: data ?? Prisma.DbNull,
+        code: compileHubSteps(name ?? current?.name ?? "Untitled test", steps, data).code,
+      }
     }
 
     const script = await prisma.testScript.update({

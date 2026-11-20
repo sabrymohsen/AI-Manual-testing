@@ -22,6 +22,22 @@ export const GENERATED_MARKER = "// Generated from plain-English steps by QA Eng
 export interface StepsTest {
   name: string
   steps: string[]
+  /** Data-driven: the test runs once per row; each column is a {variable}. */
+  data?: TestData | null
+}
+
+export interface TestData {
+  columns: string[]
+  rows: string[][]
+}
+
+/** Rows as objects, skipping empty rows and nameless columns. */
+export function dataRows(data?: TestData | null): Record<string, string>[] {
+  if (!data || !Array.isArray(data.columns) || !Array.isArray(data.rows)) return []
+  const cols = data.columns.map((c) => String(c || "").trim())
+  return data.rows
+    .filter((r) => Array.isArray(r) && r.some((v) => String(v ?? "").trim()))
+    .map((r) => Object.fromEntries(cols.map((c, i) => [c, String(r[i] ?? "")]).filter(([c]) => /^[A-Za-z_][\w-]*$/.test(c))))
 }
 
 const js = (s: string) => JSON.stringify(s)
@@ -32,7 +48,7 @@ function nativeCode(cmd: Command, sentence: string): string | null {
   if (/\{[^}]+\}/.test(sentence)) return null
   switch (cmd.type) {
     case "goto":
-      return `await page.goto(${js(cmd.url)})`
+      return `await page.goto(url(${js(cmd.url)}))`
     case "back":
       return "await page.goBack()"
     case "forward":
@@ -77,24 +93,43 @@ export function stepsToPlaywright(test: StepsTest): CompileResult {
   const body: string[] = []
   let usesRuntime = false
 
+  const rows = dataRows(test.data)
+  const ind = rows.length ? "    " : "  "
   sentences.forEach((sentence, i) => {
     const parsed = parseStep(sentence)
     if (!parsed.ok) {
       errors.push({ line: i + 1, text: sentence, error: parsed.error })
-      body.push(`  // Step ${i + 1} isn't understood yet: ${sentence.replace(/\n/g, " ")}`)
-      body.push(`  test.fail(true, ${js(`Step ${i + 1}: ${parsed.error}`)})`)
+      body.push(`${ind}// Step ${i + 1} isn't understood yet: ${sentence.replace(/\n/g, " ")}`)
+      body.push(`${ind}test.fail(true, ${js(`Step ${i + 1}: ${parsed.error}`)})`)
       return
     }
     const native = parsed.optional ? null : nativeCode(parsed.command, parsed.text)
     if (native) {
-      body.push(`  await test.step(${js(parsed.text)}, async () => {`)
-      body.push(`    ${native}`)
-      body.push("  })")
+      body.push(`${ind}await test.step(${js(parsed.text)}, async () => {`)
+      body.push(`${ind}  ${native}`)
+      body.push(`${ind}})`)
     } else {
       usesRuntime = true
-      body.push(`  await test.step(${js(parsed.text)}, () => qa.step(page, ${js(parsed.text)}))`)
+      body.push(`${ind}await test.step(${js(parsed.text)}, () => qa.step(page, ${js(parsed.text)}))`)
     }
   })
+
+  const name = test.name || "Untitled test"
+  const setup = (variables: string) =>
+    usesRuntime ? [`${ind}qa.setup(page, {`, `${ind}  steps: [`, ...sentences.map((t) => `${ind}    ${js(t)},`), `${ind}  ],`, `${ind}  variables: ${variables},`, `${ind}})`, ""] : []
+  const testBlock = rows.length
+    ? [
+        "// Test data: the test runs once for each row.",
+        `const rows = ${JSON.stringify(rows, null, 2).replace(/\n/g, "\n")}`,
+        "",
+        "for (const [i, row] of rows.entries()) {",
+        `  test(\`${name.replace(/[`\\$]/g, "\\$&")} — row \${i + 1}\`, async ({ page }) => {`,
+        ...setup("{ ...vars, ...row }"),
+        ...(body.length ? body : ["    // No steps yet."]),
+        "  })",
+        "}",
+      ]
+    : [`test(${js(name)}, async ({ page }) => {`, ...setup("vars"), ...(body.length ? body : ["  // No steps yet."]), "})"]
 
   const lines = [
     GENERATED_MARKER,
@@ -102,10 +137,12 @@ export function stepsToPlaywright(test: StepsTest): CompileResult {
     'const { test, expect } = require("@playwright/test")',
     ...(usesRuntime ? [`const qa = require(${js("./" + STEPS_RUNTIME_FILE)})`] : []),
     "",
-    `test(${js(test.name || "Untitled test")}, async ({ page }) => {`,
-    ...(usesRuntime ? ["  qa.setup(page, {", "    steps: [", ...sentences.map((t) => `      ${js(t)},`), "    ],", "  })", ""] : []),
-    ...(body.length ? body : ["  // No steps yet."]),
-    "})",
+    "// The chosen environment's test data (QA Engine passes it in QA_VARS when it runs the test).",
+    'const vars = JSON.parse(process.env.QA_VARS || "{}")',
+    "// When the environment has a baseUrl, pages open on that site instead.",
+    'const url = (u) => (process.env.QA_BASE_URL ? u.replace(/^https?:\\/\\/[^/]+/, process.env.QA_BASE_URL.replace(/\\/+$/, "")) : u)',
+    "",
+    ...testBlock,
     "",
   ]
   return { code: lines.join("\n"), errors }

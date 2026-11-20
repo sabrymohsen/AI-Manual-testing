@@ -11,7 +11,7 @@ describe("no-code steps → Playwright test", () => {
       steps: ['Go to "https://shop.test/login"', 'Type "demo" in the "Email" field', 'Click "Sign in"', 'Verify the title is "Shop"', "Press Enter"],
     })
     expect(errors).toEqual([])
-    expect(code).toContain('await page.goto("https://shop.test/login")')
+    expect(code).toContain(`await page.goto(url("https://shop.test/login"))`)
     expect(code).toContain('await expect(page).toHaveTitle("Shop")')
     expect(code).toContain('await page.keyboard.press("Enter")')
     expect(code).toContain('qa.step(page, "Click \\"Sign in\\"")')
@@ -53,4 +53,30 @@ describe("no-code steps → Playwright test", () => {
     const fresh = execFileSync("node", ["scripts/build-steps-runtime.mjs", "--print"], { encoding: "utf8" })
     expect(fresh === QA_STEPS_RUNTIME, "Run `npm run gen:steps-runtime` and commit the result").toBe(true)
   }, 60_000)
+})
+
+import { dataRows } from "@/lib/plain-english/to-playwright"
+describe("data-driven and environment-aware tests", () => {
+  it("runs once per filled row, each column a variable", () => {
+    const { code } = stepsToPlaywright({
+      name: "Login",
+      steps: ['Type "{email}" in the "Email" field'],
+      data: { columns: ["email", "", "bad name!"], rows: [["a@b.co", "x", "y"], ["", "", ""], ["c@d.co", "", ""]] },
+    })
+    expect(code).toContain("for (const [i, row] of rows.entries())")
+    expect(code).toContain("variables: { ...vars, ...row }")
+    expect(code).toContain("— row ${i + 1}")
+    expect(dataRows({ columns: ["email", "", "bad name!"], rows: [["a@b.co", "x", "y"], ["", "", ""], ["c@d.co", "", ""]] })).toEqual([
+      { email: "a@b.co" },
+      { email: "c@d.co" },
+    ])
+    expect(() => new Function("require", "process", code)).not.toThrow()
+  })
+
+  it("pages open on the environment's site when QA_BASE_URL is set", () => {
+    const { code } = stepsToPlaywright({ name: "x", steps: ['Go to "https://prod.shop.com/cart?x=1"'] })
+    const url = new Function("process", `${code.match(/const url = .*$/m)![0]}; return url`)
+    expect(url({ env: {} })("https://prod.shop.com/cart?x=1")).toBe("https://prod.shop.com/cart?x=1")
+    expect(url({ env: { QA_BASE_URL: "https://staging.shop.com/" } })("https://prod.shop.com/cart?x=1")).toBe("https://staging.shop.com/cart?x=1")
+  })
 })

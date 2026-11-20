@@ -15,6 +15,7 @@ interface Schedule {
   name: string
   scope: { folder?: string; tag?: string; scriptIds?: string[] }
   browser: string
+  environment?: string | null
   frequency: "daily" | "weekdays" | "hourly"
   timeOfDay: string | null
   everyHours: number | null
@@ -67,6 +68,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
     scopeKind: "all" | "folder" | "tag"
     scopeValue: string
     browser: string
+    environment: string
   } | null>(null)
   const [newTokenName, setNewTokenName] = useState("")
   const [shownToken, setShownToken] = useState<string | null>(null)
@@ -101,6 +103,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
         timeOfDay: form.timeOfDay,
         everyHours: form.everyHours,
         browser: form.browser,
+        environment: form.environment || null,
         scope: form.scopeKind === "folder" ? { folder: form.scopeValue } : form.scopeKind === "tag" ? { tag: form.scopeValue } : {},
       })
       toast.success("Schedule created")
@@ -144,14 +147,17 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
           <h3 className="text-sm font-semibold">Schedules</h3>
           <button
             onClick={() =>
-              setForm({ name: "", frequency: "weekdays", timeOfDay: "02:00", everyHours: 4, scopeKind: "all", scopeValue: "", browser: "Headless" })
+              setForm({ name: "", frequency: "weekdays", timeOfDay: "02:00", everyHours: 4, scopeKind: "all", scopeValue: "", browser: "Headless", environment: "" })
             }
             className="ml-auto inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium hover:bg-muted"
           >
             <Plus className="h-3.5 w-3.5" /> New
           </button>
         </div>
-        <p className="mb-3 text-xs text-muted-foreground">Times use the server&apos;s clock. A schedule skips a slot if its previous run is still going.</p>
+        <p className="mb-3 text-xs text-muted-foreground">
+          Times use the server&apos;s clock. A schedule skips a slot if its previous run is still going. When a scheduled run finishes, everyone in
+          the project gets a notification with the result.
+        </p>
 
         {form && (
           <div className="mb-3 space-y-2 rounded-lg border bg-muted/40 p-3 text-sm">
@@ -226,6 +232,17 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
                   <option key={b}>{b}</option>
                 ))}
               </select>
+              <select
+                value={form.environment}
+                onChange={(e) => setForm({ ...form, environment: e.target.value })}
+                aria-label="Environment"
+                className="h-8 rounded-md border bg-card px-2 text-sm"
+              >
+                <option value="">No environment</option>
+                {["Dev", "Staging", "UAT", "Production"].map((env) => (
+                  <option key={env}>{env}</option>
+                ))}
+              </select>
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => setForm(null)} className="rounded-md border px-3 py-1 text-xs font-medium">
@@ -292,6 +309,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
                 </div>
                 <p className="mt-0.5 text-muted-foreground">
                   {describe(s)} · {scopeLabel(s.scope)} · {s.browser}
+                  {s.environment ? ` · ${s.environment}` : ""}
                   {s.enabled && s.nextRunAt ? ` · next ${new Date(s.nextRunAt).toLocaleString()}` : " · paused"}
                 </p>
               </li>

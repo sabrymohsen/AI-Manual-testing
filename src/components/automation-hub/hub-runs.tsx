@@ -32,6 +32,7 @@ interface RunRow extends HubExecutionView {
   batchId: string | null
   executionTarget: string | null
   triggerSource?: string | null
+  environment?: string | null
   triggeredByName?: string | null
 }
 
@@ -308,6 +309,11 @@ export default function HubRunsSection({
           {r.triggerSource && r.triggerSource !== "manual" && (
             <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground" title={r.triggeredByName ?? undefined}>
               {SOURCE_LABEL[r.triggerSource] ?? r.triggerSource}
+            </span>
+          )}
+          {r.environment && (
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary" title="Environment">
+              {r.environment}
             </span>
           )}
           <span className="w-16 text-right text-xs text-muted-foreground">{formatDuration(r.duration)}</span>

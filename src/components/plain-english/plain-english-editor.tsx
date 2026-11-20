@@ -131,6 +131,7 @@ export function PlainEnglishEditor({
   projectId,
   onEditDetailed,
   manual = false,
+  knownVariables = [],
 }: {
   steps: EditorStep[]
   onChange: (_steps: EditorStep[]) => void
@@ -138,6 +139,8 @@ export function PlainEnglishEditor({
   onEditDetailed?: () => void
   /** A person runs manual steps, so automation-wording warnings don't apply. */
   manual?: boolean
+  /** Variables that come from elsewhere (e.g. a data table's columns), so they aren't flagged as unset. */
+  knownVariables?: string[]
 }) {
   const [draft, setDraft] = useState("")
   const [openExpected, setOpenExpected] = useState<Set<number>>(new Set())
@@ -156,7 +159,7 @@ export function PlainEnglishEditor({
 
   // Warn about {variables} read before anything sets them.
   const unsetVariables = useMemo(() => {
-    const known = new Set(BUILT_IN_VARIABLES)
+    const known = new Set([...BUILT_IN_VARIABLES, ...knownVariables])
     const warnings = new Map<number, string[]>()
     steps.forEach((s, i) => {
       const parsed = parsedRows[i]
@@ -166,7 +169,8 @@ export function PlainEnglishEditor({
       if (parsed.ok) variablesSet(parsed.command).forEach(v => known.add(v))
     })
     return warnings
-  }, [steps, parsedRows])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps, parsedRows, knownVariables.join("|")])
 
   useEffect(() => {
     if (aiUrl) return

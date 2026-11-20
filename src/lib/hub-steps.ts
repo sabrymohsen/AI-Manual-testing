@@ -1,4 +1,4 @@
-import { stepsToPlaywright } from "@/lib/plain-english/to-playwright"
+import { stepsToPlaywright, type TestData } from "@/lib/plain-english/to-playwright"
 
 /** A no-code Automation Hub test's step, as stored in TestScript.steps. */
 export interface HubStep {
@@ -21,7 +21,20 @@ export function cleanSteps(input: unknown): HubStep[] | null {
   return out
 }
 
+/** Validates a data table ({ columns, rows }); undefined = not sent, null = clear / invalid. */
+export function cleanData(input: unknown): TestData | null {
+  if (input === null) return null
+  const d = input as any
+  if (!d || !Array.isArray(d.columns) || !Array.isArray(d.rows) || d.columns.length > 30 || d.rows.length > 200) return null
+  const columns = d.columns.map((c: unknown) => String(c ?? "").trim().slice(0, 60))
+  const rows = d.rows
+    .filter((r: unknown) => Array.isArray(r))
+    .map((r: unknown[]) => columns.map((_: string, i: number) => String(r[i] ?? "").slice(0, 2000)))
+  if (!columns.some(Boolean) || !rows.length) return null
+  return { columns, rows }
+}
+
 /** The runnable Playwright file for a steps test. Saved as TestScript.code. */
-export function compileHubSteps(name: string, steps: HubStep[]) {
-  return stepsToPlaywright({ name, steps: steps.map((s) => s.text) })
+export function compileHubSteps(name: string, steps: HubStep[], data?: TestData | null) {
+  return stepsToPlaywright({ name, steps: steps.map((s) => s.text), data })
 }

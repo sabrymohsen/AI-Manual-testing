@@ -1,3 +1,4 @@
+import { cleanEnvironment } from "@/lib/hub-runner"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireHubProject } from "@/lib/hub-access"
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
   })
 }
 
-// POST /api/hub/schedules { projectId, name, frequency, timeOfDay?, everyHours?, scope?, browser? }
+// POST /api/hub/schedules { projectId, name, frequency, timeOfDay?, everyHours?, scope?, browser?, environment? }
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const auth = await requireHubProject(String(body.projectId || ""), "write")
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       name,
       scope: cleanScope(body.scope) as any,
       browser: String(body.browser || "Headless"),
+      environment: cleanEnvironment(body.environment),
       frequency: timing.frequency,
       timeOfDay: timing.frequency === "hourly" ? null : timing.timeOfDay,
       everyHours: timing.frequency === "hourly" ? timing.everyHours : null,

@@ -1,3 +1,4 @@
+import { cleanEnvironment } from "@/lib/hub-runner"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireHubProject } from "@/lib/hub-access"
@@ -47,6 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { schedu
       ...(typeof body.name === "string" && body.name.trim() ? { name: body.name.trim().slice(0, 120) } : {}),
       ...(body.scope !== undefined ? { scope: cleanScope(body.scope) as any } : {}),
       ...(typeof body.browser === "string" ? { browser: body.browser } : {}),
+      ...(body.environment !== undefined ? { environment: cleanEnvironment(body.environment) } : {}),
       ...(typeof body.enabled === "boolean" ? { enabled: body.enabled } : {}),
       frequency: timing.frequency,
       timeOfDay: timing.frequency === "hourly" ? null : timing.timeOfDay,

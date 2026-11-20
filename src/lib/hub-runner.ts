@@ -14,6 +14,8 @@
 // delete each other's evidence. Each finished run's folder is moved to
 // runs/<executionId>/ so its screenshots, traces and videos stay available.
 
+import { notify } from "@/lib/notifications"
+import { loadRunVariables as loadTestDataVariables } from "@/lib/plain-english/variables"
 import { prisma } from "@/lib/db"
 import { spawn, type ChildProcess } from "child_process"
 import { cleanRunEnv } from "@/lib/hub-access"
@@ -229,6 +231,8 @@ export interface RunMeta {
   /** Project the run belongs to (required for shared example scripts). */
   projectId?: string | null
   triggerSource?: "manual" | "rerun" | "schedule" | "ci"
+  /** Test Data Manager environment (Dev | Staging | UAT | Production). */
+  environment?: string | null
   triggeredById?: string | null
   triggeredByName?: string | null
 }
@@ -271,6 +275,7 @@ export async function startScriptRun(
       batchId,
       projectId: meta.projectId ?? script.projectId ?? null,
       triggerSource: meta.triggerSource ?? "manual",
+      environment: cleanEnvironment(meta.environment),
       triggeredById: meta.triggeredById ?? null,
       triggeredByName: meta.triggeredByName ?? null,
     },
@@ -279,7 +284,7 @@ export async function startScriptRun(
   queue.waitingJobs.push({
     executionId: execution.id,
     projectId: execution.projectId,
-    run: () => executeRun(execution.id, script, { browser, debug, target, accessibility }),
+    run: () => executeRun(execution.id, script, { browser, debug, target, accessibility, environment: cleanEnvironment(meta.environment) }),
   })
   pump()
   const ahead = queuePosition(execution.id) ?? 0
@@ -315,7 +320,7 @@ export async function startBatchRun(
 async function executeRun(
   executionId: string,
   script: HubScriptLike,
-  opts: { browser: string; debug?: boolean; target?: ExecutionTargetLike; accessibility?: boolean }
+  opts: { browser: string; debug?: boolean; target?: ExecutionTargetLike; accessibility?: boolean; environment?: string | null }
 ): Promise<void> {
   // Deleted or cancelled while it waited in the queue.
   const stillThere = await prisma.testExecution.findUnique({ where: { id: executionId }, select: { status: true } })
@@ -388,13 +393,23 @@ async function executeRun(
   }
 
   const vars = await loadRunVariables(script.projectId)
+  // Test Data Manager values for the chosen environment: no-code tests read
+  // them as {variables}, and a "baseUrl" value moves the test to that site.
+  const testDataSecrets: string[] = []
+  const testData = script.projectId
+    ? await loadTestDataVariables({ projectId: script.projectId, environment: opts.environment ?? null, testCaseTestData: null, credential: null, secrets: testDataSecrets }).catch(() => ({}))
+    : {}
+  vars.secrets.push(...testDataSecrets)
   mask = (text: string) => vars.secrets.reduce((t, sec) => t.split(sec).join("***"), text)
+  if (opts.environment) append(`[Automation Hub] Environment: ${opts.environment}${typeof (testData as any).baseUrl === "string" ? ` · ${(testData as any).baseUrl}` : ""}\n`)
 
   const args = ["playwright", "test", specRelPath, `--project=${projectName}`, "--reporter=list,json"]
   // Never the server's own environment — see cleanRunEnv.
   const env = cleanRunEnv({
     ...vars.env,
     PLAYWRIGHT_JSON_OUTPUT_NAME: path.join(ws.resultsDir, "report.json"),
+    QA_VARS: JSON.stringify(testData),
+    ...(typeof (testData as any).baseUrl === "string" && /^https?:\/\//.test((testData as any).baseUrl) ? { QA_BASE_URL: (testData as any).baseUrl } : {}),
     FORCE_COLOR: "0",
     ...(debug ? { DEBUG: "pw:api" } : {}),
   })
@@ -484,6 +499,58 @@ async function executeRun(
   } catch (err) {
     console.error("[hub-runner] could not store run results:", err)
   }
+  await notifyScheduledRunDone(executionId).catch((e) => console.error("[hub-runner] schedule notification failed:", e))
+}
+
+// Batches already announced (the last two runs of a batch can finish together).
+const announced: Set<string> = ((globalThis as any).__hubAnnouncedBatches ||= new Set<string>())
+
+/**
+ * When the last run of a scheduled batch finishes, tell everyone in the
+ * project once: "Nightly regression on Staging: 18 passed, 2 failed".
+ */
+export async function notifyScheduledRunDone(executionId: string) {
+  const exec = await prisma.testExecution.findUnique({
+    where: { id: executionId },
+    select: { batchId: true, triggerSource: true, projectId: true, environment: true, triggeredByName: true },
+  })
+  if (!exec || exec.triggerSource !== "schedule" || !exec.projectId) return
+  const key = exec.batchId || executionId
+  const runs = await prisma.testExecution.findMany({
+    where: exec.batchId ? { batchId: exec.batchId } : { id: executionId },
+    select: { id: true, status: true, results: true },
+  })
+  if (runs.some((r) => r.status === "Queued" || r.status === "Running") || announced.has(key)) return
+  announced.add(key)
+
+  let passed = 0
+  let failed = 0
+  for (const r of runs) {
+    const results = Array.isArray(r.results) ? (r.results as any[]) : []
+    if (results.length) {
+      passed += results.filter((t) => t.status === "passed" || t.status === "flaky").length
+      failed += results.filter((t) => ["failed", "timedOut", "interrupted"].includes(t.status)).length
+    } else if (r.status === "Passed") passed++
+    else if (r.status === "Failed") failed++
+  }
+  const firstFailed = runs.find((r) => r.status === "Failed")
+  const project = await prisma.project.findUnique({
+    where: { id: exec.projectId },
+    select: { userId: true, projectMembers: { select: { userId: true } } },
+  })
+  if (!project) return
+  const recipients = Array.from(new Set([project.userId, ...project.projectMembers.map((m) => m.userId)]))
+  const what = `${exec.triggeredByName?.replace(/^Schedule /, "") || "Scheduled run"}${exec.environment ? ` on ${exec.environment}` : ""}`
+  await notify(
+    recipients.map((userId) => ({
+      userId,
+      type: "SYSTEM" as const,
+      title: failed ? `${failed} test${failed === 1 ? "" : "s"} failed in ${what}` : `All ${passed} tests passed in ${what}`,
+      body: `${passed} passed, ${failed} failed`,
+      projectId: exec.projectId!,
+      actionUrl: `/projects/${exec.projectId}/automation-hub?tab=runs${firstFailed ? `&run=${firstFailed.id}` : ""}`,
+    }))
+  )
 }
 
 /** Where a script's spec lives, for callers that show or open it. */
@@ -498,4 +565,10 @@ function playwrightCli(): string | null {
     if (fs.existsSync(p)) return p
   }
   return null
+}
+
+const ENVIRONMENTS = ["Dev", "Staging", "UAT", "Production"]
+/** A Test Data Manager environment name, or null. */
+export function cleanEnvironment(env: unknown): string | null {
+  return typeof env === "string" && ENVIRONMENTS.includes(env) ? env : null
 }

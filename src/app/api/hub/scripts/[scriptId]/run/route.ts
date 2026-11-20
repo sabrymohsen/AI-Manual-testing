@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
 
-// POST /api/hub/scripts/{id}/run  { projectId?, browser?, debug?, targetId? }
+// POST /api/hub/scripts/{id}/run  { projectId?, browser?, debug?, targetId?, environment? }
 // Starts a run and returns its id immediately; progress via /executions/{id}.
 // Running a test runs code on the server: project writers only, and a shared
 // example must be run inside a project (`projectId`).
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: { scriptI
       {
         projectId: auth.projectId,
         triggerSource: "manual",
+        environment: body.environment ?? null,
         triggeredById: auth.session.user.id,
         triggeredByName: auth.session.user.name || auth.session.user.email,
       }

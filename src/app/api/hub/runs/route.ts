@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
       results: true,
       triggerSource: true,
       triggeredByName: true,
+      environment: true,
       script: { select: { id: true, name: true, folder: true, type: true } },
     },
   })
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/hub/runs — run tests together.
- * { projectId, scriptIds?, folder?, tag?, rerunFailedOfBatch?, rerunExecutionIds?, browser?, targetId? }
+ * { projectId, scriptIds?, folder?, tag?, rerunFailedOfBatch?, rerunExecutionIds?, browser?, targetId?, environment? }
  * No scope means every test in the project.
  */
 export async function POST(request: NextRequest) {
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest) {
         targetId: body.targetId,
         meta: {
           triggerSource: rerun ? "rerun" : "manual",
+          environment: body.environment ?? null,
           triggeredById: auth.session.user.id,
           triggeredByName: auth.session.user.name || auth.session.user.email,
         },

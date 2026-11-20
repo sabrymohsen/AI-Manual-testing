@@ -2470,6 +2470,9 @@ model TestScript {
   mode                 String          @default("code")
   // [{ text, expected? }] — the plain-English steps when mode is "steps".
   steps                Json?
+  // Data-driven: { columns: string[], rows: string[][] } — the test runs once per
+  // row, each column a {variable}. Null = runs once.
+  data                 Json?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   executions           TestExecution[]
@@ -2499,6 +2502,8 @@ model HubSchedule {
   // { scriptIds?: string[], folder?: string, tag?: string } — empty = all tests
   scope         Json
   browser       String    @default("Headless")
+  // Test Data Manager environment to run against (null = shared values only).
+  environment   String?
   // daily | weekdays | hourly
   frequency     String
   // "HH:MM" in the server's local time for daily/weekdays
@@ -2554,6 +2559,8 @@ model TestExecution {
   projectId       String?
   // manual | rerun | schedule | ci
   triggerSource   String?
+  // Test Data Manager environment the run used (Dev | Staging | UAT | Production), null = shared values only.
+  environment     String?
   triggeredById   String?
   triggeredByName String?
   createdAt       DateTime   @default(now())

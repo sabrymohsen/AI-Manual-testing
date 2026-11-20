@@ -11,6 +11,8 @@ export async function loadRunVariables(opts: {
   environment: string | null
   testCaseTestData: unknown
   credential: { username: string; password: string } | null
+  /** Filled with decrypted secret values, so logs can mask them. */
+  secrets?: string[]
 }): Promise<Record<string, unknown>> {
   const vars: Record<string, unknown> = {}
 
@@ -26,6 +28,7 @@ export async function loadRunVariables(opts: {
       } catch {
         continue
       }
+      if (opts.secrets && value && value.length >= 3) opts.secrets.push(value)
     }
     if (value === null) continue
     vars[r.key] = r.dataType === "number" && value !== "" && !isNaN(Number(value)) ? Number(value) : r.dataType === "json" ? safeJson(value) : value
