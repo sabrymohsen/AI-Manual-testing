@@ -27,6 +27,12 @@ function elapsed(from: string) {
 }
 
 function summary(job: Job) {
+  if (job.kind === "explore") {
+    const r = job.result || {}
+    const failed = Array.isArray(r.checksFailed) ? r.checksFailed.length : 0
+    const review = !r.checksAdded || r.stoppedEarly ? " — please review it before relying on it" : ""
+    return `AI wrote "${r.name}": ${r.stepCount} steps, ${r.checksAdded} check${r.checksAdded === 1 ? "" : "s"} passing${failed ? `, ${failed} check${failed === 1 ? "" : "s"} failed (possible bug)` : ""}${r.stoppedEarly ? " · stopped early" : ""}${review}`
+  }
   if (job.kind === "automate-test-case") {
     const r = job.result || {}
     return `Automated as "${r.name}" (${r.stepCount} step${r.stepCount === 1 ? "" : "s"}${r.unclear ? `, ${r.unclear} to check` : ""})`
@@ -59,8 +65,15 @@ export function AiJobsTray() {
         if (j.status === "running" || told.current.has(j.id)) continue
         told.current.add(j.id)
         const open = j.link ? { label: "Open", onClick: () => router.push(j.link!) } : undefined
-        if (j.status === "done")
-          toast.success(j.kind === "generate-tests" ? `${summary(j)} — ${j.title.replace(/^Generating /, "")}` : summary(j), { duration: 10000, action: open })
+        if (j.status === "done") {
+          // The explorer's checks that didn't hold: maybe a bug, maybe a wrong expectation.
+          const failedChecks: { step: string; error: string }[] = j.kind === "explore" && Array.isArray(j.result?.checksFailed) ? j.result.checksFailed : []
+          toast.success(j.kind === "generate-tests" ? `${summary(j)} — ${j.title.replace(/^Generating /, "")}` : summary(j), {
+            duration: failedChecks.length ? 30000 : 10000,
+            action: open,
+            description: failedChecks.length ? `Not added because they failed on the real page: ${failedChecks.map((c) => c.step).join(" · ")}` : undefined,
+          })
+        }
         else toast.error(`${j.title} failed`, { description: j.error || undefined, duration: 15000, action: open })
         window.dispatchEvent(new CustomEvent(AI_JOB_FINISHED, { detail: j }))
         fetch(`/api/ai-jobs/${j.id}/seen`, { method: "POST" }).catch(() => {})

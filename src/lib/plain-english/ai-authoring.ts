@@ -34,7 +34,7 @@ export function extractJson(text: string): any {
   throw new Error("The AI answer had no readable JSON in it.")
 }
 
-const GRAMMAR_GUIDE = `Write each step as ONE sentence using only these forms (quote every visible label and value exactly as it appears on the page):
+export const GRAMMAR_GUIDE = `Write each step as ONE sentence using only these forms (quote every visible label and value exactly as it appears on the page):
 ${STEP_TEMPLATES.map(t => `- ${t}`).join("\n")}
 Rules: one action per sentence. Use the exact label text from the page outline. Put typed values and labels in double quotes. Use {name} for values stored earlier. Do not invent pages, labels or buttons that are not in the outline. Prefer "Verify that ..." steps to check results.`
 

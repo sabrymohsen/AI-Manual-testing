@@ -55,3 +55,19 @@ describe("element names", () => {
     expect(cleanName("  Sign   in ")).toBe("Sign in")
   })
 })
+
+import { vagueStep } from "@/lib/hub-explorer"
+import { parseStep } from "@/lib/plain-english/grammar"
+describe("explorer step guard", () => {
+  const cmd = (s: string) => (parseStep(s) as any).command
+  it("rejects targets that don't name anything", () => {
+    expect(vagueStep(cmd("Click the"))).toMatch(/doesn't name anything/)
+    expect(vagueStep(cmd('Click "button"'))).toMatch(/doesn't name anything/)
+    expect(vagueStep(cmd('Click ""'))).toMatch(/doesn't name anything/)
+  })
+  it("accepts real labels", () => {
+    expect(vagueStep(cmd('Click "Log in"'))).toBeNull()
+    expect(vagueStep(cmd('Type "x" in the "Email" field'))).toBeNull()
+    expect(vagueStep(cmd('Go to "https://a.test"'))).toBeNull()
+  })
+})
