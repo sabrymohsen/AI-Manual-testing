@@ -1,3 +1,4 @@
+import { explainFailure } from "@/lib/hub-explain"
 import { NextRequest, NextResponse } from "next/server"
 import fs from "node:fs"
 import path from "node:path"
@@ -34,7 +35,13 @@ export async function POST(request: NextRequest, { params }: { params: { executi
 
   const severity = ["Low", "Medium", "High", "Critical"].includes(body.severity) ? body.severity : "High"
   const scriptName = execution.script?.name ?? "Automated test"
-  const title = (typeof body.title === "string" && body.title.trim()) || `Automated test failed: ${test.title}`.slice(0, 300)
+  // A test with named steps (no-code tests): the bug reads like a tester wrote it.
+  const steps: { title: string; status: string; error?: string }[] = Array.isArray(test.steps) ? test.steps : []
+  const failedAt = steps.findIndex((s) => s.status === "failed")
+  const explained = failedAt >= 0 ? explainFailure({ error: steps[failedAt].error, step: steps[failedAt].title, page: test.page }) : null
+  const title =
+    (typeof body.title === "string" && body.title.trim()) ||
+    (explained ? `${explained.headline} — ${test.title}` : `Automated test failed: ${test.title}`).slice(0, 300)
   const error = stripAnsi(
     [test.error?.message ?? (typeof test.error === "string" ? test.error : ""), test.error?.snippet ?? ""].filter(Boolean).join("\n\n")
   ).trim()
@@ -76,11 +83,19 @@ export async function POST(request: NextRequest, { params }: { params: { executi
         reporterId: user.id,
         source: "Automation",
         stepsToReproduce:
-          `1. Run the automated test "${test.title}" (${scriptName}${execution.script?.folder ? `, folder ${execution.script.folder}` : ""}) in Automation Hub.\n` +
-          `2. Browser: ${execution.browser ?? "default"}${execution.executionTarget ? ` on ${execution.executionTarget}` : ""}.\n` +
-          `3. The run failed at: ${firstLine}`,
-        expectedResult: "The test passes.",
-        actualResult: error.slice(0, 5000) || "The test failed without an error message.",
+          failedAt >= 0
+            ? steps
+                .slice(0, failedAt + 1)
+                .map((s, i) => `${i + 1}. ${s.title}`)
+                .join("\n") +
+              `\n\n(Automated test "${test.title}" in Automation Hub, ${execution.browser ?? "default browser"}${execution.executionTarget ? ` on ${execution.executionTarget}` : ""}.)`
+            : `1. Run the automated test "${test.title}" (${scriptName}${execution.script?.folder ? `, folder ${execution.script.folder}` : ""}) in Automation Hub.\n` +
+              `2. Browser: ${execution.browser ?? "default"}${execution.executionTarget ? ` on ${execution.executionTarget}` : ""}.\n` +
+              `3. The run failed at: ${firstLine}`,
+        expectedResult: failedAt >= 0 ? `Step ${failedAt + 1} succeeds: ${steps[failedAt].title}` : "The test passes.",
+        actualResult: explained
+          ? `${explained.headline}. ${explained.detail}\n\n${error}`.slice(0, 5000)
+          : error.slice(0, 5000) || "The test failed without an error message.",
         consoleLogs: `Automation run: ${runUrl}\nRun id: ${execution.id}`,
         screenshotPath,
         testCaseId,

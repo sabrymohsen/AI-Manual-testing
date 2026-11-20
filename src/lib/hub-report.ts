@@ -27,10 +27,75 @@ export interface HubTestResult {
     snippet?: string
     line?: number
   }
+  /** The test's named steps (test.step — a no-code test's sentences), in order. */
+  steps?: HubStepResult[]
+  /** Elements on the page when it failed (from Playwright's page snapshot), for suggestions. */
+  page?: PageElement[]
   /** Absolute paths inside the run's archive folder. */
   screenshot?: string
   trace?: string
   video?: string
+}
+
+export interface HubStepResult {
+  title: string
+  status: "passed" | "failed" | "skipped"
+  durationMs: number
+  error?: string
+}
+
+export interface PageElement {
+  role: string
+  name: string
+}
+
+/**
+ * The named elements in Playwright's ARIA page snapshot (error-context.md):
+ *   - button "Proceed to checkout" [ref=e3]
+ *   - textbox "Coupon" [active] [ref=e6]: SAVE10
+ */
+export function parsePageSnapshot(markdown: string): PageElement[] {
+  const yaml = markdown.match(/# Page snapshot\s*```ya?ml\n([\s\S]*?)```/)?.[1] ?? ""
+  const out: PageElement[] = []
+  const seen = new Set<string>()
+  for (const line of yaml.split("\n")) {
+    const m = line.match(/^\s*-\s+([a-z]+)\s+"((?:[^"\\]|\\.)+)"/)
+    if (m) {
+      const el = { role: m[1], name: cleanName(m[2].replace(/\\"/g, '"')) }
+      const key = `${el.role}|${el.name}`
+      if (el.name && !seen.has(key)) {
+        seen.add(key)
+        out.push(el)
+      }
+      continue
+    }
+    // Plain text nodes: "- text: Coupon" / "- paragraph: Total 350"
+    const t = line.match(/^\s*-\s+(text|paragraph|cell|listitem|strong|generic):\s+(.+)$/)
+    if (t && !/^\[|ref=/.test(t[2])) {
+      const name = cleanName(t[2].replace(/^"|"$/g, ""))
+      const key = `text|${name}`
+      if (name && name.length < 200 && !seen.has(key)) {
+        seen.add(key)
+        out.push({ role: "text", name })
+      }
+    }
+    if (out.length >= 300) break
+  }
+  return out
+}
+
+/** Icon-font glyphs (private-use characters) and extra spaces out of an accessible name. */
+export function cleanName(s: string): string {
+  return s.replace(/[\uE000-\uF8FF\u{F0000}-\u{FFFFD}]/gu, "").replace(/\s+/g, " ").trim()
+}
+
+function topSteps(result: any): HubStepResult[] {
+  return (result?.steps || []).map((st: any) => ({
+    title: String(st.title || "").slice(0, 500),
+    status: st.error ? "failed" : "passed",
+    durationMs: st.duration || 0,
+    ...(st.error ? { error: stripAnsi(st.error.message || String(st.error.value || "")).trim().slice(0, 1000) } : {}),
+  })) as HubStepResult[]
 }
 
 export interface HubRunSummary {
@@ -90,6 +155,14 @@ export function parsePlaywrightReport(json: any, fromDir?: string, toDir?: strin
         : undefined
       const attachments: any[] = runs.flatMap((r) => r.attachments || [])
       const find = (pred: (a: any) => boolean) => remap(attachments.filter(pred).pop()?.path)
+      const steps = topSteps(last)
+      let page: PageElement[] | undefined
+      const ctx = find((a) => a.name === "error-context" && a.path)
+      if (ctx && status !== "passed") {
+        try {
+          page = parsePageSnapshot(fs.readFileSync(ctx, "utf8"))
+        } catch {}
+      }
 
       results.push({
         title: [...parents, spec.title].join(" > "),
@@ -108,6 +181,8 @@ export function parsePlaywrightReport(json: any, fromDir?: string, toDir?: strin
               },
             }
           : {}),
+        ...(steps.length ? { steps } : {}),
+        ...(page?.length ? { page } : {}),
         screenshot: find((a) => a.contentType?.startsWith("image/") && a.path),
         trace: find((a) => a.name === "trace" && a.path),
         video: find((a) => a.contentType?.startsWith("video/") && a.path),

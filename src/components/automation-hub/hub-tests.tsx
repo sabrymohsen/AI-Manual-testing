@@ -46,6 +46,7 @@ import { PLAYWRIGHT_SNIPPETS, lintPlaywrightJs } from "@/lib/hub-editor-help"
 import { buildTemplateCode } from "@/lib/hub-templates"
 import { PlainEnglishEditor, newPlainStep, type EditorStep } from "@/components/plain-english/plain-english-editor"
 import { stepsToPlaywright } from "@/lib/plain-english/to-playwright"
+import { parseStep } from "@/lib/plain-english/grammar"
 
 interface HubTest {
   id: string
@@ -440,6 +441,44 @@ export default function HubTestsSection({
       await load()
     } catch (e: any) {
       toast.error(e.message)
+    }
+  }
+
+  /** "Did you mean …" from a failed run: change that step, save, and run again. */
+  const fixStep = async (stepText: string, newText: string) => {
+    if (!selected) return
+    const same = (t: string) => {
+      const p = parseStep(t)
+      return t.trim() === stepText || (p.ok && p.text === stepText)
+    }
+    const at = steps.findIndex((x) => same(x.actionDescription))
+    if (at === -1) {
+      toast.error("That step has changed since the run — edit it in the steps above.")
+      return
+    }
+    const next = steps.map((x, i) => (i === at ? { ...newPlainStep(newText), expectedResult: x.expectedResult } : x))
+    setSteps(next)
+    setSaving(true)
+    try {
+      await api(`/api/hub/scripts/${selected.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steps: stepRows(next) }),
+      })
+      setDirty(false)
+      await load()
+      toast.success(`Step ${at + 1} updated — running again`)
+      // Start the run directly: run() would see this render's (stale) steps.
+      const d = await api<{ executionId: string }>(`/api/hub/scripts/${selected.id}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ browser, targetId, projectId }),
+      })
+      await loadExecution(d.executionId)
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -892,7 +931,7 @@ export default function HubTestsSection({
             <div className="rounded-xl border bg-card p-4">
               <h3 className="mb-3 text-sm font-semibold text-foreground">Last run</h3>
               {execution ? (
-                <HubRunResults execution={execution} onOpenTrace={onOpenTrace} />
+                <HubRunResults execution={execution} onOpenTrace={onOpenTrace} onFixStep={mode === "steps" ? fixStep : undefined} />
               ) : (
                 <p className="text-sm text-muted-foreground">Not run yet. Press <b>Run test</b> to see each check pass or fail here.</p>
               )}

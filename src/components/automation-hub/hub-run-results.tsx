@@ -24,6 +24,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { Lightbulb, Wand2 } from "lucide-react"
+import { explainFailure } from "@/lib/hub-explain"
 
 export interface HubTestResultView {
   title: string
@@ -33,6 +35,10 @@ export interface HubTestResultView {
   durationMs: number
   retries: number
   error?: { message: string; snippet?: string; line?: number }
+  /** Named steps (a no-code test's sentences) with their outcome. */
+  steps?: { title: string; status: "passed" | "failed" | "skipped"; durationMs: number; error?: string }[]
+  /** Elements on the page when it failed. */
+  page?: { role: string; name: string }[]
   screenshot?: string
   trace?: string
   video?: string
@@ -102,10 +108,13 @@ export default function HubRunResults({
   execution,
   onOpenTrace,
   showLogByDefault = false,
+  onFixStep,
 }: {
   execution: HubExecutionView
   onOpenTrace?: (traceId: string) => void
   showLogByDefault?: boolean
+  /** No-code tests: replace a step's text (from a "Did you mean" suggestion) and re-run. */
+  onFixStep?: (stepText: string, newText: string) => void
 }) {
   const results = execution.results || []
   const failedFirst = results
@@ -187,15 +196,21 @@ export default function HubRunResults({
 
                 {expanded && (
                   <div className="space-y-3 border-t bg-muted/60 px-3 py-3 pl-11">
+                    {r.steps && r.steps.length > 0 && <StepTimeline r={r} onFixStep={onFixStep} />}
+                    {r.error && !(r.steps && r.steps.length) && <Explain r={r} onFixStep={onFixStep} />}
                     {r.error && (
-                      <div className="space-y-2">
-                        <pre className="whitespace-pre-wrap break-words rounded-md border border-rose-200 bg-rose-50 p-3 font-mono text-xs text-rose-800">
-                          {r.error.message}
-                        </pre>
-                        {r.error.snippet && (
-                          <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-100">{r.error.snippet}</pre>
-                        )}
-                      </div>
+                      <details className="group" open={!(r.steps && r.steps.length) && !r.page}>
+                        <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">Technical details</summary>
+                        <div className="mt-2 space-y-2">
+                          <pre className="whitespace-pre-wrap break-words rounded-md border border-rose-200 bg-rose-50 p-3 font-mono text-xs text-rose-800">
+                            {r.error.message}
+                          </pre>
+                          {/* A no-code test's snippet is the step runner's own code — not useful to show. */}
+                          {r.error.snippet && !/qa-steps/.test(r.error.snippet) && (
+                            <pre className="overflow-x-auto rounded-md bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-100">{r.error.snippet}</pre>
+                          )}
+                        </div>
+                      </details>
                     )}
                     <div className="flex flex-wrap items-start gap-3">
                       {r.screenshot && (
@@ -268,6 +283,93 @@ export default function HubRunResults({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Each step with ✓ / ✗, and the explanation under the one that failed. */
+function StepTimeline({ r, onFixStep }: { r: HubTestResultView; onFixStep?: (stepText: string, newText: string) => void }) {
+  const steps = r.steps || []
+  const failedAt = steps.findIndex((s) => s.status === "failed")
+  const testFailed = !["passed", "skipped"].includes(r.status)
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <p className="mb-2 text-xs font-semibold text-foreground">What happened</p>
+      <ol className="space-y-1">
+        {steps.map((st, i) => {
+          const notReached = testFailed && failedAt !== -1 && i > failedAt
+          return (
+            <li key={i}>
+              <div className={`flex items-start gap-2 text-[13px] ${notReached ? "text-muted-foreground" : "text-foreground"}`}>
+                <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}</span>
+                {st.status === "failed" ? (
+                  <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-600" />
+                ) : notReached ? (
+                  <MinusCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                )}
+                <span dir="auto" className="min-w-0 flex-1 break-words">
+                  {st.title}
+                </span>
+                <span className="shrink-0 text-[11px] text-muted-foreground">{notReached ? "not run" : formatDuration(st.durationMs)}</span>
+              </div>
+              {st.status === "failed" && (
+                <div className="ml-12 mt-1.5">
+                  <Explain r={r} step={st} onFixStep={onFixStep} />
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ol>
+      {testFailed && failedAt === -1 && r.error && (
+        <div className="mt-2">
+          <Explain r={r} onFixStep={onFixStep} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** The plain-words reason, tips, and a one-click fix when a close match was on the page. */
+function Explain({
+  r,
+  step,
+  onFixStep,
+}: {
+  r: HubTestResultView
+  step?: { title: string; error?: string }
+  onFixStep?: (stepText: string, newText: string) => void
+}) {
+  const e = explainFailure({ error: step?.error || r.error?.message, step: step?.title, page: r.page })
+  const fixed = step && e.didYouMean ? step.title.replace(`"${e.didYouMean.from}"`, `"${e.didYouMean.to}"`) : null
+  return (
+    <div className="space-y-1.5 rounded-md border border-rose-200 bg-rose-50/60 p-2.5 dark:border-rose-900/50 dark:bg-rose-950/20">
+      <p className="text-[13px] font-semibold text-rose-800 dark:text-rose-300">{e.headline}</p>
+      <p className="text-xs text-foreground/80">{e.detail}</p>
+      {e.didYouMean && (
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+          <span className="inline-flex items-center gap-1 text-xs text-foreground">
+            <Lightbulb className="h-3.5 w-3.5 text-amber-500" /> Did you mean the {e.didYouMean.role === "textbox" ? "field" : e.didYouMean.role} “{e.didYouMean.to}”?
+          </span>
+          {onFixStep && fixed && fixed !== step!.title && (
+            <button
+              type="button"
+              onClick={() => onFixStep(step!.title, fixed)}
+              className="inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-medium text-primary-foreground hover:opacity-90"
+              title={`Change the step to: ${fixed}`}
+            >
+              <Wand2 className="h-3 w-3" /> Use “{e.didYouMean.to}” and re-run
+            </button>
+          )}
+        </div>
+      )}
+      <ul className="list-disc space-y-0.5 pl-4 text-xs text-muted-foreground">
+        {e.tips.map((t) => (
+          <li key={t}>{t}</li>
+        ))}
+      </ul>
     </div>
   )
 }
