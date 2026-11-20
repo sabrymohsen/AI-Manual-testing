@@ -1,19 +1,11 @@
-"use client"
-
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { ActiveProjectRedirect } from "@/components/ui/active-project-redirect"
 
 export default function AutomationHubRootPage() {
-  const router = useRouter()
-
-  useEffect(() => {
-    // Redirect the user to the projects list so they can select an active project context
-    router.push("/projects")
-  }, [router])
-
   return (
-    <div className="py-20 text-center text-xs font-semibold text-muted-foreground">
-      <span>Redirecting to projects dashboard selection...</span>
-    </div>
+    <ActiveProjectRedirect
+      workflow="automation-hub"
+      title="Automation Hub"
+      description="Choose a project to write, record and run its automated tests."
+    />
   )
 }

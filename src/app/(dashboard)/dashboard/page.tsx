@@ -82,10 +82,10 @@ export default function DashboardPage() {
       <div className="max-w-4xl mx-auto space-y-8 select-none text-xs font-semibold py-8">
         <div className="space-y-2 text-center md:text-left">
           <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center justify-center md:justify-start gap-2">
-            <Zap className="h-8 w-8 text-primary fill-current" /> QA Engine Workspaces
+            <Zap className="h-8 w-8 text-primary fill-current" /> Dashboard
           </h1>
           <p className="text-sm text-muted-foreground font-medium">
-            Select a project workspace scope to view test health, run live sessions, and capture defects.
+            Choose a project to see its test health, run live sessions and capture defects.
           </p>
         </div>
 

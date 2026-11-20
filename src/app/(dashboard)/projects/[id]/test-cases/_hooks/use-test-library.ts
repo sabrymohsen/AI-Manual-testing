@@ -184,6 +184,9 @@ export function useSuites(projectId: string) {
       getJson<{ suites: SuiteNode[]; unfiledCount: number }>(
         `/api/projects/${projectId}/test-suites`
       ),
+    // Several parts of the page read the suites; don't refetch for each one.
+    // Creating/moving suites invalidates this key, so edits still show at once.
+    staleTime: 30_000,
   })
 }
 

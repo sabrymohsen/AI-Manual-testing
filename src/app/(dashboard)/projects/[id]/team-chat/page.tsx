@@ -52,10 +52,9 @@ export default function TeamChat() {
   }
 
   return (
-    <TeamChatPage
-      projectId={projectId}
-      token={token}
-      currentUserId={currentUserId}
-    />
+    <>
+      <h1 className="sr-only">Team Chat</h1>
+      <TeamChatPage projectId={projectId} token={token} currentUserId={currentUserId} />
+    </>
   )
 }

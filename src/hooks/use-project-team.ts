@@ -20,19 +20,30 @@ export interface TeamMember {
  * Loads a project's assignee pool (ProjectTeamMember) and exposes CRUD + sync.
  * Plain fetch to match the app's convention (React Query is scoped to Scrum).
  */
+// Every assignee picker on a page used to load the team on its own (3+ requests
+// per page). Share one request per project briefly; changes reload for real.
+const teamCache = new Map<string, { at: number; promise: Promise<{ ok: boolean; data: any }> }>()
+function loadTeam(projectId: string, fresh: boolean) {
+  const hit = teamCache.get(projectId)
+  if (!fresh && hit && Date.now() - hit.at < 15_000) return hit.promise
+  const promise = fetch(`/api/projects/${projectId}/team`).then(async (res) => ({ ok: res.ok, data: await res.json() }))
+  teamCache.set(projectId, { at: Date.now(), promise })
+  promise.catch(() => teamCache.delete(projectId))
+  return promise
+}
+
 export function useProjectTeam(projectId: string | null | undefined) {
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const reload = useCallback(async () => {
+  const load = useCallback(async (fresh: boolean) => {
     if (!projectId) return
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/projects/${projectId}/team`)
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || "Failed to load team")
+      const { ok, data } = await loadTeam(projectId, fresh)
+      if (!ok) throw new Error(data.error || "Failed to load team")
       setMembers(Array.isArray(data.members) ? data.members : [])
     } catch (e: any) {
       setError(e.message)
@@ -40,10 +51,11 @@ export function useProjectTeam(projectId: string | null | undefined) {
       setLoading(false)
     }
   }, [projectId])
+  const reload = useCallback(() => load(true), [load])
 
   useEffect(() => {
-    reload()
-  }, [reload])
+    load(false)
+  }, [load])
 
   const sync = useCallback(async () => {
     if (!projectId) return { ok: false, error: "No project" }

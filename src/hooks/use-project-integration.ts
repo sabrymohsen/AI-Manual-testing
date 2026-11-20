@@ -13,14 +13,26 @@ interface ProviderInfo {
   connected: boolean
 }
 
+// Many parts of a page ask for this at once (a bug page asked up to 6 times):
+// share one request per project for a short while.
+const cache = new Map<string, { at: number; promise: Promise<any> }>()
+function providerInfo(projectId: string) {
+  const hit = cache.get(projectId)
+  if (hit && Date.now() - hit.at < 30_000) return hit.promise
+  const promise = fetch(`/api/projects/${projectId}/integrations/provider`)
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)
+  cache.set(projectId, { at: Date.now(), promise })
+  return promise
+}
+
 export function useProjectIntegration(projectId: string | null | undefined): ProviderInfo {
   const [info, setInfo] = useState<ProviderInfo>({ provider: null, name: "tracker", connected: false })
 
   useEffect(() => {
     if (!projectId) return
     let cancelled = false
-    fetch(`/api/projects/${projectId}/integrations/provider`)
-      .then((r) => (r.ok ? r.json() : null))
+    providerInfo(projectId)
       .then((data) => {
         if (!cancelled && data) setInfo({ provider: data.provider, name: data.name, connected: data.connected })
       })

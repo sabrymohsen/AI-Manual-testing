@@ -663,14 +663,18 @@ export default function ProjectBugReportsPage() {
 
   // Load OpenProject boards for bug placement (no-op if integration isn't configured)
   useEffect(() => {
+    // Only for projects that use OpenProject; others got two errors per visit.
+    if (trackerProvider !== "OpenProject") return
     fetch(`/api/projects/${projectId}/integrations/openproject/metadata`)
       .then(res => (res.ok ? res.json() : { boards: [] }))
       .then(data => setOpBoards(Array.isArray(data.boards) ? data.boards : []))
       .catch(() => setOpBoards([]))
-  }, [projectId])
+  }, [projectId, trackerProvider])
 
   // Load the required custom fields of the OpenProject bug type (no-op if unconfigured)
   useEffect(() => {
+    // Only for projects that use OpenProject; others got two errors per visit.
+    if (trackerProvider !== "OpenProject") return
     fetch(`/api/projects/${projectId}/integrations/openproject/bug-fields`)
       .then(res => (res.ok ? res.json() : { fields: [] }))
       .then(data => {
@@ -678,15 +682,17 @@ export default function ProjectBugReportsPage() {
         setBugFieldDefaults(data.defaults && typeof data.defaults === "object" ? data.defaults : {})
       })
       .catch(() => setOpBugFields([]))
-  }, [projectId])
+  }, [projectId, trackerProvider])
 
   // Load "Bug Source" options from OpenProject (no-op if unconfigured / no field)
   useEffect(() => {
+    // Only for projects that use OpenProject; others got two errors per visit.
+    if (trackerProvider !== "OpenProject") return
     fetch(`/api/projects/${projectId}/integrations/openproject/source-options`)
       .then(res => (res.ok ? res.json() : { options: [] }))
       .then(data => setOpSourceOptions(Array.isArray(data.options) ? data.options : []))
       .catch(() => setOpSourceOptions([]))
-  }, [projectId])
+  }, [projectId, trackerProvider])
 
   // Declared above loadBugsList, which reads it. Safe either way here since
   // loadBugsList is only invoked from an effect, but keeping declarations ahead
