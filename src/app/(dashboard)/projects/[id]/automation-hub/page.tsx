@@ -442,7 +442,7 @@ export default function AutomationHubPage() {
             <Layers className="h-6 w-6 text-primary" /> Automation Hub
           </h1>
           <p className="mt-1 text-sm font-normal text-muted-foreground">
-            Write and run Playwright tests in JavaScript, record flows into code, and see exactly what failed.
+            Build tests in plain English — no code needed — or in Playwright JavaScript, run them, and see exactly what failed.
           </p>
         </div>
       </div>

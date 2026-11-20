@@ -16,7 +16,8 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "db:seed": "tsx prisma/seed.ts",
-    "setup:env": "node scripts/ensure-env.mjs"
+    "setup:env": "node scripts/ensure-env.mjs",
+    "gen:steps-runtime": "node scripts/build-steps-runtime.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.110.0",

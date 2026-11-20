@@ -137,31 +137,56 @@ const CANDIDATES_OF: Record<ElementKind, string> = {
   row: "tr, [role=row]",
 }
 
-function byName(page: Page, name: string, kind: ElementKind): Locator {
+/**
+ * Ways to find an element by its name, MOST LIKELY FIRST. They're tried in this
+ * order (see pickFirstMatch): combining them with .or() picked whichever came
+ * first on the page, so `Click "Login"` clicked the "Login Page" heading above
+ * the Login button.
+ */
+function byName(page: Page, name: string, kind: ElementKind): Locator[] {
   const role = ROLE_OF[kind]
   if (kind === "field") {
-    return page
-      .getByLabel(name, { exact: false })
-      .or(page.getByPlaceholder(name, { exact: false }))
-      .or(page.getByRole("textbox", { name, exact: false }))
-      .or(page.locator(`[name="${cssEscape(name)}"], #${cssIdent(name)}`))
+    return [
+      page.getByLabel(name, { exact: false }),
+      page.getByPlaceholder(name, { exact: false }),
+      page.getByRole("textbox", { name, exact: false }),
+      page.locator(`[name="${cssEscape(name)}"], #${cssIdent(name)}`),
+    ]
   }
   if (kind === "dropdown") {
-    return page.getByLabel(name, { exact: false }).or(page.getByRole("combobox", { name, exact: false })).or(page.locator(`select[name="${cssEscape(name)}"]`))
+    return [page.getByLabel(name, { exact: false }), page.getByRole("combobox", { name, exact: false }), page.locator(`select[name="${cssEscape(name)}"]`)]
   }
   if (kind === "checkbox" || kind === "radio") {
-    return page.getByRole(role!, { name, exact: false }).or(page.getByLabel(name, { exact: false }))
+    return [page.getByRole(role!, { name, exact: false }), page.getByLabel(name, { exact: false })]
   }
-  if (role) return page.getByRole(role, { name, exact: false })
-  if (kind === "text") return page.getByText(name, { exact: false })
-  // Anything: prefer what a person would click — buttons and links — then any visible text.
-  return page
-    .getByRole("button", { name, exact: false })
-    .or(page.getByRole("link", { name, exact: false }))
-    .or(page.getByRole("menuitem", { name, exact: false }))
-    .or(page.getByRole("tab", { name, exact: false }))
-    .or(page.getByLabel(name, { exact: false }))
-    .or(page.getByText(name, { exact: false }))
+  if (role) return [page.getByRole(role, { name, exact: false })]
+  if (kind === "text") return [page.getByText(name, { exact: false })]
+  // Anything: what a person would click — buttons and links — before any visible text.
+  return [
+    page.getByRole("button", { name, exact: true }),
+    page.getByRole("link", { name, exact: true }),
+    page.getByRole("button", { name, exact: false }),
+    page.getByRole("link", { name, exact: false }),
+    page.getByRole("menuitem", { name, exact: false }),
+    page.getByRole("tab", { name, exact: false }),
+    page.getByLabel(name, { exact: false }),
+    page.getByText(name, { exact: true }),
+    page.getByText(name, { exact: false }),
+  ]
+}
+
+/** The first way (in order of likelihood) that finds a visible element, waiting up to the timeout. */
+async function pickFirstMatch(candidates: Locator[], ordinal: number | undefined, timeoutMs: number, describe: string): Promise<Locator> {
+  const deadline = Date.now() + timeoutMs
+  for (;;) {
+    for (const c of candidates) {
+      const visible = c.filter({ visible: true })
+      const count = await visible.count().catch(() => 0)
+      if (count > 0) return pickVisible(c, ordinal, Math.max(1000, deadline - Date.now()), describe)
+    }
+    if (Date.now() >= deadline) throw new Error(`Could not find ${describe} on the page within ${Math.round(timeoutMs / 1000)} s.`)
+    await new Promise((r) => setTimeout(r, 200))
+  }
 }
 
 function cssEscape(s: string) {
@@ -252,7 +277,7 @@ async function resolveTarget(page: Page, target: Target, ctx: PlainEnglishContex
       return resolveRelative(page, target, timeoutMs, vars)
     case "name": {
       const name = interpolate(target.name, vars)
-      return pickVisible(byName(page, name, target.kind), target.ordinal, timeoutMs, `${target.kind === "any" ? "" : `the ${target.kind} `}"${name}"`)
+      return pickFirstMatch(byName(page, name, target.kind), target.ordinal, timeoutMs, `${target.kind === "any" ? "" : `the ${target.kind} `}"${name}"`)
     }
   }
 }

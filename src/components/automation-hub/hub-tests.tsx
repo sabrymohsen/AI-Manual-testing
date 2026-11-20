@@ -44,6 +44,8 @@ import AccessibilityPanel from "@/components/automation-hub/accessibility-panel"
 import { PLAYWRIGHT_EDITOR_TYPES } from "@/components/automation-hub/playwright-editor-types"
 import { PLAYWRIGHT_SNIPPETS, lintPlaywrightJs } from "@/lib/hub-editor-help"
 import { buildTemplateCode } from "@/lib/hub-templates"
+import { PlainEnglishEditor, newPlainStep, type EditorStep } from "@/components/plain-english/plain-english-editor"
+import { stepsToPlaywright } from "@/lib/plain-english/to-playwright"
 
 interface HubTest {
   id: string
@@ -54,6 +56,9 @@ interface HubTest {
   folder: string
   shared: boolean
   accessibilityEnabled: boolean
+  /** "steps" = no-code plain-English test (code is generated); "code" = JavaScript. */
+  mode?: "steps" | "code"
+  steps?: { text: string; expected?: string }[] | null
   lastExecution: null | { id: string; status: string; createdAt: string; passed: number; failed: number; total: number }
   /** Manual test cases this script verifies; their status follows its runs. */
   linkedTestCases?: { id: string; title: string; lastStatus: string }[]
@@ -118,6 +123,13 @@ export default function HubTestsSection({
   const [pendingRunAnyway, setPendingRunAnyway] = useState(false)
   const [pendingDelete, setPendingDelete] = useState(false)
   const [runSettings, setRunSettings] = useState<{ retries: number; workers: number } | null>(null)
+  // No-code tests: plain-English steps are the source; "code" shows what they become.
+  const [mode, setMode] = useState<"steps" | "code">("code")
+  const [steps, setSteps] = useState<EditorStep[]>([])
+  const [view, setView] = useState<"steps" | "code">("steps")
+  const [pendingConvert, setPendingConvert] = useState(false)
+  const [pendingRunUnclear, setPendingRunUnclear] = useState(false)
+  const [projectUrl, setProjectUrl] = useState("")
   const editorRef = useRef<any>(null)
   const monacoRef = useRef<any>(null)
 
@@ -148,6 +160,10 @@ export default function HubTestsSection({
         setRunSettings({ retries: v("retries", 0), workers: v("workers", 1) })
       })
       .catch(() => {})
+    // The project's website, to start new no-code tests on it.
+    api<{ project?: { webAppUrl?: string } }>(`/api/projects/${projectId}`)
+      .then((d) => setProjectUrl(d.project?.webAppUrl || ""))
+      .catch(() => {})
     api<{ targets: { id: string; name: string }[] }>("/api/hub/targets")
       .then((d) => setTargets(d.targets || []))
       .catch(() => {})
@@ -170,6 +186,10 @@ export default function HubTestsSection({
     setSelectedId(t.id)
     setTagsText(t.tags.join(", "))
     setCode(t.code)
+    const isSteps = t.mode === "steps"
+    setMode(isSteps ? "steps" : "code")
+    setView(isSteps ? "steps" : "code")
+    setSteps(isSteps ? (t.steps || []).map((x) => ({ ...newPlainStep(x.text), expectedResult: x.expected || "" })) : [])
     setName(t.name)
     setFolder(t.folder)
     setDirty(false)
@@ -281,7 +301,11 @@ export default function HubTestsSection({
       await api(`/api/hub/scripts/${selected.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, name: name.trim(), folder, tags: parseTags(tagsText) }),
+        body: JSON.stringify(
+          mode === "steps"
+            ? { steps: stepRows(steps), name: name.trim(), folder, tags: parseTags(tagsText) }
+            : { code, name: name.trim(), folder, tags: parseTags(tagsText) }
+        ),
       })
       setDirty(false)
       await load()
@@ -299,8 +323,12 @@ export default function HubTestsSection({
     force = false
   ) => {
     if (scope.kind === "test" && dirty && !(await save())) return
-    if (scope.kind === "test" && !force && issues.some((i) => i.severity === "error")) {
+    if (scope.kind === "test" && !force && mode === "code" && issues.some((i) => i.severity === "error")) {
       setPendingRunAnyway(true)
+      return
+    }
+    if (scope.kind === "test" && !force && mode === "steps" && unclearSteps > 0) {
+      setPendingRunUnclear(true)
       return
     }
     try {
@@ -336,12 +364,23 @@ export default function HubTestsSection({
     }
   }
 
-  const create = async (form: { name: string; type: "Web" | "API"; folder: string }) => {
+  const create = async (form: { name: string; type: "Web" | "API"; folder: string; how: "steps" | "code"; url: string }) => {
     try {
+      const body =
+        form.how === "steps"
+          ? {
+              projectId,
+              name: form.name.trim(),
+              type: form.type,
+              folder: form.folder,
+              mode: "steps",
+              steps: form.url.trim() ? [{ text: `Go to "${form.url.trim()}"` }] : [],
+            }
+          : { projectId, name: form.name.trim(), type: form.type, folder: form.folder, code: buildTemplateCode(form.type, form.name.trim()) }
       const d = await api<{ script: HubTest }>("/api/hub/scripts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, name: form.name.trim(), type: form.type, folder: form.folder, code: buildTemplateCode(form.type, form.name.trim()) }),
+        body: JSON.stringify(body),
       })
       setCreating(false)
       const list = await load()
@@ -365,7 +404,11 @@ export default function HubTestsSection({
       const d = await api<{ script: HubTest }>("/api/hub/scripts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, name: copyName, type: selected.type, folder, code, tags: selected.tags }),
+        body: JSON.stringify(
+          mode === "steps"
+            ? { projectId, name: copyName, type: selected.type, folder, mode: "steps", steps: stepRows(steps), tags: selected.tags }
+            : { projectId, name: copyName, type: selected.type, folder, code, tags: selected.tags }
+        ),
       })
       const list = await load()
       const t = list.find((x) => x.id === d.script.id)
@@ -395,6 +438,25 @@ export default function HubTestsSection({
         body: JSON.stringify({ testCaseIds: ids }),
       })
       await load()
+    } catch (e: any) {
+      toast.error(e.message)
+    }
+  }
+
+  /** One way: the generated code becomes the test, and the steps are dropped. */
+  const convertToCode = async () => {
+    if (!selected) return
+    if (dirty && !(await save())) return
+    try {
+      await api(`/api/hub/scripts/${selected.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "code" }),
+      })
+      const list = await load()
+      const t = list.find((x) => x.id === selected.id)
+      if (t) openTest(t)
+      toast.success("Converted to JavaScript. You can now edit the code directly.")
     } catch (e: any) {
       toast.error(e.message)
     }
@@ -434,6 +496,11 @@ export default function HubTestsSection({
   const errors = issues.filter((i) => i.severity === "error").length
   const warnings = issues.filter((i) => i.severity === "warning").length
   const running = !!execution && isActive(execution.status)
+  const generated = useMemo(
+    () => (mode === "steps" ? stepsToPlaywright({ name: name || "Untitled test", steps: steps.map((x) => x.actionDescription) }) : null),
+    [mode, steps, name]
+  )
+  const unclearSteps = generated?.errors.length ?? 0
 
   if (tests === null) {
     return (
@@ -545,6 +612,7 @@ export default function HubTestsSection({
                           </span>
                         )}
                         {t.type === "API" && <span className="rounded bg-muted px-1 text-[10px] font-semibold text-muted-foreground">API</span>}
+                        {t.mode === "steps" && <span className="rounded bg-primary/10 px-1 text-[10px] font-medium text-primary" title="Written as plain-English steps">No-code</span>}
                         {t.shared && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
                       </button>
                     )
@@ -674,6 +742,21 @@ export default function HubTestsSection({
                   </span>
                 )}
 
+                {mode === "steps" ? (
+                  <div className="ml-auto inline-flex rounded-md border bg-card p-0.5 text-xs" role="tablist" aria-label="View">
+                    {(["steps", "code"] as const).map((v) => (
+                      <button
+                        key={v}
+                        role="tab"
+                        aria-selected={view === v}
+                        onClick={() => setView(v)}
+                        className={`rounded px-2.5 py-1 font-medium ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {v === "steps" ? "Steps" : "Code"}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
                 <div className="relative ml-auto">
                   <Button size="sm" variant="outline" onClick={() => setSnippetsOpen((v) => !v)}>
                     <Wand2 className="h-4 w-4" /> Insert step <ChevronDown className="h-3.5 w-3.5" />
@@ -699,8 +782,43 @@ export default function HubTestsSection({
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
+              {mode === "steps" && view === "steps" ? (
+                <div className="space-y-3 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Write each step as a sentence — e.g. <i>Click &quot;Sign in&quot;</i>, <i>Type &quot;demo&quot; in the &quot;Email&quot; field</i>,{" "}
+                    <i>Verify that the page contains &quot;Welcome&quot;</i>. Suggestions appear as you type, or let AI write them.
+                  </p>
+                  <PlainEnglishEditor
+                    steps={steps}
+                    projectId={projectId}
+                    onChange={(next) => {
+                      setSteps(next)
+                      setDirty(true)
+                    }}
+                  />
+                </div>
+              ) : mode === "steps" ? (
+                <div>
+                  <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                    <span>This is the Playwright code your steps become — it&apos;s what runs. Edit the steps to change it.</span>
+                    <Button size="sm" variant="outline" className="ml-auto h-7" onClick={() => setPendingConvert(true)}>
+                      Convert to code
+                    </Button>
+                  </div>
+                  <div className="h-[420px] overflow-hidden">
+                    <Editor
+                      key={`${selected.id}-generated`}
+                      language="javascript"
+                      path={`file:///generated/${selected.id}.spec.js`}
+                      value={generated?.code || ""}
+                      options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13, scrollBeyondLastLine: false, wordWrap: "on", automaticLayout: true }}
+                    />
+                  </div>
+                </div>
+              ) : (
               <div className="h-[420px]">
                 <Editor
                   key={selected.id}
@@ -727,6 +845,20 @@ export default function HubTestsSection({
                   }}
                 />
               </div>
+              )}
+              {mode === "steps" ? (
+                <div className="flex flex-wrap items-center gap-3 border-t px-3 py-1.5 text-xs text-muted-foreground">
+                  <span>No-code test · {steps.length} step{steps.length === 1 ? "" : "s"}</span>
+                  {unclearSteps === 0 ? (
+                    <span className="text-emerald-600">Every step is understood</span>
+                  ) : (
+                    <span className="text-rose-600">
+                      {unclearSteps} step{unclearSteps === 1 ? " isn't" : "s aren't"} understood yet — see the red note under {unclearSteps === 1 ? "it" : "them"}
+                    </span>
+                  )}
+                  <span className="ml-auto hidden sm:inline">⌘/Ctrl+S saves · Runs as a real Playwright test</span>
+                </div>
+              ) : (
               <div className="flex flex-wrap items-center gap-3 border-t px-3 py-1.5 text-xs text-muted-foreground">
                 <span>Playwright · JavaScript</span>
                 {errors === 0 && warnings === 0 ? (
@@ -752,6 +884,7 @@ export default function HubTestsSection({
                 )}
                 <span className="ml-auto hidden sm:inline">Type <kbd className="rounded border px-1">page.</kbd> for suggestions · ⌘/Ctrl+Enter runs</span>
               </div>
+              )}
             </div>
 
             <LinkedCases projectId={projectId} test={selected} onSave={saveLinks} />
@@ -827,6 +960,28 @@ export default function HubTestsSection({
         onCancel={() => setPendingRunAnyway(false)}
       />
       <ConfirmDialog
+        open={pendingConvert}
+        title="Convert this test to JavaScript code?"
+        description="The generated Playwright code becomes the test and you edit it directly. The plain-English steps are removed — this can't be switched back."
+        confirmLabel="Convert to code"
+        onConfirm={async () => {
+          setPendingConvert(false)
+          await convertToCode()
+        }}
+        onCancel={() => setPendingConvert(false)}
+      />
+      <ConfirmDialog
+        open={pendingRunUnclear}
+        title="Some steps aren't understood yet"
+        description="Steps with a red note can't run yet; the test will stop with a clear message at the first one. Fix them first, or run anyway."
+        confirmLabel="Run anyway"
+        onConfirm={() => {
+          setPendingRunUnclear(false)
+          run({ kind: "test" }, true)
+        }}
+        onCancel={() => setPendingRunUnclear(false)}
+      />
+      <ConfirmDialog
         open={pendingDelete}
         variant="danger"
         title={`Delete “${selected?.name}”?`}
@@ -839,7 +994,7 @@ export default function HubTestsSection({
         onCancel={() => setPendingDelete(false)}
       />
 
-      {creating && <NewTestDialog folders={folderNames} onCancel={() => setCreating(false)} onCreate={create} />}
+      {creating && <NewTestDialog folders={folderNames} projectUrl={projectUrl} onCancel={() => setCreating(false)} onCreate={create} />}
       <ExecutionTargetsModal
         open={targetsOpen}
         onClose={() => setTargetsOpen(false)}
@@ -851,23 +1006,27 @@ export default function HubTestsSection({
 
 function NewTestDialog({
   folders,
+  projectUrl,
   onCancel,
   onCreate,
 }: {
   folders: string[]
+  projectUrl: string
   onCancel: () => void
-  onCreate: (form: { name: string; type: "Web" | "API"; folder: string }) => Promise<void>
+  onCreate: (form: { name: string; type: "Web" | "API"; folder: string; how: "steps" | "code"; url: string }) => Promise<void>
 }) {
   const [name, setName] = useState("")
   const [type, setType] = useState<"Web" | "API">("Web")
   const [folder, setFolder] = useState("")
+  const [how, setHow] = useState<"steps" | "code">("steps")
+  const [url, setUrl] = useState(projectUrl)
   const [busy, setBusy] = useState(false)
   const valid = /^[A-Za-z0-9][A-Za-z0-9 _-]{0,79}$/.test(name.trim())
 
   const submit = async () => {
     if (!valid) return
     setBusy(true)
-    await onCreate({ name, type, folder })
+    await onCreate({ name, type, folder, how, url: type === "Web" ? url : "" })
     setBusy(false)
   }
 
@@ -908,6 +1067,38 @@ function NewTestDialog({
             ))}
           </div>
         </div>
+        <div className="space-y-1 text-sm">
+          <span className="font-medium text-foreground">How do you want to build it?</span>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["steps", "Plain-English steps", "No code: write sentences, or let AI write them"],
+                ["code", "JavaScript code", "Playwright code, for developers"],
+              ] as const
+            ).map(([value, title, text]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setHow(value)}
+                className={`rounded-lg border p-3 text-left ${how === value ? "border-primary bg-primary/10" : "hover:border-border"}`}
+              >
+                <span className="block font-medium text-foreground">{title}</span>
+                <span className="text-xs text-muted-foreground">{text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        {how === "steps" && type === "Web" && (
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium text-foreground">Start page <span className="font-normal text-muted-foreground">(optional)</span></span>
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://your-app.example.com/login"
+              className="h-10 w-full rounded-md border px-3 outline-none focus:border-primary"
+            />
+          </label>
+        )}
         <label className="block space-y-1 text-sm">
           <span className="font-medium text-foreground">Folder <span className="font-normal text-muted-foreground">(optional)</span></span>
           <input
@@ -923,7 +1114,11 @@ function NewTestDialog({
             ))}
           </datalist>
         </label>
-        <p className="text-xs text-muted-foreground">It starts with a working example you can run straight away and then change.</p>
+        <p className="text-xs text-muted-foreground">
+          {how === "steps"
+            ? "You'll add steps like Click \"Sign in\" next — or describe the test and let AI write them."
+            : "It starts with a working example you can run straight away and then change."}
+        </p>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel
@@ -936,6 +1131,10 @@ function NewTestDialog({
     </div>
   )
 }
+
+/** Editor rows → what the API stores. */
+const stepRows = (rows: EditorStep[]) =>
+  rows.filter((r) => r.actionDescription.trim()).map((r) => ({ text: r.actionDescription.trim(), ...(r.expectedResult?.trim() ? { expected: r.expectedResult.trim() } : {}) }))
 
 const parseTags = (text: string) =>
   Array.from(new Set(text.split(",").map((t) => t.trim()).filter((t) => t && t.length <= 40))).slice(0, 20)

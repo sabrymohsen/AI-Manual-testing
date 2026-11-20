@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client"
+import { cleanSteps, compileHubSteps } from "@/lib/hub-steps"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { cleanFolder, hubNameError } from "@/lib/hub-scripts"
@@ -60,13 +62,26 @@ export async function PUT(request: NextRequest, { params }: { params: { scriptId
       return NextResponse.json({ error: "Tags must be short text" }, { status: 400 })
     }
 
+    // No-code tests: the steps are the source; the code is regenerated from
+    // them. mode "code" converts a steps test to hand-written code (one way).
+    const current = await prisma.testScript.findUnique({ where: { id: params.scriptId }, select: { name: true, mode: true, steps: true } })
+    let stepsData: { mode?: string; steps?: any; code?: string } = {}
+    if (body.mode === "code" && current?.mode === "steps") {
+      stepsData = { mode: "code", steps: Prisma.DbNull }
+    } else if (body.steps !== undefined || (current?.mode === "steps" && name !== undefined)) {
+      const steps = cleanSteps(body.steps !== undefined ? body.steps : current?.steps ?? [])
+      if (!steps) return NextResponse.json({ error: "Steps must be a list of sentences" }, { status: 400 })
+      stepsData = { mode: "steps", steps, code: compileHubSteps(name ?? current?.name ?? "Untitled test", steps).code }
+    }
+
     const script = await prisma.testScript.update({
       where: { id: params.scriptId },
       data: {
         ...(name !== undefined && { name }),
         ...(body.folder !== undefined && { folder: cleanFolder(body.folder) }),
         ...(type !== undefined && { type }),
-        ...(code !== undefined && { code }),
+        ...(code !== undefined && stepsData.mode !== "steps" && { code }),
+        ...stepsData,
         ...(tags !== undefined && { tags: Array.from(new Set((tags as string[]).map((t) => t.trim()).filter(Boolean))).slice(0, 20) }),
         ...(accessibilityEnabled !== undefined && { accessibilityEnabled: Boolean(accessibilityEnabled) }),
       },

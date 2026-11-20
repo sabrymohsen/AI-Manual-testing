@@ -23,6 +23,8 @@
 import * as fs from "fs"
 import * as path from "path"
 import { STORAGE_ROOT } from "@/lib/storage-health"
+import { needsStepsRuntime, STEPS_RUNTIME_FILE } from "@/lib/plain-english/to-playwright"
+import { QA_STEPS_RUNTIME } from "@/lib/plain-english/runtime/qa-steps-runtime.generated"
 
 export const WORKSPACE_ROOT = path.resolve(STORAGE_ROOT, "hub-workspace")
 export const TESTS_DIR = path.join(WORKSPACE_ROOT, "tests")
@@ -196,6 +198,7 @@ export function prepareRunWorkspace(
   writeConfig(config, dir)
   const file = path.join(dir, "tests", specFileName(script.name))
   fs.writeFileSync(file, script.code, "utf8")
+  writeStepsRuntime(path.join(dir, "tests"), script.code)
   const resultsDir = path.join(dir, "test-results")
   fs.mkdirSync(resultsDir, { recursive: true })
   return { dir, resultsDir, specRelPath: path.relative(dir, file) }
@@ -227,7 +230,14 @@ export function writeSpec(scriptName: string, code: string): string {
   fs.rmSync(path.join(TESTS_DIR, `${specBaseName(scriptName)}.spec.ts`), { force: true })
   const file = path.join(TESTS_DIR, specFileName(scriptName))
   fs.writeFileSync(file, code, "utf8")
+  writeStepsRuntime(TESTS_DIR, code)
   return path.relative(WORKSPACE_ROOT, file)
+}
+
+/** No-code tests require qa-steps.cjs (the plain-English step runner) beside them. */
+export function writeStepsRuntime(testsDir: string, code: string): void {
+  if (!needsStepsRuntime(code)) return
+  fs.writeFileSync(path.join(testsDir, STEPS_RUNTIME_FILE), QA_STEPS_RUNTIME, "utf8")
 }
 
 /**

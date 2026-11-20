@@ -1,3 +1,4 @@
+import { cleanSteps, compileHubSteps } from "@/lib/hub-steps"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth } from "@/lib/api-guards"
@@ -106,6 +107,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/hub/scripts — create a test { projectId, name, type, code, folder?, tags? }
+// or a no-code test { projectId, name, type, mode: "steps", steps: [{ text }] } (code is generated).
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const projectId: string | null = body.projectId || null
@@ -116,9 +118,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const name = String(body.name || "").trim()
-    const { type, code, tags } = body
+    const { type, tags } = body
     const nameError = hubNameError(name)
     if (nameError) return NextResponse.json({ error: nameError }, { status: 400 })
+    const isSteps = body.mode === "steps"
+    const steps = isSteps ? cleanSteps(body.steps ?? []) : null
+    if (isSteps && !steps) return NextResponse.json({ error: "Steps must be a list of sentences" }, { status: 400 })
+    const code: string = isSteps ? compileHubSteps(name, steps!).code : body.code
     if (!type || !code) {
       return NextResponse.json({ error: "Missing required fields: type, code" }, { status: 400 })
     }
@@ -131,7 +137,16 @@ export async function POST(request: NextRequest) {
     }
 
     const script = await prisma.testScript.create({
-      data: { name, type, code, tags: Array.isArray(tags) ? tags : [], folder: cleanFolder(body.folder), projectId },
+      data: {
+        name,
+        type,
+        code,
+        mode: isSteps ? "steps" : "code",
+        ...(isSteps ? { steps: steps as any } : {}),
+        tags: Array.isArray(tags) ? tags : [],
+        folder: cleanFolder(body.folder),
+        projectId,
+      },
     })
     return NextResponse.json({ script }, { status: 201 })
   } catch (err: any) {

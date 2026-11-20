@@ -2465,6 +2465,11 @@ model TestScript {
   projectId            String?
   // Folder / suite in the hub's test list ("" = top level). Run a whole folder at once.
   folder               String          @default("")
+  // "steps" = written as plain-English steps (the source), with `code`
+  // generated from them on every save; "code" = JavaScript written by hand.
+  mode                 String          @default("code")
+  // [{ text, expected? }] — the plain-English steps when mode is "steps".
+  steps                Json?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   executions           TestExecution[]
