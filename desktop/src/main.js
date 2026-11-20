@@ -15,6 +15,37 @@ const updater = require("./updater")
 const pageTools = require("./page-tools")
 
 const PARTITION = "persist:qa-engine" // keeps cookies (the login) across restarts
+
+// ── startup log ────────────────────────────────────────────────────────────
+// Anything that goes wrong at startup is written here (Help → Open Log Folder),
+// so "it doesn't open" on someone's PC can be diagnosed.
+const fs = require("fs")
+function logFile() {
+  try {
+    const dir = path.join(app.getPath("userData"), "logs")
+    fs.mkdirSync(dir, { recursive: true })
+    return path.join(dir, "main.log")
+  } catch {
+    return null
+  }
+}
+function log(...parts) {
+  const f = logFile()
+  if (!f) return
+  try {
+    // Keep it small: start over past 1 MB.
+    if (fs.existsSync(f) && fs.statSync(f).size > 1_000_000) fs.writeFileSync(f, "")
+    fs.appendFileSync(f, `[${new Date().toISOString()}] ${parts.map((p) => (p instanceof Error ? p.stack : String(p))).join(" ")}\n`)
+  } catch {}
+}
+process.on("uncaughtException", (err) => {
+  log("uncaughtException", err)
+  try {
+    dialog.showErrorBox("QA Engine ran into a problem", `${err?.message || err}\n\nDetails are in the log (Help → Open Log Folder).`)
+  } catch {}
+})
+process.on("unhandledRejection", (err) => log("unhandledRejection", err))
+app.on("child-process-gone", (_e, d) => log("child process gone", d.type, d.reason, d.exitCode))
 const isMac = process.platform === "darwin"
 
 let mainWindow = null
@@ -26,8 +57,10 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0)
 }
 app.on("second-instance", () => {
-  if (!mainWindow) return
+  log("second launch: bringing the window forward")
+  if (!mainWindow) return createMainWindow()
   if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
   mainWindow.focus()
 })
 
@@ -56,6 +89,17 @@ function isLocalMode() {
 function loadApp(win = mainWindow) {
   if (!win) return
   if (isLocalMode() && win === mainWindow) return startLocal()
+  log("loading", appOrigin())
+  // A server that never answers (blocked network) would leave a blank window
+  // forever; after 25s show the offline page with Retry.
+  const timer = setTimeout(() => {
+    if (!win.isDestroyed() && win.webContents.isLoadingMainFrame()) {
+      log("server did not answer in 25s")
+      win.webContents.stop()
+      showOffline(win, "The server didn't answer. Check your internet connection or company firewall.")
+    }
+  }, 25000)
+  win.webContents.once("did-finish-load", () => clearTimeout(timer))
   win.loadURL(appOrigin()).catch(() => {
     /* did-fail-load shows the offline page */
   })
@@ -146,6 +190,14 @@ function createMainWindow() {
 
   if (saved.maximized) mainWindow.maximize()
   mainWindow.once("ready-to-show", () => mainWindow.show())
+  // If the first page is slow (or the network silently drops the connection),
+  // ready-to-show never fires and the app sat invisible — show it anyway.
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
+      log("window not ready after 4s; showing it anyway")
+      mainWindow.show()
+    }
+  }, 4000)
 
   const wc = mainWindow.webContents
 
@@ -186,6 +238,7 @@ function createMainWindow() {
   })
 
   wc.on("did-fail-load", (_e, code, description, url, isMainFrame) => {
+    if (isMainFrame) log("load failed", code, description, url)
     // -3 = ERR_ABORTED (a navigation replaced by another) — not a real failure.
     if (!isMainFrame || code === -3) return
     if (url && url.startsWith("file://")) return
@@ -194,6 +247,7 @@ function createMainWindow() {
   })
 
   wc.on("render-process-gone", (_e, details) => {
+    log("page process gone", details.reason, details.exitCode)
     if (details.reason !== "clean-exit") showOffline(mainWindow, `The page stopped (${details.reason}).`)
   })
 
@@ -445,6 +499,7 @@ function buildMenu() {
             }),
         },
         { label: "Check for Updates…", click: () => checkForUpdates(true) },
+        { label: "Open Log Folder", click: () => shell.openPath(path.join(app.getPath("userData"), "logs")) },
       ],
     },
   ]
@@ -461,6 +516,7 @@ app.setName("QA Engine")
 if (process.platform === "win32") app.setAppUserModelId("app.qaengine.desktop") // native notifications
 
 app.whenReady().then(() => {
+  log(`QA Engine ${app.getVersion()} starting on ${process.platform} ${process.arch} (${require("os").release()}), Electron ${process.versions.electron}`)
   configureSession()
   buildMenu()
   createMainWindow()

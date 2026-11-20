@@ -26,7 +26,7 @@ rsync -az --files-from="$LIST" -e "$RSH" ./ "${REMOTE}qa-engine/"
 rm -f "$LIST"
 
 echo "▸ Rebuilding the server (about 10 minutes)"
-"${SSH[@]}" 'cd qa-engine/deploy/oracle && docker compose --env-file .env build && docker compose --env-file .env up -d && docker compose --env-file .env exec -T caddy caddy reload --config /etc/caddy/Caddyfile && docker compose --env-file .env ps --format "{{.Service}}: {{.Status}}"'
+"${SSH[@]}" 'cd qa-engine/deploy/oracle && docker compose --env-file .env build && docker compose --env-file .env up -d && docker compose --env-file .env up -d --force-recreate caddy && docker compose --env-file .env ps --format "{{.Service}}: {{.Status}}"'
 fi
 
 VERSION="$(node -p 'require("./desktop/package.json").version')"
