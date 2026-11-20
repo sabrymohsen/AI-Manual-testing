@@ -47,6 +47,7 @@ import { buildTemplateCode } from "@/lib/hub-templates"
 import { PlainEnglishEditor, newPlainStep, type EditorStep } from "@/components/plain-english/plain-english-editor"
 import { stepsToPlaywright } from "@/lib/plain-english/to-playwright"
 import { parseStep } from "@/lib/plain-english/grammar"
+import { LocalProjectPanel, LocalProjectsSidebar, pwApi, type LocalProject } from "@/components/automation-hub/local-projects"
 
 interface HubTest {
   id: string
@@ -57,8 +58,8 @@ interface HubTest {
   folder: string
   shared: boolean
   accessibilityEnabled: boolean
-  /** "steps" = no-code plain-English test (code is generated); "code" = JavaScript. */
-  mode?: "steps" | "code"
+  /** "steps" = no-code plain-English test (code is generated); "code" = JavaScript; "local" = a project on a tester's computer. */
+  mode?: "steps" | "code" | "local"
   steps?: { text: string; expected?: string }[] | null
   data?: { columns: string[]; rows: string[][] } | null
   lastExecution: null | { id: string; status: string; createdAt: string; passed: number; failed: number; total: number }
@@ -133,6 +134,9 @@ export default function HubTestsSection({
   const [pendingConvert, setPendingConvert] = useState(false)
   const [pendingRunUnclear, setPendingRunUnclear] = useState(false)
   const [projectUrl, setProjectUrl] = useState("")
+  const [exploring, setExploring] = useState(false)
+  const [localProject, setLocalProject] = useState<LocalProject | null>(null)
+  const [importing, setImporting] = useState(false)
   const [environment, setEnvironment] = useState("")
   const [data, setData] = useState<{ columns: string[]; rows: string[][] } | null>(null)
   const editorRef = useRef<any>(null)
@@ -190,6 +194,7 @@ export default function HubTestsSection({
   }
 
   const openTest = (t: HubTest) => {
+    setLocalProject(null)
     setSelectedId(t.id)
     setTagsText(t.tags.join(", "))
     setCode(t.code)
@@ -569,6 +574,48 @@ export default function HubTestsSection({
               <PlayCircle className="h-4 w-4" /> Run all
             </Button>
           </div>
+          <Button size="sm" variant="outline" className="w-full" onClick={() => setExploring(true)} title="Give a user story, the start page and test data — AI explores the app and writes the test">
+            <Wand2 className="h-4 w-4 text-violet-500" /> AI explorer: test a user story
+          </Button>
+          <div className="flex items-center justify-between gap-2 px-1 text-xs">
+            <a href={`/api/hub/export?projectId=${projectId}`} className="text-primary hover:underline" title="Download every test as a standalone Playwright project">
+              Export as Playwright project
+            </a>
+            <label className="cursor-pointer text-primary hover:underline" title="Copy the JavaScript specs of a Playwright project (.zip) into the hub">
+              {importing ? "Importing…" : "Import .zip"}
+              <input
+                type="file"
+                accept=".zip,application/zip"
+                className="hidden"
+                disabled={importing}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]
+                  e.target.value = ""
+                  if (!f) return
+                  setImporting(true)
+                  try {
+                    const fd = new FormData()
+                    fd.append("projectId", projectId)
+                    fd.append("file", f)
+                    const res = await fetch("/api/hub/import", { method: "POST", body: fd })
+                    const d = await res.json().catch(() => ({}))
+                    if (!res.ok) throw new Error(d.error || "Import failed")
+                    await load()
+                    toast.success(`Imported ${d.imported.length} test${d.imported.length === 1 ? "" : "s"}`, {
+                      description: d.skipped?.length
+                        ? `Skipped ${d.skipped.length}: ${d.skipped.slice(0, 3).map((x: any) => `${x.file.split("/").pop()} (${x.reason})`).join("; ")}${d.skipped.length > 3 ? "…" : ""}`
+                        : undefined,
+                      duration: d.skipped?.length ? 20000 : 6000,
+                    })
+                  } catch (err: any) {
+                    toast.error(err.message)
+                  } finally {
+                    setImporting(false)
+                  }
+                }}
+              />
+            </label>
+          </div>
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
@@ -659,6 +706,7 @@ export default function HubTestsSection({
                         )}
                         {t.type === "API" && <span className="rounded bg-muted px-1 text-[10px] font-semibold text-muted-foreground">API</span>}
                         {t.mode === "steps" && <span className="rounded bg-primary/10 px-1 text-[10px] font-medium text-primary" title="Written as plain-English steps">No-code</span>}
+                        {t.mode === "local" && <span className="rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground" title="Runs on a tester's computer">Computer</span>}
                         {t.shared && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
                       </button>
                     )
@@ -667,11 +715,58 @@ export default function HubTestsSection({
             )
           })}
         </div>
+        <LocalProjectsSidebar
+          selectedPath={localProject?.path ?? null}
+          onSelect={(p) => {
+            setLocalProject(p)
+            const shared = (tests || []).find((t) => t.mode === "local" && t.name.toLowerCase() === p.name.toLowerCase())
+            setSelectedId(shared?.id ?? null)
+            setExecution(null)
+            if (shared?.lastExecution) loadExecution(shared.lastExecution.id)
+          }}
+        />
       </aside>
 
       {/* ── editor + results ── */}
       <section className="min-w-0 space-y-4">
-        {!selected ? (
+        {localProject ? (
+          <>
+            <LocalProjectPanel
+              projectId={projectId}
+              project={localProject}
+              onUnlinked={() => setLocalProject(null)}
+              onShared={async (executionId, sharedName) => {
+                const list = await load()
+                const t = list.find((x) => x.mode === "local" && x.name.toLowerCase() === sharedName.toLowerCase())
+                if (t) setSelectedId(t.id)
+                await loadExecution(executionId)
+              }}
+            />
+            {execution && (
+              <div className="rounded-xl border bg-card p-4">
+                <h3 className="mb-3 text-sm font-semibold text-foreground">Last shared run</h3>
+                <HubRunResults execution={execution} onOpenTrace={onOpenTrace} />
+              </div>
+            )}
+          </>
+        ) : selected?.mode === "local" ? (
+          <>
+            <div className="rounded-xl border bg-card p-4">
+              <h3 className="text-base font-semibold text-foreground">{selected.name}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                A Playwright project on a tester&apos;s computer. It runs there from the QA Engine desktop app (Automation Hub → On my computer),
+                and its results are shared here.
+              </p>
+              {pwApi() && (
+                <p className="mt-2 text-xs text-muted-foreground">On this computer? Link its folder under “On my computer” in the list to run it.</p>
+              )}
+            </div>
+            <div className="rounded-xl border bg-card p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Last shared run</h3>
+              {execution ? <HubRunResults execution={execution} onOpenTrace={onOpenTrace} /> : <p className="text-sm text-muted-foreground">No results shared yet.</p>}
+            </div>
+          </>
+        ) : !selected ? (
           <div className="rounded-xl border border-dashed bg-card p-10 text-center">
             <BookOpen className="mx-auto h-8 w-8 text-slate-300" />
             <p className="mt-2 font-medium text-foreground">No test selected</p>
@@ -1069,11 +1164,142 @@ export default function HubTestsSection({
       />
 
       {creating && <NewTestDialog folders={folderNames} projectUrl={projectUrl} onCancel={() => setCreating(false)} onCreate={create} />}
+      {exploring && <ExploreDialog projectId={projectId} projectUrl={projectUrl} onClose={() => setExploring(false)} />}
       <ExecutionTargetsModal
         open={targetsOpen}
         onClose={() => setTargetsOpen(false)}
         onChange={(list: any[]) => setTargets(list.map((t) => ({ id: t.id, name: t.name })))}
       />
+    </div>
+  )
+}
+
+/**
+ * The AI explorer: pick (or write) a user story, give the start page and test
+ * data; AI drives a real browser and writes a no-code test. Runs in the
+ * background — the AI tray says when the test is ready.
+ */
+function ExploreDialog({ projectId, projectUrl, onClose }: { projectId: string; projectUrl: string; onClose: () => void }) {
+  const [stories, setStories] = useState<{ id: string; source: string; key: string | null; title: string; text: string; criteria: string[] }[]>([])
+  const [pick, setPick] = useState("")
+  const [title, setTitle] = useState("")
+  const [text, setText] = useState("")
+  const [criteria, setCriteria] = useState("")
+  const [url, setUrl] = useState(projectUrl)
+  const [dataText, setDataText] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    api<{ stories: typeof stories }>(`/api/hub/explore/stories?projectId=${projectId}`)
+      .then((d) => setStories(d.stories))
+      .catch(() => {})
+  }, [projectId])
+
+  const choose = (id: string) => {
+    setPick(id)
+    const s = stories.find((x) => x.id === id)
+    if (!s) return
+    setTitle(s.title.slice(0, 200))
+    setText(s.text)
+    setCriteria(s.criteria.join("\n"))
+  }
+
+  const data = useMemo(() => {
+    const out: Record<string, string> = {}
+    for (const line of dataText.split("\n")) {
+      const m = line.match(/^\s*([A-Za-z_][\w-]*)\s*[=:]\s*(.*)$/)
+      if (m) out[m[1]] = m[2].trim()
+    }
+    return out
+  }, [dataText])
+
+  const start = async () => {
+    setBusy(true)
+    try {
+      await api("/api/hub/explore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectId,
+          story: { title, text, criteria: criteria.split("\n").map((c) => c.trim()).filter(Boolean) },
+          startUrl: url,
+          data,
+        }),
+      })
+      window.dispatchEvent(new Event("qa:ai-job-started"))
+      toast("AI is exploring your app…", { description: "It works in the background; you'll get a message with the new test when it's done." })
+      onClose()
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
+      <div className="max-h-[90vh] w-full max-w-xl space-y-3 overflow-y-auto rounded-xl bg-card p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <Wand2 className="h-5 w-5 text-violet-500" /> AI explorer
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            AI opens your app in a real browser, works through the story step by step using the real buttons and fields, then checks the
+            acceptance criteria. You get a no-code test you can read, edit and run.
+          </p>
+        </div>
+        {stories.length > 0 && (
+          <label className="block space-y-1 text-sm">
+            <span className="font-medium text-foreground">User story</span>
+            <select value={pick} onChange={(e) => choose(e.target.value)} className="h-9 w-full rounded-md border bg-card px-2 text-sm">
+              <option value="">Write my own…</option>
+              {stories.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.source} · {s.key ? `${s.key} · ` : ""}
+                  {s.title.slice(0, 90)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-foreground">Story title</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Customer checks out with a coupon" className="h-9 w-full rounded-md border px-3" />
+        </label>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-foreground">
+            Details <span className="font-normal text-muted-foreground">(optional)</span>
+          </span>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} placeholder="As a customer I want to apply a coupon at checkout so that I pay less." className="w-full rounded-md border px-3 py-2" />
+        </label>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-foreground">Acceptance criteria <span className="font-normal text-muted-foreground">(one per line — they become checks)</span></span>
+          <textarea value={criteria} onChange={(e) => setCriteria(e.target.value)} rows={3} placeholder={"The total shows the discount\nA confirmation message appears"} className="w-full rounded-md border px-3 py-2" />
+        </label>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-foreground">Start page</span>
+          <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://your-app.example.com/login" className="h-9 w-full rounded-md border px-3" />
+        </label>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-foreground">Test data <span className="font-normal text-muted-foreground">(name = value, one per line)</span></span>
+          <textarea
+            value={dataText}
+            onChange={(e) => setDataText(e.target.value)}
+            rows={3}
+            placeholder={"email = sara@test.com\npassword = Secret123\ncoupon = SAVE10"}
+            className="w-full rounded-md border px-3 py-2 font-mono text-xs"
+          />
+          <span className="text-[11px] text-muted-foreground">Passwords, tokens and keys are never sent to the AI — it only sees their names.</span>
+        </label>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button onClick={start} disabled={busy || title.trim().length < 3 || url.trim().length < 4}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Start exploring
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -15,6 +15,9 @@ export async function POST(request: NextRequest, { params }: { params: { scriptI
   const auth = await requireHubScript(params.scriptId, "run", body.projectId || null)
   if (!auth.ok) return auth.response
 
+  if ((auth.script as any).mode === "local") {
+    return NextResponse.json({ error: "This project runs on a tester's computer — run it from the QA Engine desktop app." }, { status: 400 })
+  }
   try {
     const target = await resolveTarget(body.targetId)
     const executionId = await startScriptRun(

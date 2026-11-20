@@ -8,6 +8,19 @@ const info = {
   version: () => ipcRenderer.invoke("desktop:version"),
   // Desktop app update: shows "Update now" when a newer version is out.
   checkForUpdate: () => ipcRenderer.invoke("desktop:check-update"),
+  // Playwright projects on this computer (folders the user linked). Runs happen here.
+  pw: {
+    pick: () => ipcRenderer.invoke("desktop:pw-pick"),
+    list: () => ipcRenderer.invoke("desktop:pw-list"),
+    unlink: (dir) => ipcRenderer.invoke("desktop:pw-unlink", dir),
+    run: (dir, opts) => ipcRenderer.invoke("desktop:pw-run", dir, opts),
+    stop: (dir) => ipcRenderer.invoke("desktop:pw-stop", dir),
+    onLog: (cb) => {
+      const h = (_e, p) => cb(p)
+      ipcRenderer.on("desktop:pw-log", h)
+      return () => ipcRenderer.removeListener("desktop:pw-log", h)
+    },
+  },
   // AI on this computer (Ollama). The main process only answers our server's pages.
   ai: {
     status: () => ipcRenderer.invoke("desktop:ai-status"),

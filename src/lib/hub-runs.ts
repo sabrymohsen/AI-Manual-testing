@@ -49,7 +49,8 @@ export async function scriptsForScope(projectId: string, scope: RunScope) {
     if (typeof scope.folder === "string") and.push({ folder: scope.folder })
     if (scope.tag) and.push({ tags: { has: scope.tag } })
   }
-  return prisma.testScript.findMany({ where: { AND: and }, orderBy: [{ folder: "asc" }, { name: "asc" }] })
+  // Projects on testers' computers run from the desktop app, never on the server.
+  return prisma.testScript.findMany({ where: { AND: [...and, { mode: { not: "local" } }] }, orderBy: [{ folder: "asc" }, { name: "asc" }] })
 }
 
 export async function startScopedRun(
