@@ -26,7 +26,7 @@ rsync -az --files-from="$LIST" -e "$RSH" ./ "${REMOTE}qa-engine/"
 rm -f "$LIST"
 
 echo "▸ Rebuilding the server (about 10 minutes)"
-"${SSH[@]}" 'cd qa-engine/deploy/oracle && docker compose --env-file .env build && docker compose --env-file .env up -d && docker compose --env-file .env ps --format "{{.Service}}: {{.Status}}"'
+"${SSH[@]}" 'cd qa-engine/deploy/oracle && docker compose --env-file .env build && docker compose --env-file .env up -d && docker compose --env-file .env exec -T caddy caddy reload --config /etc/caddy/Caddyfile && docker compose --env-file .env ps --format "{{.Service}}: {{.Status}}"'
 fi
 
 VERSION="$(node -p 'require("./desktop/package.json").version')"
@@ -46,6 +46,7 @@ OUT="$(mktemp -d)"
 cp "$D/QA-Engine-$VERSION-mac-arm64.dmg" "$OUT/QA-Engine-mac-arm64.dmg"
 cp "$D/QA-Engine-$VERSION-mac-x64.dmg" "$OUT/QA-Engine-mac-x64.dmg"
 cp "$D/QA-Engine-Setup-$VERSION.exe" "$OUT/QA-Engine-Setup.exe"
+cp "$D/QA-Engine-$VERSION-win-x64.zip" "$OUT/QA-Engine-win.zip"
 node -e '
   const [v, notes] = process.argv.slice(1)
   console.log(JSON.stringify({
@@ -55,7 +56,7 @@ node -e '
 
 echo "▸ Publishing installers"
 # Installers first, latest.json last, so nobody is told about files that aren't there yet.
-rsync -a -e "$RSH" "$OUT"/*.dmg "$OUT"/*.exe "${REMOTE}qa-engine-downloads/"
+rsync -a -e "$RSH" "$OUT"/*.dmg "$OUT"/*.exe "$OUT"/*.zip "${REMOTE}qa-engine-downloads/"
 rsync -a -e "$RSH" "$OUT/latest.json" "${REMOTE}qa-engine-downloads/"
 rm -rf "$OUT"
 echo "✓ Released server + desktop $VERSION"

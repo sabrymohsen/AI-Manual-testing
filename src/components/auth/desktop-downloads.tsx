@@ -69,7 +69,11 @@ export function DesktopDownloads() {
         {link(FILES.windows, os === "windows", win)}
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        First launch: on Mac open System Settings → Privacy &amp; Security → Open Anyway; on Windows click More info → Run anyway.
+        First launch: on Mac open System Settings → Privacy &amp; Security → Open Anyway. On Windows, if the browser holds the file, open
+        Downloads (Ctrl+J) → ⋯ → Keep → Keep anyway; then More info → Run anyway.{" "}
+        <a href="/downloads/QA-Engine-win.zip" download className="underline hover:text-foreground">
+          Windows .zip
+        </a>
       </p>
     </div>
   )
@@ -113,6 +117,13 @@ export function DesktopDownloadCards() {
           </a>
         ))}
       </div>
+      <p className="text-[12px] text-muted-foreground">
+        Windows installer blocked by your browser or company? Try the{" "}
+        <a href="/downloads/QA-Engine-win.zip" download className="font-medium text-primary hover:underline">
+          Windows .zip
+        </a>{" "}
+        — unzip it and open <span className="font-medium text-foreground">QA Engine.exe</span>, no install needed.
+      </p>
       {inApp && <p className="text-[12px] text-muted-foreground">You&apos;re already using the desktop app.</p>}
     </div>
   )

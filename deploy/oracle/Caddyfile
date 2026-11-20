@@ -8,7 +8,18 @@
 	# Desktop installers (copied to ~/qa-engine-downloads on the server).
 	handle_path /downloads/* {
 		root * /srv/downloads
-		header Content-Disposition attachment
+		# A real file name and type, so browsers save "QA-Engine-Setup.exe" (not a
+		# nameless file Windows asks to "Open with").
+		header Content-Disposition "attachment; filename=\"{http.request.uri.path.file}\""
+		@exe path *.exe
+		header @exe Content-Type application/vnd.microsoft.portable-executable
+		@zip path *.zip
+		header @zip Content-Type application/zip
+		@dmg path *.dmg
+		header @dmg Content-Type application/x-apple-diskimage
+		@json path *.json
+		header @json Content-Disposition inline
+		header @json Cache-Control no-store
 		file_server
 	}
 	handle {

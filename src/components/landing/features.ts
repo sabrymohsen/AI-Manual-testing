@@ -246,6 +246,6 @@ export const FAQ = [
   },
   {
     q: "Why does my Mac or Windows warn me the first time?",
-    a: "The desktop app isn't signed with a paid certificate yet. On Mac, open System Settings → Privacy & Security and click Open Anyway. On Windows, click More info → Run anyway. You only do this once.",
+    a: "The desktop app isn't signed with a paid certificate yet, so Mac and Windows don't recognise it. On Mac, open System Settings → Privacy & Security and click Open Anyway. On Windows, if the browser holds the download, open Downloads (Ctrl+J), click ⋯ → Keep → Keep anyway; then on \"Windows protected your PC\" click More info → Run anyway. Don't double-click a file ending in .crdownload or .partial — that's an unfinished download. You only do this once; the Windows .zip is an alternative that needs no install.",
   },
 ]

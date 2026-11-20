@@ -211,7 +211,8 @@ export default async function Home() {
               </p>
               <p>
                 <span className="font-medium text-foreground">2. First launch.</span> Mac: System Settings → Privacy &amp; Security → Open Anyway.
-                Windows: More info → Run anyway.
+                Windows: if the browser says the file &quot;isn&apos;t commonly downloaded&quot;, open Downloads (Ctrl+J) → ⋯ → Keep → Keep anyway.
+                Then on &quot;Windows protected your PC&quot; click More info → Run anyway.
               </p>
               <p>
                 <span className="font-medium text-foreground">3. Sign in.</span> Use the same account as the website. If Ollama is installed, the
