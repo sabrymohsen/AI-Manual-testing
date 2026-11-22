@@ -237,6 +237,17 @@ const ACK_TIMEOUT_MS = 1500
 // dense table 285 KB vs 532 KB) for ~170 ms more encoding, which a still
 // frame can afford.
 const STILL_DELAY_MS = 250
+// A change that comes more than this long after the previous one is
+// "isolated" (typing, a click, a caret blink) rather than motion (scrolling,
+// an animation), and is sent at full resolution straight away.
+const ISOLATED_GAP_MS = 300
+// Isolated changes are sent at device scale. Right after the tester's input
+// (a keystroke's echo, a click result) as JPEG: ~30 ms to encode, so typing
+// feels immediate. Otherwise (a caret blink, a page settling) as WebP: ~170 ms
+// to encode, but a third of the bytes — on the SDOH login page 36 KB vs 103 KB,
+// 2-3 times a second while the caret blinks.
+const INPUT_ECHO_MS = 600
+const DETAIL_QUALITY = Math.min(100, Math.max(40, Number(process.env.RECORDER_DETAIL_QUALITY) || 80))
 const STILL_QUALITY = Math.min(100, Math.max(40, Number(process.env.RECORDER_STILL_QUALITY) || 80))
 
 // Sessions launch with --force-device-scale-factor=2, so a 1400x800 viewport
@@ -334,6 +345,10 @@ interface SessionStream {
   frameSeq?: number
   /** Last screencast frame (base64), to skip byte-identical repeats. */
   lastCast?: string
+  /** When the last changed screencast frame arrived. */
+  lastCastAt?: number
+  /** When a viewer last sent input (click, key, scroll). */
+  lastInputAt?: number
 }
 
 interface ViewerFlow {
@@ -390,6 +405,33 @@ function onFrameAck(stream: SessionStream, ws: WebSocket) {
     flow.lastSentAt = Date.now()
     ws.send(buf)
   }
+}
+
+/**
+ * Send an isolated change at full device resolution. If the page keeps
+ * changing while we capture, the motion frame that arrives is newer and wins;
+ * on failure the motion frame we already have is sent instead.
+ */
+function sendDetailFrame(sessionId: string, stream: SessionStream, fallback: Buffer) {
+  if (stream.stillTimer) clearTimeout(stream.stillTimer)
+  stream.stillTimer = null
+  const seq = (stream.frameSeq = (stream.frameSeq || 0) + 1)
+  const cdp = stream.cdp
+  if (!cdp) return pushFrame(stream, fallback)
+  const afterInput = Date.now() - (stream.lastInputAt || 0) < INPUT_ECHO_MS
+  cdp
+    .send("Page.captureScreenshot", {
+      format: afterInput ? "jpeg" : "webp",
+      quality: afterInput ? DETAIL_QUALITY : STILL_QUALITY,
+      optimizeForSpeed: true,
+    } as any)
+    .then((shot: any) => {
+      if (stream.frameSeq !== seq || sessionStreams.get(sessionId) !== stream) return
+      pushFrame(stream, Buffer.from(shot.data, "base64"))
+    })
+    .catch(() => {
+      if (stream.frameSeq === seq && sessionStreams.get(sessionId) === stream) pushFrame(stream, fallback)
+    })
 }
 
 /**
@@ -524,8 +566,19 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       }
       current.lastCast = ev.data
       const buf = Buffer.from(ev.data, "base64")
-      pushFrame(current, buf)
-      armStillFrame(sessionId, current, page)
+      const now = Date.now()
+      const gap = now - (current.lastCastAt || 0)
+      current.lastCastAt = now
+      if (current.profile !== "sharp" && gap > ISOLATED_GAP_MS) {
+        // An isolated change (a blinking cursor, a keystroke, a click result):
+        // send it sharp right away instead of a blurry motion frame. On
+        // production the login caret alone swapped the sharp view for a
+        // blurry one 2-3 times a second.
+        sendDetailFrame(sessionId, current, buf)
+      } else {
+        pushFrame(current, buf)
+        armStillFrame(sessionId, current, page)
+      }
       const deadline = Date.now() + 400
       const ackWhenDrained = () => {
         const cur = sessionStreams.get(sessionId)
@@ -607,6 +660,8 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   const inputQueue: any[] = []
   let inputBusy = false
   const queueInput = (payload: any) => {
+    const cur = sessionStreams.get(sessionId)
+    if (cur) cur.lastInputAt = Date.now()
     const last = inputQueue[inputQueue.length - 1]
     if (last && payload?.type === "wheel" && last.type === "wheel") {
       last.deltaX = (last.deltaX || 0) + (payload.deltaX || 0)
