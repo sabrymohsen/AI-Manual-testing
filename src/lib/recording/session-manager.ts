@@ -263,7 +263,18 @@ export async function startSession(
       status: { in: ["Starting", "Active", "Paused", "Saving"] },
     },
   })
-  if (existingActive) {
+  // A session the database calls open but this recorder isn't running (the
+  // recorder restarted, e.g. on a release, or crashed) has no browser any
+  // more: close it instead of blocking every new session.
+  const stillStarting =
+    existingActive?.status === "Starting" &&
+    Date.now() - new Date(existingActive.startedAt ?? existingActive.createdAt).getTime() < 120_000
+  if (existingActive && !activeSessions.has(existingActive.id) && !stillStarting) {
+    await prisma.recordingSession.update({
+      where: { id: existingActive.id },
+      data: { status: "Cancelled", finishedAt: new Date(), lastError: "Recorder restarted; the browser for this session was closed." },
+    })
+  } else if (existingActive) {
     throw new Error(
       kind === "LiveQA"
         ? "You already have a Live QA session open in this project. End it before starting a new one."
