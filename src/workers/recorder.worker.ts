@@ -80,11 +80,72 @@ async function checkPlaywrightInstalled(): Promise<boolean> {
 // ── Live-view input: shared by the REST fallback and the WebSocket stream ──
 // Playwright dispatches these as trusted input events, so the injected
 // recorder captures them as steps exactly like direct interaction.
+const EDIT_SHORTCUTS: Record<string, string> = {
+  "Control+a": "selectAll",
+  "Control+A": "selectAll",
+  "Control+z": "undo",
+  "Control+Z": "redo", // Ctrl+Shift+Z
+  "Control+y": "redo",
+}
+
+// ── Clipboard and saved logins for the live view ──
+// The remote browser's clipboard never reaches the tester, so copy/cut read
+// the selection here and send the text back to the viewer.
+async function readSelection(page: Page, cut: boolean): Promise<string> {
+  const text = await page
+    .evaluate(() => {
+      const el = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null
+      if (el && (el.tagName === "TEXTAREA" || (el.tagName === "INPUT" && el.type !== "password"))) {
+        const start = el.selectionStart ?? 0
+        const end = el.selectionEnd ?? 0
+        return el.value.slice(start, end)
+      }
+      return String(window.getSelection?.() || "")
+    })
+    .catch(() => "")
+  if (cut && text) await page.keyboard.press("Delete").catch(() => null)
+  return text
+}
+
+// Written as a string on purpose: tsx/esbuild wraps named inner functions in
+// __name(...), which doesn't exist in the page, so a compiled callback threw
+// and the sign-in form was never found.
+const MARK_LOGIN_FIELDS = `(() => {
+  function visible(el) {
+    var r = el.getBoundingClientRect(); var st = getComputedStyle(el);
+    return r.width > 0 && r.height > 0 && st.visibility !== "hidden" && st.display !== "none";
+  }
+  document.querySelectorAll("[data-qa-login]").forEach(function (el) { el.removeAttribute("data-qa-login"); });
+  var pw = Array.prototype.find.call(document.querySelectorAll("input[type=password]"), visible);
+  if (!pw) return null;
+  var user = null;
+  document.querySelectorAll("input").forEach(function (i) {
+    if (!visible(i) || !/^(text|email|tel|)$/.test(i.type || "text")) return;
+    if (i.compareDocumentPosition(pw) & Node.DOCUMENT_POSITION_FOLLOWING) user = i;
+  });
+  pw.setAttribute("data-qa-login", "password");
+  if (user) user.setAttribute("data-qa-login", "username");
+  return { username: user ? user.value : null, password: pw.value, hasUser: !!user };
+})()`
+
+// Finds the visible password field and the username/email field before it,
+// marks them for frame.fill, and reports what they hold. Main frame first,
+// then iframes (some sign-in pages are embedded).
+async function markLoginFields(page: Page) {
+  for (const frame of page.frames()) {
+    const found = (await frame.evaluate(MARK_LOGIN_FIELDS).catch(() => null)) as
+      | { username: string | null; password: string; hasUser: boolean }
+      | null
+    if (found) return { frame, ...found }
+  }
+  return null
+}
+
 async function applyInput(
   page: Page,
   body: any,
   sessionId?: string
-): Promise<{ success: boolean; error?: string; unknown?: boolean }> {
+): Promise<{ success: boolean; error?: string; unknown?: boolean; text?: string; login?: any }> {
   try {
     switch (body.type) {
       case "mousedown":
@@ -111,6 +172,20 @@ async function applyInput(
       case "key":
       case "keydown": {
         const key = String(body.key || "")
+        // Headless Chrome on Linux has no window key bindings, so Ctrl+A / Z /
+        // Y reach the page but select or undo nothing. Run them as editing
+        // commands instead (inputs, textareas and contenteditable).
+        const editCommand = EDIT_SHORTCUTS[key]
+        if (editCommand) {
+          await page
+            .evaluate((cmd) => {
+              const el = document.activeElement as HTMLInputElement | null
+              if (cmd === "selectAll" && el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) el.select()
+              else document.execCommand(cmd)
+            }, editCommand)
+            .catch(() => null)
+          break
+        }
         if (key) {
           if (key.length === 1 && !body.ctrlKey && !body.metaKey) {
             await page.keyboard.insertText(key).catch(() => null)
@@ -166,6 +241,24 @@ async function applyInput(
             .catch(() => null)
         }
         break
+      case "copy":
+      case "cut":
+        return { success: true, text: await readSelection(page, body.type === "cut") }
+      case "read-login": {
+        // Only reachable through the server (REST), never the viewer socket.
+        const f = await markLoginFields(page)
+        if (!f) return { success: false, error: "No sign-in form on this page (no visible password field)." }
+        return { success: true, login: { username: f.username || "", password: f.password, url: page.url() } }
+      }
+      case "fill-login": {
+        const f = await markLoginFields(page)
+        if (!f) return { success: false, error: "No sign-in form on this page (no visible password field)." }
+        // page.fill fires real input events, so React/Angular forms see the values.
+        if (f.hasUser && body.username != null) await f.frame.fill('[data-qa-login="username"]', String(body.username))
+        await f.frame.fill('[data-qa-login="password"]', String(body.password ?? ""))
+        if (body.submit) await f.frame.press('[data-qa-login="password"]', "Enter").catch(() => null)
+        return { success: true }
+      }
       default:
         return { success: false, unknown: true }
     }
@@ -691,7 +784,10 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
           const next = inputQueue.shift()
           const sess = activeSessions.get(sessionId)
           if (!sess) break
-          await applyInput(sess.page, next, sessionId).catch(() => null)
+          const result = await applyInput(sess.page, next, sessionId).catch(() => null)
+          if ((next.type === "copy" || next.type === "cut") && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "clipboard", text: result?.text || "" }))
+          }
         }
       } finally {
         inputQueue.length = 0
@@ -732,6 +828,9 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
         }
         return
       }
+      // Saved-login actions go through the server, which checks permissions
+      // and keeps passwords off the viewer's socket.
+      if (payload?.type === "read-login" || payload?.type === "fill-login") return
       if (sess) queueInput(payload)
     } catch {
       // malformed message — ignore

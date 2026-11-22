@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { AnnotationEditor } from "@/components/live-qa/annotation-editor"
 import { CreateBugModal, type SessionAttachment } from "@/components/bug-reports/create-bug-modal"
+import { SessionLogins } from "@/components/live-qa/session-logins"
 import {
   Maximize,
   Maximize2,
@@ -470,6 +471,8 @@ export default function LiveQASessionPage() {
               const msg = JSON.parse(event.data)
               if (msg.type === "url" && msg.url) {
                 setLiveUrl(msg.url)
+              } else if (msg.type === "clipboard") {
+                void writeLocalClipboard(String(msg.text || ""))
               } else if (msg.type === "quality" && msg.profile) {
                 setStreamQuality(msg.profile)
               } else if (msg.type === "file_chooser_requested") {
@@ -590,6 +593,54 @@ export default function LiveQASessionPage() {
     if (!urlEditingRef.current && liveUrl) setUrlInput(liveUrl)
   }, [liveUrl])
 
+  async function writeLocalClipboard(text: string) {
+    if (!text) {
+      setToast({ message: "Nothing selected to copy", type: "error" })
+      return
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      // Older browsers / no permission: copy through a hidden textarea.
+      const ta = document.createElement("textarea")
+      ta.value = text
+      ta.style.position = "fixed"
+      ta.style.opacity = "0"
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      ta.remove()
+      liveViewRef.current?.focus()
+    }
+    setToast({ message: `Copied ${text.length} character${text.length === 1 ? "" : "s"}`, type: "success" })
+  }
+
+  /** Copy or cut the remote page's selection into this computer's clipboard. */
+  async function requestCopy(type: "copy" | "cut") {
+    if (!sessionId || sessionStatus !== "Active") return
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type })) // the reply arrives as {type: "clipboard"}
+      return
+    }
+    try {
+      const res = await fetch(`/api/recording/${sessionId}/input`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type }),
+      })
+      const data = await res.json().catch(() => ({}))
+      await writeLocalClipboard(data.text || "")
+    } catch {}
+  }
+
+  async function reloadProjectLogins() {
+    try {
+      const res = await fetch(`/api/projects/${projectId}`)
+      if (res.ok) setProject((await res.json()).project)
+    } catch {}
+  }
+
   function sendBrowserInput(payload: Record<string, unknown>) {
     if (!sessionId || sessionStatus !== "Active") return
     const ws = wsRef.current
@@ -658,12 +709,19 @@ export default function LiveQASessionPage() {
 
   const MOUSE_BUTTONS: Record<number, string> = { 0: "left", 1: "middle", 2: "right" }
 
+  // The remote browser runs on Linux, where shortcuts use Ctrl. A tester on a
+  // Mac presses Cmd: send it as Ctrl so Cmd+A, Cmd+Z, Cmd+Shift+Z work.
+  const isMacRef = useRef(false)
+  useEffect(() => {
+    isMacRef.current = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
+  }, [])
+
   function mapKeyboardEvent(e: React.KeyboardEvent): string | null {
     if (e.key === "Control" || e.key === "Meta" || e.key === "Alt" || e.key === "Shift") return null
     const key = e.key === " " ? "Space" : e.key
     const mods: string[] = []
-    if (e.ctrlKey) mods.push("Control")
-    if (e.metaKey) mods.push("Meta")
+    if (e.ctrlKey || (e.metaKey && isMacRef.current)) mods.push("Control")
+    if (e.metaKey && !isMacRef.current) mods.push("Meta")
     if (e.altKey) mods.push("Alt")
     if (e.shiftKey && key.length > 1) mods.push("Shift")
     return [...mods, key].join("+")
@@ -1574,6 +1632,18 @@ export default function LiveQASessionPage() {
                 </Button>
               </div>
 
+              {/* Cluster: Saved logins */}
+              {sessionId && (
+                <div className="flex items-center rounded-xl border bg-muted/40 p-0.5">
+                  <SessionLogins
+                    sessionId={sessionId}
+                    logins={project?.credentials ?? []}
+                    onSaved={reloadProjectLogins}
+                    notify={(message, type) => setToast({ message, type })}
+                  />
+                </div>
+              )}
+
               {/* Cluster: Video & Step Recording */}
               <div className="flex items-center rounded-xl border bg-muted/40 p-0.5 gap-1">
                 {stepRecording ? (
@@ -1850,9 +1920,23 @@ export default function LiveQASessionPage() {
                     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Tab", "Backspace", "Space"].includes(e.key) || e.key === " ") {
                       e.preventDefault()
                     }
+                    const shortcut = (isMacRef.current ? e.metaKey : e.ctrlKey) && !e.altKey
+                    const lower = e.key.toLowerCase()
+                    if (shortcut && (lower === "c" || lower === "x")) {
+                      // Copy/cut: read the remote selection into this computer's clipboard.
+                      e.preventDefault()
+                      requestCopy(lower === "x" ? "cut" : "copy")
+                      return
+                    }
+                    // Paste: the browser's paste event below sends the text.
+                    if (shortcut && lower === "v") return
+                    // Other editing shortcuts (select all, undo, bold, find...)
+                    // belong to the remote page, not this one. Browser-level
+                    // ones (reload, new tab, close, address bar) stay local.
+                    if (shortcut && !["r", "t", "w", "n", "q", "l"].includes(lower)) e.preventDefault()
                     const key = mapKeyboardEvent(e)
                     if (key) {
-                      sendBrowserInput({ type: "keydown", key, ctrlKey: e.ctrlKey, metaKey: e.metaKey })
+                      sendBrowserInput({ type: "keydown", key, ctrlKey: e.ctrlKey || (e.metaKey && isMacRef.current), metaKey: e.metaKey && !isMacRef.current })
                     }
                   }}
                   onKeyUp={(e) => {

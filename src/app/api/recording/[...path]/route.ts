@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse, canUseProject } from "@/lib/api-guards"
+import { requireAuth, unauthorizedResponse, notFoundResponse, badRequestResponse, canUseProject, requireProjectOwner } from "@/lib/api-guards"
+import { encryptSecret, decryptSecret } from "@/lib/crypto"
+import { createAuditLog } from "@/lib/auth/audit"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { getSessionStats, saveRecordedCaseAsTestCase } from "@/lib/recording/session-store"
@@ -895,12 +897,113 @@ export async function POST(
       })
     }
 
+    // POST /api/recording/[sessionId]/save-login {roleName} — save the username
+    // and password the tester typed into the page as a project login. The
+    // worker reads the fields; the password is encrypted here and never sent
+    // to the browser. Owner/Admin only, like the project Credentials page.
+    if (matches(path, ["*", "save-login"])) {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const rec = await prisma.recordingSession.findUnique({ where: { id: sessionId }, select: { projectId: true } })
+      if (!rec) return notFoundResponse("Recording session not found")
+      const owner = await requireProjectOwner(rec.projectId)
+      if (owner.error) {
+        return NextResponse.json({ error: "Only the project's Owner or an Admin can save logins." }, { status: 403 })
+      }
+      const body = await request.json().catch(() => ({}))
+      const roleName = String(body.roleName || "").trim().slice(0, 200)
+      if (!roleName) return badRequestResponse("Give the login a name, e.g. Admin or Case worker.")
+      return withWorker(async () => {
+        const result = await recorderWorkerRequest<{ success: boolean; error?: string; login?: { username: string; password: string; url: string } }>(
+          `/sessions/${sessionId}/input`,
+          { method: "POST", body: JSON.stringify({ type: "read-login" }) }
+        )
+        if (!result.success || !result.login) return badRequestResponse(result.error || "No sign-in form on this page.")
+        const { username, password, url } = result.login
+        if (!username.trim() || !password) {
+          return badRequestResponse("Type the username and password into the page first, then save.")
+        }
+        // Keep a reusable sign-in address: sign-in pages often carry one-time
+        // links (e.g. /interaction/<token>) that expire, so drop those.
+        let loginUrl: string | null = null
+        try {
+          const u = new URL(url)
+          if (/^https?:$/.test(u.protocol)) {
+            const oneTime = u.pathname.split("/").some((seg) => /^[A-Za-z0-9_-]{16,}$/.test(seg) && /\d/.test(seg))
+            loginUrl = oneTime ? null : `${u.origin}${u.pathname}`
+          }
+        } catch {}
+        // Same username in this project: update its password instead of adding a duplicate.
+        const existing = await prisma.projectCredential.findFirst({ where: { projectId: rec.projectId, username } })
+        const enc = encryptSecret(password)
+        const data = {
+          roleName,
+          username,
+          encryptedPassword: enc.encrypted,
+          encryptionIv: enc.iv,
+          encryptionAuthTag: enc.authTag,
+          keyVersion: enc.keyVersion,
+          loginUrl,
+        }
+        const credential = existing
+          ? await prisma.projectCredential.update({ where: { id: existing.id }, data })
+          : await prisma.projectCredential.create({ data: { ...data, projectId: rec.projectId } })
+        await createAuditLog({
+          action: existing ? "CREDENTIAL_UPDATED" : "CREDENTIAL_CREATED",
+          details: `${existing ? "Updated" : "Saved"} login "${roleName}" from a Live QA session`,
+          userId: auth.session!.user.id,
+          projectId: rec.projectId,
+          credentialId: credential.id,
+        })
+        return NextResponse.json({
+          credential: { id: credential.id, roleName: credential.roleName, username: credential.username, loginUrl: credential.loginUrl },
+          updated: !!existing,
+        })
+      })
+    }
+
+    // POST /api/recording/[sessionId]/fill-login {credentialId, submit?} — fill
+    // a saved project login into the page's sign-in form. Any project member
+    // may use saved logins (they never see the password).
+    if (matches(path, ["*", "fill-login"])) {
+      const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
+      if (guard) return guard
+      const rec = await prisma.recordingSession.findUnique({ where: { id: sessionId }, select: { projectId: true } })
+      const body = await request.json().catch(() => ({}))
+      const cred = await prisma.projectCredential.findUnique({ where: { id: String(body.credentialId || "") } })
+      if (!rec || !cred || cred.projectId !== rec.projectId) return notFoundResponse("Saved login not found")
+      const password = decryptSecret({
+        encrypted: cred.encryptedPassword,
+        iv: cred.encryptionIv,
+        authTag: cred.encryptionAuthTag,
+        keyVersion: cred.keyVersion,
+      })
+      return withWorker(async () => {
+        const result = await recorderWorkerRequest<{ success: boolean; error?: string }>(`/sessions/${sessionId}/input`, {
+          method: "POST",
+          body: JSON.stringify({ type: "fill-login", username: cred.username, password, submit: !!body.submit }),
+        })
+        if (!result.success) return badRequestResponse(result.error || "Could not fill the sign-in form.")
+        await createAuditLog({
+          action: "USE_CREDENTIAL_FOR_RECORDING",
+          details: `Filled login "${cred.roleName}" in a Live QA session`,
+          userId: auth.session!.user.id,
+          projectId: rec.projectId,
+          credentialId: cred.id,
+        })
+        return NextResponse.json({ success: true })
+      })
+    }
+
     // POST /api/recording/[sessionId]/input — forward mouse/keyboard/navigation
     // events from the embedded live browser view to the controlled page.
     if (matches(path, ["*", "input"])) {
       const guard = await verifyRecordingSession(sessionId, auth.session!.user.id)
       if (guard) return guard
       const body = await request.json().catch(() => ({}))
+      if (body?.type === "read-login" || body?.type === "fill-login") {
+        return badRequestResponse("Use save-login / fill-login for saved logins.")
+      }
       return withWorker(async () => {
         const result = await recorderWorkerRequest<any>(`/sessions/${sessionId}/input`, {
           method: "POST",
