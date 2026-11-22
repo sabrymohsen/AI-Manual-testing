@@ -57,6 +57,16 @@ export async function importQuestionsFromIssues(
         origin: "analysis",
         createdById: actor.id ?? null,
         createdByName: actor.name ?? null,
+        // Already resolved in the Issues tab: its accepted criteria are the answer.
+        ...(i.resolution
+          ? {
+              status: "Answered",
+              answer: [i.resolution.title, ...i.resolution.criteria.map((c) => `• ${c}`)].join("\n").slice(0, 8000),
+              answerSource: "other",
+              answeredByName: i.resolution.byName,
+              answeredAt: new Date(i.resolution.at),
+            }
+          : {}),
       },
     })
     added++

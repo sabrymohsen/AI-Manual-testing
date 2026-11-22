@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   ChevronDown,
-  HelpCircle,
   Loader2,
   Quote,
   RefreshCw,
@@ -15,11 +14,10 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { boardSummary } from "@/components/brd/brd-to-board"
+import { BrdIssues } from "@/components/brd/brd-issues"
 import {
-  ISSUE_LABEL,
   KIND_LABEL,
   type AnalysisCandidate,
-  type AnalysisIssue,
   type AnalysisView,
 } from "@/lib/brd/analysis-types"
 
@@ -46,12 +44,16 @@ export function BrdAnalysis({
   brdId,
   projectId,
   canEdit,
+  canManage,
   onApplied,
+  onBrdUpdated,
 }: {
   brdId: string
   projectId: string
   canEdit: boolean
+  canManage?: boolean
   onApplied: () => void
+  onBrdUpdated?: () => void
 }) {
   const [analysis, setAnalysis] = useState<AnalysisView | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -65,12 +67,14 @@ export function BrdAnalysis({
   const [kindFilter, setKindFilter] = useState<string>("all")
   const seededFor = useRef<string | null>(null)
 
+  const [fileType, setFileType] = useState<string | null>(null)
   const load = useCallback(async () => {
-    const res = await fetch(`/api/brds/${brdId}/analysis`)
+    const [res, info] = await Promise.all([fetch(`/api/brds/${brdId}/analysis`), fetch(`/api/brds/${brdId}/issues`)])
     if (res.ok) {
       const d = await res.json()
       setAnalysis(d.analysis)
     }
+    if (info.ok) setFileType((await info.json()).fileType ?? null)
     setLoaded(true)
   }, [brdId])
 
@@ -257,7 +261,10 @@ export function BrdAnalysis({
                 {(
                   [
                     ["requirements", `Requirements (${candidates.length})`],
-                    ["issues", `Issues (${analysis.issues.length})`],
+                    [
+                      "issues",
+                      `Issues (${analysis.issues.filter((i) => !i.resolution).length}${analysis.issues.some((i) => i.resolution) ? ` open of ${analysis.issues.length}` : ""})`,
+                    ],
                   ] as const
                 ).map(([t, label]) => (
                   <button
@@ -355,16 +362,20 @@ export function BrdAnalysis({
                 </>
               )}
 
-              {tab === "issues" &&
-                (analysis.issues.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">No issues found.</p>
-                ) : (
-                  <div className="max-h-[560px] space-y-1.5 overflow-y-auto pr-1">
-                    {analysis.issues.map((i) => (
-                      <IssueRow key={i.id} i={i} />
-                    ))}
-                  </div>
-                ))}
+              {tab === "issues" && (
+                <BrdIssues
+                  brdId={brdId}
+                  projectId={projectId}
+                  analysis={analysis}
+                  canEdit={canManage ?? canEdit}
+                  fileType={fileType}
+                  onBrdUpdated={onBrdUpdated}
+                  onChanged={async () => {
+                    await load()
+                    onApplied()
+                  }}
+                />
+              )}
             </>
           )}
         </div>
@@ -482,47 +493,6 @@ function CandidateRow({
             </blockquote>
           )}
         </div>
-      )}
-    </div>
-  )
-}
-
-const SEVERITY = {
-  high: "bg-red-500/10 text-red-700 dark:text-red-400",
-  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  low: "bg-muted text-muted-foreground",
-}
-
-function IssueRow({ i }: { i: AnalysisIssue }) {
-  return (
-    <div className="space-y-1.5 rounded-md border p-2.5 text-xs">
-      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-        <span className={cn("rounded px-1.5 py-0.5 font-medium", SEVERITY[i.severity])}>
-          {ISSUE_LABEL[i.kind].en} · {i.severity}
-        </span>
-        {i.relatedKeys.map((k) => (
-          <span key={k} className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
-            {k}
-          </span>
-        ))}
-        {i.section && (
-          <span dir="auto" className="truncate text-muted-foreground">
-            {i.section}
-          </span>
-        )}
-      </div>
-      <p dir="auto" className="font-medium">
-        {i.text}
-      </p>
-      {i.quote && (
-        <blockquote dir="auto" className="border-s-2 border-amber-500/40 ps-2 italic text-muted-foreground">
-          {i.quote}
-        </blockquote>
-      )}
-      {i.suggestion && (
-        <p dir="auto" className="flex gap-1.5 text-muted-foreground">
-          <HelpCircle className="mt-0.5 h-3 w-3 shrink-0" /> {i.suggestion}
-        </p>
       )}
     </div>
   )

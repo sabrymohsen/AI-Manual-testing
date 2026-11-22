@@ -131,12 +131,18 @@ export function BrdRequirements({
   canEdit,
   initialFilter,
   onOpenQuestions,
+  canManage,
+  onBrdUpdated,
 }: {
   brdId: string
   projectId: string
   canEdit: boolean
   initialFilter?: Filter
   onOpenQuestions?: () => void
+  /** Can change the BRD itself (resolve issues into it). */
+  canManage?: boolean
+  /** The BRD got a new version (issue criteria written in). */
+  onBrdUpdated?: () => void
 }) {
   const [reqs, setReqs] = useState<Requirement[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -257,7 +263,14 @@ export function BrdRequirements({
 
   return (
     <div className="space-y-4">
-      <BrdAnalysis brdId={brdId} projectId={projectId} canEdit={canEdit} onApplied={load} />
+      <BrdAnalysis
+        brdId={brdId}
+        projectId={projectId}
+        canEdit={canEdit}
+        canManage={canManage ?? canEdit}
+        onApplied={load}
+        onBrdUpdated={onBrdUpdated}
+      />
 
       {gate && gate.state !== "ready" && (
         <div

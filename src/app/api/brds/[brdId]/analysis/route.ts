@@ -3,6 +3,7 @@ import { z } from "zod"
 import { prisma } from "@/lib/db"
 import { requireBrdAccess, requireBrdTestAccess } from "@/lib/brd/server"
 import { startBrdAnalysis, matchExisting, STALE_AFTER_MS } from "@/lib/brd/analyze"
+import { CRITERIA_VERSION_PREFIX } from "@/lib/brd/issue-resolution"
 import type { AnalysisCandidate, AnalysisIssue, AnalysisView } from "@/lib/brd/analysis-types"
 
 export const dynamic = "force-dynamic"
@@ -33,10 +34,16 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
     where: { brdId: params.brdId },
     select: { id: true, key: true, title: true, description: true, sourceQuote: true },
   })
-  const current = await prisma.brdVersion.findFirst({
-    where: { id: access.brd!.currentVersionId ?? "" },
-    select: { versionNumber: true },
-  })
+  // Newer versions that only added reviewed acceptance criteria don't make the analysis stale.
+  const newer = a.versionNumber
+    ? await prisma.brdVersion.count({
+        where: {
+          brdId: params.brdId,
+          versionNumber: { gt: a.versionNumber },
+          OR: [{ changeSummary: null }, { NOT: { changeSummary: { startsWith: CRITERIA_VERSION_PREFIX } } }],
+        },
+      })
+    : 0
 
   const view: AnalysisView = {
     id: a.id,
@@ -55,7 +62,7 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
     createdByName: a.createdByName,
     createdAt: a.createdAt.toISOString(),
     finishedAt: a.finishedAt?.toISOString() ?? null,
-    outdated: !!(a.versionNumber && current && current.versionNumber !== a.versionNumber),
+    outdated: newer > 0,
   }
   return NextResponse.json({ analysis: view })
 }

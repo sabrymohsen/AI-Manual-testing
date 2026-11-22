@@ -261,6 +261,8 @@ export default function BrdDetailPage() {
             brdId={brd.id}
             projectId={projectId}
             canEdit={canTest}
+            canManage={canManage && !isFinal}
+            onBrdUpdated={load}
             onOpenQuestions={() => setTab("questions")}
             initialFilter={searchParams.get("tab") === "coverage" && searchParams.get("filter") === "review" ? "review" : undefined}
           />

@@ -84,6 +84,37 @@ export interface AnalysisIssue {
   verified: boolean
   /** Keys of the candidates this concerns. */
   relatedKeys: string[]
+  /** Proposed acceptance criteria that would resolve the issue (AI, or the suggestion when AI is off). */
+  draft?: IssueDraft
+  /** Set once someone accepted or edited the criteria: they became a user story. */
+  resolution?: IssueResolution
+}
+
+export interface IssueDraft {
+  title: string
+  criteria: string[]
+  by: "ai" | "suggestion"
+  at: string
+}
+
+export interface IssueResolution {
+  /** accepted = the draft as it was; edited = changed before saving */
+  status: "accepted" | "edited"
+  title: string
+  criteria: string[]
+  requirementId: string | null
+  requirementKey: string | null
+  /** Board key of the story, e.g. SHOD-12 */
+  storyKey: string | null
+  taskId: string | null
+  byName: string | null
+  at: string
+  /** BRD version the criteria were written into; null = not in the document yet. */
+  brdVersion: number | null
+  /** Written next to the quoted text (true) or at the end of the document (false). */
+  nearQuote?: boolean
+  /** The criteria were added to a requirement that already existed (not a new story). */
+  appended?: boolean
 }
 
 export interface AnalysisView {
