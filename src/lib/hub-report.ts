@@ -212,3 +212,61 @@ export function summarize(results: HubTestResult[]): HubRunSummary {
     flaky: results.filter((r) => r.status === "flaky").length,
   }
 }
+
+// ── JUnit XML (pytest --junitxml, and most other runners) ──────────────────
+
+const xmlText = (s: string) =>
+  s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&amp;/g, "&")
+
+function xmlAttrs(s: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const m of s.matchAll(/([\w:-]+)\s*=\s*"([^"]*)"/g)) out[m[1]] = xmlText(m[2])
+  return out
+}
+
+/**
+ * Parse a JUnit XML report into the hub's per-test results. A pytest
+ * Playwright project on a tester's computer reports this way.
+ */
+export function parseJunitReport(xml: string): HubTestResult[] {
+  const out: HubTestResult[] = []
+  if (typeof xml !== "string") return out
+  for (const m of xml.matchAll(/<testcase\b([^>]*?)(?:\/>|>([\s\S]*?)<\/testcase>)/g)) {
+    const a = xmlAttrs(m[1])
+    const body = m[2] || ""
+    const fail = body.match(/<(failure|error)\b([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/)
+    const skip = body.match(/<skipped\b([^>]*?)(?:\/>|>([\s\S]*?)<\/skipped>)/)
+    // pytest: classname "tests.smoke.test_x" (+ ".TestClass"); show the class, not the module path.
+    const cls = (a.classname || "").split(".").filter((p) => /^[A-Z]/.test(p))
+    const file = a.file || (a.classname ? a.classname.split(".").filter((p) => !/^[A-Z]/.test(p)).join("/") + ".py" : "")
+    const r: HubTestResult = {
+      title: [...cls, a.name || "test"].join(" > "),
+      file,
+      line: a.line ? Number(a.line) + 1 : undefined,
+      status: fail ? "failed" : skip ? "skipped" : "passed",
+      durationMs: Math.round((Number(a.time) || 0) * 1000),
+      retries: 0,
+    }
+    if (fail) {
+      const fa = xmlAttrs(fail[2] || "")
+      const detail = stripAnsi(xmlText(fail[3] || "")).trim()
+      r.error = {
+        message: (fa.message || detail.split("\n").find((l) => l.trim()) || (fail[1] === "error" ? "Error" : "Failed")).slice(0, 2000),
+        snippet: detail ? detail.slice(-4000) : undefined,
+      }
+    } else if (skip) {
+      const sa = xmlAttrs(skip[1] || "")
+      if (sa.message) r.error = { message: sa.message.slice(0, 1000) }
+    }
+    out.push(r)
+  }
+  return out
+}

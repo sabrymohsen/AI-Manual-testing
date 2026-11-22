@@ -15,7 +15,10 @@ interface PwApi {
   pick(): Promise<null | { error: string } | LocalProject>
   list(): Promise<LocalProject[]>
   unlink(dir: string): Promise<boolean>
-  run(dir: string, opts?: { headed?: boolean; grep?: string }): Promise<{ exitCode: number; report: any; log: string; durationMs: number }>
+  run(
+    dir: string,
+    opts?: { headed?: boolean; grep?: string; marker?: string }
+  ): Promise<{ exitCode: number; report: any; format?: "playwright" | "junit"; log: string; durationMs: number }>
   stop(dir: string): Promise<boolean>
   onLog(cb: (p: { dir: string; text: string }) => void): () => void
 }
@@ -23,6 +26,8 @@ interface PwApi {
 export interface LocalProject {
   path: string
   name: string
+  /** "pytest" = Python pytest-playwright project; "node" (or missing, older desktop app) = JavaScript. */
+  kind?: "node" | "pytest"
   config: string | null
   hasPlaywright: boolean
   installed: boolean
@@ -91,6 +96,8 @@ export function LocalProjectPanel({
   const [running, setRunning] = useState(false)
   const [headed, setHeaded] = useState(false)
   const [grep, setGrep] = useState("")
+  const [marker, setMarker] = useState("")
+  const isPy = project.kind === "pytest"
   const [log, setLog] = useState("")
   const logRef = useRef<HTMLPreElement>(null)
 
@@ -109,11 +116,11 @@ export function LocalProjectPanel({
     setRunning(true)
     setLog("")
     try {
-      const r = await pw.run(project.path, { headed, grep })
+      const r = await pw.run(project.path, { headed, grep, ...(isPy ? { marker } : {}) })
       const res = await fetch("/api/hub/local-runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId, name: project.name, path: project.path, report: r.report, log: r.log, durationMs: r.durationMs, exitCode: r.exitCode }),
+        body: JSON.stringify({ projectId, name: project.name, path: project.path, report: r.report, format: r.format, log: r.log, durationMs: r.durationMs, exitCode: r.exitCode }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(d.error || "Couldn't share the results")
@@ -140,14 +147,21 @@ export function LocalProjectPanel({
             {project.path}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Runs here with the project&apos;s own setup ({project.config || "package.json"}). Results are shared in this Automation Hub; the
+            Runs here with the project&apos;s own setup ({isPy ? `pytest, ${project.config}` : project.config || "package.json"}). Results are shared in this Automation Hub; the
             screenshots, traces and videos stay on this computer.
           </p>
-          {!project.installed && (
-            <p className="mt-1 text-xs text-amber-700">
-              This project&apos;s packages aren&apos;t installed yet — run <code className="rounded bg-muted px-1">npm install</code> in it first.
-            </p>
-          )}
+          {!project.installed &&
+            (isPy ? (
+              <p className="mt-1 text-xs text-amber-700">
+                No virtualenv found (.venv) — the system Python will be used. Create one with{" "}
+                <code className="rounded bg-muted px-1">python3 -m venv .venv</code> and{" "}
+                <code className="rounded bg-muted px-1">pip install -r requirements.txt</code> if the run can&apos;t find pytest.
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-amber-700">
+                This project&apos;s packages aren&apos;t installed yet — run <code className="rounded bg-muted px-1">npm install</code> in it first.
+              </p>
+            ))}
         </div>
         <Button size="sm" variant="ghost" onClick={async () => (await pw?.unlink(project.path), onUnlinked())} title="Stop listing this folder here">
           <Unlink className="h-4 w-4" />
@@ -169,9 +183,18 @@ export function LocalProjectPanel({
         <input
           value={grep}
           onChange={(e) => setGrep(e.target.value)}
-          placeholder="Only tests matching… (optional)"
+          placeholder={isPy ? "Only tests matching (pytest -k)… optional" : "Only tests matching… (optional)"}
           className="h-8 min-w-[200px] flex-1 rounded-md border bg-card px-2 text-xs"
         />
+        {isPy && (
+          <input
+            value={marker}
+            onChange={(e) => setMarker(e.target.value)}
+            placeholder="Marker (pytest -m), e.g. smoke"
+            title="Runs only tests with this marker, e.g. smoke, regression, or emergency_housing and not wip"
+            className="h-8 min-w-[180px] rounded-md border bg-card px-2 text-xs"
+          />
+        )}
         {running && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
       </div>
       {(running || log) && (

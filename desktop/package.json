@@ -1,7 +1,7 @@
 {
   "name": "qa-engine-desktop",
   "productName": "QA Engine",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "QA Engine desktop app for macOS and Windows",
   "author": "QA Engine",
   "private": true,

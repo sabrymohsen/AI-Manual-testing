@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireHubProject } from "@/lib/hub-access"
-import { parsePlaywrightReport, summarize } from "@/lib/hub-report"
+import { parseJunitReport, parsePlaywrightReport, summarize } from "@/lib/hub-report"
 
 export const dynamic = "force-dynamic"
 
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic"
 const LOCAL_FOLDER = "On my computer"
 
 /**
- * POST /api/hub/local-runs  { projectId, name, path, report, log, durationMs }
+ * POST /api/hub/local-runs  { projectId, name, path, report, format?, log, durationMs }
+ * format "junit" = report is JUnit XML text (pytest projects), else Playwright's JSON.
  * Results of a Playwright project the desktop app ran on the tester's own
  * computer, shared in the Automation Hub. The project shows as a "local" test
  * (it can't run on the server); each upload is a run in the Runs tab.
@@ -29,7 +30,8 @@ export async function POST(request: Request) {
   const where = typeof body.path === "string" ? body.path.slice(0, 500) : ""
 
   // Attachment paths point at the tester's disk: keep the results, drop the paths.
-  const results = body.report ? parsePlaywrightReport(body.report).map(({ screenshot, trace, video, ...r }) => r) : []
+  const parsed = !body.report ? [] : body.format === "junit" ? parseJunitReport(String(body.report)) : parsePlaywrightReport(body.report)
+  const results = parsed.map(({ screenshot, trace, video, ...r }) => r)
   const sum = summarize(results)
   const failed = sum.failed > 0 || (!results.length && body.exitCode !== 0)
 
@@ -43,7 +45,7 @@ export async function POST(request: Request) {
         folder: LOCAL_FOLDER,
         projectId: body.projectId,
         tags: ["local"],
-        code: `// "${name}" is a Playwright project on a tester's computer${where ? ` (${where})` : ""}.\n// It runs there from the QA Engine desktop app; its results are shared here.\n`,
+        code: `${body.format === "junit" ? "#" : "//"} "${name}" is a ${body.format === "junit" ? "pytest " : ""}Playwright project on a tester's computer${where ? ` (${where})` : ""}.\n${body.format === "junit" ? "#" : "//"} It runs there from the QA Engine desktop app; its results are shared here.\n`,
       },
     })
   }
