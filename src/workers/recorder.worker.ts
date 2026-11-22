@@ -209,13 +209,35 @@ async function applyInput(
 // testers saw while scrolling. The defaults now target ~10 Mbps.
 const STREAM_QUALITY = Math.min(100, Math.max(20, Number(process.env.RECORDER_STREAM_QUALITY) || 60))
 
-// Send every Nth captured frame. 2 halves the rate during scroll (~11 fps) for
-// half the bandwidth; idle pages are unaffected because they produce almost no
-// frames. RECORDER_STREAM_EVERY_NTH_FRAME=1 restores full rate on a fast link.
+// Send every Nth captured frame. Viewers that acknowledge frames (see
+// pushFrame) get flow control that drops stale frames to fit their link, so the
+// full rate costs nothing on a slow connection and is smooth on a fast one.
+// RECORDER_STREAM_EVERY_NTH_FRAME=2 halves the capture rate if CPU is tight.
 const STREAM_EVERY_NTH_FRAME = Math.min(
   10,
-  Math.max(1, Number(process.env.RECORDER_STREAM_EVERY_NTH_FRAME) || 2)
+  Math.max(1, Number(process.env.RECORDER_STREAM_EVERY_NTH_FRAME) || 1)
 )
+
+// Flow control. Behind a reverse proxy (Caddy on production) the worker's own
+// socket buffer never fills — the proxy takes every frame at once and the
+// backlog builds between the proxy and the tester, where `bufferedAmount`
+// can't see it. Measured on production: a ~5 Mbps link to the tester vs ~10
+// Mbps of frames while scrolling, so the view fell seconds behind. Viewers now
+// acknowledge each frame they finish drawing; at most FRAMES_IN_FLIGHT are
+// unacknowledged per viewer and only the NEWEST waiting frame is kept, so
+// latency stays at about one frame whatever the link speed.
+const FRAMES_IN_FLIGHT = 2
+// A viewer that stops acknowledging (tab frozen, ack lost) is not starved forever.
+const ACK_TIMEOUT_MS = 1500
+
+// When the page stops changing, send one frame at full device resolution, so
+// text is crisp while the tester reads. Motion frames stay small for speed;
+// the sharp frame replaces the last blurry one. WebP: about half the bytes of
+// a JPEG of the same quality (measured at 2x: login page 30 KB vs 80 KB, a
+// dense table 285 KB vs 532 KB) for ~170 ms more encoding, which a still
+// frame can afford.
+const STILL_DELAY_MS = 250
+const STILL_QUALITY = Math.min(100, Math.max(40, Number(process.env.RECORDER_STILL_QUALITY) || 80))
 
 // Sessions launch with --force-device-scale-factor=2, so a 1400x800 viewport
 // produces 2800x1600 frames — roughly 4x the pixels and 3-4x the bytes of what
@@ -305,6 +327,19 @@ interface SessionStream {
   // it to map mouse coordinates back to CSS pixels.
   dsf: number
   profile: StreamProfileName
+  /** Per-viewer flow control, only for viewers that said they acknowledge frames. */
+  flow?: Map<WebSocket, ViewerFlow>
+  stillTimer?: ReturnType<typeof setTimeout> | null
+  /** Bumped by every motion frame; a sharp capture that started earlier is stale. */
+  frameSeq?: number
+  /** Last screencast frame (base64), to skip byte-identical repeats. */
+  lastCast?: string
+}
+
+interface ViewerFlow {
+  inFlight: number
+  waiting: Buffer | null
+  lastSentAt: number
 }
 
 const sessionStreams = new Map<string, SessionStream>()
@@ -316,10 +351,84 @@ function broadcastJson(stream: SessionStream, payload: unknown) {
   }
 }
 
+/**
+ * Send a frame to every viewer. Acknowledging viewers get at most
+ * FRAMES_IN_FLIGHT unacknowledged frames; beyond that the frame waits, and a
+ * newer frame replaces it (stale frames are never queued). Older viewers that
+ * don't acknowledge keep the previous socket-buffer check.
+ */
+function pushFrame(stream: SessionStream, buf: Buffer) {
+  const now = Date.now()
+  for (const ws of stream.viewers) {
+    if (ws.readyState !== WebSocket.OPEN) continue
+    const flow = stream.flow?.get(ws)
+    if (!flow) {
+      if (ws.bufferedAmount < buf.length * 2) ws.send(buf)
+      continue
+    }
+    if (flow.inFlight >= FRAMES_IN_FLIGHT && now - flow.lastSentAt > ACK_TIMEOUT_MS) flow.inFlight = 0
+    if (flow.inFlight < FRAMES_IN_FLIGHT) {
+      flow.inFlight++
+      flow.lastSentAt = now
+      flow.waiting = null
+      ws.send(buf)
+    } else {
+      flow.waiting = buf
+    }
+  }
+}
+
+/** A viewer finished drawing a frame: send the newest waiting one, if any. */
+function onFrameAck(stream: SessionStream, ws: WebSocket) {
+  const flow = stream.flow?.get(ws)
+  if (!flow) return
+  flow.inFlight = Math.max(0, flow.inFlight - 1)
+  if (flow.waiting && ws.readyState === WebSocket.OPEN) {
+    const buf = flow.waiting
+    flow.waiting = null
+    flow.inFlight++
+    flow.lastSentAt = Date.now()
+    ws.send(buf)
+  }
+}
+
+/**
+ * After STILL_DELAY_MS without a new frame, capture one at full device
+ * resolution and high quality. Skipped for the "sharp" profile, whose motion
+ * frames are already full quality.
+ */
+function armStillFrame(sessionId: string, stream: SessionStream, page: Page, force = false) {
+  if (stream.stillTimer) clearTimeout(stream.stillTimer)
+  stream.stillTimer = null
+  if (stream.profile === "sharp" && !force) return
+  const seq = (stream.frameSeq = (stream.frameSeq || 0) + 1)
+  stream.stillTimer = setTimeout(async () => {
+    stream.stillTimer = null
+    const cur = sessionStreams.get(sessionId)
+    if (cur !== stream || !stream.cdp || stream.viewers.size === 0) return
+    try {
+      const shot: any = await stream.cdp.send("Page.captureScreenshot", {
+        format: "webp",
+        quality: STILL_QUALITY,
+        // Device pixels (2x): crisp text on Retina screens.
+        captureBeyondViewport: false,
+        optimizeForSpeed: true,
+      } as any)
+      // The page moved while we captured: the motion frame is newer, keep it.
+      if (stream.frameSeq !== seq || sessionStreams.get(sessionId) !== stream) return
+      pushFrame(stream, Buffer.from(shot.data, "base64"))
+    } catch {
+      // navigating or closing — the next motion frame re-arms
+    }
+  }, force ? 0 : STILL_DELAY_MS)
+}
+
 function teardownStream(sessionId: string) {
   const stream = sessionStreams.get(sessionId)
   if (!stream) return
   sessionStreams.delete(sessionId)
+  if (stream.stillTimer) clearTimeout(stream.stillTimer)
+  stream.stillTimer = null
   if (stream.timer) {
     clearInterval(stream.timer)
     stream.timer = null
@@ -371,11 +480,7 @@ async function ensureGenericScreencast(sessionId: string, page: Page): Promise<v
           // viewport size, so either works.
           scale: prof.deviceScale ? "device" : "css",
         })
-        for (const ws of currentStream.viewers) {
-          if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
-            ws.send(buf)
-          }
-        }
+        pushFrame(currentStream, buf)
       } catch {
         // page closed or navigating
       } finally {
@@ -410,12 +515,17 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
     cdp.on("Page.screencastFrame", (ev: any) => {
       const current = sessionStreams.get(sessionId)
       if (!current) return
-      const buf = Buffer.from(ev.data, "base64")
-      for (const ws of current.viewers) {
-        if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < buf.length * 2) {
-          ws.send(buf)
-        }
+      // Chrome repeats the last frame unchanged (e.g. right after the sharp
+      // capture below). Re-sending it would replace the sharp frame with a
+      // blurry copy and restart the cycle, so identical frames are skipped.
+      if (ev.data === current.lastCast) {
+        cdp.send("Page.screencastFrameAck", { sessionId: ev.sessionId }).catch(() => {})
+        return
       }
+      current.lastCast = ev.data
+      const buf = Buffer.from(ev.data, "base64")
+      pushFrame(current, buf)
+      armStillFrame(sessionId, current, page)
       const deadline = Date.now() + 400
       const ackWhenDrained = () => {
         const cur = sessionStreams.get(sessionId)
@@ -488,6 +598,89 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   }
   stream.viewers.add(ws)
 
+  // Inputs run one at a time, in order. A Playwright wheel step takes ~70 ms
+  // but the page sends one per animation frame, so they used to pile up and
+  // the page kept scrolling for seconds after the tester stopped. While a step
+  // runs, consecutive wheel steps merge (deltas add up) and consecutive mouse
+  // moves keep only the latest position; clicks and keys are never merged or
+  // reordered.
+  const inputQueue: any[] = []
+  let inputBusy = false
+  const queueInput = (payload: any) => {
+    const last = inputQueue[inputQueue.length - 1]
+    if (last && payload?.type === "wheel" && last.type === "wheel") {
+      last.deltaX = (last.deltaX || 0) + (payload.deltaX || 0)
+      last.deltaY = (last.deltaY || 0) + (payload.deltaY || 0)
+      last.x = payload.x
+      last.y = payload.y
+    } else if (last && payload?.type === "mousemove" && last.type === "mousemove") {
+      inputQueue[inputQueue.length - 1] = payload
+    } else {
+      inputQueue.push({ ...payload })
+    }
+    if (inputBusy) return
+    inputBusy = true
+    void (async () => {
+      try {
+        while (inputQueue.length) {
+          const next = inputQueue.shift()
+          const sess = activeSessions.get(sessionId)
+          if (!sess) break
+          await applyInput(sess.page, next, sessionId).catch(() => null)
+        }
+      } finally {
+        inputQueue.length = 0
+        inputBusy = false
+      }
+    })()
+  }
+
+  // Listen before the screencast starts: the client sends its hello, quality
+  // and first resize as soon as the socket opens, and messages that arrive
+  // with no listener are lost.
+  ws.on("message", async (data, isBinary) => {
+    if (isBinary) return
+    try {
+      const payload = JSON.parse(data.toString())
+      const sess = activeSessions.get(sessionId)
+      if (payload?.type === "ack") {
+        const cur = sessionStreams.get(sessionId)
+        if (cur) onFrameAck(cur, ws)
+        return
+      }
+      if (payload?.type === "hello") {
+        // The viewer acknowledges every frame it draws: turn on flow control.
+        const cur = sessionStreams.get(sessionId)
+        if (cur && payload.acks === true) {
+          if (!cur.flow) cur.flow = new Map()
+          cur.flow.set(ws, { inFlight: 0, waiting: null, lastSentAt: 0 })
+        }
+        return
+      }
+      if (payload?.type === "quality") {
+        // Viewer picked a stream quality (Sharp / Balanced / Fast).
+        const cur = sessionStreams.get(sessionId)
+        if (cur && sess && isProfileName(payload.profile) && cur.profile !== payload.profile) {
+          cur.profile = payload.profile
+          await restreamAtViewport(sessionId, sess.page)
+          broadcastJson(cur, { type: "quality", profile: cur.profile })
+        }
+        return
+      }
+      if (sess) queueInput(payload)
+    } catch {
+      // malformed message — ignore
+    }
+  })
+
+  ws.on("close", () => {
+    const current = sessionStreams.get(sessionId)
+    if (!current) return
+    current.viewers.delete(ws)
+    current.flow?.delete(ws)
+    if (current.viewers.size === 0) teardownStream(sessionId)
+  })
+
   try {
     if (activeSess.browserType === "Chromium") {
       await ensureScreencast(sessionId, activeSess.page)
@@ -503,6 +696,10 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
     return
   }
 
+  // A viewer joining a running stream (reconnect, second tab) would otherwise
+  // see nothing until the page changes: send it a sharp frame now.
+  if (stream.cdp) armStillFrame(sessionId, stream, activeSess.page, true)
+
   ws.send(JSON.stringify({ type: "mode", mode: "streaming" }))
   ws.send(JSON.stringify({ type: "dsf", dsf: stream.dsf || 1 }))
   ws.send(JSON.stringify({ type: "quality", profile: stream.profile }))
@@ -513,33 +710,6 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   if (vp) ws.send(JSON.stringify({ type: "viewport", width: vp.width, height: vp.height }))
   ws.send(JSON.stringify({ type: "url", url: activeSess.page.url() }))
 
-  ws.on("message", async (data, isBinary) => {
-    if (isBinary) return
-    try {
-      const payload = JSON.parse(data.toString())
-      const sess = activeSessions.get(sessionId)
-      if (payload?.type === "quality") {
-        // Viewer picked a stream quality (Sharp / Balanced / Fast).
-        const cur = sessionStreams.get(sessionId)
-        if (cur && sess && isProfileName(payload.profile) && cur.profile !== payload.profile) {
-          cur.profile = payload.profile
-          await restreamAtViewport(sessionId, sess.page)
-          broadcastJson(cur, { type: "quality", profile: cur.profile })
-        }
-        return
-      }
-      if (sess) await applyInput(sess.page, payload, sessionId)
-    } catch {
-      // malformed message — ignore
-    }
-  })
-
-  ws.on("close", () => {
-    const current = sessionStreams.get(sessionId)
-    if (!current) return
-    current.viewers.delete(ws)
-    if (current.viewers.size === 0) teardownStream(sessionId)
-  })
 }
 
 const server = http.createServer(async (req, res) => {

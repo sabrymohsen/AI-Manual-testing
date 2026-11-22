@@ -234,6 +234,18 @@ export default function LiveQASessionPage() {
   // The remote viewport size this client last asked for (CSS px). Pointer
   // coordinates are scaled into it, so frame resolution never affects clicks.
   const remoteViewportRef = useRef<{ width: number; height: number } | null>(null)
+  // Same size as state, for the image's fixed display size.
+  const [viewSize, setViewSize] = useState<{ width: number; height: number } | null>(null)
+  // A streamed frame is being drawn; tell the worker when it's done (flow control).
+  const frameAckPendingRef = useRef(false)
+  const ackStreamFrame = () => {
+    if (!frameAckPendingRef.current) return
+    frameAckPendingRef.current = false
+    const ws = wsRef.current
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try { ws.send('{"type":"ack"}') } catch {}
+    }
+  }
   // True while a streamed frame is decoding; incoming frames are dropped until
   // it clears so a slow client sheds rate instead of accumulating lag.
   const decodingFrameRef = useRef(false)
@@ -353,9 +365,19 @@ export default function LiveQASessionPage() {
     if (pageUrl && pageUrl !== liveUrl) {
       setLiveUrl(pageUrl)
     }
-    if (recordingRef.current && img && img.naturalWidth) {
-      drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
-    }
+    if (recordingRef.current && img && img.naturalWidth) paintRecordingFrame(img)
+  }
+
+  /**
+   * Draw a frame into the recording canvas. The canvas keeps the size it had
+   * when recording started — frames come in two resolutions (motion and sharp)
+   * and a video must not change size mid-recording.
+   */
+  const paintRecordingFrame = (img: HTMLImageElement) => {
+    const canvas = liveCanvasRef.current
+    if (!canvas || !img.naturalWidth) return
+    const ctx = canvas.getContext("2d")
+    if (ctx) ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
   }
 
   const drawToCanvas = (width: number, height: number, draw: (ctx: CanvasRenderingContext2D) => void) => {
@@ -406,7 +428,11 @@ export default function LiveQASessionPage() {
         wsRef.current = ws
 
         ws.onopen = () => {
+          retries = 0
           if (isMounted) setStreamMode("streaming")
+          // This viewer acknowledges every frame it draws, so the worker sends
+          // only what the connection can carry (no growing lag on slow links).
+          ws.send('{"type":"hello","acks":true}')
           const pref = preferredQualityRef.current
           if (pref === "sharp" || pref === "balanced" || pref === "fast") {
             ws.send(JSON.stringify({ type: "quality", profile: pref }))
@@ -421,13 +447,19 @@ export default function LiveQASessionPage() {
             // client that can't keep up turns a bandwidth spike into unbounded,
             // ever-growing latency — the view drifts further behind the browser
             // the longer you scroll. Skipping keeps it live at a lower rate.
-            if (decodingFrameRef.current || document.hidden) return
+            if (decodingFrameRef.current || document.hidden) {
+              // Dropped here, but still received: acknowledge it right away.
+              try { ws.send('{"type":"ack"}') } catch {}
+              return
+            }
             decodingFrameRef.current = true
             const url = URL.createObjectURL(event.data)
             if (imgRef.current) {
+              frameAckPendingRef.current = true
               imgRef.current.src = url
             } else {
               decodingFrameRef.current = false
+              try { ws.send('{"type":"ack"}') } catch {}
             }
             if (prevBlobUrl) URL.revokeObjectURL(prevBlobUrl)
             prevBlobUrl = url
@@ -452,11 +484,33 @@ export default function LiveQASessionPage() {
         }
 
         ws.onclose = () => {
-          if (isMounted) setStreamMode("polling")
+          if (wsRef.current === ws) wsRef.current = null
+          frameAckPendingRef.current = false
+          decodingFrameRef.current = false
+          if (!isMounted) return
+          setStreamMode("polling")
+          scheduleReconnect()
         }
       } catch {
-        if (isMounted) setStreamMode("polling")
+        if (!isMounted) return
+        setStreamMode("polling")
+        scheduleReconnect()
       }
+    }
+
+    // A dropped connection (Wi-Fi blip, proxy restart) used to leave the view
+    // on slow polling until the page was reloaded. Reconnect with backoff;
+    // polling covers the gap.
+    let retries = 0
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+    function scheduleReconnect() {
+      if (reconnectTimer || !isMounted) return
+      const delay = Math.min(10_000, 1000 * 2 ** retries)
+      retries++
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null
+        if (isMounted) startStream()
+      }, delay)
     }
 
     startStream()
@@ -470,6 +524,7 @@ export default function LiveQASessionPage() {
 
     return () => {
       isMounted = false
+      if (reconnectTimer) clearTimeout(reconnectTimer)
       if (framePollerRef.current) clearInterval(framePollerRef.current)
       if (prevBlobUrl) URL.revokeObjectURL(prevBlobUrl)
       if (wsRef.current) {
@@ -675,6 +730,7 @@ export default function LiveQASessionPage() {
       const width = Math.round(rect.width / zoom)
       const height = Math.round(rect.height / zoom)
       remoteViewportRef.current = { width, height }
+      setViewSize({ width, height })
       sendBrowserInput({ type: "resize", width, height })
     }
 
@@ -926,7 +982,12 @@ export default function LiveQASessionPage() {
     try {
       const img = imgRef.current
       if (img && img.naturalWidth) {
-        drawToCanvas(img.naturalWidth, img.naturalHeight, (ctx) => ctx.drawImage(img, 0, 0))
+        // Fixed video size for the whole recording: the remote viewport at 2x
+        // (sharp enough to read), or the current frame's size.
+        const vp = remoteViewportRef.current
+        const w = vp ? vp.width * 2 : img.naturalWidth
+        const h = vp ? vp.height * 2 : img.naturalHeight
+        drawToCanvas(w - (w % 2), h - (h % 2), (ctx) => ctx.drawImage(img, 0, 0, w - (w % 2), h - (h % 2)))
       }
       recordingRef.current = true
 
@@ -1818,16 +1879,22 @@ export default function LiveQASessionPage() {
                       decodingFrameRef.current = false
                       hasFrameRef.current = true
                       setHasFrame(true)
+                      ackStreamFrame()
+                      if (recordingRef.current && imgRef.current) paintRecordingFrame(imgRef.current)
                     }}
                     onError={() => {
                       decodingFrameRef.current = false
+                      ackStreamFrame()
                     }}
                     className="max-w-full max-h-full object-contain pointer-events-none select-none"
-                    style={{
-                      transform: `scale(${zoom})`,
-                      transformOrigin: "center center",
-                      imageRendering: "-webkit-optimize-contrast"
-                    }}
+                    // A fixed display size: motion frames (1x) and the sharp frame
+                    // sent when the page is still (2x) line up exactly, and the
+                    // browser scales them smoothly (no jagged text).
+                    style={
+                      viewSize
+                        ? { width: viewSize.width * zoom, height: viewSize.height * zoom }
+                        : { transform: `scale(${zoom})`, transformOrigin: "center center" }
+                    }
                   />
 
                   {!hasFrame && (
