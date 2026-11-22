@@ -319,7 +319,9 @@ const STREAM_EVERY_NTH_FRAME = Math.min(
 // acknowledge each frame they finish drawing; at most FRAMES_IN_FLIGHT are
 // unacknowledged per viewer and only the NEWEST waiting frame is kept, so
 // latency stays at about one frame whatever the link speed.
-const FRAMES_IN_FLIGHT = 2
+// 3 (was 2): on a 0.6 MB/s, 100 ms link scrolling went from 6-7 to 9-10
+// frames/s at 2x, for ~20 ms more delay.
+const FRAMES_IN_FLIGHT = 3
 // A viewer that stops acknowledging (tab frozen, ack lost) is not starved forever.
 const ACK_TIMEOUT_MS = 1500
 
@@ -376,8 +378,33 @@ const DEFAULT_STREAM_PROFILE: StreamProfileName = isProfileName(process.env.RECO
   ? process.env.RECORDER_STREAM_PROFILE
   : "fast"
 
-function streamParams(page: Page, stream: { profile: StreamProfileName; dsf: number } | undefined) {
-  const prof = STREAM_PROFILES[stream?.profile || DEFAULT_STREAM_PROFILE]
+// Scrolling (motion) frames adapt to the tester's connection. Measured on the
+// signed-in SDOH app while scrolling: 1x q60 27 KB/frame, 2x q60 66 KB. At 1x
+// a Retina screen shows a blurry view, which testers reported; at 2x a ~5
+// Mbps link gets ~9 frames/s. Every session starts at 1.5x and moves one step
+// after each scroll, from the frames per second the viewer actually received.
+const MOTION_LEVELS = [
+  { scale: 1, quality: 60 },
+  { scale: 1.5, quality: 65 },
+  { scale: 2, quality: 70 },
+]
+const START_MOTION_LEVEL = 1
+const MOTION_UP_FPS = 15 // kept up easily: sharper next time
+const MOTION_DOWN_FPS = 8 // struggled: lighter next time
+const MIN_BURST_MS = 600 // judge only real scrolling, not a single wheel tick
+
+function streamParams(page: Page, stream: { profile: StreamProfileName; dsf: number; motionLevel?: number } | undefined) {
+  const profileName = stream?.profile || DEFAULT_STREAM_PROFILE
+  if (profileName !== "sharp") {
+    const level = MOTION_LEVELS[stream?.motionLevel ?? START_MOTION_LEVEL]
+    return {
+      format: "jpeg" as const,
+      quality: level.quality,
+      everyNthFrame: 1,
+      ...screencastBounds(page, level.scale, 3840),
+    }
+  }
+  const prof = STREAM_PROFILES[profileName]
   return {
     format: "jpeg" as const,
     quality: prof.quality,
@@ -436,6 +463,10 @@ interface SessionStream {
   stillTimer?: ReturnType<typeof setTimeout> | null
   /** Bumped by every motion frame; a sharp capture that started earlier is stale. */
   frameSeq?: number
+  /** Index into MOTION_LEVELS for scrolling frames (adapts per session). */
+  motionLevel?: number
+  /** The current scroll burst: when it started and frames the viewers received. */
+  burst?: { start: number; last: number; acks: number; waited: number } | null
   /** Last screencast frame (base64), to skip byte-identical repeats. */
   lastCast?: string
   /** When the last changed screencast frame arrived. */
@@ -484,6 +515,8 @@ function pushFrame(stream: SessionStream, buf: Buffer) {
       ws.send(buf)
     } else {
       flow.waiting = buf
+      // The connection is busy: this frame waits (and may be replaced).
+      if (stream.burst) stream.burst.waited++
     }
   }
 }
@@ -492,6 +525,7 @@ function pushFrame(stream: SessionStream, buf: Buffer) {
 function onFrameAck(stream: SessionStream, ws: WebSocket) {
   const flow = stream.flow?.get(ws)
   if (!flow) return
+  if (stream.burst) stream.burst.acks++
   flow.inFlight = Math.max(0, flow.inFlight - 1)
   if (flow.waiting && ws.readyState === WebSocket.OPEN) {
     const buf = flow.waiting
@@ -500,6 +534,28 @@ function onFrameAck(stream: SessionStream, ws: WebSocket) {
     flow.lastSentAt = Date.now()
     ws.send(buf)
   }
+}
+
+/**
+ * A scroll burst ended: if the viewers received frames easily, use sharper
+ * frames next time; if they struggled, lighter ones. One step at a time.
+ */
+async function adaptMotionLevel(sessionId: string, stream: SessionStream, page: Page) {
+  const burst = stream.burst
+  stream.burst = null
+  if (!burst || stream.profile === "sharp" || !stream.flow?.size) return
+  if (burst.last - burst.start < MIN_BURST_MS) return
+  // Acks keep arriving after the last scroll frame, so count time until now.
+  const fps = (burst.acks * 1000) / (Date.now() - burst.start)
+  const level = stream.motionLevel ?? START_MOTION_LEVEL
+  // Frames per second also depends on how fast the page scrolls, so judge
+  // the connection by whether frames had to wait: none waited = it kept up.
+  const keptUp = burst.waited === 0 || fps >= MOTION_UP_FPS
+  const struggled = burst.waited > 0 && fps < MOTION_DOWN_FPS
+  const next = keptUp ? Math.min(MOTION_LEVELS.length - 1, level + 1) : struggled ? Math.max(0, level - 1) : level
+  if (next === level) return
+  stream.motionLevel = next
+  await restreamAtViewport(sessionId, page)
 }
 
 /**
@@ -543,6 +599,7 @@ function armStillFrame(sessionId: string, stream: SessionStream, page: Page, for
     stream.stillTimer = null
     const cur = sessionStreams.get(sessionId)
     if (cur !== stream || !stream.cdp || stream.viewers.size === 0) return
+    void adaptMotionLevel(sessionId, stream, page)
     try {
       const shot: any = await stream.cdp.send("Page.captureScreenshot", {
         format: "webp",
@@ -676,6 +733,8 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
         // blurry one 2-3 times a second.
         sendDetailFrame(sessionId, current, buf)
       } else {
+        if (!current.burst) current.burst = { start: now, last: now, acks: 0, waited: 0 }
+        current.burst.last = now
         pushFrame(current, buf)
         armStillFrame(sessionId, current, page)
       }
