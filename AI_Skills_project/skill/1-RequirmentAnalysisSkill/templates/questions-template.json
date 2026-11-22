@@ -1,0 +1,31 @@
+{
+  "storyId": "<ID>",
+  "storyTitle": "<title>",
+  "sample": false,
+  "clarity": "Unclear",
+  "jiraUpdated": false,
+  "emailUpdated": false,
+  "acceptanceCriteria": [
+    { "id": "AC-1", "text": "<as written>" }
+  ],
+  "gaps": [
+    { "id": "G-01", "text": "<what is missing>", "ac": "AC-1", "source": "<lint rule or quote>" }
+  ],
+  "questions": [
+    {
+      "id": "Q-01",
+      "question": "<one question, answerable by one person>",
+      "why": "<what it blocks or changes>",
+      "gap": "G-01",
+      "ac": "AC-1",
+      "askTo": "PO",
+      "priority": "High",
+      "options": [],
+      "status": "Open",
+      "answer": null,
+      "answeredBy": null,
+      "answeredAt": null,
+      "source": null
+    }
+  ]
+}

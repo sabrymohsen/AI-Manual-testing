@@ -41,6 +41,63 @@ const TEST_GENERATION = [
 
 // Order matters: when more skills match than fit, the earlier ones win.
 export const QA_SKILLS: QaSkill[] = [
+  // ── Professional-tester pipeline rules (from AI_Skills_project) ──────────
+  // These come first so they win the size budget on the features they cover.
+  {
+    id: "never-assume",
+    name: "Never assume — ask",
+    description: "Unknowns become open questions, never invented answers; expected results come only from the requirement.",
+    instructions:
+      "Never invent a requirement, rule, message text, limit or role. Walk each acceptance criterion through: actor/role, preconditions, inputs (required, type, length, format), boundaries, exact output and message wording (prefixes, punctuation, case), what happens next, error handling, data and cleanup. Anything not stated is a gap: write it as an open question for the business (who to ask, why it blocks testing), not as an answer. Expected results are copied exactly from the requirement; when one rests on an open question, say so and mark that case Blocked instead of guessing. If you had to use what the site shows today, label it 'observed, not confirmed'.",
+    commands: [
+      "analyze-brd",
+      "generate-test-case",
+      "generate-test-cases",
+      "generate-test-cases-from-requirement",
+      "suggest-expected-result",
+    ],
+  },
+  {
+    id: "impact-analysis",
+    name: "Impact analysis",
+    description: "Ranks what else a requirement can break (Likelihood x Severity) with evidence for every link.",
+    instructions:
+      "For every requirement or story, list the other modules it can break: what it depends on, what depends on it, shared components (same form, page, header, cart, API), shared data (account, session, order) and areas the text calls fragile. Score Likelihood 3 (changes it directly) / 2 (shares data or flow) / 1 (indirect) times Severity 3 (blocks a core flow, data loss, security, money) / 2 (wrong with a workaround) / 1 (cosmetic). 9 = Critical, 6 = High, 3-4 = Medium, 1-2 = Low. Back each impact with an exact quote, or raise a question if the link is uncertain. Never invent a link.",
+    commands: ["analyze-brd", "agent-brain-plan"],
+  },
+  {
+    id: "impact-coverage",
+    name: "Story + regression coverage",
+    description: "A target case for every acceptance criterion and a regression case for every Critical/High impacted module.",
+    instructions:
+      "Cover two scopes. Target: at least one case per acceptance criterion (positive, negative, boundary), each traced to its criterion. Impacted: a regression case for every Critical or High impacted module, checking that it still works after the change (for example a valid login still reaches the home page after new error handling). Prefer fewer strong cases over many weak ones, but never drop a criterion or a Critical/High impact to fit a limit: say what is not covered. Each case has one goal, exact test data, and an expected result someone can observe.",
+    commands: ["generate-test-cases", "generate-test-cases-from-requirement"],
+  },
+  {
+    id: "bug-triage",
+    name: "Bug triage — only confirmed defects",
+    description: "Every failure gets a decision: Bug, Requirement issue, Test issue, Environment, Duplicate or Not a bug.",
+    instructions:
+      "Before calling anything a bug, triage it: (1) did the test run as designed? No = Test issue or Environment, never a bug. (2) Is the expected result confirmed by the requirement? No = Requirement issue (name the open question), not a bug. (3) Does the evidence show wrong behaviour? Yes = Bug; unclear = Not a bug with the reason. (4) Same cause as an earlier finding = Duplicate. A failure in a module that worked before is a regression: at least High if that module is Critical, at least Medium if High. Actual = the exact text or state observed; Expected = the exact text from the test case, never changed.",
+    commands: ["draft-bug-report", "generate-bug-report", "autonomous-run-summary"],
+  },
+  {
+    id: "honest-results",
+    name: "Honest results",
+    description: "Failed, Error, Flaky, Blocked and Skipped are reported separately; expected results are never bent to get green.",
+    instructions:
+      "Report results honestly and separately. Failed = the app answered and the answer is wrong (wrong text, missing element on a rendered page, 4xx/5xx from the app). Error = the test could not run or observe (site down, session died, missing data). Flaky = passed only on a retry after an infrastructure error. Blocked = rests on an open question. Skipped = pointless after an earlier failure. Never merge or hide these, never change an expected result or force a step (JS click, force) to get a pass, and compare text exactly, including prefix, punctuation and case. A console error is a finding even when the page looks right.",
+    commands: ["autonomous-run-summary", "explain-failure", "diagnosis-chat", "agent-chat"],
+  },
+  {
+    id: "case-to-automation",
+    name: "Faithful automation of a test case",
+    description: "Automated steps do exactly what the manual case says and assert its exact expected result.",
+    instructions:
+      "When turning a test case or goal into automated steps: follow the case's steps in order, one action per step, and end every case with an assertion of its exact expected result (text, URL or element state), never only 'page loaded'. Do not add steps the case did not ask for or skip ones it did; if a step cannot be automated, say so. Stay on the site under test, use synthetic data (example.com emails, fake names, published test cards), never real credentials, and undo data you create when the case allows it.",
+    commands: ["plain-english-generate-steps", "autonomous-generate-tests"],
+  },
+  // ── General QA craft ─────────────────────────────────────────────────────
   {
     id: "test-design",
     name: "Test design techniques",
@@ -78,7 +135,7 @@ export const QA_SKILLS: QaSkill[] = [
     name: "Severity and priority rubric",
     description: "Consistent Critical / High / Medium / Low ratings based on impact.",
     instructions:
-      "Rate severity by impact: Critical = crash, data loss or corruption, security hole, or the core flow is blocked with no workaround. High = a major feature is broken or gives wrong results, workaround is painful. Medium = partly wrong, a reasonable workaround exists. Low = cosmetic, typo, minor layout. Priority adds urgency (customer-facing, many users, release blocker). A visual glitch is Low even if it looks bad; anything that loses user data is Critical.",
+      "Rate severity by impact: Critical = crash, data loss or corruption, security hole, or the core flow is blocked with no workaround. High = a major feature is broken or gives wrong results, workaround is painful. Medium = partly wrong, a reasonable workaround exists. Low = cosmetic, typo, minor layout. Priority adds urgency (customer-facing, many users, release blocker). A visual glitch is Low even if it looks bad; anything that loses user data is Critical. A regression (something that worked before) in a core module is at least High.",
     commands: ["draft-bug-report", "generate-bug-report", "bug-assistance:suggest-severity", "bug-assistance:developer-summary"],
   },
   {

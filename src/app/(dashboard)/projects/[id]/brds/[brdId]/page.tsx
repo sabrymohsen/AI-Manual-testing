@@ -20,11 +20,13 @@ import {
   Plus,
   Upload,
   ListChecks,
+  ShieldQuestion,
   UserCheck,
   AlertTriangle,
 } from "lucide-react"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { BrdRequirements } from "@/components/brd/brd-requirements"
+import { BrdQuestions } from "@/components/brd/brd-questions"
 import { BrdReviews } from "@/components/brd/brd-reviews"
 import { BrdCompare } from "@/components/brd/brd-compare"
 import { BrdEditor } from "@/components/brd/brd-editor"
@@ -55,8 +57,8 @@ function fmtBytes(n: number) {
   return `${(n / 1024 / 1024).toFixed(1)} MB`
 }
 
-type Tab = "preview" | "edit" | "coverage" | "versions" | "reviews" | "links" | "audit"
-const TABS: Tab[] = ["preview", "edit", "coverage", "versions", "reviews", "links", "audit"]
+type Tab = "preview" | "edit" | "coverage" | "questions" | "versions" | "reviews" | "links" | "audit"
+const TABS: Tab[] = ["preview", "edit", "coverage", "questions", "versions", "reviews", "links", "audit"]
 
 export default function BrdDetailPage() {
   const params = useParams<{ id: string; brdId: string }>()
@@ -144,6 +146,7 @@ export default function BrdDetailPage() {
     { id: "preview", label: "Preview", icon: Eye, show: true },
     { id: "edit", label: "Edit", icon: Pencil, show: editable },
     { id: "coverage", label: "Requirements & coverage", icon: ListChecks, show: true },
+    { id: "questions", label: "Questions & readiness", icon: ShieldQuestion, show: true },
     { id: "versions", label: `Versions (${brd.versionCount})`, icon: History, show: true },
     { id: "reviews", label: "Reviews", icon: UserCheck, show: true },
     { id: "links", label: `Links (${brd.linkCount})`, icon: Link2, show: true },
@@ -258,9 +261,11 @@ export default function BrdDetailPage() {
             brdId={brd.id}
             projectId={projectId}
             canEdit={canTest}
+            onOpenQuestions={() => setTab("questions")}
             initialFilter={searchParams.get("tab") === "coverage" && searchParams.get("filter") === "review" ? "review" : undefined}
           />
         )}
+        {tab === "questions" && <BrdQuestions brdId={brd.id} canEdit={canTest} />}
         {tab === "versions" && <VersionsTab brd={brd} canManage={canManage && !isFinal} onChanged={load} />}
         {tab === "reviews" && (
           <BrdReviews

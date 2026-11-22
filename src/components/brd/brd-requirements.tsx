@@ -10,8 +10,12 @@ import {
   ChevronDown,
   CircleDashed,
   KanbanSquare,
+  GitBranch,
+  HelpCircle,
   Link2,
   Loader2,
+  Pencil,
+  ShieldAlert,
   Plus,
   ScanSearch,
   Search,
@@ -24,6 +28,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { BrdAnalysis } from "@/components/brd/brd-analysis"
 import { BrdToBoard, boardSummary } from "@/components/brd/brd-to-board"
 import { cn } from "@/lib/utils"
+import type { Gate } from "@/lib/brd/readiness"
+import { RELATION_LABEL, type Impact, type ImpactLevel } from "@/lib/brd/impact"
 
 /**
  * Requirements & coverage for one BRD — the tester's traceability view.
@@ -62,7 +68,25 @@ interface Requirement {
   story: { id: string; key: string; status: string } | null
   epic: { id: string; title: string } | null
   coverage: Coverage
+  impacts: Impact[]
+  openQuestions: { key: string; priority: string; question: string }[]
   testCases: LinkedCase[]
+}
+
+const LEVEL_CHIP: Record<ImpactLevel, string> = {
+  Critical: "bg-red-500/10 text-red-700 dark:text-red-400",
+  High: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
+  Medium: "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  Low: "bg-muted text-muted-foreground",
+}
+
+/** A destructive action waiting for confirmation. */
+interface PendingAction {
+  title: string
+  description: string
+  confirmLabel: string
+  run: () => Promise<unknown>
+  ok?: string
 }
 interface Summary {
   total: number
@@ -106,11 +130,13 @@ export function BrdRequirements({
   projectId,
   canEdit,
   initialFilter,
+  onOpenQuestions,
 }: {
   brdId: string
   projectId: string
   canEdit: boolean
   initialFilter?: Filter
+  onOpenQuestions?: () => void
 }) {
   const [reqs, setReqs] = useState<Requirement[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -121,7 +147,12 @@ export function BrdRequirements({
   const [newText, setNewText] = useState("")
   const [generating, setGenerating] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<Requirement | null>(null)
+  const [pending, setPending] = useState<PendingAction | null>(null)
   const [toBoard, setToBoard] = useState(false)
+  const [gate, setGate] = useState<Gate | null>(null)
+  // Generation stopped by the readiness gate, waiting for an override reason.
+  const [overrideFor, setOverrideFor] = useState<{ r: Requirement; count: number } | null>(null)
+  const [overrideWhy, setOverrideWhy] = useState("")
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/brds/${brdId}/requirements`)
@@ -129,6 +160,7 @@ export function BrdRequirements({
       const d = await res.json()
       setReqs(d.requirements)
       setSummary(d.summary)
+      setGate(d.gate ?? null)
     }
     setLoading(false)
   }, [brdId])
@@ -150,12 +182,29 @@ export function BrdRequirements({
     }
   }
 
-  async function generate(r: Requirement, count: number) {
+  async function generate(r: Requirement, count: number, why?: string) {
     setGenerating(r.id)
     try {
       // Runs on the server as a background job: the tray shows it on every page
       // and tells the user when it's done, even after they leave this page.
-      await send(`/api/brds/${brdId}/requirements/${r.id}/generate`, "POST", { count, background: true })
+      const res = await fetch(`/api/brds/${brdId}/requirements/${r.id}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count, background: true, ...(why ? { overrideWhy: why } : {}) }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 409 && data.code === "GATE_BLOCKED") {
+        // Readiness gate: blocking questions are open. Ask for an override reason.
+        setGate(data.gate)
+        setOverrideFor({ r, count })
+        return
+      }
+      if (!res.ok) throw new Error(data.error || "Request failed")
+      if (why) {
+        setOverrideFor(null)
+        setOverrideWhy("")
+        load()
+      }
       window.dispatchEvent(new Event(AI_JOB_STARTED))
       toast(`Generating ${count} test case${count === 1 ? "" : "s"} for ${r.key}…`, {
         description: "This runs in the background — keep working, we'll tell you when it's done.",
@@ -209,6 +258,69 @@ export function BrdRequirements({
   return (
     <div className="space-y-4">
       <BrdAnalysis brdId={brdId} projectId={projectId} canEdit={canEdit} onApplied={load} />
+
+      {gate && gate.state !== "ready" && (
+        <div
+          className={cn(
+            "flex flex-wrap items-center gap-2 rounded-lg border p-3 text-xs",
+            gate.state === "blocked" ? "border-red-500/30 bg-red-500/5" : "border-amber-500/30 bg-amber-500/5"
+          )}
+        >
+          <ShieldAlert className={cn("h-4 w-4 shrink-0", gate.state === "blocked" ? "text-red-600" : "text-amber-600")} />
+          <span className="min-w-0 flex-1">
+            {gate.state === "blocked" ? (
+              <>
+                <b>Not ready for test design.</b> {gate.blocking} open question{gate.blocking === 1 ? "" : "s"} ({gate.blockingKeys.join(", ")}){" "}
+                {gate.blocking === 1 ? "changes" : "change"} what tests should expect, so generating tests needs answers or a tester override.
+              </>
+            ) : (
+              <>
+                <b>Tester override</b> by {gate.override?.byName ?? "a tester"}: “{gate.override?.why}”. New tests are tagged “tester-override”.
+              </>
+            )}
+          </span>
+          {onOpenQuestions && (
+            <button onClick={onOpenQuestions} className="rounded-md border bg-card px-2.5 py-1 font-medium hover:bg-accent">
+              Open questions
+            </button>
+          )}
+        </div>
+      )}
+
+      {overrideFor && gate && (
+        <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+          <p className="text-xs font-medium">
+            {overrideFor.r.key}: {gate.blocking} blocking question{gate.blocking === 1 ? " is" : "s are"} open ({gate.blockingKeys.join(", ")}). A professional
+            tester doesn't guess expected results. Answer them first, or record why you're proceeding anyway (saved with your name; the tests are tagged
+            “tester-override” and any case resting on an open question is marked blocked).
+          </p>
+          <textarea
+            autoFocus
+            value={overrideWhy}
+            onChange={(e) => setOverrideWhy(e.target.value)}
+            rows={2}
+            placeholder="Why proceed now?"
+            className="w-full rounded-md border bg-card p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="flex flex-wrap justify-end gap-2">
+            <button onClick={() => setOverrideFor(null)} className="rounded-md border px-3 py-1 text-xs font-medium">
+              Cancel
+            </button>
+            {onOpenQuestions && (
+              <button onClick={() => { setOverrideFor(null); onOpenQuestions() }} className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-accent">
+                Answer questions
+              </button>
+            )}
+            <button
+              disabled={overrideWhy.trim().length < 5 || generating !== null}
+              onClick={() => generate(overrideFor.r, overrideFor.count, overrideWhy.trim())}
+              className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white disabled:opacity-60"
+            >
+              Override and generate
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Summary */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
@@ -332,6 +444,26 @@ export function BrdRequirements({
               onRetire={() => act(() => send(`/api/brds/${brdId}/requirements/${r.id}`, "PATCH", { status: "removed" }), `${r.key} retired`)}
               onRestore={() => act(() => send(`/api/brds/${brdId}/requirements/${r.id}`, "PATCH", { status: "active" }))}
               onDelete={() => setPendingDelete(r)}
+              onSave={(body) => act(() => send(`/api/brds/${brdId}/requirements/${r.id}`, "PATCH", body), `${r.key} saved`)}
+              onDeleteCase={(t) =>
+                setPending({
+                  title: `Delete test case “${t.title.slice(0, 60)}”?`,
+                  description: "The test case is deleted from the test library. Its bugs and run history are kept.",
+                  confirmLabel: "Delete test case",
+                  run: () => send(`/api/projects/${projectId}/test-cases/${t.id}`, "DELETE"),
+                  ok: "Test case deleted",
+                })
+              }
+              onDeleteStory={() =>
+                r.story &&
+                setPending({
+                  title: `Delete story ${r.story.key}?`,
+                  description: "The user story is deleted from the Scrum board. The requirement and its test cases stay; you can create the story again.",
+                  confirmLabel: "Delete story",
+                  run: () => send(`/api/scrum/tasks/${r.story!.id}`, "DELETE"),
+                  ok: "Story deleted",
+                })
+              }
               onLink={(ids) => act(() => send(`/api/brds/${brdId}/requirements/${r.id}/test-cases`, "POST", { add: ids }), "Linked")}
               onUnlink={(id) => act(() => send(`/api/brds/${brdId}/requirements/${r.id}/test-cases`, "POST", { remove: [id] }))}
               onReviewed={(id) =>
@@ -354,6 +486,18 @@ export function BrdRequirements({
         }}
         onCancel={() => setPendingDelete(null)}
       />
+      <ConfirmDialog
+        open={pending !== null}
+        variant="danger"
+        title={pending?.title ?? ""}
+        description={pending?.description}
+        confirmLabel={pending?.confirmLabel}
+        onConfirm={async () => {
+          if (pending) await act(pending.run, pending.ok)
+          setPending(null)
+        }}
+        onCancel={() => setPending(null)}
+      />
     </div>
   )
 }
@@ -370,6 +514,9 @@ function RequirementCard({
   onRetire,
   onRestore,
   onDelete,
+  onSave,
+  onDeleteCase,
+  onDeleteStory,
   onLink,
   onUnlink,
   onReviewed,
@@ -385,13 +532,18 @@ function RequirementCard({
   onRetire: () => void
   onRestore: () => void
   onDelete: () => void
+  onSave: (body: { title: string; description: string; priority: string | null; acceptanceCriteria: string[] }) => Promise<unknown>
+  onDeleteCase: (t: LinkedCase) => void
+  onDeleteStory: () => void
   onLink: (ids: string[]) => void
   onUnlink: (id: string) => void
   onReviewed: (id: string) => void
 }) {
   const [open, setOpen] = useState(r.status === "changed" || r.testCases.some((t) => t.needsReview))
   const [picking, setPicking] = useState(false)
+  const [editing, setEditing] = useState(false)
   const cov = COVERAGE[r.coverage]
+  const topImpact = r.impacts.find((i) => i.level === "Critical" || i.level === "High")
   const CovIcon = cov.icon
 
   return (
@@ -434,12 +586,35 @@ function RequirementCard({
               </Link>
             )}
             {r.acceptanceCriteria.length > 0 && <span>· {r.acceptanceCriteria.length} criteria</span>}
+            {topImpact && (
+              <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium", LEVEL_CHIP[topImpact.level])} title="Highest impact on another requirement">
+                <GitBranch className="h-3 w-3" /> {r.impacts.filter((i) => i.level === "Critical" || i.level === "High").length} high impact
+              </span>
+            )}
+            {r.openQuestions.length > 0 && (
+              <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 font-medium text-red-700 dark:text-red-400" title="Open questions about this requirement">
+                <HelpCircle className="h-3 w-3" /> {r.openQuestions.length} open question{r.openQuestions.length === 1 ? "" : "s"}
+              </span>
+            )}
           </span>
         </span>
         <ChevronDown className={cn("mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
       </button>
 
-      {open && (
+      {open && editing && (
+        <div className="border-t p-3">
+          <RequirementEditForm
+            r={r}
+            onCancel={() => setEditing(false)}
+            onSave={async (body) => {
+              await onSave(body)
+              setEditing(false)
+            }}
+          />
+        </div>
+      )}
+
+      {open && !editing && (
         <div className="space-y-3 border-t px-3 pb-3 pt-2.5">
           {r.section && <p dir="auto" className="text-[11px] text-muted-foreground">{r.section}</p>}
           {r.description && r.description !== r.title && (
@@ -459,6 +634,45 @@ function RequirementCard({
             <blockquote dir="auto" className="border-s-2 border-primary/30 ps-2 text-xs italic text-muted-foreground" title="Text in the document this requirement came from">
               {r.sourceQuote}
             </blockquote>
+          )}
+
+          {r.openQuestions.length > 0 && (
+            <div className="rounded-md border border-red-500/20 bg-red-500/5 p-2.5">
+              <p className="mb-1 text-[11px] font-medium text-red-800 dark:text-red-300">Open questions: expected results here are not confirmed yet</p>
+              <ul dir="auto" className="space-y-0.5 text-xs text-muted-foreground">
+                {r.openQuestions.map((q) => (
+                  <li key={q.key}>
+                    <b className="text-foreground">{q.key}</b> ({q.priority}) {q.question}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {r.impacts.length > 0 && (
+            <div>
+              <p className="mb-1 flex items-center gap-1 text-[11px] font-medium">
+                <GitBranch className="h-3.5 w-3.5" /> Impacted requirements:
+                <span className="font-normal text-muted-foreground">what a change here can break (Likelihood × Severity). Critical/High get regression tests.</span>
+              </p>
+              <div className="space-y-1">
+                {r.impacts.map((i) => (
+                  <div key={i.id} className="flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-xs">
+                    <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold", LEVEL_CHIP[i.level])} title={`L${i.likelihood} × S${i.severity} = ${i.score}`}>
+                      {i.level} {i.score}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span dir="auto" className="font-medium">
+                        {i.key} · {i.title}
+                      </span>
+                      <span dir="auto" className="block text-[11px] text-muted-foreground">
+                        {RELATION_LABEL[i.relation]} — {i.evidence}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {r.status === "changed" && (
@@ -511,9 +725,22 @@ function RequirementCard({
                   </button>
                 )}
                 {canEdit && (
-                  <button onClick={() => onUnlink(t.id)} className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive" aria-label="Unlink test case" title="Unlink">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
+                  <>
+                    <Link
+                      href={`/projects/${projectId}/test-cases/${t.id}/edit`}
+                      className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      aria-label="Edit test case"
+                      title="Edit test case"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Link>
+                    <button onClick={() => onUnlink(t.id)} className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-foreground" aria-label="Unlink test case" title="Unlink (keep the test case)">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => onDeleteCase(t)} className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive" aria-label="Delete test case" title="Delete test case">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </>
                 )}
               </div>
             ))}
@@ -538,9 +765,33 @@ function RequirementCard({
                   <KanbanSquare className="h-3.5 w-3.5" /> {/^(epic|ملحمة)$/i.test((r.type ?? "").trim()) ? "Create epic" : "Create story"}
                 </button>
               )}
+              {r.story && (
+                <>
+                  <Link
+                    href={`/projects/${projectId}/scrum?task=${r.story.id}`}
+                    className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                    title="Open the user story to edit it"
+                  >
+                    <KanbanSquare className="h-3.5 w-3.5" /> Edit story {r.story.key}
+                  </Link>
+                  <button
+                    onClick={onDeleteStory}
+                    className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-destructive"
+                    title="Delete the user story made from this requirement"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" /> Story
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setEditing(true)}
+                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground"
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </button>
               <button
                 onClick={onRetire}
-                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground"
               >
                 Retire
               </button>
@@ -568,6 +819,84 @@ function RequirementCard({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+function RequirementEditForm({
+  r,
+  onSave,
+  onCancel,
+}: {
+  r: Requirement
+  onSave: (body: { title: string; description: string; priority: string | null; acceptanceCriteria: string[] }) => Promise<void>
+  onCancel: () => void
+}) {
+  const [title, setTitle] = useState(r.title)
+  const [description, setDescription] = useState(r.description || r.title)
+  const [priority, setPriority] = useState(r.priority ?? "")
+  const [criteria, setCriteria] = useState(r.acceptanceCriteria.join("\n"))
+  const [saving, setSaving] = useState(false)
+  return (
+    <div className="space-y-2">
+      <label className="block text-[11px] font-medium">Title</label>
+      <input
+        dir="auto"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="h-8 w-full rounded-md border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+      />
+      <label className="block text-[11px] font-medium">Description</label>
+      <textarea
+        dir="auto"
+        value={description}
+        onChange={(e) => setDescription(e.target.value)}
+        rows={3}
+        className="w-full rounded-md border bg-card p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+      />
+      <label className="block text-[11px] font-medium">Acceptance criteria (one per line)</label>
+      <textarea
+        dir="auto"
+        value={criteria}
+        onChange={(e) => setCriteria(e.target.value)}
+        rows={4}
+        className="w-full rounded-md border bg-card p-2 font-mono text-xs outline-none focus:ring-2 focus:ring-primary/30"
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-[11px] font-medium">Priority</label>
+        <select value={priority} onChange={(e) => setPriority(e.target.value)} className="h-8 rounded-md border bg-card px-2 text-xs">
+          <option value="">None</option>
+          {["Critical", "High", "Medium", "Low"].map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <div className="ml-auto flex gap-2">
+          <button onClick={onCancel} className="rounded-md border px-3 py-1 text-xs font-medium">
+            Cancel
+          </button>
+          <button
+            disabled={!title.trim() || !description.trim() || saving}
+            onClick={async () => {
+              setSaving(true)
+              try {
+                await onSave({
+                  title: title.trim(),
+                  description: description.trim(),
+                  priority: priority || null,
+                  acceptanceCriteria: criteria.split("\n").map((s) => s.trim()).filter(Boolean),
+                })
+              } finally {
+                setSaving(false)
+              }
+            }}
+            className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

@@ -1,0 +1,24 @@
+{
+  "tool": "playwright-cli",
+  "version": "0.1.24",
+  "session": "qa-sd-02-20261115-000907-9b93",
+  "headed": true,
+  "baseUrl": "https://www.saucedemo.com",
+  "commandsUsed": [
+    "open --headed",
+    "goto",
+    "reload",
+    "snapshot",
+    "fill",
+    "click",
+    "eval",
+    "screenshot --filename",
+    "console error",
+    "console --clear",
+    "cookie-list",
+    "cookie-clear",
+    "localstorage-clear",
+    "close"
+  ],
+  "automationCode": false
+}

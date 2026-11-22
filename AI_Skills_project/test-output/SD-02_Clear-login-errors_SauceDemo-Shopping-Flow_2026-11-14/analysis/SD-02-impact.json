@@ -1,0 +1,66 @@
+{
+  "storyId": "SD-02",
+  "storyTitle": "Clear login errors",
+  "epic": "SauceDemo Shopping Flow",
+  "epicFile": "test-input/EPIC_1_SauceDemo.md",
+  "sample": false,
+  "noImpactReason": null,
+  "impacts": [
+    {
+      "id": "IM-01",
+      "module": "SD-01 Log in",
+      "storyRef": "SD-01",
+      "relation": "depends-on",
+      "likelihood": 3,
+      "severity": 3,
+      "score": 9,
+      "level": "Critical",
+      "evidence": "SD-02 | ... | SD-01 | (Depends On); SD-01: \"standard_user / secret_sauce opens the Products page\"",
+      "question": null,
+      "why": "The error handling lives on the same login form and submit action as the valid login. A change to validation can block every valid login, and SD-01 is the entry to the whole epic.",
+      "testFocus": "standard_user / secret_sauce still opens the Products page, including right after an error was shown"
+    },
+    {
+      "id": "IM-02",
+      "module": "SD-03 Blocked user message",
+      "storyRef": "SD-03",
+      "relation": "shared-component",
+      "likelihood": 3,
+      "severity": 2,
+      "score": 6,
+      "level": "High",
+      "evidence": "Linked tickets: ... related SD-03 (blocked user message); SD-03: \"locked_out_user -> Sorry, this user has been locked out.\"",
+      "question": "Q-01",
+      "why": "The locked-out message uses the same error area as the SD-02 messages. A change to how errors are shown or worded can break it, and a locked-out user getting in is a security failure.",
+      "testFocus": "locked_out_user / secret_sauce stays on the login page and sees the locked-out message (exact prefix depends on Q-01)"
+    },
+    {
+      "id": "IM-03",
+      "module": "Shopping flow after login (SD-04 to SD-11)",
+      "storyRef": "SD-04",
+      "relation": "regression-area",
+      "likelihood": 1,
+      "severity": 3,
+      "score": 3,
+      "level": "Medium",
+      "evidence": "Dependency Chain (test in this order): SD-01 → SD-04 → SD-06 → SD-07 → SD-08 → SD-09 → SD-10 → SD-11",
+      "question": null,
+      "why": "Every later story starts with a login. SD-02 only touches failed logins, so the risk to them is indirect.",
+      "testFocus": "after a valid login the product list shows (covered by the IM-01 case reaching Products)"
+    },
+    {
+      "id": "IM-04",
+      "module": "SD-12 Logout returns to the login page",
+      "storyRef": "SD-12",
+      "relation": "same-page",
+      "likelihood": 1,
+      "severity": 2,
+      "score": 2,
+      "level": "Low",
+      "evidence": "SD-12: \"Logout returns to the login page\"",
+      "question": null,
+      "why": "Logout lands on the login form that SD-02 changes; the form must still validate after a logout.",
+      "testFocus": "after logout, submitting an empty username still shows the AC-1 message"
+    }
+  ]
+}

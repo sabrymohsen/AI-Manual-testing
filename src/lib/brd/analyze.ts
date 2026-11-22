@@ -5,6 +5,7 @@ import mammoth from "mammoth"
 import { prisma } from "@/lib/db"
 import { STORAGE_ROOT, brdAudit } from "@/lib/brd/server"
 import { ensureVersionText } from "@/lib/brd/content"
+import { importQuestionsFromIssues } from "@/lib/brd/questions"
 import { normalize, detectLanguage, type DocLanguage } from "@/lib/brd/text-utils"
 import {
   sectionsFromHtml,
@@ -935,11 +936,17 @@ export async function applyBrdAnalysis(
   }
 
   await prisma.brdAnalysis.update({ where: { id: analysisId }, data: { status: "applied" } })
+  // The analysis's gaps become open questions (readiness gate): never assumed answers.
+  const questionsAdded = await importQuestionsFromIssues(
+    analysis.brdId,
+    ((analysis.issues as unknown as AnalysisIssue[]) || []),
+    actor
+  )
   await brdAudit(
     analysis.brdId,
     "requirements_extracted",
-    `Added ${added}, updated ${updated}${removed ? `, removed ${removed} earlier auto-found` : ""} from ${analysis.method === "ai" ? "AI" : "rule-based"} analysis`,
+    `Added ${added}, updated ${updated}${removed ? `, removed ${removed} earlier auto-found` : ""} from ${analysis.method === "ai" ? "AI" : "rule-based"} analysis${questionsAdded ? `; ${questionsAdded} open question(s)` : ""}`,
     actor
   )
-  return { added, updated, removed, requirementIds }
+  return { added, updated, removed, requirementIds, questionsAdded }
 }

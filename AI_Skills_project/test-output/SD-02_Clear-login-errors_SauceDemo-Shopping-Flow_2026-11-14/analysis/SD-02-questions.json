@@ -1,0 +1,29 @@
+{
+  "storyId": "SD-02",
+  "storyTitle": "Clear login errors",
+  "sample": false,
+  "clarity": "Unclear",
+  "jiraUpdated": false,
+  "emailUpdated": false,
+  "acceptanceCriteria": [
+    { "id": "AC-1", "text": "Empty username -> \"Epic sadface: Username is required\"" },
+    { "id": "AC-2", "text": "Empty password -> \"Password is required\"" },
+    { "id": "AC-3", "text": "Wrong details -> \"Username and password do not match any user in this service\"" }
+  ],
+  "gaps": [
+    { "id": "G-01", "text": "AC-1 gives its message with the prefix \"Epic sadface: \"; AC-2 and AC-3 give theirs without it. The exact expected text of AC-2 and AC-3 is therefore unknown.", "ac": "AC-2, AC-3", "source": "story_lint inconsistent-text" },
+    { "id": "G-02", "text": "\"Wrong details\" does not say whether it means a wrong username, a wrong password, or both, nor whether all three give the same message.", "ac": "AC-3", "source": "AC-3 wording" },
+    { "id": "G-03", "text": "Both fields empty is not covered: which message is shown when the username AND the password are empty?", "ac": "AC-1, AC-2", "source": "decision table of AC-1 x AC-2" },
+    { "id": "G-04", "text": "Nothing says what happens to the form after an error: are the inputs kept or cleared, can the error be dismissed, are the fields highlighted?", "ac": "all", "source": "analysis checklist: states and flow" },
+    { "id": "G-05", "text": "Not stated whether a username of spaces only counts as empty (AC-1), and whether the password check is case sensitive (AC-3).", "ac": "AC-1, AC-3", "source": "analysis checklist: boundaries" },
+    { "id": "G-06", "text": "The stakeholders are placeholders (<PO name> / <BA name> / <Dev lead name>), so nobody is named who can answer the questions.", "ac": null, "source": "story_lint placeholder, line 15" }
+  ],
+  "questions": [
+    { "id": "Q-01", "question": "What is the exact expected text for AC-2 (empty password) and AC-3 (wrong details): with the prefix \"Epic sadface: \" like AC-1, or without it as written?", "why": "Expected results must be exact. Without the answer, AC-2 and AC-3 cannot pass or fail meaningfully. The same question applies to SD-03 (locked-out message), which shares the error area.", "gap": "G-01", "ac": "AC-2, AC-3", "askTo": "PO", "priority": "High", "options": ["All messages carry \"Epic sadface: \"", "Only AC-1 carries it (as written)", "None carries it (AC-1 is a typo)"], "status": "Open", "answer": null, "answeredBy": null, "answeredAt": null, "source": null },
+    { "id": "Q-02", "question": "Does AC-3 \"Wrong details\" cover a wrong username with a valid password, a valid username with a wrong password, and both wrong? Is the message the same for all three?", "why": "Decides how many AC-3 cases exist and their expected results. A different message per case would reveal which usernames exist (a security concern).", "gap": "G-02", "ac": "AC-3", "askTo": "PO", "priority": "Medium", "options": ["Same message for all three", "Different messages"], "status": "Open", "answer": null, "answeredBy": null, "answeredAt": null, "source": null },
+    { "id": "Q-03", "question": "When both username and password are empty, which message is expected: the username message (AC-1), the password message (AC-2), or both?", "why": "A common case with no defined result; without it the case is Blocked.", "gap": "G-03", "ac": "AC-1, AC-2", "askTo": "PO", "priority": "Medium", "options": ["Username message only", "Password message only", "Both"], "status": "Open", "answer": null, "answeredBy": null, "answeredAt": null, "source": null },
+    { "id": "Q-04", "question": "After a login error, should the typed inputs be kept or cleared, should the error be dismissible (e.g. an X button), and should the fields be highlighted?", "why": "Defines the after-error state; currently untestable.", "gap": "G-04", "ac": null, "askTo": "BA", "priority": "Low", "options": [], "status": "Open", "answer": null, "answeredBy": null, "answeredAt": null, "source": null },
+    { "id": "Q-05", "question": "Does a username made only of spaces count as empty (AC-1 message)? Is the password comparison case sensitive (\"Secret_Sauce\" -> AC-3 message)?", "why": "Boundary cases; the expected results are not stated.", "gap": "G-05", "ac": "AC-1, AC-3", "askTo": "BA", "priority": "Low", "options": [], "status": "Open", "answer": null, "answeredBy": null, "answeredAt": null, "source": null },
+    { "id": "Q-06", "question": "Who are the PO, BA and Dev lead for EPIC 1, so the questions can be answered and recorded with a name?", "why": "The readiness gate needs answers from a named person; the story lists placeholders only.", "gap": "G-06", "ac": null, "askTo": "Tester / project lead", "priority": "High", "options": [], "status": "Open", "answer": null, "answeredBy": null, "answeredAt": null, "source": null }
+  ]
+}

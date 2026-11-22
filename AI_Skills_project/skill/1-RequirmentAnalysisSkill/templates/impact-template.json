@@ -1,0 +1,24 @@
+{
+  "storyId": "<ID>",
+  "storyTitle": "<title>",
+  "epic": "<epic name>",
+  "epicFile": "test-input/EPIC_<n>_<Name>.md",
+  "sample": false,
+  "noImpactReason": null,
+  "impacts": [
+    {
+      "id": "IM-01",
+      "module": "<story id + name, or module name>",
+      "storyRef": "<story id in the epic, or omit>",
+      "relation": "depends-on",
+      "likelihood": 3,
+      "severity": 3,
+      "score": 9,
+      "level": "Critical",
+      "evidence": "<exact quote>",
+      "question": null,
+      "why": "<how this story can break it>",
+      "testFocus": "<what an Impacted test case should check>"
+    }
+  ]
+}

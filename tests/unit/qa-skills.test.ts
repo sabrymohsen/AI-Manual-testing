@@ -50,8 +50,26 @@ describe("QA skills for the app's AI", () => {
     expect(skillsForCommand("generate-test-case").map((s) => s.id)).toContain("test-design")
     expect(skillsForCommand("bug-assistance:suggest-severity").map((s) => s.id)).toContain("severity")
     expect(skillsForCommand("bug-assistance:suggest-title").map((s) => s.id)).toEqual(["bug-reporting"])
-    expect(skillsForCommand("explain-failure").map((s) => s.id)).toEqual(["failure-diagnosis"])
+    expect(skillsForCommand("explain-failure").map((s) => s.id)).toEqual(["honest-results", "failure-diagnosis"])
     expect(skillsForCommand("detect-duplicate-test-case").map((s) => s.id)).toEqual(["duplicates"])
+  })
+
+  it("applies the professional-tester pipeline rules to the core features", () => {
+    const ids = (c: string) => skillsForCommand(c).map((s) => s.id)
+    // Test cases: never assume + story/regression coverage
+    expect(ids("generate-test-cases")).toEqual(expect.arrayContaining(["never-assume", "impact-coverage"]))
+    expect(ids("generate-test-cases-from-requirement")).toEqual(expect.arrayContaining(["never-assume", "impact-coverage"]))
+    expect(ids("generate-test-case")).toContain("never-assume")
+    // BRD: never assume + impact analysis, plus the BRD rules
+    expect(ids("analyze-brd")).toEqual(["never-assume", "impact-analysis", "brd-analysis"])
+    // Bug reports: triage first
+    expect(ids("draft-bug-report")[0]).toBe("bug-triage")
+    expect(ids("generate-bug-report")[0]).toBe("bug-triage")
+    // Automation: faithful case-to-steps
+    expect(ids("plain-english-generate-steps")[0]).toBe("case-to-automation")
+    expect(ids("autonomous-generate-tests")[0]).toBe("case-to-automation")
+    // Results: honest statuses
+    expect(ids("autonomous-run-summary")).toContain("honest-results")
   })
 
   it("leaves unknown or missing commands alone", () => {

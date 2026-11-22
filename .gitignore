@@ -91,3 +91,6 @@ graphify-out/
 .superpowers/
 .playwright-mcp/
 .next-verify/
+
+# playwright agent-cli scratch
+.playwright-cli/

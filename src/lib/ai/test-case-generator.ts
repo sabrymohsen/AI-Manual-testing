@@ -5,6 +5,7 @@ import {
   hasLocalAi,
 } from "@/lib/ai/provider-chat";
 import { withQaSkills } from "@/lib/ai/qa-skills";
+import { sanitizeJsonControlChars } from "@/lib/json-sanitize";
 import { TEST_DESIGN_CRAFT, LANGUAGE_RULE } from "@/lib/ai/qa-craft";
 
 export interface AIGeneratedTestCase {
@@ -326,7 +327,8 @@ function parseTestCasesFromResponse(
   }
 
   try {
-    const parsed = JSON.parse(jsonText);
+    // Models often put real line breaks inside string values; escape them first.
+    const parsed = JSON.parse(sanitizeJsonControlChars(jsonText));
 
     if (!Array.isArray(parsed)) {
       console.warn("AI response is not an array, wrapping in array");

@@ -65,42 +65,9 @@ export function traceDirName(traceId: string): string {
 }
 
 
-// SHAFT's shaft-trace.json embeds raw newlines inside string values (stack
-// traces, code snippets), which strict JSON.parse rejects. Escape control
-// characters that occur *inside* strings so the document parses cleanly.
-export function sanitizeJsonControlChars(input: string): string {
-  let out = ""
-  let inString = false
-  let escaped = false
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i]
-    const code = input.charCodeAt(i)
-    if (escaped) {
-      out += ch
-      escaped = false
-      continue
-    }
-    if (ch === "\\") {
-      out += ch
-      escaped = inString
-      continue
-    }
-    if (ch === '"') {
-      inString = !inString
-      out += ch
-      continue
-    }
-    if (inString && code <= 0x1f) {
-      if (ch === "\n") out += "\\n"
-      else if (ch === "\r") out += "\\r"
-      else if (ch === "\t") out += "\\t"
-      else out += "\\u" + code.toString(16).padStart(4, "0")
-      continue
-    }
-    out += ch
-  }
-  return out
-}
+// SHAFT's shaft-trace.json embeds raw newlines inside string values; see json-sanitize.
+export { sanitizeJsonControlChars } from "@/lib/json-sanitize"
+import { sanitizeJsonControlChars } from "@/lib/json-sanitize"
 
 export function unzipEntry(zipPath: string, entry: string): Promise<string> {
   return new Promise((resolve, reject) => {

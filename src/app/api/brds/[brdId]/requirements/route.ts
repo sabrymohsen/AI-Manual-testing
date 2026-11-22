@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db"
 import { z } from "zod"
 import { requireBrdAccess, requireBrdTestAccess, brdAudit } from "@/lib/brd/server"
 import { extractBrdRequirements } from "@/lib/brd/lifecycle"
+import { impactMap } from "@/lib/brd/impact"
+import { loadGate } from "@/lib/brd/questions"
+import { questionsFor } from "@/lib/brd/readiness"
 
 /**
  * GET  /api/brds/:brdId/requirements — requirements with their linked test
@@ -40,6 +43,30 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
     return "covered"
   }
 
+  // Impact analysis (what each requirement can break) and the open questions
+  // that concern it — both from the QA pipeline's professional-tester rules.
+  const impacts = impactMap(
+    reqs.map((r) => ({
+      id: r.id,
+      key: r.key,
+      title: r.title,
+      description: r.description,
+      acceptanceCriteria: Array.isArray(r.acceptanceCriteria) ? (r.acceptanceCriteria as string[]) : [],
+      section: r.section,
+      parentKey: r.parentKey,
+      priority: r.priority,
+      status: r.status,
+    })),
+    { limit: 6 }
+  )
+  const [questions, gate] = await Promise.all([
+    prisma.brdQuestion.findMany({
+      where: { brdId: params.brdId, status: "Open" },
+      select: { key: true, priority: true, status: true, question: true, relatedKeys: true },
+    }),
+    loadGate(params.brdId),
+  ])
+
   const requirements = reqs.map((r) => ({
     id: r.id,
     key: r.key,
@@ -61,6 +88,8 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
       ? { id: r.task.id, key: boardKey ? `${boardKey}-${r.task.taskNumber}` : `#${r.task.taskNumber}`, status: r.task.status }
       : null,
     epic: r.epic ? { id: r.epic.id, title: r.epic.title } : null,
+    impacts: impacts[r.id] ?? [],
+    openQuestions: questionsFor(r.key, questions).map((q) => ({ key: q.key, priority: q.priority, question: q.question })),
     testCases: r.testCases.map((l) => ({
       ...l.testCase,
       needsReview: l.needsReview,
@@ -70,6 +99,7 @@ export async function GET(_req: Request, { params }: { params: { brdId: string }
 
   return NextResponse.json({
     requirements,
+    gate,
     summary: {
       total: live.length,
       covered: requirements.filter((r) => r.status !== "removed" && r.coverage !== "uncovered").length,

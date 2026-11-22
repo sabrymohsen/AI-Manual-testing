@@ -1,0 +1,24 @@
+{
+  "storyId": "<ID>",
+  "sample": false,
+  "triagedBy": "bug-reporter agent",
+  "observations": [
+    { "testId": "TC-<AREA>-002", "text": "<something seen but not checked by any step>", "followUp": "<new case or question>" }
+  ],
+  "decisions": [
+    {
+      "testId": "TC-<AREA>-001",
+      "decision": "Bug",
+      "reason": "<why, citing the screenshot and the expected result>",
+      "title": "<what is wrong + where>",
+      "severity": "Medium",
+      "priority": "P3",
+      "component": "<page / feature>"
+    },
+    {
+      "testId": "TC-<AREA>-002",
+      "decision": "RequirementIssue",
+      "reason": "Expected text depends on open question Q-01"
+    }
+  ]
+}

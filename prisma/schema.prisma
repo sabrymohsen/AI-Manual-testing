@@ -3143,6 +3143,13 @@ model BrdDocument {
   requirements     BrdRequirement[]
   analyses         BrdAnalysis[]
   reviews          BrdReview[]
+  questions        BrdQuestion[]
+  /// Readiness gate: a tester chose to design tests before every open question
+  /// was answered. Who, why and when; cleared when they withdraw it.
+  gateOverrideById   String?
+  gateOverrideByName String?
+  gateOverrideWhy    String?   @db.Text
+  gateOverrideAt     DateTime?
   isDeleted        Boolean         @default(false)
   deletedAt        DateTime?
   createdAt        DateTime        @default(now())
@@ -3298,6 +3305,46 @@ model BrdRequirement {
   @@index([brdId])
   @@index([taskId])
   @@index([epicId])
+}
+
+/// An open question about a BRD: a gap the tester must not fill with an
+/// assumption. High-priority open questions block test design (readiness gate).
+model BrdQuestion {
+  id             String      @id @default(cuid())
+  brdId          String
+  brd            BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  /// Q-01, Q-02 … unique within the BRD
+  key            String
+  question       String      @db.Text
+  /// Why it matters for testing
+  why            String?     @db.Text
+  /// ambiguity | conflict | missing | untestable | question
+  kind           String      @default("question")
+  /// High = blocks a test case; Medium = changes an expected result; Low = nice to know
+  priority       String      @default("Medium")
+  /// Requirement keys this concerns
+  relatedKeys    String[]    @default([])
+  quote          String?     @db.Text
+  section        String?
+  /// Who should answer: PO, BA, Dev, …
+  askTo          String?
+  /// Open | Answered | Dismissed
+  status         String      @default("Open")
+  answer         String?     @db.Text
+  answeredById   String?
+  answeredByName String?
+  answeredAt     DateTime?
+  /// Where the answer came from: email | meeting | jira | chat | other
+  answerSource   String?
+  /// analysis | manual
+  origin         String      @default("manual")
+  createdById    String?
+  createdByName  String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([brdId, key])
+  @@index([brdId, status])
 }
 
 model BrdRequirementTestCase {

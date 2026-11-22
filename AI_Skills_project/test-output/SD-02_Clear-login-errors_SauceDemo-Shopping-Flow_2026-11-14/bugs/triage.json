@@ -1,0 +1,34 @@
+{
+  "storyId": "SD-02",
+  "sample": false,
+  "override": true,
+  "triagedBy": "bug-reporter agent",
+  "triagedAt": "2026-11-15",
+  "note": "TESTER OVERRIDE suite (gate overridden 2026-11-14T22:04:39Z, Q-01..Q-06 Open). All four Failed results differ from the expected text only by the leading \"Epic sadface: \" prefix. The prefix is exactly what open question Q-01 asks about, so none of these expected results is confirmed. No result is decided as Bug.",
+  "decisions": [
+    {
+      "testId": "TC-LOGIN-002",
+      "decision": "RequirementIssue",
+      "questionRef": ["Q-01"],
+      "reason": "Expected text depends on open question Q-01 (G-01). Screenshot TC-LOGIN-002-s4.png shows the user kept on the login page with the error \"Epic sadface: Password is required\"; the expected text is AC-2 as written, \"Password is required\". The only difference is the \"Epic sadface: \" prefix. AC-1 in the same story requires that prefix (TC-LOGIN-001 passed with it), so the story contradicts itself and Q-01 is still Open. Not confirmed, so not a bug; goes to the PO via Q-01. The behaviour itself (stay on login page, password-required message) held."
+    },
+    {
+      "testId": "TC-LOGIN-003",
+      "decision": "RequirementIssue",
+      "questionRef": ["Q-01"],
+      "reason": "Expected text depends on open question Q-01 (G-01). Screenshot TC-LOGIN-003-s4.png shows the user kept on the login page with \"Epic sadface: Username and password do not match any user in this service\"; the expected text is AC-3 as written, without the prefix. Only the \"Epic sadface: \" prefix differs, which is exactly what Q-01 asks. Not confirmed, so not a bug. (Q-02, which combinations AC-3 covers, is also Open but does not affect this result: the message body matches AC-3.)"
+    },
+    {
+      "testId": "TC-LOGIN-004",
+      "decision": "RequirementIssue",
+      "questionRef": ["Q-01", "Q-02"],
+      "reason": "Expected text depends on open question Q-01 (G-01), and whether an unknown username is covered by AC-3 at all depends on open Q-02. Screenshot TC-LOGIN-004-s4.png shows the user kept on the login page with \"Epic sadface: Username and password do not match any user in this service\"; expected is AC-3 as written, without the prefix. Only the prefix differs. Same requirement cause as TC-LOGIN-002/003, recorded against the questions rather than as a duplicate bug. Not a bug."
+    },
+    {
+      "testId": "TC-LOGIN-007",
+      "decision": "RequirementIssue",
+      "questionRef": ["Q-01"],
+      "reason": "Expected text depends on open question Q-01, which explicitly also covers the SD-03 locked-out message. Screenshots TC-LOGIN-007-s3.png and -s4.png show locked_out_user kept on the login page (Products page not opened, step 3 passed, so the IM-02 security behaviour held) with \"Epic sadface: Sorry, this user has been locked out.\"; expected is the SD-03 AC as written, without the prefix. Only the prefix differs. Not a bug and not a regression. The 2 console errors are 401 responses from the third-party telemetry host events.backtrace.io (outside the approved hosts, not the login form, no visible effect): no product evidence, not filed. The session-username=locked_out_user cookie seen after the rejected login is a note, not an asserted step: listed as an observation for follow-up in bugs-summary.md, not filed."
+    }
+  ]
+}

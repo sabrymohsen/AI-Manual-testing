@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "runId": "SD-02_Clear-login-errors_SauceDemo-Shopping-Flow_2026-11-14",
+  "createdAt": "2026-11-14T22:01:53.322Z",
+  "sample": false,
+  "story": {
+    "id": "SD-02",
+    "title": "Clear login errors"
+  },
+  "epic": {
+    "name": "SauceDemo Shopping Flow",
+    "file": "test-input/EPIC_1_SauceDemo.md"
+  },
+  "config": {
+    "baseUrl": "https://www.saucedemo.com",
+    "approvedHosts": [
+      "www.saucedemo.com"
+    ],
+    "scope": 7,
+    "headed": true,
+    "dashboard": true
+  },
+  "stages": {
+    "analysis": {
+      "status": "Done",
+      "agent": "requirements-analyst",
+      "startedAt": "2026-11-14T22:01:53.561Z",
+      "completedAt": "2026-11-14T22:03:04.523Z",
+      "errors": []
+    },
+    "gate": {
+      "status": "Done",
+      "agent": "orchestrator + user",
+      "startedAt": null,
+      "completedAt": "2026-11-14T22:04:39.242Z",
+      "errors": []
+    },
+    "testcases": {
+      "status": "Done",
+      "agent": "test-designer",
+      "startedAt": "2026-11-14T22:05:05.351Z",
+      "completedAt": "2026-11-14T22:06:44.234Z",
+      "errors": []
+    },
+    "execution": {
+      "status": "Done",
+      "agent": "qc-execution",
+      "startedAt": "2026-11-14T22:08:09.836Z",
+      "completedAt": "2026-11-14T22:18:32.202Z",
+      "errors": []
+    },
+    "bugs": {
+      "status": "Done",
+      "agent": "bug-reporter",
+      "startedAt": "2026-11-14T22:18:32.643Z",
+      "completedAt": "2026-11-14T22:20:38.267Z",
+      "errors": []
+    },
+    "report": {
+      "status": "Done",
+      "agent": "report-builder",
+      "startedAt": "2026-11-14T22:20:38.381Z",
+      "completedAt": "2026-11-14T22:21:38.986Z",
+      "errors": []
+    },
+    "summary": {
+      "status": "Done",
+      "agent": "orchestrator",
+      "startedAt": null,
+      "completedAt": "2026-11-14T22:21:40.029Z",
+      "errors": []
+    }
+  },
+  "gate": {
+    "decision": "Override",
+    "conditions": {
+      "allAnswered": false,
+      "requirementClear": false,
+      "jiraUpdated": false,
+      "emailUpdated": false,
+      "openQuestions": [
+        {
+          "id": "Q-01",
+          "priority": "High",
+          "question": "What is the exact expected text for AC-2 (empty password) and AC-3 (wrong details): with the prefix \"Epic sadface: \" like AC-1, or without it as written?"
+        },
+        {
+          "id": "Q-02",
+          "priority": "Medium",
+          "question": "Does AC-3 \"Wrong details\" cover a wrong username with a valid password, a valid username with a wrong password, and both wrong? Is the message the same for all three?"
+        },
+        {
+          "id": "Q-03",
+          "priority": "Medium",
+          "question": "When both username and password are empty, which message is expected: the username message (AC-1), the password message (AC-2), or both?"
+        },
+        {
+          "id": "Q-04",
+          "priority": "Low",
+          "question": "After a login error, should the typed inputs be kept or cleared, should the error be dismissible (e.g. an X button), and should the fields be highlighted?"
+        },
+        {
+          "id": "Q-05",
+          "priority": "Low",
+          "question": "Does a username made only of spaces count as empty (AC-1 message)? Is the password comparison case sensitive (\"Secret_Sauce\" -> AC-3 message)?"
+        },
+        {
+          "id": "Q-06",
+          "priority": "High",
+          "question": "Who are the PO, BA and Dev lead for EPIC 1, so the questions can be answered and recorded with a name?"
+        }
+      ]
+    },
+    "by": "Tester (the user)",
+    "why": "Run the full testing cycle now, before the PO answers the 6 open questions",
+    "words": "Override and run now; run in headed mode",
+    "at": "2026-11-14T22:04:39.107Z",
+    "noticeShownFirst": true,
+    "noticeDraftedAt": "2026-11-14T22:03:04.640Z"
+  },
+  "posted": [],
+  "notes": [
+    {
+      "at": "2026-11-14T22:18:32.318Z",
+      "text": "No application data created on saucedemo.com; cookies and localStorage cleared after each login; browser session qa-sd-02-20261115-000907-9b93 closed (plus a short probe session qa-sd-02-probe-20261115, also closed)."
+    },
+    {
+      "at": "2026-11-14T22:18:32.422Z",
+      "text": "Record correction: the execution agent hand-edited only the TC-LOGIN-007 'note' field in results.json (console errors were noted as 0 before being read; 2 third-party telemetry 401s from events.backtrace.io). Logged in execution-log.md. No status, step or actual result was changed."
+    },
+    {
+      "at": "2026-11-14T22:18:32.528Z",
+      "text": "Scratch left on disk: .playwright-cli/ (32 snapshot/console files from this run) in the project root; deletion was not permitted to the agent, so it is the user's call."
+    },
+    {
+      "at": "2026-11-14T22:21:39.109Z",
+      "text": "Follow-ups from triage (not filed): after the rejected locked_out_user login a cookie session-username=locked_out_user was set (add a case: open /inventory.html directly afterwards, expect redirect to login); the AC-3 message looks clipped in the error box (TC-LOGIN-003/004 s4 screenshots, cosmetic); a redirect error persisted across reload (Q-04)."
+    },
+    {
+      "at": "2026-11-14T22:21:39.226Z",
+      "text": "Java ExtentReports output skipped: Java 17+ and Maven are not installed."
+    }
+  ],
+  "updatedAt": "2026-11-14T22:21:40.030Z"
+}

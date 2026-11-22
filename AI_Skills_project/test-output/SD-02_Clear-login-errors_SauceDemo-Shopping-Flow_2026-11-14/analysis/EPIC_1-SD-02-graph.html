@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Impact Graph SD-02</title>
+<style>
+:root{--bg:#f7f8fa;--fg:#1d2330;--muted:#5b6475;--node:#dfe4ec;--edge:#9aa4b5;--hot:#d6293e;--target:#2e9e4f;--card:#fff;--line:#e3e7ee}
+@media (prefers-color-scheme:dark){:root{--bg:#12151c;--fg:#e8ebf1;--muted:#9aa3b5;--node:#2a3140;--edge:#5d6880;--card:#1a1f2a;--line:#2a3140}}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+main{max-width:1200px;margin:0 auto;padding:20px 16px}
+h1{font-size:20px;margin:0 0 4px}.sub{color:var(--muted);margin:0 0 16px}
+.banner{background:#d6293e;color:#fff;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-weight:600}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+svg{display:block}.edge{fill:none;stroke:var(--edge);stroke-width:1.6}.edge.hot{stroke:var(--hot);stroke-width:2.4}
+.lbl{fill:var(--fg);font-size:12px}.lbl.dark{fill:#fff}.lbl.id{font-weight:700}
+.node.target rect{stroke:var(--fg);stroke-width:3}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0;color:var(--muted)}.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:4px;display:inline-block}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:16px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--muted);font-weight:600}
+.pill{color:#111;padding:2px 8px;border-radius:999px;font-weight:600;font-size:12px}
+</style></head><body><main>
+<h1>Impact graph: SD-02 in SauceDemo Shopping Flow</h1>
+<p class="sub">12 stories. Arrows point from a story to the stories that depend on it. Red arrows touch the target story. Hover a box for its acceptance criteria and impact.</p>
+<div class="legend"><span><i class="sw" style="background:var(--target)"></i>Target</span><span><i class="sw" style="background:#d6293e"></i>Critical</span><span><i class="sw" style="background:#f2a93b"></i>High</span><span><i class="sw" style="background:#eac54f"></i>Medium</span><span><i class="sw" style="background:#7fb3d5"></i>Low</span><span><i class="sw" style="background:var(--node)"></i>Not impacted</span></div>
+<div class="wrap"><svg width="2070" height="304" viewBox="0 0 2070 304" role="img" aria-label="Epic dependency graph">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--edge)"/></marker>
+<marker id="arrowHot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--hot)"/></marker></defs>
+<path d="M220,62 C255,62 255,62 284,62" class="edge hot" marker-end="url(#arrowHot)"/>
+<path d="M220,62 C255,62 255,152 284,152" class="edge" marker-end="url(#arrow)"/>
+<path d="M220,62 C255,62 255,242 284,242" class="edge" marker-end="url(#arrow)"/>
+<path d="M480,242 C515,242 515,62 544,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M480,242 C515,242 515,152 544,152" class="edge" marker-end="url(#arrow)"/>
+<path d="M480,242 C645,242 645,62 804,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M740,152 C775,152 775,62 804,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M1000,62 C1035,62 1035,62 1064,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M1260,62 C1295,62 1295,62 1324,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M1520,62 C1555,62 1555,62 1584,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M1780,62 C1815,62 1815,62 1844,62" class="edge" marker-end="url(#arrow)"/>
+<path d="M220,62 C645,62 645,152 1064,152" class="edge" marker-end="url(#arrow)"/>
+<path d="M1000,62 C1035,62 1035,152 1064,152" class="edge" marker-end="url(#arrow)"/>
+<g class="node"><title>SD-01: As a shopper, I want to log in so that I can see the products.
+AC: standard_user / secret_sauce opens the Products page
+Impact IM-01: Critical (score 9) - The error handling lives on the same login form and submit action as the valid login. A change to validation can block every valid login, and SD-01 is the entry to the whole epic.</title><rect x="30" y="30" width="190" height="64" rx="10" fill="#d6293e"/><text x="42" y="52" class="lbl dark id">SD-01 · Critical</text><text x="42" y="70" class="lbl dark">log in</text></g>
+<g class="node target"><title>SD-02: As a shopper, I want clear login errors so that I know what went wrong.
+AC: Empty username → &quot;Epic sadface: Username is required&quot;. Empty password → &quot;Password is required&quot;. Wrong details → &quot;Username and password do not match any user in this service&quot;
+TARGET STORY</title><rect x="290" y="30" width="190" height="64" rx="10" fill="var(--target)"/><text x="302" y="52" class="lbl dark id">SD-02 · TARGET</text><text x="302" y="70" class="lbl dark">clear login errors</text></g>
+<g class="node"><title>SD-03: As the business, I want blocked users kept out so that the system stays secure.
+AC: locked_out_user → &quot;Sorry, this user has been locked out.&quot;
+Impact IM-02: High (score 6) - The locked-out message uses the same error area as the SD-02 messages. A change to how errors are shown or worded can break it, and a locked-out user getting in is a security failure.</title><rect x="290" y="120" width="190" height="64" rx="10" fill="#f2a93b"/><text x="302" y="142" class="lbl dark id">SD-03 · High</text><text x="302" y="160" class="lbl dark">blocked users kept out</text></g>
+<g class="node"><title>SD-04: As a shopper, I want to see the product list so that I can choose items.
+AC: 6 products shown, each with image, name, description, price, and Add to cart
+Impact IM-03: Medium (score 3) - Every later story starts with a login. SD-02 only touches failed logins, so the risk to them is indirect.</title><rect x="290" y="210" width="190" height="64" rx="10" fill="#eac54f"/><text x="302" y="232" class="lbl id">SD-04 · Medium</text><text x="302" y="250" class="lbl">see the product list</text></g>
+<g class="node"><title>SD-05: As a shopper, I want to sort products so that I can find items faster.
+AC: Sort options: Name (A to Z), Name (Z to A), Price (low to high), Price (high to low). The list reorders correctly</title><rect x="550" y="30" width="190" height="64" rx="10" fill="var(--node)"/><text x="562" y="52" class="lbl id">SD-05</text><text x="562" y="70" class="lbl">sort products</text></g>
+<g class="node"><title>SD-06: As a shopper, I want to open a product's details so that I can read more.
+AC: Clicking a product name opens its detail page; Back to products returns to the list</title><rect x="550" y="120" width="190" height="64" rx="10" fill="var(--node)"/><text x="562" y="142" class="lbl id">SD-06</text><text x="562" y="160" class="lbl">open a product's details</text></g>
+<g class="node"><title>SD-07: As a shopper, I want to add and remove items so that I control my cart.
+AC: Button switches Add to cart ⇄ Remove; the cart badge count goes up and down</title><rect x="810" y="30" width="190" height="64" rx="10" fill="var(--node)"/><text x="822" y="52" class="lbl id">SD-07</text><text x="822" y="70" class="lbl">add and remove items</text></g>
+<g class="node"><title>SD-08: As a shopper, I want to view my cart so that I can check my items.
+AC: Cart shows quantity, name, and price; Continue Shopping and Checkout work</title><rect x="1070" y="30" width="190" height="64" rx="10" fill="var(--node)"/><text x="1082" y="52" class="lbl id">SD-08</text><text x="1082" y="70" class="lbl">view my cart</text></g>
+<g class="node"><title>SD-09: As a shopper, I want to enter my details at checkout so that my order can be processed.
+AC: First Name, Last Name, and Zip are required; empty field → &quot;Error: First Name is required&quot; (same for the others)</title><rect x="1330" y="30" width="190" height="64" rx="10" fill="var(--node)"/><text x="1342" y="52" class="lbl id">SD-09</text><text x="1342" y="70" class="lbl">enter my details at</text><text x="1342" y="85" class="lbl">checkout</text></g>
+<g class="node"><title>SD-10: As a shopper, I want to review the order total so that there are no surprises.
+AC: Item total + Tax = Total, and the maths is correct (tax ≈ 8%)</title><rect x="1590" y="30" width="190" height="64" rx="10" fill="var(--node)"/><text x="1602" y="52" class="lbl id">SD-10</text><text x="1602" y="70" class="lbl">review the order total</text></g>
+<g class="node"><title>SD-11: As a shopper, I want an order confirmation so that I know the order is done.
+AC: Finish → &quot;Thank you for your order!&quot;; cart badge cleared; Back Home works</title><rect x="1850" y="30" width="190" height="64" rx="10" fill="var(--node)"/><text x="1862" y="52" class="lbl id">SD-11</text><text x="1862" y="70" class="lbl">an order confirmation</text></g>
+<g class="node"><title>SD-12: As a shopper, I want a menu to log out and reset the app so that I can manage my session.
+AC: Logout returns to the login page; Reset App State empties the cart; the browser Back button after logout does not show products
+Impact IM-04: Low (score 2) - Logout lands on the login form that SD-02 changes; the form must still validate after a logout.</title><rect x="1070" y="120" width="190" height="64" rx="10" fill="#7fb3d5"/><text x="1082" y="142" class="lbl id">SD-12 · Low</text><text x="1082" y="160" class="lbl">a menu to log out and</text><text x="1082" y="175" class="lbl">reset the app</text></g>
+</svg></div>
+<table><thead><tr><th>ID</th><th>Module</th><th>Level</th><th>L x S</th><th>Evidence / question</th><th>Test focus</th></tr></thead><tbody><tr><td>IM-01</td><td>SD-01 Log in</td><td><span class="pill" style="background:#d6293e">Critical</span></td><td>3 x 3 = 9</td><td>&quot;SD-02 | ... | SD-01 | (Depends On); SD-01: &quot;standard_user / secret_sauce opens the Products page&quot;&quot;</td><td>standard_user / secret_sauce still opens the Products page, including right after an error was shown</td></tr><tr><td>IM-02</td><td>SD-03 Blocked user message</td><td><span class="pill" style="background:#f2a93b">High</span></td><td>3 x 2 = 6</td><td>&quot;Linked tickets: ... related SD-03 (blocked user message); SD-03: &quot;locked_out_user -&gt; Sorry, this user has been locked out.&quot;&quot; Q-01</td><td>locked_out_user / secret_sauce stays on the login page and sees the locked-out message (exact prefix depends on Q-01)</td></tr><tr><td>IM-03</td><td>Shopping flow after login (SD-04 to SD-11)</td><td><span class="pill" style="background:#eac54f">Medium</span></td><td>1 x 3 = 3</td><td>&quot;Dependency Chain (test in this order): SD-01 → SD-04 → SD-06 → SD-07 → SD-08 → SD-09 → SD-10 → SD-11&quot;</td><td>after a valid login the product list shows (covered by the IM-01 case reaching Products)</td></tr><tr><td>IM-04</td><td>SD-12 Logout returns to the login page</td><td><span class="pill" style="background:#7fb3d5">Low</span></td><td>1 x 2 = 2</td><td>&quot;SD-12: &quot;Logout returns to the login page&quot;&quot;</td><td>after logout, submitting an empty username still shows the AC-1 message</td></tr></tbody></table>
+</main></body></html>

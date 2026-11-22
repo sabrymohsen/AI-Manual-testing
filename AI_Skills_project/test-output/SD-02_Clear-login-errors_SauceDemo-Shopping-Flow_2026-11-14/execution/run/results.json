@@ -1,0 +1,594 @@
+{
+  "schemaVersion": 1,
+  "suiteId": "TS-LOGIN-001",
+  "storyId": "SD-02",
+  "storyTitle": "Clear login errors",
+  "epic": "SauceDemo Shopping Flow",
+  "suitePath": "G:\\Testing\\Learning\\AI\\Gen AI Practical\\AI Projects\\AI_Skills_project\\test-output\\SD-02_Clear-login-errors_SauceDemo-Shopping-Flow_2026-11-14\\testcases\\SD-02-testcases.json",
+  "baseUrl": "https://www.saucedemo.com",
+  "approvedHosts": [
+    "saucedemo.com"
+  ],
+  "headed": true,
+  "session": "qa-sd-02-20261115-000907-9b93",
+  "sample": false,
+  "override": true,
+  "observationDerived": false,
+  "status": "complete",
+  "startedAt": "2026-11-14T22:09:07.041Z",
+  "finishedAt": "2026-11-14T22:17:35.989Z",
+  "results": [
+    {
+      "id": "TC-LOGIN-001",
+      "title": "Empty username shows the username-required error",
+      "scope": "Target",
+      "impactRef": null,
+      "priority": "P1",
+      "caseStatus": "Ready",
+      "status": "Passed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:09:28.008Z",
+      "endedAt": "2026-11-14T22:10:28.091Z",
+      "durationMs": 60083,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Leave the **Username** field empty",
+          "expected": "",
+          "actual": "Username field left empty (value \"\")",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"() => [document.querySelector('#user-name').value, ...]\""
+          ],
+          "at": "2026-11-14T22:10:21.522Z"
+        },
+        {
+          "n": 2,
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with secret_sauce",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f1e13 \"secret_sauce\""
+          ],
+          "at": "2026-11-14T22:10:21.678Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)",
+          "actual": "Still on https://www.saucedemo.com/ with the Login form and Login button shown; no Products title on the page",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-001-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f1e15"
+          ],
+          "at": "2026-11-14T22:10:21.810Z"
+        },
+        {
+          "n": 4,
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Epic sadface: Username is required\"",
+          "actual": "Visible error text: \"Epic sadface: Username is required\"",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-001-s4.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"(el) => el.textContent\" f1e26"
+          ],
+          "at": "2026-11-14T22:10:21.928Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-001-s3.png",
+        "evidence/TC-LOGIN-001-s4.png"
+      ],
+      "reason": null,
+      "note": "console error: 0 JS errors",
+      "infra": false,
+      "history": []
+    },
+    {
+      "id": "TC-LOGIN-002",
+      "title": "Empty password shows the password-required error",
+      "scope": "Target",
+      "impactRef": null,
+      "priority": "P1",
+      "caseStatus": "Ready",
+      "status": "Failed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:10:28.203Z",
+      "endedAt": "2026-11-14T22:11:21.593Z",
+      "durationMs": 53390,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Enter `standard_user` in **Username**",
+          "expected": "",
+          "actual": "Username field filled with standard_user",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f2e11 \"standard_user\""
+          ],
+          "at": "2026-11-14T22:11:06.124Z"
+        },
+        {
+          "n": 2,
+          "action": "Leave the **Password** field empty",
+          "expected": "",
+          "actual": "Password field left empty (value \"\")",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"() => [document.querySelector('#user-name').value, document.querySelector('#password').value]\""
+          ],
+          "at": "2026-11-14T22:11:06.294Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)",
+          "actual": "Still on https://www.saucedemo.com/ with the Login form and Login button shown; no Products title on the page",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-002-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f2e15"
+          ],
+          "at": "2026-11-14T22:11:06.522Z"
+        },
+        {
+          "n": 4,
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Password is required\"",
+          "actual": "Visible error text: \"Epic sadface: Password is required\" (expected exactly \"Password is required\"; live text has the extra \"Epic sadface: \" prefix)",
+          "status": "fail",
+          "screenshot": "evidence/TC-LOGIN-002-s4.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"(el) => el.textContent\" f2e26"
+          ],
+          "at": "2026-11-14T22:11:06.705Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-002-s3.png",
+        "evidence/TC-LOGIN-002-s4.png"
+      ],
+      "reason": "Step 4: error text is \"Epic sadface: Password is required\", expected exactly \"Password is required\" (AC-2 as written; Q-01 open)",
+      "note": "console error: 0 JS errors",
+      "infra": false,
+      "history": []
+    },
+    {
+      "id": "TC-LOGIN-003",
+      "title": "Wrong password for standard_user shows the no-match error",
+      "scope": "Target",
+      "impactRef": null,
+      "priority": "P1",
+      "caseStatus": "Ready",
+      "status": "Failed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:11:21.712Z",
+      "endedAt": "2026-11-14T22:12:18.751Z",
+      "durationMs": 57039,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Enter `standard_user` in **Username**",
+          "expected": "",
+          "actual": "Username field filled with standard_user",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f3e11 \"standard_user\""
+          ],
+          "at": "2026-11-14T22:12:05.086Z"
+        },
+        {
+          "n": 2,
+          "action": "Enter `wrong_pass_123` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with wrong_pass_123",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f3e13 \"wrong_pass_123\""
+          ],
+          "at": "2026-11-14T22:12:05.218Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)",
+          "actual": "Still on https://www.saucedemo.com/ with the Login form and Login button shown; no Products title on the page",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-003-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f3e15"
+          ],
+          "at": "2026-11-14T22:12:05.332Z"
+        },
+        {
+          "n": 4,
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Username and password do not match any user in this service\"",
+          "actual": "Visible error text: \"Epic sadface: Username and password do not match any user in this service\" (expected exactly \"Username and password do not match any user in this service\"; live text has the extra \"Epic sadface: \" prefix)",
+          "status": "fail",
+          "screenshot": "evidence/TC-LOGIN-003-s4.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"(el) => el.textContent\" f3e26"
+          ],
+          "at": "2026-11-14T22:12:05.448Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-003-s3.png",
+        "evidence/TC-LOGIN-003-s4.png"
+      ],
+      "reason": "Step 4: error text is \"Epic sadface: Username and password do not match any user in this service\", expected exactly \"Username and password do not match any user in this service\" (AC-3 as written; Q-01 open)",
+      "note": "console error: 0 JS errors",
+      "infra": false,
+      "history": []
+    },
+    {
+      "id": "TC-LOGIN-004",
+      "title": "Unknown username shows the no-match error",
+      "scope": "Target",
+      "impactRef": null,
+      "priority": "P2",
+      "caseStatus": "Ready",
+      "status": "Failed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:12:18.900Z",
+      "endedAt": "2026-11-14T22:13:09.014Z",
+      "durationMs": 50114,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Enter `qa_unknown_user_x1` in **Username**",
+          "expected": "",
+          "actual": "Username field filled with qa_unknown_user_x1",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f4e11 \"qa_unknown_user_x1\""
+          ],
+          "at": "2026-11-14T22:13:07.171Z"
+        },
+        {
+          "n": 2,
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with secret_sauce",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f4e13 \"secret_sauce\""
+          ],
+          "at": "2026-11-14T22:13:07.310Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)",
+          "actual": "Still on https://www.saucedemo.com/ with the Login form and Login button shown; no Products title on the page",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-004-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f4e15"
+          ],
+          "at": "2026-11-14T22:13:07.419Z"
+        },
+        {
+          "n": 4,
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Username and password do not match any user in this service\"",
+          "actual": "Visible error text: \"Epic sadface: Username and password do not match any user in this service\" (expected exactly \"Username and password do not match any user in this service\"; live text has the extra \"Epic sadface: \" prefix)",
+          "status": "fail",
+          "screenshot": "evidence/TC-LOGIN-004-s4.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"(el) => el.textContent\" f4e26"
+          ],
+          "at": "2026-11-14T22:13:07.544Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-004-s3.png",
+        "evidence/TC-LOGIN-004-s4.png"
+      ],
+      "reason": "Step 4: error text is \"Epic sadface: Username and password do not match any user in this service\", expected exactly \"Username and password do not match any user in this service\" (AC-3 as written; Q-01, Q-02 open)",
+      "note": "console error: 0 JS errors",
+      "infra": false,
+      "history": []
+    },
+    {
+      "id": "TC-LOGIN-005",
+      "title": "Valid standard_user login still opens the Products page",
+      "scope": "Impacted",
+      "impactRef": "IM-01",
+      "priority": "P1",
+      "caseStatus": "Ready",
+      "status": "Passed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:13:13.988Z",
+      "endedAt": "2026-11-14T22:14:02.392Z",
+      "durationMs": 48404,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Enter `standard_user` in **Username**",
+          "expected": "",
+          "actual": "Username field filled with standard_user",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f5e11 \"standard_user\""
+          ],
+          "at": "2026-11-14T22:13:53.641Z"
+        },
+        {
+          "n": 2,
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with secret_sauce",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f5e13 \"secret_sauce\""
+          ],
+          "at": "2026-11-14T22:13:53.780Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "No login error message is shown",
+          "actual": "Navigated to https://www.saucedemo.com/inventory.html; no [data-test=error] element and no login error message on the page",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-005-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f5e15"
+          ],
+          "at": "2026-11-14T22:13:53.895Z"
+        },
+        {
+          "n": 4,
+          "action": "Look at the page title area",
+          "expected": "The **Products** page is open (the **Products** title is visible)",
+          "actual": "Products page open: title text \"Products\" is visible (inventory.html)",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-005-s4.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"(el) => el.textContent\" f5e34"
+          ],
+          "at": "2026-11-14T22:13:54.020Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-005-s3.png",
+        "evidence/TC-LOGIN-005-s4.png"
+      ],
+      "reason": null,
+      "note": "console error: 0 JS errors. Cleanup: cookie-clear + localstorage-clear, then goto login page",
+      "infra": false,
+      "history": []
+    },
+    {
+      "id": "TC-LOGIN-006",
+      "title": "Valid login right after a login error still opens the Products page",
+      "scope": "Impacted",
+      "impactRef": "IM-01",
+      "priority": "P1",
+      "caseStatus": "Ready",
+      "status": "Passed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:14:27.162Z",
+      "endedAt": "2026-11-14T22:16:09.508Z",
+      "durationMs": 102346,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Leave the **Username** field empty",
+          "expected": "",
+          "actual": "Username field left empty (value \"\"). Precondition note: a leftover redirect message from the TC-LOGIN-005 logout check was dismissed with the Dismiss error button (f10e20) before the case started",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f10e20"
+          ],
+          "at": "2026-11-14T22:16:00.550Z"
+        },
+        {
+          "n": 2,
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with secret_sauce",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f10e15 \"secret_sauce\""
+          ],
+          "at": "2026-11-14T22:16:00.715Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "The login page is still shown and the error says exactly \"Epic sadface: Username is required\"",
+          "actual": "Still on https://www.saucedemo.com/ (Login button shown, no Products title); visible error text: \"Epic sadface: Username is required\"",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-006-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f10e23"
+          ],
+          "at": "2026-11-14T22:16:00.848Z"
+        },
+        {
+          "n": 4,
+          "action": "Clear the **Password** field (whatever it contains after the error) and make sure **Username** is empty",
+          "expected": "",
+          "actual": "Password cleared; both Username and Password values are \"\"",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f10e15 \"\""
+          ],
+          "at": "2026-11-14T22:16:00.974Z"
+        },
+        {
+          "n": 5,
+          "action": "Enter `standard_user` in **Username**",
+          "expected": "",
+          "actual": "Username field filled with standard_user",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f10e11 \"standard_user\""
+          ],
+          "at": "2026-11-14T22:16:01.086Z"
+        },
+        {
+          "n": 6,
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with secret_sauce",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f10e15 \"secret_sauce\""
+          ],
+          "at": "2026-11-14T22:16:01.226Z"
+        },
+        {
+          "n": 7,
+          "action": "Click **Login**",
+          "expected": "The **Products** page is open (the **Products** title is visible)",
+          "actual": "Navigated to https://www.saucedemo.com/inventory.html; title \"Products\" is visible",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-006-s7.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f10e23"
+          ],
+          "at": "2026-11-14T22:16:01.402Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-006-s3.png",
+        "evidence/TC-LOGIN-006-s7.png"
+      ],
+      "reason": null,
+      "note": "console error: 0 JS errors. Before step 1 a leftover redirect message (\"Epic sadface: You can only access '/inventory.html' when you are logged in.\", from the TC-LOGIN-005 logout check) survived reload and was dismissed. Cleanup: cookie-clear + localstorage-clear, then goto login page",
+      "infra": false,
+      "history": []
+    },
+    {
+      "id": "TC-LOGIN-007",
+      "title": "locked_out_user stays on the login page with the locked-out message",
+      "scope": "Impacted",
+      "impactRef": "IM-02",
+      "priority": "P1",
+      "caseStatus": "Ready",
+      "status": "Failed",
+      "attempts": 1,
+      "startedAt": "2026-11-14T22:16:21.547Z",
+      "endedAt": "2026-11-14T22:17:04.796Z",
+      "durationMs": 43249,
+      "steps": [
+        {
+          "n": 1,
+          "action": "Enter `locked_out_user` in **Username**",
+          "expected": "",
+          "actual": "Username field filled with locked_out_user",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f11e11 \"locked_out_user\""
+          ],
+          "at": "2026-11-14T22:17:02.165Z"
+        },
+        {
+          "n": 2,
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": "",
+          "actual": "Password field filled with secret_sauce",
+          "status": "pass",
+          "screenshot": null,
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 fill f11e13 \"secret_sauce\""
+          ],
+          "at": "2026-11-14T22:17:02.335Z"
+        },
+        {
+          "n": 3,
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)",
+          "actual": "Still on https://www.saucedemo.com/ with the Login form and Login button shown; no Products title on the page",
+          "status": "pass",
+          "screenshot": "evidence/TC-LOGIN-007-s3.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 click f11e15"
+          ],
+          "at": "2026-11-14T22:17:02.491Z"
+        },
+        {
+          "n": 4,
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Sorry, this user has been locked out.\"",
+          "actual": "Visible error text: \"Epic sadface: Sorry, this user has been locked out.\" (expected exactly \"Sorry, this user has been locked out.\"; live text has the extra \"Epic sadface: \" prefix)",
+          "status": "fail",
+          "screenshot": "evidence/TC-LOGIN-007-s4.png",
+          "commands": [
+            "playwright-cli -s=qa-sd-02-20261115-000907-9b93 eval \"(el) => el.textContent\" f11e26"
+          ],
+          "at": "2026-11-14T22:17:02.655Z"
+        }
+      ],
+      "evidence": [
+        "evidence/TC-LOGIN-007-s3.png",
+        "evidence/TC-LOGIN-007-s4.png"
+      ],
+      "reason": "Step 4: error text is \"Epic sadface: Sorry, this user has been locked out.\", expected exactly \"Sorry, this user has been locked out.\" (SD-03 AC as written; Q-01 open)",
+      "note": "console error: 2 errors, both from the site's third-party telemetry, not from the login form: [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://events.backtrace.io/api/unique-events/submit?universe=UNIVERSE&token=TOKEN:1 ; [ERROR] Failed to load resource: the server responded with a status of 401 (Unauthorized) @ https://events.backtrace.io/api/summed-events/submit?universe=UNIVERSE&token=TOKEN:1 . Also observed: the session-username=locked_out_user cookie was set after the rejected login (cleared at cleanup).",
+      "infra": false,
+      "history": []
+    }
+  ],
+  "summary": {
+    "total": 7,
+    "Passed": 3,
+    "Failed": 4,
+    "Error": 0,
+    "Flaky": 0,
+    "Blocked": 0,
+    "Skipped": 0,
+    "Not Run": 0,
+    "Running": 0,
+    "passRate": 42.9
+  },
+  "summaryByScope": {
+    "Target": {
+      "total": 4,
+      "Passed": 1,
+      "Failed": 3,
+      "Error": 0,
+      "Flaky": 0,
+      "Blocked": 0,
+      "Skipped": 0,
+      "Not Run": 0,
+      "Running": 0,
+      "passRate": 25
+    },
+    "Impacted": {
+      "total": 3,
+      "Passed": 2,
+      "Failed": 1,
+      "Error": 0,
+      "Flaky": 0,
+      "Blocked": 0,
+      "Skipped": 0,
+      "Not Run": 0,
+      "Running": 0,
+      "passRate": 66.7
+    }
+  },
+  "updatedAt": "2026-11-14T22:17:35.990Z"
+}

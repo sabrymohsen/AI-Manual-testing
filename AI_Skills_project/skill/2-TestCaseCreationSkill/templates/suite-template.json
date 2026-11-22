@@ -1,0 +1,51 @@
+{
+  "suiteId": "TS-<AREA>-001",
+  "storyId": "<ID>",
+  "storyTitle": "<title>",
+  "epic": "<epic name>",
+  "baseUrl": "<url>",
+  "approvedHosts": ["<host>"],
+  "sample": false,
+  "override": false,
+  "overrideNote": null,
+  "observationDerived": false,
+  "analysisRef": "../analysis/<ID>-result.md",
+  "acceptanceCriteria": [
+    { "id": "AC-1", "text": "<as written>" }
+  ],
+  "testCases": [
+    {
+      "id": "TC-<AREA>-001",
+      "title": "<what it proves>",
+      "scope": "Target",
+      "acRef": ["AC-1"],
+      "type": "Negative",
+      "technique": "EP",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [],
+      "preconditions": ["<state before step 1>"],
+      "testData": {},
+      "steps": [
+        { "action": "<user action>", "expected": "" },
+        { "action": "<user action>", "expected": "<exact observable outcome>" }
+      ],
+      "expectedResult": "<exact final outcome>",
+      "expectedSource": "requirement"
+    },
+    {
+      "id": "TC-<AREA>-002",
+      "title": "<impacted behaviour still works>",
+      "scope": "Impacted",
+      "impactRef": "IM-01",
+      "type": "Regression",
+      "technique": "Regression",
+      "priority": "P1",
+      "status": "Ready",
+      "steps": [
+        { "action": "<user action>", "expected": "<exact observable outcome>" }
+      ],
+      "expectedResult": "<exact final outcome>"
+    }
+  ]
+}

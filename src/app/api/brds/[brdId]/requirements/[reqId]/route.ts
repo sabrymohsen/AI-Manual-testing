@@ -7,6 +7,8 @@ const patchSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
   description: z.string().trim().min(1).max(10000).optional(),
   priority: z.enum(["Low", "Medium", "High", "Critical"]).nullable().optional(),
+  type: z.string().trim().max(60).nullable().optional(),
+  acceptanceCriteria: z.array(z.string().trim().min(1).max(2000)).max(100).optional(),
   // "active" accepts a change (the requirement's current wording is right);
   // "removed" retires it without losing its history.
   status: z.enum(["active", "removed"]).optional(),
@@ -34,6 +36,9 @@ export async function PATCH(request: Request, { params }: { params: { brdId: str
       ...(d.status === "active" ? { changedInVersion: null } : {}),
     },
   })
+  if (d.title !== undefined || d.description !== undefined || d.acceptanceCriteria !== undefined || d.priority !== undefined) {
+    await brdAudit(params.brdId, "requirement_edited", `${req.key}: ${requirement.title}`, access.session!.user)
+  }
   if (d.status && d.status !== req.status) {
     await brdAudit(params.brdId, "requirement_status", `${req.key}: ${req.status} → ${d.status}`, access.session!.user)
   }

@@ -1,0 +1,342 @@
+{
+  "suiteId": "TS-LOGIN-001",
+  "storyId": "SD-02",
+  "storyTitle": "Clear login errors",
+  "epic": "SauceDemo Shopping Flow",
+  "baseUrl": "https://www.saucedemo.com",
+  "approvedHosts": [
+    "saucedemo.com"
+  ],
+  "sample": false,
+  "override": true,
+  "overrideNote": "Tester (the user), 2026-11-15 (gate recorded 2026-11-14T22:04:39Z): \"Run the full testing cycle now, before the PO answers the 6 open questions\". User's words: \"Override and run now; run in headed mode\". Q-01 to Q-06 stay Open; expected results follow the acceptance criteria as written. Labelled TESTER OVERRIDE, never posted.",
+  "observationDerived": false,
+  "analysisRef": "../analysis/SD-02-result.md",
+  "acceptanceCriteria": [
+    {
+      "id": "AC-1",
+      "text": "Empty username -> \"Epic sadface: Username is required\""
+    },
+    {
+      "id": "AC-2",
+      "text": "Empty password -> \"Password is required\""
+    },
+    {
+      "id": "AC-3",
+      "text": "Wrong details -> \"Username and password do not match any user in this service\""
+    }
+  ],
+  "testCases": [
+    {
+      "id": "TC-LOGIN-001",
+      "title": "Empty username shows the username-required error",
+      "scope": "Target",
+      "acRef": [
+        "AC-1"
+      ],
+      "type": "Negative",
+      "technique": "EP",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields"
+      ],
+      "testData": {
+        "username": "",
+        "password": "secret_sauce"
+      },
+      "steps": [
+        {
+          "action": "Leave the **Username** field empty",
+          "expected": ""
+        },
+        {
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)"
+        },
+        {
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Epic sadface: Username is required\""
+        }
+      ],
+      "expectedResult": "The user stays on the login page and the error says exactly \"Epic sadface: Username is required\"",
+      "expectedSource": "requirement"
+    },
+    {
+      "id": "TC-LOGIN-002",
+      "title": "Empty password shows the password-required error",
+      "scope": "Target",
+      "acRef": [
+        "AC-2"
+      ],
+      "type": "Negative",
+      "technique": "EP",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [
+        "Q-01"
+      ],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields",
+        "TESTER OVERRIDE: Q-01 (prefix \"Epic sadface: \" or not) is Open; the expected text is AC-2 exactly as written"
+      ],
+      "testData": {
+        "username": "standard_user",
+        "password": ""
+      },
+      "steps": [
+        {
+          "action": "Enter `standard_user` in **Username**",
+          "expected": ""
+        },
+        {
+          "action": "Leave the **Password** field empty",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)"
+        },
+        {
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Password is required\""
+        }
+      ],
+      "expectedResult": "The user stays on the login page and the error says exactly \"Password is required\"",
+      "expectedSource": "requirement"
+    },
+    {
+      "id": "TC-LOGIN-003",
+      "title": "Wrong password for standard_user shows the no-match error",
+      "scope": "Target",
+      "acRef": [
+        "AC-3"
+      ],
+      "type": "Negative",
+      "technique": "EP",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [
+        "Q-01",
+        "Q-02"
+      ],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields",
+        "TESTER OVERRIDE: Q-01 (prefix) and Q-02 (which wrong-detail combinations AC-3 covers) are Open; the expected text is AC-3 exactly as written"
+      ],
+      "testData": {
+        "username": "standard_user",
+        "password": "wrong_pass_123"
+      },
+      "steps": [
+        {
+          "action": "Enter `standard_user` in **Username**",
+          "expected": ""
+        },
+        {
+          "action": "Enter `wrong_pass_123` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)"
+        },
+        {
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Username and password do not match any user in this service\""
+        }
+      ],
+      "expectedResult": "The user stays on the login page and the error says exactly \"Username and password do not match any user in this service\"",
+      "expectedSource": "requirement"
+    },
+    {
+      "id": "TC-LOGIN-004",
+      "title": "Unknown username shows the no-match error",
+      "scope": "Target",
+      "acRef": [
+        "AC-3"
+      ],
+      "type": "Negative",
+      "technique": "EP",
+      "priority": "P2",
+      "status": "Ready",
+      "questionRef": [
+        "Q-01",
+        "Q-02"
+      ],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields",
+        "TESTER OVERRIDE: Q-01 (prefix) and Q-02 (whether an unknown username counts as \"wrong details\") are Open; the expected text is AC-3 exactly as written"
+      ],
+      "testData": {
+        "username": "qa_unknown_user_x1",
+        "password": "secret_sauce"
+      },
+      "steps": [
+        {
+          "action": "Enter `qa_unknown_user_x1` in **Username**",
+          "expected": ""
+        },
+        {
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)"
+        },
+        {
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Username and password do not match any user in this service\""
+        }
+      ],
+      "expectedResult": "The user stays on the login page and the error says exactly \"Username and password do not match any user in this service\"",
+      "expectedSource": "requirement"
+    },
+    {
+      "id": "TC-LOGIN-005",
+      "title": "Valid standard_user login still opens the Products page",
+      "scope": "Impacted",
+      "impactRef": "IM-01",
+      "type": "Regression",
+      "technique": "Regression",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields"
+      ],
+      "testData": {
+        "username": "standard_user",
+        "password": "secret_sauce"
+      },
+      "steps": [
+        {
+          "action": "Enter `standard_user` in **Username**",
+          "expected": ""
+        },
+        {
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "No login error message is shown"
+        },
+        {
+          "action": "Look at the page title area",
+          "expected": "The **Products** page is open (the **Products** title is visible)"
+        }
+      ],
+      "expectedResult": "standard_user / secret_sauce opens the **Products** page (SD-01 AC)",
+      "expectedSource": "requirement",
+      "cleanup": "Log out (menu > **Logout**) or close the browser session so the next case starts logged out"
+    },
+    {
+      "id": "TC-LOGIN-006",
+      "title": "Valid login right after a login error still opens the Products page",
+      "scope": "Impacted",
+      "impactRef": "IM-01",
+      "type": "Regression",
+      "technique": "State transition",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields"
+      ],
+      "testData": {
+        "username": "standard_user",
+        "password": "secret_sauce",
+        "firstAttemptUsername": "",
+        "firstAttemptPassword": "secret_sauce"
+      },
+      "steps": [
+        {
+          "action": "Leave the **Username** field empty",
+          "expected": ""
+        },
+        {
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The login page is still shown and the error says exactly \"Epic sadface: Username is required\""
+        },
+        {
+          "action": "Clear the **Password** field (whatever it contains after the error) and make sure **Username** is empty",
+          "expected": ""
+        },
+        {
+          "action": "Enter `standard_user` in **Username**",
+          "expected": ""
+        },
+        {
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The **Products** page is open (the **Products** title is visible)"
+        }
+      ],
+      "expectedResult": "After an error was shown, standard_user / secret_sauce still opens the **Products** page (SD-01 AC)",
+      "expectedSource": "requirement",
+      "cleanup": "Log out (menu > **Logout**) or close the browser session so the next case starts logged out"
+    },
+    {
+      "id": "TC-LOGIN-007",
+      "title": "locked_out_user stays on the login page with the locked-out message",
+      "scope": "Impacted",
+      "impactRef": "IM-02",
+      "type": "Security",
+      "technique": "Regression",
+      "priority": "P1",
+      "status": "Ready",
+      "questionRef": [
+        "Q-01"
+      ],
+      "preconditions": [
+        "Logged out",
+        "The login page https://www.saucedemo.com is open with empty Username and Password fields",
+        "TESTER OVERRIDE: Q-01 (prefix \"Epic sadface: \" or not, also for SD-03) is Open; the expected text is the SD-03 AC exactly as written"
+      ],
+      "testData": {
+        "username": "locked_out_user",
+        "password": "secret_sauce"
+      },
+      "steps": [
+        {
+          "action": "Enter `locked_out_user` in **Username**",
+          "expected": ""
+        },
+        {
+          "action": "Enter `secret_sauce` in **Password**",
+          "expected": ""
+        },
+        {
+          "action": "Click **Login**",
+          "expected": "The login page is still shown (the **Products** page does not open)"
+        },
+        {
+          "action": "Read the error message on the login form",
+          "expected": "The error says exactly \"Sorry, this user has been locked out.\""
+        }
+      ],
+      "expectedResult": "locked_out_user stays on the login page and the error says exactly \"Sorry, this user has been locked out.\" (SD-03 AC)",
+      "expectedSource": "requirement"
+    }
+  ]
+}
