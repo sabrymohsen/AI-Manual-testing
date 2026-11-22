@@ -349,6 +349,8 @@ interface SessionStream {
   lastCastAt?: number
   /** When a viewer last sent input (click, key, scroll). */
   lastInputAt?: number
+  /** When a viewer last typed or clicked (not scroll or pointer movement). */
+  lastActionAt?: number
 }
 
 interface ViewerFlow {
@@ -569,7 +571,12 @@ async function ensureScreencast(sessionId: string, page: Page): Promise<void> {
       const now = Date.now()
       const gap = now - (current.lastCastAt || 0)
       current.lastCastAt = now
-      if (current.profile !== "sharp" && gap > ISOLATED_GAP_MS) {
+      // Changes caused by typing or clicking are sharp too, however fast the
+      // tester types (on production, typing looked blurry until the tester
+      // stopped). Only scrolling, pointer movement and the page animating by
+      // itself use the light motion frames.
+      const fromTyping = now - (current.lastActionAt || 0) < INPUT_ECHO_MS
+      if (current.profile !== "sharp" && (gap > ISOLATED_GAP_MS || fromTyping)) {
         // An isolated change (a blinking cursor, a keystroke, a click result):
         // send it sharp right away instead of a blurry motion frame. On
         // production the login caret alone swapped the sharp view for a
@@ -661,7 +668,10 @@ async function handleViewer(ws: WebSocket, sessionId: string) {
   let inputBusy = false
   const queueInput = (payload: any) => {
     const cur = sessionStreams.get(sessionId)
-    if (cur) cur.lastInputAt = Date.now()
+    if (cur) {
+      cur.lastInputAt = Date.now()
+      if (payload?.type !== "wheel" && payload?.type !== "mousemove") cur.lastActionAt = cur.lastInputAt
+    }
     const last = inputQueue[inputQueue.length - 1]
     if (last && payload?.type === "wheel" && last.type === "wheel") {
       last.deltaX = (last.deltaX || 0) + (payload.deltaX || 0)
