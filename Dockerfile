@@ -4,6 +4,15 @@
 # none ("Executable doesn't exist … chromium_headless_shell").
 FROM mcr.microsoft.com/playwright:v1.60.0-jammy AS base
 
+# Arabic (and other right-to-left) pages: the Playwright image has no Arabic
+# font, so Chrome fell back to FreeMono — letters spaced apart, not joined —
+# in Live QA, recordings and screenshots. Noto Sans Arabic UI (5 MB) plus a
+# fontconfig rule that prefers it for Arabic text.
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-ui-core \
+    && rm -rf /var/lib/apt/lists/*
+COPY deploy/fonts/65-arabic.conf /etc/fonts/conf.d/65-arabic.conf
+RUN fc-cache -f
+
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
