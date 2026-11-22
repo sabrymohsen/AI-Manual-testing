@@ -6,6 +6,7 @@ import { chromium } from "playwright"
 import { decryptSecret } from "@/lib/crypto"
 import { chatWithConfiguredProvider, resolveProvider } from "@/lib/ai/provider-chat"
 import { handleLogin } from "@/lib/playwright/login-handler"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 console.log("[AGENT WORKER STARTUP] Starting Autonomous QA Agent worker process...")
 
@@ -255,6 +256,7 @@ async function runAutonomousQA(agentRunId: string) {
           priority: "High",
           status: "Open",
           projectId: project.id,
+          bugKey: await nextBugKey(project.id),
           testCaseId: run.testCaseId,
           testRunId: run.id,
           testStepResultId: failedStep.id,

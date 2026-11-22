@@ -12,6 +12,7 @@ import { decryptSecret } from "../crypto"
 import { handleLogin } from "../playwright/login-handler"
 import { saveFile } from "../storage"
 import { isAgentBrainCancelSignalSet } from "@/lib/queue"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export interface AgentExecutionOptions {
   agentBrainRunId: string
@@ -289,6 +290,7 @@ export async function runExecutionPlan(
               priority: "High",
               status: "Open",
               projectId,
+              bugKey: await nextBugKey(projectId),
               testCaseId: dbTestCase.id,
               testRunId: dbTestRun.id,
               testStepResultId: dbStepResult.id,

@@ -15,14 +15,12 @@ import { withBugModule } from "@/lib/bug-reports/module"
 import { loadIntegration, type LoadedIntegration } from "@/lib/integrations/core/load-integration"
 import { syncBugReport } from "@/lib/integrations/core/sync-bug-report"
 import type { WorkItemProvider } from "@/lib/integrations/core/provider"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 const APP_URL = process.env.NEXTAUTH_URL || process.env.APP_URL || "http://localhost:3000"
 
 // ─── Auto-generate a sequential bug key ──────────────────────────────────────
-async function nextBugKey(projectId: string): Promise<string> {
-  const count = await prisma.bugReport.count({ where: { projectId } })
-  return `BUG-${String(count + 1).padStart(4, "0")}`
-}
+// (shared: highest existing number + 1, so a delete never makes a key repeat)
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  MAIN HOOK

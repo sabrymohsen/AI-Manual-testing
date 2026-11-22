@@ -79,7 +79,7 @@ export const QA_SKILLS: QaSkill[] = [
     description: "Every failure gets a decision: Bug, Requirement issue, Test issue, Environment, Duplicate or Not a bug.",
     instructions:
       "Before calling anything a bug, triage it: (1) did the test run as designed? No = Test issue or Environment, never a bug. (2) Is the expected result confirmed by the requirement? No = Requirement issue (name the open question), not a bug. (3) Does the evidence show wrong behaviour? Yes = Bug; unclear = Not a bug with the reason. (4) Same cause as an earlier finding = Duplicate. A failure in a module that worked before is a regression: at least High if that module is Critical, at least Medium if High. Actual = the exact text or state observed; Expected = the exact text from the test case, never changed.",
-    commands: ["draft-bug-report", "generate-bug-report", "autonomous-run-summary"],
+    commands: ["bug-triage", "draft-bug-report", "generate-bug-report", "autonomous-run-summary"],
   },
   {
     id: "honest-results",
@@ -136,7 +136,7 @@ export const QA_SKILLS: QaSkill[] = [
     description: "Consistent Critical / High / Medium / Low ratings based on impact.",
     instructions:
       "Rate severity by impact: Critical = crash, data loss or corruption, security hole, or the core flow is blocked with no workaround. High = a major feature is broken or gives wrong results, workaround is painful. Medium = partly wrong, a reasonable workaround exists. Low = cosmetic, typo, minor layout. Priority adds urgency (customer-facing, many users, release blocker). A visual glitch is Low even if it looks bad; anything that loses user data is Critical. A regression (something that worked before) in a core module is at least High.",
-    commands: ["draft-bug-report", "generate-bug-report", "bug-assistance:suggest-severity", "bug-assistance:developer-summary"],
+    commands: ["bug-triage", "draft-bug-report", "generate-bug-report", "bug-assistance:suggest-severity", "bug-assistance:developer-summary"],
   },
   {
     id: "failure-diagnosis",
@@ -211,6 +211,7 @@ export const COMMAND_LABELS: Record<string, string> = {
   "plain-english-generate-steps": "Plain-English steps",
   "plain-english-generate-data": "Plain-English test data",
   "suggest-expected-result": "Suggest expected result",
+  "bug-triage": "AI bug triage",
   "draft-bug-report": "Bug draft from failed step",
   "generate-bug-report": "Generate bug report",
   "bug-assistance:": "Bug report assistant",

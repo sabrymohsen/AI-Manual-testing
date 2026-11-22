@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/db"
 import { applyModulePrefix } from "@/lib/bug-reports/title-prefix"
 import { asRegions } from "./compare-service"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export async function fileBugFromScreen(opts: {
   screenId: string
@@ -55,10 +56,9 @@ export async function fileBugFromScreen(opts: {
     .filter(Boolean)
     .join("\n")
 
-  const count = await prisma.bugReport.count({ where: { projectId } })
   const bug = await prisma.bugReport.create({
     data: {
-      bugKey: `BUG-${String(count + 1).padStart(4, "0")}`,
+      bugKey: await nextBugKey(projectId),
       title,
       projectId,
       suiteId: test.suiteId,

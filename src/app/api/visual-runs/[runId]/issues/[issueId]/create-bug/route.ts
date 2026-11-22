@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { z } from "zod"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 const bodySchema = z.object({
   title: z.string().optional(),
@@ -78,6 +79,7 @@ export async function POST(
     const bugReport = await prisma.bugReport.create({
       data: {
         projectId: project.id,
+        bugKey: await nextBugKey(project.id),
         title: bugTitle,
         severity: bugSeverity,
         priority: bugPriority,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse } from "@/lib/api-guards"
 import { Priority, BugStatus } from "@prisma/client"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export async function POST(
   request: Request,
@@ -99,6 +100,7 @@ export async function POST(
       data: {
         title: `[QA Agent Brain Defect] ${finding.title}`,
         projectId: finding.agentRun.projectId,
+        bugKey: await nextBugKey(finding.agentRun.projectId),
         severity,
         priority: Priority.Medium,
         status: BugStatus.Open,

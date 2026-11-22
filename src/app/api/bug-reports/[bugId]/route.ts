@@ -4,12 +4,23 @@ import { requireProjectOwner, notFoundResponse, unauthorizedResponse, requirePro
 import { checkTransition } from "@/lib/bug-reports/workflow"
 import { resolveBugSuiteId } from "@/lib/bug-reports/module"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
+import { healBugProject } from "@/lib/bug-reports/keys"
+
+/**
+ * Bugs saved without a project (older manual-run bugs) could never be opened,
+ * edited or deleted. Give them their project first when it can be inferred.
+ */
+async function ensureProject(bugId: string) {
+  const row = await prisma.bugReport.findUnique({ where: { id: bugId }, select: { projectId: true } })
+  if (row && !row.projectId) await healBugProject(bugId)
+}
 
 export async function GET(
   request: Request,
   { params }: { params: { bugId: string } }
 ) {
   try {
+    await ensureProject(params.bugId)
     const bug = await prisma.bugReport.findUnique({
       where: { id: params.bugId },
       include: {
@@ -32,8 +43,14 @@ export async function GET(
       }
     })
 
-    if (!bug || !bug.project) {
+    if (!bug) {
       return notFoundResponse("Bug report not found")
+    }
+    if (!bug.project) {
+      return NextResponse.json(
+        { error: "This bug isn't linked to any project, so it can't be opened. Ask an admin to link or remove it.", code: "NO_PROJECT" },
+        { status: 409 }
+      )
     }
 
     const auth = await requireProjectMember(bug.project.id)
@@ -91,6 +108,7 @@ export async function PUT(
       suiteId
     } = body
 
+    await ensureProject(params.bugId)
     const existingBug = await prisma.bugReport.findUnique({
       where: { id: params.bugId }
     })
@@ -99,7 +117,10 @@ export async function PUT(
       return notFoundResponse("Bug report not found")
     }
 
-    const auth = await requireProjectMember(existingBug.projectId!)
+    if (!existingBug.projectId) {
+      return NextResponse.json({ error: "This bug isn't linked to any project.", code: "NO_PROJECT" }, { status: 409 })
+    }
+    const auth = await requireProjectMember(existingBug.projectId)
     if (auth.error) return unauthorizedResponse(auth.error)
 
     // Enforce the status workflow. This route previously wrote `status as any`
@@ -240,17 +261,33 @@ export async function DELETE(
   { params }: { params: { bugId: string } }
 ) {
   try {
+    await ensureProject(params.bugId)
     const bug = await prisma.bugReport.findUnique({
       where: { id: params.bugId },
-      select: { projectId: true }
+      select: { projectId: true, reporterId: true }
     })
 
     if (!bug) {
       return notFoundResponse("Bug report not found")
     }
 
-    const auth = await requireProjectOwner(bug.projectId!)
-    if (auth.error) return unauthorizedResponse(auth.error)
+    if (!bug.projectId) {
+      // An orphan nobody can reach through a project: only a global admin may remove it.
+      const { getSession } = await import("@/lib/auth")
+      const session = await getSession()
+      const me = session ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }) : null
+      if (me?.role !== "Admin") return unauthorizedResponse("Only an admin can delete a bug that has no project")
+      await prisma.bugReport.delete({ where: { id: params.bugId } })
+      return NextResponse.json({ success: true, remoteDeleted: false, remoteError: null })
+    }
+
+    const auth = await requireProjectOwner(bug.projectId)
+    if (auth.error) {
+      return NextResponse.json(
+        { error: "Only the project's Owner or an Admin can delete bugs. Ask them, or close the bug instead.", code: "FORBIDDEN" },
+        { status: 403 }
+      )
+    }
 
     // Optionally also delete the mapped OpenProject work package (?deleteRemote=true).
     const { searchParams } = new URL(request.url)

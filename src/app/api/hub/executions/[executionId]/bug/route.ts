@@ -7,6 +7,7 @@ import { requireHubExecution } from "@/lib/hub-access"
 import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
 import { ARTIFACT_ROOT } from "@/lib/hub-evidence"
 import { stripAnsi } from "@/lib/hub-report"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export const dynamic = "force-dynamic"
 
@@ -66,8 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: { executi
   const testCaseId = links.length === 1 ? links[0].testCaseId : null
   const runUrl = `/projects/${projectId}/automation-hub?tab=runs&run=${execution.id}`
 
-  const count = await prisma.bugReport.count({ where: { projectId } })
-  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+  const bugKey = await nextBugKey(projectId)
   const user = access.session.user
 
   const bug = await prisma.$transaction(async (tx) => {

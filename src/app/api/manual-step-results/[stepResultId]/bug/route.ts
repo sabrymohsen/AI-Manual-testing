@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, notFoundResponse, canUseProject } from "@/lib/api-guards"
 import { suiteIdOfTestCase } from "@/lib/bug-reports/module"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 import { z } from "zod"
 
 const bodySchema = z.object({
@@ -82,8 +83,17 @@ export async function POST(
     // module is read from the case behind that session.
     const suiteId = await suiteIdOfTestCase(testCaseId)
 
+    // A bug must belong to the run's project: without it the bug could be
+    // neither opened nor deleted (the detail and delete routes check access
+    // through the project), and it never showed in the project's list.
+    const projectId = manualSession.projectId
+    const bugKey = await nextBugKey(projectId)
+
     const bugReport = await prisma.bugReport.create({
       data: {
+        projectId,
+        bugKey,
+        reporterId: auth.session!.user.id,
         title: title || `Failed: ${stepResult.sessionCase.testCase.title} - Step ${stepResult.stepNumber}`,
         suiteId,
         severity: severity || "High",
@@ -108,6 +118,14 @@ export async function POST(
           : undefined
       }
     })
+
+    await prisma.bugActivity.create({
+      data: {
+        bugId: bugReport.id,
+        action: "Created",
+        details: `Bug ${bugKey} filed from manual run step ${stepResult.stepNumber}.`,
+      },
+    }).catch(() => {})
 
     // Link bug report to manual step result
     await prisma.manualStepResult.update({

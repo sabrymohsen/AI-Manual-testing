@@ -26,6 +26,7 @@ import { syncBugReport } from "./sync-bug-report"
 import { entityMarker } from "./types"
 import type { WorkItem } from "./types"
 import type { WorkItemProvider } from "./provider"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 /** What the rebuild will do with a single tracker work item. */
 export type RebuildAction = "delete" | "import-then-delete"
@@ -189,8 +190,7 @@ export async function planBugRebuild(projectId: string): Promise<RebuildBugsPlan
 
 /** Create an app bug from a tracker work item that the app never knew about. */
 async function importTrackerBug(projectId: string, item: WorkItem): Promise<string> {
-  const count = await prisma.bugReport.count({ where: { projectId } })
-  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+  const bugKey = await nextBugKey(projectId)
   const title = item.title.replace(/^\[BUG\]\s*/i, "").trim() || `Work item ${item.externalId}`
 
   const bug = await prisma.bugReport.create({

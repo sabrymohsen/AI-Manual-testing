@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { createBugReportSchema } from "@/schemas"
 import { requireAuth, unauthorizedResponse, badRequestResponse, memberProjectWhere, requireProjectMember } from "@/lib/api-guards"
 import { withBugModule } from "@/lib/bug-reports/module"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -236,8 +237,7 @@ export async function POST(request: Request) {
     if (auth.error) return unauthorizedResponse(auth.error)
 
     // 1. Generate sequential bug key e.g., BUG-0001
-    const count = await prisma.bugReport.count({ where: { projectId } })
-    const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+    const bugKey = await nextBugKey(projectId)
 
     // 2. Write bug report
     const bugReport = await prisma.$transaction(async (tx) => {

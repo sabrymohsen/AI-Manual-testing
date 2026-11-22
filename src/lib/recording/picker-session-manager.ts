@@ -5,6 +5,7 @@ import { saveFile } from "@/lib/storage"
 import { decryptSecret } from "@/lib/crypto"
 import { handleLogin } from "@/lib/playwright/login-handler"
 import { INJECTED_PICKER_SCRIPT } from "./injected-picker"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 // A picked element. Mirrors the shape produced by injected-picker.js so it maps cleanly onto
 // ElementLocator rows when the user saves a collection.
@@ -301,8 +302,7 @@ export async function createBugFromPickerElement(
     domSnapshotPath = await saveFile("dom_snapshots", `picker-bug-${sessionId}-${Date.now()}.html`, Buffer.from(html))
   } catch {}
 
-  const count = await prisma.bugReport.count({ where: { projectId: s.projectId } })
-  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+  const bugKey = await nextBugKey(s.projectId)
   const locatorLine = element
     ? `Element: ${element.suggestedName} | ${element.locatorType}=${element.locatorValue}` +
       (element.cssSelector ? ` | css=${element.cssSelector}` : "") +

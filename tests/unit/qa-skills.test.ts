@@ -70,6 +70,8 @@ describe("QA skills for the app's AI", () => {
     expect(ids("autonomous-generate-tests")[0]).toBe("case-to-automation")
     // Results: honest statuses
     expect(ids("autonomous-run-summary")).toContain("honest-results")
+    // AI bug triage on the Bug Reports page
+    expect(ids("bug-triage")).toEqual(["bug-triage", "severity"])
   })
 
   it("leaves unknown or missing commands alone", () => {

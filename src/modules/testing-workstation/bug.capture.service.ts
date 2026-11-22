@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db"
 import { Priority, BugStatus } from "@prisma/client"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 /**
  * BugCaptureService aggregates workstation telemetry logs (exceptions, networks)
@@ -26,6 +27,7 @@ export class BugCaptureService {
     const bug = await prisma.bugReport.create({
       data: {
         projectId: params.projectId,
+        bugKey: await nextBugKey(params.projectId),
         title: params.title,
         severity: Priority.Medium,
         priority: Priority.Medium,

@@ -5,6 +5,7 @@ import { createBugReportSchema } from "@/schemas"
 import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
 import { resolveBugSuiteId } from "@/lib/bug-reports/module"
 import { z } from "zod"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export async function GET(
   request: NextRequest,
@@ -280,8 +281,7 @@ export async function POST(
   })
 
   // Generate sequential bug key e.g., BUG-0001
-  const count = await prisma.bugReport.count({ where: { projectId: params.projectId } })
-  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+  const bugKey = await nextBugKey(params.projectId)
 
   const bugReport = await prisma.$transaction(async (tx) => {
     const bug = await tx.bugReport.create({

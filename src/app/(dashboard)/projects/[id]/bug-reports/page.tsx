@@ -59,6 +59,15 @@ import {
   FileBarChart
 } from "lucide-react"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
+import { BugTriagePanel } from "@/components/bug-reports/bug-triage-panel"
+import {
+  useBugShortcuts,
+  ShortcutHelp,
+  useUndoableDelete,
+  UndoBar,
+  SavedViews,
+  type BugFilters,
+} from "@/components/bug-reports/bug-page-helpers"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -742,13 +751,65 @@ export default function ProjectBugReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, filterSeverity, filterPriority, filterStatus, filterSource, filterModule, filterTestCaseId, debouncedSearch, filterUnassigned, filterReopened])
 
-  // Read query params on load to automatically open detail drawer
+  // The open bug lives in the URL (?bugId=…): links can be shared, refresh
+  // keeps it open, and Back closes it. URL → state:
+  const urlBugRef = useRef<string | null>(null)
   useEffect(() => {
-    const bugIdParam = searchParams.get("bugId")
-    if (bugIdParam) {
-      handleOpenDetail(bugIdParam)
-    }
+    // ?bug= is what older "Copy link" wrote; still accept it.
+    const p = searchParams.get("bugId") || searchParams.get("bug")
+    if (p && p !== selectedBugId) handleOpenDetail(p)
+    else if (!p && selectedBugId && urlBugRef.current) setSelectedBugId(null)
+    urlBugRef.current = p
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
+
+  // State → URL: opening pushes a history entry, switching/closing replaces it.
+  // Only after something was open: on first load the URL may name a bug that
+  // is still being fetched, and clearing it here would close it again.
+  const prevSelectedRef = useRef<string | null>(null)
+  useEffect(() => {
+    const prev = prevSelectedRef.current
+    prevSelectedRef.current = selectedBugId
+    if (!selectedBugId && !prev) return
+    const cur = searchParams.get("bugId")
+    if ((selectedBugId ?? null) === (cur ?? null) && !searchParams.get("bug")) return
+    const sp = new URLSearchParams(searchParams.toString())
+    sp.delete("bug")
+    if (selectedBugId) sp.set("bugId", selectedBugId)
+    else sp.delete("bugId")
+    const qs = sp.toString()
+    const url = `${window.location.pathname}${qs ? `?${qs}` : ""}`
+    if (selectedBugId && !cur) router.push(url, { scroll: false })
+    else router.replace(url, { scroll: false })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBugId])
+
+  const bugLink = (id: string) => `${window.location.origin}/projects/${projectId}/bug-reports/${id}`
+
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const [showShortcuts, setShowShortcuts] = useState(false)
+  const [triageSignal, setTriageSignal] = useState(0)
+
+  const currentFilters: BugFilters = {
+    search: searchQuery,
+    severity: filterSeverity,
+    priority: filterPriority,
+    status: filterStatus,
+    source: filterSource,
+    module: filterModule,
+    unassigned: filterUnassigned,
+    reopened: filterReopened,
+  }
+  const applyFilters = (f: BugFilters) => {
+    setSearchQuery(f.search)
+    setFilterSeverity(f.severity)
+    setFilterPriority(f.priority)
+    setFilterStatus(f.status)
+    setFilterSource(f.source)
+    setFilterModule(f.module)
+    setFilterUnassigned(f.unassigned)
+    setFilterReopened(f.reopened)
+  }
 
   const showToastMsg = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type })
@@ -830,9 +891,16 @@ export default function ProjectBugReportsPage() {
             }
           })
           .catch(() => {})
+      } else {
+        // Say why instead of silently showing nothing.
+        const data = await res.json().catch(() => ({}))
+        showToastMsg(data.error || `Couldn't open this bug (error ${res.status}).`, "error")
+        setSelectedBugId(null)
       }
     } catch (err) {
       console.error(err)
+      showToastMsg("Network error opening the bug. Check your connection and try again.", "error")
+      setSelectedBugId(null)
     } finally {
       setDetailLoading(false)
     }
@@ -857,7 +925,8 @@ export default function ProjectBugReportsPage() {
         showToastMsg("Bug details updated successfully!")
         loadBugsList()
       } else {
-        showToastMsg("Failed to save changes", "error")
+        const data = await res.json().catch(() => ({}))
+        showToastMsg(data.error || "Failed to save changes", "error")
       }
     } catch (err) {
       showToastMsg("Network error saving changes", "error")
@@ -1228,31 +1297,59 @@ export default function ProjectBugReportsPage() {
     setDeleteTarget({ id: bugId, synced })
   }
 
-  // Perform the actual deletion; deleteRemote also removes the linked OP work package.
-  const performDeleteBug = async (bugId: string, deleteRemote: boolean) => {
-    try {
-      const res = await fetch(`/api/bug-reports/${bugId}?deleteRemote=${deleteRemote ? "true" : "false"}`, {
-        method: "DELETE"
-      })
-      if (res.ok) {
-        const data = await res.json().catch(() => ({}))
-        if (deleteRemote && data.remoteError) {
-          showToastMsg(`Bug deleted, but ${trackerName} removal failed: ${data.remoteError}`, "error")
-        } else if (deleteRemote && data.remoteDeleted) {
-          showToastMsg(`Defect deleted from the app and ${trackerName}.`)
-        } else {
-          showToastMsg("Defect successfully deleted.")
-        }
-        setDeleteTarget(null)
-        setSelectedBugId(null)
-        loadBugsList()
-      } else {
-        showToastMsg("Failed to delete bug report", "error")
-      }
-    } catch (err) {
-      showToastMsg("Network error deleting bug report", "error")
-    }
+  // Deletes wait 10 s with an Undo before they reach the server.
+  const undoable = useUndoableDelete({
+    hide: (ids) => {
+      setBugs((prev) => prev.filter((b) => !ids.includes(b.id)))
+      if (selectedBugId && ids.includes(selectedBugId)) setSelectedBugId(null)
+      setSelectedBugIds((prev) => prev.filter((id) => !ids.includes(id)))
+    },
+    restore: () => {
+      loadBugsList()
+      showToastMsg("Delete undone.")
+    },
+    done: (deleted, failed) => {
+      if (failed.length) showToastMsg(`${failed.length} bug(s) not deleted: ${failed[0].error}`, "error")
+      else if (deleted) showToastMsg(`Deleted ${deleted} bug(s).`)
+      loadBugsList()
+    },
+  })
+
+  const scheduleDelete = (ids: string[], deleteRemote: boolean) => {
+    const names = ids.map((id) => bugs.find((b) => b.id === id)?.bugKey || (selectedBug?.id === id ? selectedBug?.bugKey : null) || "bug")
+    undoable.schedule(ids, deleteRemote, ids.length === 1 ? `Deleted ${names[0]}` : `Deleted ${ids.length} bugs`)
+    setDeleteTarget(null)
+    setBulkDeleteOpen(false)
   }
+
+  // J/K walk the bugs in the order the list shows them.
+  const stepBug = (dir: 1 | -1) => {
+    if (!bugs.length) return
+    const i = bugs.findIndex((b) => b.id === selectedBugId)
+    const next = bugs[(i + dir + bugs.length) % bugs.length]
+    if (next && next.id !== selectedBugId) handleOpenDetail(next.id)
+  }
+  useBugShortcuts({
+    open: !!selectedBugId && !!selectedBug,
+    next: () => stepBug(1),
+    prev: () => stepBug(-1),
+    edit: () => setIsEditingTitle(true),
+    remove: () => selectedBugId && handleDeleteBug(selectedBugId),
+    copyLink: () => {
+      if (!selectedBugId) return
+      navigator.clipboard.writeText(bugLink(selectedBugId))
+      showToastMsg("Link copied")
+    },
+    triage: () => {
+      setActiveDetailTab("overview")
+      setTriageSignal((n) => n + 1)
+    },
+    search: () => searchInputRef.current?.focus(),
+    close: () => setSelectedBugId(null),
+    help: () => setShowShortcuts((v) => !v),
+  })
+
+
 
   // Upload a photo/screenshot to the currently open bug
   const handleUploadPhoto = async (file: File) => {
@@ -1429,29 +1526,7 @@ export default function ProjectBugReportsPage() {
     }
   }
 
-  // Bulk delete every selected bug (optionally removing the linked OP work package).
-  const performBulkDelete = async (deleteRemote: boolean) => {
-    if (selectedBugIds.length === 0) return
-    setBulkApplying(true)
-    try {
-      const results = await Promise.all(
-        selectedBugIds.map(id =>
-          fetch(`/api/bug-reports/${id}?deleteRemote=${deleteRemote ? "true" : "false"}`, { method: "DELETE" })
-        )
-      )
-      const failed = results.filter(r => !r.ok).length
-      if (failed === 0) showToastMsg(`Deleted ${selectedBugIds.length} bug(s)${deleteRemote ? ` (app + ${trackerName})` : ""}.`)
-      else showToastMsg(`${failed} of ${selectedBugIds.length} deletion(s) failed.`, "error")
-      setBulkDeleteOpen(false)
-      setSelectedBugIds([])
-      if (selectedBugId && selectedBugIds.includes(selectedBugId)) setSelectedBugId(null)
-      loadBugsList()
-    } catch {
-      showToastMsg("Network error deleting bugs", "error")
-    } finally {
-      setBulkApplying(false)
-    }
-  }
+
 
   // ── Board columns ───────────────────────────────────────────────────────────
   // One shape for both worlds so the card rendering below doesn't care which it
@@ -1513,6 +1588,9 @@ export default function ProjectBugReportsPage() {
   return (
     <div className="flex-1 space-y-6 text-xs font-semibold select-none">
       
+      <UndoBar pending={undoable.pending} onUndo={undoable.undo} onCommit={undoable.commitNow} />
+      {showShortcuts && <ShortcutHelp onClose={() => setShowShortcuts(false)} />}
+
       {/* Toast Feedback */}
       {toast && (
         <div className={`fixed bottom-5 right-5 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-2 border font-bold text-white transition-all transform animate-in slide-in-from-bottom duration-300 ${
@@ -1532,7 +1610,7 @@ export default function ProjectBugReportsPage() {
                 <Trash2 className="h-4 w-4 text-rose-600" /> Delete Defect
               </h3>
               <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
-                This action is irreversible.
+                You can undo it for 10 seconds.
                 {deleteTarget.synced
                   ? ` This bug is synced to ${trackerName} — choose whether to also delete the linked work package.`
                   : ` This bug is not synced to ${trackerName}.`}
@@ -1541,14 +1619,14 @@ export default function ProjectBugReportsPage() {
 
             <div className="space-y-2">
               <Button
-                onClick={() => performDeleteBug(deleteTarget.id, false)}
+                onClick={() => scheduleDelete([deleteTarget.id], false)}
                 className="h-9 w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold"
               >
                 Delete from app only
               </Button>
               {deleteTarget.synced && (
                 <Button
-                  onClick={() => performDeleteBug(deleteTarget.id, true)}
+                  onClick={() => scheduleDelete([deleteTarget.id], true)}
                   className="h-9 w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold"
                 >
                   Delete from app and {trackerName}
@@ -1577,7 +1655,7 @@ export default function ProjectBugReportsPage() {
                   <Trash2 className="h-4 w-4 text-rose-600" /> Delete {selectedBugIds.length} Defect{selectedBugIds.length === 1 ? "" : "s"}
                 </h3>
                 <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
-                  This action is irreversible.
+                  You can undo it for 10 seconds.
                   {syncedCount > 0
                     ? ` ${syncedCount} of these ${syncedCount === 1 ? "is" : "are"} synced to ${trackerName} — choose whether to also delete the linked work package${syncedCount === 1 ? "" : "s"}.`
                     : ` None of these are synced to ${trackerName}.`}
@@ -1586,7 +1664,7 @@ export default function ProjectBugReportsPage() {
 
               <div className="space-y-2">
                 <Button
-                  onClick={() => performBulkDelete(false)}
+                  onClick={() => scheduleDelete([...selectedBugIds], false)}
                   disabled={bulkApplying}
                   className="h-9 w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold"
                 >
@@ -1594,7 +1672,7 @@ export default function ProjectBugReportsPage() {
                 </Button>
                 {syncedCount > 0 && (
                   <Button
-                    onClick={() => performBulkDelete(true)}
+                    onClick={() => scheduleDelete([...selectedBugIds], true)}
                     disabled={bulkApplying}
                     className="h-9 w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold"
                   >
@@ -1681,9 +1759,10 @@ export default function ProjectBugReportsPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/60" />
           <Input 
+            ref={searchInputRef}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by title, testcase, logs..." 
+            placeholder="Search by title, testcase, logs…  ( / )" 
             className="pl-9 h-9 text-xs bg-background"
           />
         </div>
@@ -1841,6 +1920,13 @@ export default function ProjectBugReportsPage() {
             >
               Board View
             </button>
+          </div>
+          <div className="basis-full">
+            <SavedViews
+              projectId={projectId}
+              current={currentFilters}
+              apply={applyFilters}
+            />
           </div>
         </div>
       </div>
@@ -2450,11 +2536,14 @@ export default function ProjectBugReportsPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?bug=${selectedBug.id}`)
+                        navigator.clipboard.writeText(bugLink(selectedBug.id))
                         showToastMsg("Link copied")
                       }}
                     >
                       <Link2 className="mr-2 h-4 w-4" /> Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.open(bugLink(selectedBug.id), "_blank", "noopener")}>
+                      <ExternalLink className="mr-2 h-4 w-4" /> Open in new tab
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleSyncToOpenProject(selectedBug.id, {
@@ -2615,6 +2704,21 @@ export default function ProjectBugReportsPage() {
                       projectId={projectId}
                       entityId={selectedBug.id}
                       entityType="BUG_REPORT"
+                    />
+                  </div>
+
+                  {/* Duplicates + AI triage (professional-tester rules) */}
+                  <div className="border-t border-border/60 pt-5">
+                    <BugTriagePanel
+                      bugId={selectedBug.id}
+                      projectId={projectId}
+                      title={selectedBug.title}
+                      steps={selectedBug.stepsToReproduce ?? null}
+                      severity={selectedBug.severity}
+                      priority={selectedBug.priority}
+                      onApply={(fields) => handleInlineUpdate(fields as Partial<BugReport>)}
+                      onOpenBug={(id) => handleOpenDetail(id)}
+                      runSignal={triageSignal}
                     />
                   </div>
 
@@ -3265,6 +3369,9 @@ export default function ProjectBugReportsPage() {
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 Updated {new Date(selectedBug.updatedAt).toLocaleDateString()}
+                <button onClick={() => setShowShortcuts(true)} className="ml-3 hidden rounded border px-1.5 py-0.5 font-mono text-[10px] hover:bg-muted sm:inline" title="Keyboard shortcuts">
+                  J/K · E · D · T · ?
+                </button>
               </span>
               <button
                 onClick={() => handleDeleteBug(selectedBug.id)}

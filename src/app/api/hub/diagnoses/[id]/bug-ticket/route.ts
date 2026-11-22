@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 import { executionVisibleTo } from "@/lib/hub-access"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export async function POST(
   request: NextRequest,
@@ -30,8 +31,7 @@ export async function POST(
     }
 
     // Sequential bug key e.g. BUG-0001
-    const count = await prisma.bugReport.count({ where: { projectId: project.id } })
-    const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+    const bugKey = await nextBugKey(project.id)
 
     const bugReport = await prisma.bugReport.create({
       data: {

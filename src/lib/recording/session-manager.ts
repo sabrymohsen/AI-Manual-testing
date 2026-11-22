@@ -10,6 +10,7 @@ import {
   saveRecordedCaseAsTestCase,
 } from "@/lib/recording/session-store"
 import { syncBugReportToOpenProject } from "@/lib/integrations/openproject/sync-bug-report"
+import { nextBugKey } from "@/lib/bug-reports/keys"
 
 export { getSessionStats } from "@/lib/recording/session-store"
 
@@ -1228,8 +1229,7 @@ export async function createBugFromSession(sessionId: string, bugData: any) {
   })
 
   // Generate bugKey
-  const count = await prisma.bugReport.count({ where: { projectId: activeSess.projectId } })
-  const bugKey = `BUG-${String(count + 1).padStart(4, "0")}`
+  const bugKey = await nextBugKey(activeSess.projectId)
 
   // Steps to reproduce — prefer tester-edited text, else auto-build from recorded steps
   const autoStepsText = draftCase.steps
