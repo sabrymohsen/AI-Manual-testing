@@ -193,3 +193,103 @@ describe("recorded code", () => {
     expect(py).toContain('    expect(page.get_by_text("You logged in").first).to_be_visible()')
   })
 })
+
+import { splitUser } from "@/lib/plain-english/grammar"
+import { stepsToPlaywright } from "@/lib/plain-english/to-playwright"
+import { asUser } from "@/lib/browser-agent/snapshot"
+
+describe("more than one user", () => {
+  it("reads the user prefix of a step", () => {
+    expect(splitUser("As reviewer: Click the \"Approve\" button")).toEqual({ user: "reviewer", rest: 'Click the "Approve" button' })
+    expect(splitUser("as the approver_2: Verify that the page contains \"Approved\"").user).toBe("approver_2")
+    expect(splitUser('Click the "Login" button').user).toBeNull()
+    const p = parseStep('as reviewer: click the "Approve" button')
+    expect(p.ok && p.user).toBe("reviewer")
+    expect(p.ok && p.meaning).toMatch(/^As reviewer: Click/)
+    expect(parseStep("As reviewer:").ok).toBe(false)
+  })
+
+  it("records steps per user, with saved values", () => {
+    const s = stepSentence("remember", { role: "cell", name: "REQ-1042" }, "request_id")!
+    expect(s).toBe('Save the text of "REQ-1042" as {request_id}')
+    for (const t of [asUser(s, "submitter"), stepSentence("remember", { role: "heading", name: "Request 7" }, "req")!, asUser('Type {request_id} in the "Search" field', "reviewer")]) {
+      expect(parseStep(t).ok, t).toBe(true)
+    }
+    expect(actionsFor({ role: "cell" })).toContain("remember")
+  })
+
+  it("lets the AI remember a value and act as a user", () => {
+    expect(parseAgentReply('{"action":"remember","name":"{request_id}","value":"REQ-1042"}', "")).toEqual({ kind: "remember", name: "request_id", value: "REQ-1042", why: "" })
+    expect(parseAgentReply('{"action":"remember","name":"1x","value":"a"}', "").kind).toBe("done")
+    const p = buildPrompt({
+      projectId: "p",
+      userId: "u",
+      testTitle: "Approve",
+      previous: [],
+      step: { action: "Open request {request_id}", expected: "" },
+      page: { snapshot: "- button \"Go\" [ref=e1]" },
+      done: [],
+      dataNames: ["submitter_user", "reviewer_user", "reviewer_password"],
+      remembered: { request_id: "REQ-1042" },
+      user: "reviewer",
+    })
+    expect(p).toContain("YOU ARE ACTING AS: reviewer")
+    expect(p).toContain("This user's test data: {reviewer_user}, {reviewer_password}")
+    expect(p).toContain('{request_id} = "REQ-1042"')
+  })
+
+  it("writes code with a browser context per user", () => {
+    const acts = [
+      { action: "goto" as const, sentence: "", value: "https://x.test", user: "submitter" },
+      { action: "remember" as const, sentence: "", locator: "getByRole('cell', { name: 'REQ-1' })", value: "request_id", user: "submitter" },
+      { action: "goto" as const, sentence: "", value: "https://x.test", user: "reviewer" },
+      { action: "fill" as const, sentence: "", locator: "getByRole('textbox', { name: 'Search' })", value: "{request_id}", user: "reviewer" },
+      { action: "fill" as const, sentence: "", locator: "getByRole('textbox', { name: 'Password' })", value: "{reviewer_password}", user: "reviewer" },
+    ]
+    const js = toJavaScript("Approve", acts)
+    expect(js).toContain("async ({ browser }) => {")
+    expect(js).toContain("const reviewerPage = await (await browser.newContext()).newPage();")
+    expect(js).toContain("const requestId = (await submitterPage.getByRole('cell', { name: 'REQ-1' }).innerText()).trim();")
+    expect(js).toContain("await reviewerPage.getByRole('textbox', { name: 'Search' }).fill(requestId);")
+    expect(js).toContain("fill(process.env.REVIEWER_PASSWORD ?? '')")
+    const py = toPython("Approve", acts)
+    expect(py).toContain("def test_approve(browser: Browser) -> None:")
+    expect(py).toContain("    reviewer_page = browser.new_context().new_page()")
+    expect(py).toContain('    request_id = submitter_page.get_by_role("cell", name="REQ-1").inner_text().strip()')
+    expect(py).toContain('reviewer_page.get_by_role("textbox", name="Search").fill(request_id)')
+  })
+
+  it("compiles a no-code test with users into their own contexts", () => {
+    const { code, errors } = stepsToPlaywright({
+      name: "Approve",
+      steps: ['As submitter: Go to "https://x.test"', 'As submitter: Save the text of "Request number" as {request_id}', 'As reviewer: Go to "https://x.test"', 'As reviewer: Type {request_id} in the "Search" field'],
+    })
+    expect(errors).toEqual([])
+    expect(code).toContain("async ({ page: firstPage, browser }) => {")
+    expect(code).toContain('const users = { "submitter": firstPage }')
+    expect(code).toContain('page = await asUser("reviewer")')
+    expect(code).toContain("qa.share(page, users[user])")
+    expect(code).toContain("await p.context().close()")
+    expect(stepsToPlaywright({ name: "x", steps: ['Go to "https://x.test"'] }).code).toContain("async ({ page }) => {")
+  })
+})
+
+import { rememberPlan } from "@/lib/browser-agent/snapshot"
+import { wordAfter } from "@/lib/plain-english/interpreter"
+
+describe("remembering a value inside a sentence", () => {
+  it("keeps the word after the fixed text", () => {
+    expect(rememberPlan({ role: "paragraph", name: "", value: "Your request number is REQ-2497" })).toEqual({ value: "REQ-2497", after: "Your request number is" })
+    expect(rememberPlan({ role: "paragraph", name: "", value: "Order #A12-77 was created." })).toEqual({ value: "A12-77", after: "Order" })
+    expect(rememberPlan({ role: "heading", name: "Request sent" })).toEqual({ value: "Request sent" })
+    expect(wordAfter("Your request number is REQ-2497.", "Your request number is")).toBe("REQ-2497")
+    const s = stepSentence("remember", { role: "paragraph", name: "", value: "Your request number is REQ-2497" }, "request_id")!
+    expect(s).toBe('Save the text after "Your request number is" as {request_id}')
+    const p = parseStep(s)
+    expect(p.ok && p.command).toEqual({ type: "setVariable", name: "request_id", source: { from: "after", label: "Your request number is" } })
+    const js = toJavaScript("x", [{ action: "remember", sentence: s, value: "request_id", after: "Your request number is" }])
+    expect(js).toContain("const requestId = ((await page.getByText('Your request number is').first().innerText()).split('Your request number is')[1] ?? '').trim()")
+    const py = toPython("x", [{ action: "remember", sentence: s, value: "request_id", after: "Your request number is" }])
+    expect(py).toContain('request_id = (page.get_by_text("Your request number is").first.inner_text().split("Your request number is", 1)[-1].split() or [""])[0]')
+  })
+})

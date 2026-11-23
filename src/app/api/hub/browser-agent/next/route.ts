@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { requireHubProject } from "@/lib/hub-access"
-import { aiAvailable, nextAction } from "@/lib/browser-agent/agent"
+import { aiAvailable, nextAction, REMEMBER_NAME } from "@/lib/browser-agent/agent"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 240
@@ -32,6 +32,13 @@ export async function POST(request: Request) {
       page: { url: str(body.page?.url, 1000), title: str(body.page?.title, 300), snapshot: str(body.page?.snapshot, 200_000) },
       done: (Array.isArray(body.done) ? body.done : []).slice(0, 20).map((d: any) => ({ action: str(d?.action, 300), error: d?.error ? str(d.error, 500) : undefined })),
       dataNames: (Array.isArray(body.dataNames) ? body.dataNames : []).filter((n: unknown) => typeof n === "string").slice(0, 50),
+      remembered: Object.fromEntries(
+        Object.entries(body.remembered && typeof body.remembered === "object" ? body.remembered : {})
+          .filter(([k, v]) => REMEMBER_NAME.test(k) && typeof v === "string")
+          .slice(0, 30)
+          .map(([k, v]) => [k, (v as string).slice(0, 300)])
+      ),
+      user: typeof body.user === "string" && /^[A-Za-z][\w-]{0,29}$/.test(body.user) ? body.user : undefined,
     })
     return NextResponse.json(next)
   } catch (e: any) {

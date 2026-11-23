@@ -49,6 +49,7 @@ storage/recordings/*
 # Generated per run by the Automation Hub: the Playwright workspace (specs,
 # config, traces, video). Runtime output, and traces run to tens of MB.
 storage/hub-workspace/
+storage/browser-agent/
 # One directory per Story Agent run (screenshots, DOM snapshots, run artifacts).
 # Runtime output only.
 storage/story-agent-runs/

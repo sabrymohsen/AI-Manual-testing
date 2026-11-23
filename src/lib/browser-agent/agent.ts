@@ -15,6 +15,8 @@ export const MAX_ACTIONS_PER_STEP = 8
 
 export type AgentAction =
   | { kind: "act"; cmd: "click" | "dblclick" | "fill" | "select" | "check" | "uncheck" | "hover" | "press" | "goto" | "go-back" | "reload" | "wait"; ref?: string; value?: string; why: string }
+  /** Keep a value the page shows (a request number…) as {name} for later steps. */
+  | { kind: "remember"; name: string; value: string; why: string }
   | { kind: "done"; passed: boolean; actual: string }
 
 export interface NextInput {
@@ -29,6 +31,10 @@ export interface NextInput {
   done: { action: string; error?: string }[]
   /** Test data names the AI may use as {name}; values are never sent. */
   dataNames: string[]
+  /** Values remembered from the page in earlier steps (shown to the AI: they came from the page). */
+  remembered?: Record<string, string>
+  /** "As reviewer:" — the user doing this step, in their own browser. */
+  user?: string
 }
 
 const ACT_CMDS = new Set(["click", "dblclick", "fill", "select", "check", "uncheck", "hover", "press", "goto", "go-back", "reload", "wait"])
@@ -43,6 +49,7 @@ Reply with JSON only, one of:
 {"action":"press","value":"Enter","why":"..."}          a keyboard key
 {"action":"goto","value":"https://...","why":"..."}      only when the step says to open a page
 {"action":"go-back"} {"action":"reload"} {"action":"wait","value":"2","why":"page still loading"}
+{"action":"remember","name":"request_id","value":"REQ-1042","why":"..."}  keep a value shown on the page for later steps
 {"done":true,"passed":true|false,"actual":"what the page shows now"}
 Rules:
 - Do exactly what the current step says, nothing more. Use only refs that are in the outline you were given now.
@@ -50,6 +57,8 @@ Rules:
 - passed=true only if the outline clearly shows the expected result. If it shows something else, an error, or you cannot find what the step needs, passed=false.
 - "actual" is one or two factual sentences about what the page shows, in the same language as the step.
 - Test data is written as {name}; use the placeholder as the value, never invent passwords.
+- When the step says to remember, save or note a value (a request number, an ID, a total), reply "remember" with a short snake_case name (the one the step gives, if any) and the exact text copied from the outline, then continue. Later steps use it as {name}.
+- Each user in the test has their own browser and their own login. When you act as a user, log in with that user's test data if the step says to.
 - If an action failed, try a different element or approach once; after repeated failures reply done with passed=false.`
 
 export async function aiAvailable(projectId: string, userId: string) {
@@ -62,7 +71,13 @@ export function buildPrompt(input: NextInput): string {
     input.previous.length ? `Earlier steps:\n${input.previous.map((p, i) => `${i + 1}. ${p.action} — ${p.passed ? "passed" : "failed"}`).join("\n")}` : null,
     `CURRENT STEP: ${input.step.action}`,
     `EXPECTED RESULT: ${input.step.expected || "(none given — the step just has to succeed)"}`,
+    input.user
+      ? `YOU ARE ACTING AS: ${input.user} (their own browser).${userData(input).length ? ` This user's test data: ${userData(input).map((n) => `{${n}}`).join(", ")}` : ""}`
+      : null,
     input.dataNames.length ? `Test data you may use: ${input.dataNames.map((n) => `{${n}}`).join(", ")}` : null,
+    input.remembered && Object.keys(input.remembered).length
+      ? `Remembered earlier (use as {name}):\n${Object.entries(input.remembered).map(([k, v]) => `{${k}} = "${v}"`).join("\n")}`
+      : null,
     input.done.length
       ? `Already done for this step:\n${input.done.map((d, i) => `${i + 1}. ${d.action}${d.error ? ` → FAILED: ${d.error.slice(0, 300)}` : " → ok"}`).join("\n")}`
       : "Nothing done for this step yet.",
@@ -73,6 +88,14 @@ export function buildPrompt(input: NextInput): string {
     .filter(Boolean)
     .join("\n\n")
 }
+
+/** Test data that belongs to the acting user: reviewer_user, reviewer-password, reviewerPassword… */
+function userData(input: NextInput) {
+  const u = (input.user || "").toLowerCase()
+  return u ? input.dataNames.filter((n) => n.toLowerCase().startsWith(u) && n.length > u.length) : []
+}
+
+export const REMEMBER_NAME = /^[A-Za-z][\w-]{0,39}$/
 
 /** Turns the AI's reply into an action; anything unusable becomes a failed "done". */
 export function parseAgentReply(raw: string, snapshot: string): AgentAction {
@@ -87,6 +110,12 @@ export function parseAgentReply(raw: string, snapshot: string): AgentAction {
     return { kind: "done", passed: d.passed === true, actual: String(d.actual || d.why || "").slice(0, 1000) || (d.passed ? "As expected." : "Not as expected.") }
   }
   const cmd = String(d.action || "").toLowerCase()
+  if (cmd === "remember") {
+    const name = String(d.name || "").trim().replace(/^\{|\}$/g, "")
+    const value = String(d.value ?? "").trim().slice(0, 300)
+    if (!REMEMBER_NAME.test(name) || !value) return { kind: "done", passed: false, actual: "The AI didn't say which value to remember." }
+    return { kind: "remember", name, value, why: String(d.why || "").slice(0, 300) }
+  }
   if (!ACT_CMDS.has(cmd)) return { kind: "done", passed: false, actual: `The AI asked for an unknown action "${cmd}".` }
   const why = String(d.why || "").slice(0, 300)
   const value = d.value === undefined || d.value === null ? undefined : String(d.value).slice(0, 2000)

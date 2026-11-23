@@ -6,6 +6,7 @@ import { CheckCircle2, ExternalLink, Loader2, MinusCircle, Play, Search, Square,
 import { Button } from "@/components/ui/button"
 import { AgentBrowser, fillData, parseTestData, sleep } from "@/lib/browser-agent/client"
 import { parseSnapshot, redactSecrets } from "@/lib/browser-agent/snapshot"
+import { splitUser } from "@/lib/plain-english/grammar"
 import { LiveView, type AgentSettings } from "./browser-agent"
 
 interface CaseStep {
@@ -62,7 +63,8 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
   const [page, setPage] = useState<{ title: string; url: string } | null>(null)
   const [log, setLog] = useState<string[]>([])
   const stopRef = useRef(false)
-  const browserRef = useRef<AgentBrowser | null>(null)
+  // One browser per user of the running test ("As reviewer: …" steps).
+  const browsersRef = useRef<Map<string, AgentBrowser>>(new Map())
 
   useEffect(() => {
     fetch(`/api/hub/browser-agent/cases?projectId=${encodeURIComponent(projectId)}`)
@@ -72,7 +74,7 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
   }, [projectId])
 
   // Leaving the tab closes the agent's browser.
-  useEffect(() => () => void browserRef.current?.close(), [])
+  useEffect(() => () => void closeAll(browsersRef.current), [])
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -103,8 +105,12 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
       }
       const tc = list[ci]
       const caseStarted = Date.now()
-      const browser = new AgentBrowser(projectId, settings.runsOn, settings.headed)
-      browserRef.current = browser
+      const browsers = new Map<string, AgentBrowser>()
+      browsersRef.current = browsers
+      // Values the agent copied from the page ("Remember the request number as {request_id}").
+      const remembered: Record<string, string> = {}
+      let user = splitUser(tc.steps[0]?.action || "").user || ""
+      const show = (b: AgentBrowser) => b.page && setPage({ ...b.page, title: user ? `[${user}] ${b.page.title}` : b.page.title })
       const results: StepRun[] = tc.steps.map((s) => ({ ...s, status: "pending", actions: [], durationMs: 0 }))
       const caseLog: string[] = []
       const note = (line: string) => {
@@ -114,14 +120,21 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
       patchRun(ci, (r) => ({ ...r, status: "running" }))
       note(`▶ ${tc.title}`)
       try {
-        await browser.openAt(settings.startUrl.trim())
-        setPage(browser.page)
-        setShot(await browser.screenshot())
-
         for (let si = 0; si < tc.steps.length; si++) {
-          const step = tc.steps[si]
+          const split = splitUser(tc.steps[si].action)
+          if (split.user) user = split.user
+          const step = { action: split.rest || tc.steps[si].action, expected: tc.steps[si].expected }
           const sr = results[si]
           if (stopRef.current) break
+          let browser = browsers.get(user)
+          if (!browser) {
+            browser = new AgentBrowser(projectId, settings.runsOn, settings.headed)
+            browsers.set(user, browser)
+            if (user) note(`  ⇢ ${user}: own browser`)
+            await browser.openAt(settings.startUrl.trim())
+            show(browser)
+            setShot(await browser.screenshot())
+          }
           sr.status = "running"
           patchRun(ci, (r) => ({ ...r, steps: results.map((x) => ({ ...x })) }))
           note(`  ${si + 1}. ${step.action}`)
@@ -138,9 +151,11 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
                 testTitle: tc.title,
                 previous: results.slice(0, si).map((p) => ({ action: p.action, passed: p.status === "passed" })),
                 step,
+                user: user || undefined,
                 page: { ...browser.page, snapshot: snap },
                 done,
                 dataNames: Object.keys(data),
+                remembered,
               }),
             })
             const next = await res.json().catch(() => ({}))
@@ -149,6 +164,17 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
               sr.status = next.passed ? "passed" : "failed"
               sr.actual = next.actual
               break
+            }
+            if (next.kind === "remember") {
+              const flat = (t: string) => t.replace(/\s+/g, " ").trim()
+              const ok = flat(snap).includes(flat(next.value))
+              const desc = `remember {${next.name}} = "${next.value}"`
+              const error = ok ? undefined : "that text isn't on the page — copy it exactly from the outline"
+              if (ok) remembered[next.name] = next.value
+              done.push({ action: desc, error })
+              sr.actions.push(error ? `${desc} — failed: ${error}` : desc)
+              note(`     · ${desc}${error ? ` ✗ ${error}` : ""}`)
+              continue
             }
             const els = parseSnapshot(snap)
             const el = next.ref ? els.find((e) => e.ref === next.ref) : null
@@ -159,10 +185,11 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
             if (next.cmd === "wait") {
               await sleep(Math.min(5, Math.max(1, Number(next.value) || 1)) * 1000)
             } else {
-              const args = next.ref ? [next.ref, ...(next.value !== undefined && ["fill", "select"].includes(next.cmd) ? [fillData(next.value, data)] : [])] : next.value ? [fillData(next.value, data)] : []
+              const values = { ...data, ...remembered }
+              const args = next.ref ? [next.ref, ...(next.value !== undefined && ["fill", "select"].includes(next.cmd) ? [fillData(next.value, values)] : [])] : next.value ? [fillData(next.value, values)] : []
               const r = await browser.exec(next.cmd, args).catch((e: any) => ({ ok: false, error: e?.message }) as any)
               if (!r.ok) error = r.error || "failed"
-              if (browser.page) setPage(browser.page)
+              show(browser)
             }
             done.push({ action: desc, error })
             sr.actions.push(error ? `${desc} — failed: ${error.slice(0, 200)}` : desc)
@@ -180,7 +207,8 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
         for (const r of results) if (r.status === "pending" || r.status === "running") r.status = "skipped"
         const failed = results.some((r) => r.status === "failed")
         const stopped = stopRef.current && !failed
-        await browser.close()
+        await closeAll(browsers)
+        if (Object.keys(remembered).length) note(`Remembered: ${Object.entries(remembered).map(([k, v]) => `{${k}} = "${v}"`).join(", ")}`)
 
         const save = await fetch("/api/hub/browser-agent/results", {
           method: "POST",
@@ -209,7 +237,7 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
         patchRun(ci, (r) => ({ ...r, status: stopped ? "stopped" : failed ? "failed" : "passed", executionId: saved.executionId, steps: results.map((x) => ({ ...x })) }))
         note(`${failed ? "✗ Failed" : stopped ? "■ Stopped" : "✓ Passed"} — saved to Runs`)
       } catch (e: any) {
-        await browser.close()
+        await closeAll(browsers)
         note(`✗ ${e?.message || e}`)
         patchRun(ci, (r) => ({ ...r, status: "error", error: e?.message || String(e), steps: results.map((x) => ({ ...x })) }))
         if (/AI provider|desktop app|server is already running/i.test(String(e?.message))) {
@@ -218,7 +246,7 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
         }
       }
     }
-    browserRef.current = null
+    browsersRef.current = new Map()
     setRunning(false)
   }
 
@@ -240,7 +268,9 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
                 onChange={(e) => setAdHocSteps(e.target.value)}
                 rows={7}
                 dir="auto"
-                placeholder={"One step per line:  action | expected result\nLog in with {username} and {password} | The Secure Area page opens\nClick Logout | The login page shows \"You logged out\""}
+                placeholder={
+                  "One step per line:  action | expected result\nAs submitter: Log in with {submitter_user} and {submitter_password} | Home page opens\nAs submitter: Send a new request and remember its number as {request_id} | \"Request sent\" is shown\nAs reviewer: Log in with {reviewer_user} and {reviewer_password} | Inbox opens\nAs reviewer: Open request {request_id} and approve it | Status is \"Approved\""
+                }
                 className="w-full rounded-md border bg-card px-2 py-1.5 text-[13px] font-normal"
               />
             </div>
@@ -291,6 +321,10 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
             )}
             <span className="text-xs font-normal text-muted-foreground">Each step: the AI acts, then checks the expected result.</span>
           </div>
+          <p className="mt-2 text-xs font-normal text-muted-foreground">
+            More than one user? Start a step with <span className="font-mono">As reviewer:</span> — each user gets their own browser and login, and stays signed in.
+            Say “remember the request number as {"{request_id}"}” to use a value from the page in later steps.
+          </p>
         </div>
 
         {runs.length > 0 && (
@@ -312,6 +346,10 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
       </div>
     </div>
   )
+}
+
+function closeAll(browsers: Map<string, AgentBrowser>) {
+  return Promise.all(Array.from(browsers.values()).map((b) => b.close()))
 }
 
 function StepIcon({ s }: { s: StepStatus }) {

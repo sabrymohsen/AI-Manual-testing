@@ -5,7 +5,7 @@ import { toast } from "sonner"
 import { ArrowLeft, Copy, Globe, Loader2, Play, RefreshCw, Save, Search, Trash2, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AgentBrowser, fillData, parseTestData } from "@/lib/browser-agent/client"
-import { actionsFor, listedElements, parseSnapshot, roleLocator, stepSentence, type RecordAction, type SnapElement } from "@/lib/browser-agent/snapshot"
+import { actionsFor, asUser, listedElements, parseSnapshot, rememberPlan, roleLocator, stepSentence, type RecordAction, type SnapElement } from "@/lib/browser-agent/snapshot"
 import { toJavaScript, toPython, type RecordedAction } from "@/lib/browser-agent/record-code"
 import { LiveView, type AgentSettings } from "./browser-agent"
 
@@ -20,24 +20,37 @@ const ACTION_LABEL: Record<RecordAction, string> = {
   "verify-text": "Check page text",
   press: "Press key",
   goto: "Go to",
+  remember: "Remember its text",
 }
 
-/** Shared by Record and Find locators: an open browser and its current page. */
-export function useAgentPage(projectId: string, settings: AgentSettings) {
-  const browserRef = useRef<AgentBrowser | null>(null)
+/**
+ * Shared by Record and Find locators: an open browser and its current page.
+ * Record keeps one browser per user ("Recording as"), each with its own login.
+ */
+export function useAgentPage(projectId: string, settings: AgentSettings, user = "") {
+  const browsersRef = useRef<Map<string, AgentBrowser>>(new Map())
+  const userRef = useRef(user)
   const [busy, setBusy] = useState(false)
   const [snapshot, setSnapshot] = useState("")
   const [shot, setShot] = useState<string>()
   const [page, setPage] = useState<{ title: string; url: string } | null>(null)
 
-  useEffect(() => () => void browserRef.current?.close(), [])
-  // Switching server/computer means another browser.
-  useEffect(() => {
-    void browserRef.current?.close()
-    browserRef.current = null
+  const clear = () => {
     setSnapshot("")
     setShot(undefined)
     setPage(null)
+  }
+  const closeAll = () => {
+    const all = Array.from(browsersRef.current.values())
+    browsersRef.current = new Map()
+    return Promise.all(all.map((b) => b.close()))
+  }
+
+  useEffect(() => () => void closeAll(), [])
+  // Switching server/computer means other browsers.
+  useEffect(() => {
+    void closeAll()
+    clear()
   }, [settings.runsOn, settings.headed])
 
   const refresh = async (b: AgentBrowser) => {
@@ -50,17 +63,28 @@ export function useAgentPage(projectId: string, settings: AgentSettings) {
 
   const run = async <T,>(fn: (b: AgentBrowser) => Promise<T>): Promise<T | undefined> => {
     setBusy(true)
+    const key = userRef.current
     try {
-      if (!browserRef.current) browserRef.current = new AgentBrowser(projectId, settings.runsOn, settings.headed)
-      return await fn(browserRef.current)
+      let b = browsersRef.current.get(key)
+      if (!b) browsersRef.current.set(key, (b = new AgentBrowser(projectId, settings.runsOn, settings.headed)))
+      return await fn(b)
     } catch (e: any) {
       toast.error(e?.message || String(e))
-      if (browserRef.current && !browserRef.current.open) setPage(null)
+      if (!browsersRef.current.get(key)?.open) setPage(null)
       return undefined
     } finally {
       setBusy(false)
     }
   }
+
+  // Another user: show their browser (or nothing until it's opened).
+  useEffect(() => {
+    userRef.current = user
+    const b = browsersRef.current.get(user)
+    if (b?.open) void run((x) => refresh(x))
+    else clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   const open = (url: string) =>
     run(async (b) => {
@@ -71,14 +95,15 @@ export function useAgentPage(projectId: string, settings: AgentSettings) {
     })
 
   const close = async () => {
-    await browserRef.current?.close()
-    browserRef.current = null
-    setSnapshot("")
-    setShot(undefined)
-    setPage(null)
+    const b = browsersRef.current.get(userRef.current)
+    browsersRef.current.delete(userRef.current)
+    await b?.close()
+    clear()
   }
 
-  return { browser: () => browserRef.current, busy, snapshot, shot, page, run, refresh, open, close, isOpen: !!page }
+  const openUsers = () => Array.from(browsersRef.current.entries()).filter(([, b]) => b.open).map(([u]) => u)
+
+  return { busy, snapshot, shot, page, run, refresh, open, close, openUsers, isOpen: !!page }
 }
 
 /** Element list with search; selecting one shows its actions. */
@@ -115,8 +140,15 @@ export function ElementList({ elements, selected, onSelect }: { elements: SnapEl
 }
 
 export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: string; settings: AgentSettings; onOpenTests: (name: string) => void }) {
-  const ap = useAgentPage(projectId, settings)
+  // "Recording as": each user has their own browser; "" = one user, no prefix.
+  const [user, setUser] = useState("")
+  const [users, setUsers] = useState<string[]>([])
+  const [newUser, setNewUser] = useState("")
+  const ap = useAgentPage(projectId, settings, user)
   const [steps, setSteps] = useState<RecordedAction[]>([])
+  const [saveAs, setSaveAs] = useState("")
+  // Values remembered while recording, so a later {name} types the real value.
+  const [saved, setSaved] = useState<Record<string, string>>({})
   const [sel, setSel] = useState<SnapElement | null>(null)
   const [value, setValue] = useState("")
   const [pageText, setPageText] = useState("")
@@ -125,13 +157,25 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
   const [saving, setSaving] = useState(false)
   const elements = useMemo(() => listedElements(parseSnapshot(ap.snapshot)), [ap.snapshot])
 
-  const add = (a: RecordedAction) => setSteps((s) => [...s, a])
+  const add = (a: RecordedAction) => setSteps((s) => [...s, { ...a, sentence: asUser(a.sentence, user), user: user || undefined }])
+
+  const addUser = () => {
+    const u = newUser.trim()
+    if (!/^[A-Za-z][\w-]{0,29}$/.test(u)) return toast.error("A user name is one word in English letters, like reviewer or approver_2")
+    if (!users.includes(u)) setUsers((x) => [...x, u])
+    setUser(u)
+    setNewUser("")
+    setSel(null)
+  }
 
   const start = async () => {
     const url = settings.startUrl.trim()
     const ok = await ap.open(url)
     if (ok) {
-      setSteps((s) => (s.length ? s : [{ action: "goto", sentence: stepSentence("goto", null, url)!, value: url }]))
+      // Each user's part starts on the start page in their own browser.
+      setSteps((s) =>
+        s.some((x) => (x.user || "") === user) ? s : [...s, { action: "goto", sentence: asUser(stepSentence("goto", null, url)!, user), value: url, user: user || undefined }]
+      )
       setSel(null)
     }
   }
@@ -141,13 +185,25 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
       const { data } = parseTestData(settings.testData)
       const needsValue = action === "fill" || action === "select"
       if (needsValue && !value) throw new Error(action === "fill" ? "Type the text first" : "Type the option to select")
+      const name = saveAs.trim().replace(/^\{|\}$/g, "")
+      if (action === "remember" && !/^[A-Za-z][\w-]{0,39}$/.test(name)) throw new Error("Name the value first, like request_id")
       const el = sel
       if (!el) return
       // The locator first: the ref is only good for the current snapshot.
       const loc = await b.exec("generate-locator", [el.ref])
       const locator = loc.ok ? String(loc.result?.result || "").trim() || undefined : roleLocator(el, "js")?.replace(/^page\./, "")
+      if (action === "remember") {
+        // "Your request number is REQ-1042" → keeps REQ-1042, found again after the fixed words.
+        const plan = rememberPlan(el)
+        setSaved((x) => ({ ...x, [name]: plan.value }))
+        add({ action, sentence: stepSentence("remember", el, name)!, locator, value: name, after: plan.after })
+        toast.success(`{${name}} = "${plan.value}"`)
+        setSaveAs("")
+        setSel(null)
+        return
+      }
       if (action !== "verify-visible") {
-        const args = needsValue ? [el.ref, fillData(value, data)] : [el.ref]
+        const args = needsValue ? [el.ref, fillData(value, { ...data, ...saved })] : [el.ref]
         await b.must(action, args)
       }
       const sentence = stepSentence(action, el, needsValue ? value : undefined)
@@ -197,6 +253,33 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
 
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,380px)_1fr_minmax(0,360px)]">
+      {/* Users */}
+      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border bg-card p-2.5 xl:col-span-3">
+        <span className="mr-1 text-[13px] font-medium text-foreground">Recording as</span>
+        {["", ...users].map((u) => (
+          <button
+            key={u || "one"}
+            onClick={() => (setUser(u), setSel(null))}
+            disabled={ap.busy}
+            className={`rounded-md border px-2 py-1 text-xs font-medium ${user === u ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            {u || (users.length ? "first user" : "one user")}
+            {ap.openUsers().includes(u) && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle" title="Browser open" />}
+          </button>
+        ))}
+        <input
+          value={newUser}
+          onChange={(e) => setNewUser(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addUser()}
+          placeholder="Add a user, e.g. reviewer"
+          className="h-7 w-44 rounded-md border bg-card px-2 text-xs font-normal"
+        />
+        <Button size="sm" variant="outline" onClick={addUser} disabled={!newUser.trim()}>
+          Add user
+        </Button>
+        <span className="text-xs font-normal text-muted-foreground">Each user has their own browser and login. Their steps start with “As {"{user}"}:”.</span>
+      </div>
+
       {/* Elements */}
       <div className="space-y-3 rounded-xl border bg-card p-3">
         <div className="flex items-center gap-2">
@@ -232,6 +315,15 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
                     placeholder="Text to type / option to select — or {name} from test data"
                     className="h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal"
                     dir="auto"
+                  />
+                )}
+                {actionsFor(sel).includes("remember") && (
+                  <input
+                    value={saveAs}
+                    onChange={(e) => setSaveAs(e.target.value)}
+                    placeholder="To remember its text: a name, like request_id"
+                    className="h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal"
+                    dir="ltr"
                   />
                 )}
                 <div className="flex flex-wrap gap-1.5">

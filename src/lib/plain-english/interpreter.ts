@@ -565,7 +565,13 @@ async function run(cmd: Command, page: Page, rootPage: Page, ctx: PlainEnglishCo
       if (cmd.source.from === "literal") value = v(cmd.source.value)
       else if (cmd.source.from === "url") value = page.url()
       else if (cmd.source.from === "title") value = await page.title()
-      else {
+      else if (cmd.source.from === "after") {
+        const label = v(cmd.source.label)
+        const el = page.getByText(label).first()
+        await el.waitFor({ state: "visible", timeout })
+        value = wordAfter(await el.innerText(), label)
+        if (!value) throw new Error(`Nothing follows "${label}" on the page`)
+      } else {
         const el = await resolveTarget(page, cmd.source.target, ctx, timeout)
         value = ((await el.inputValue().catch(() => null)) ?? (await el.innerText())).trim()
       }
@@ -660,4 +666,13 @@ async function run(cmd: Command, page: Page, rootPage: Page, ctx: PlainEnglishCo
       return
     }
   }
+}
+
+/** "Your request number is REQ-1042." after "Your request number is" → "REQ-1042". */
+export function wordAfter(text: string, label: string): string {
+  const flat = text.replace(/\s+/g, " ")
+  const i = flat.toLowerCase().indexOf(label.replace(/\s+/g, " ").toLowerCase())
+  if (i === -1) return ""
+  const rest = flat.slice(i + label.replace(/\s+/g, " ").length).replace(/^[\s:#=\-–—]+/, "")
+  return (rest.split(" ")[0] || "").replace(/[.,;:!?)\]"'»]+$/, "")
 }

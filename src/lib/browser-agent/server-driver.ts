@@ -15,7 +15,7 @@ import { type BaCommand, cliArgs, commandError } from "./commands"
 
 export const BA_ROOT = path.resolve(STORAGE_ROOT, "browser-agent")
 const CLI = path.join(process.cwd(), "node_modules", "@playwright", "cli", "playwright-cli.js")
-const MAX_SESSIONS = Number(process.env.BROWSER_AGENT_MAX_SESSIONS || 4)
+const MAX_SESSIONS = Number(process.env.BROWSER_AGENT_MAX_SESSIONS || 8)
 const IDLE_MS = 15 * 60 * 1000
 const CMD_TIMEOUT_MS = 90_000
 
@@ -58,6 +58,13 @@ function cliEnv(dir: string): NodeJS.ProcessEnv {
     PLAYWRIGHT_MCP_OUTPUT_DIR: path.join(dir, "out"),
     // Session bookkeeping in our own (writable) folder, not the server user's home.
     PLAYWRIGHT_DAEMON_SESSION_DIR: path.join(BA_ROOT, "daemon"),
+    // The app may run as a user whose home isn't writable (Docker: nextjs, HOME=/app);
+    // Chromium's crash handler then kills the browser at launch. Sockets go in TMPDIR.
+    HOME: path.join(BA_ROOT, "home"),
+    XDG_CONFIG_HOME: path.join(BA_ROOT, "home", ".config"),
+    XDG_CACHE_HOME: path.join(BA_ROOT, "home", ".cache"),
+    // Linux only: macOS caps socket paths at 104 characters.
+    ...(process.platform === "linux" ? { TMPDIR: path.join(BA_ROOT, "tmp") } : {}),
     FORCE_COLOR: "0",
   }
   const exe = process.env.BROWSER_AGENT_CHROMIUM || imageChromium()
@@ -69,6 +76,7 @@ function cliEnv(dir: string): NodeJS.ProcessEnv {
 }
 
 function run(dir: string, args: string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
+  for (const d of ["home", "tmp"]) fs.mkdirSync(path.join(BA_ROOT, d), { recursive: true })
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [CLI, ...args], { cwd: dir, env: cliEnv(dir) })
     let stdout = ""

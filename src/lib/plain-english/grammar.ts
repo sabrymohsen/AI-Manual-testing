@@ -71,7 +71,7 @@ export type Command =
   | { type: "assertValue"; left: string; comparison: Comparison; right: string }
   | { type: "assertEnabled"; target: Target; negate: boolean }
   | { type: "assertChecked"; target: Target; negate: boolean }
-  | { type: "setVariable"; name: string; source: { from: "literal"; value: string } | { from: "element"; target: Target } | { from: "url" } | { from: "title" } }
+  | { type: "setVariable"; name: string; source: { from: "literal"; value: string } | { from: "element"; target: Target } | { from: "url" } | { from: "title" } | { from: "after"; label: string } }
   | { type: "executeJs"; code: string }
   | { type: "api"; method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; url: string; headers: Record<string, string>; body: string | null }
   | { type: "upload"; file: string; target: Target }
@@ -89,6 +89,8 @@ export interface ParsedStep {
   meaning: string
   /** The sentence after auto-correction. */
   text: string
+  /** "As reviewer: …" — the user (own browser, own login) who does this step. */
+  user?: string
 }
 
 export interface ParseError {
@@ -476,6 +478,9 @@ const RULES: Rule[] = [
     const name = m ? m[1] : m2 ? m2[2] : null
     const rhs = m ? m[2].trim() : m2 ? m2[1].trim() : null
     if (!name || rhs === null) return null
+    // "Save the text after "Your request number is" as {request_id}": the word that follows a fixed label.
+    const after = /^(?:the\s+)?(?:text|value|number|id|code|word)\s+(?:after|following)\s+(⟦\d+⟧)$/i.exec(rhs)
+    if (after) return { type: "setVariable", name, source: { from: "after", label: c.value(after[1])! } }
     if (c.isValue(rhs)) return { type: "setVariable", name, source: { from: "literal", value: c.value(rhs)! } }
     if (/^(?:the\s+)?(?:current\s+)?(?:page\s+)?url$/i.test(rhs)) return { type: "setVariable", name, source: { from: "url" } }
     if (/^(?:the\s+)?(?:page\s+)?title$/i.test(rhs)) return { type: "setVariable", name, source: { from: "title" } }
@@ -659,8 +664,24 @@ const RULES: Rule[] = [
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
+/** "As reviewer: Click Approve" → { user: "reviewer", rest: "Click Approve" }. */
+export function splitUser(sentence: string): { user: string | null; rest: string } {
+  const m = USER_PREFIX.exec(sentence)
+  return m ? { user: m[1], rest: sentence.slice(m[0].length).trim() } : { user: null, rest: sentence }
+}
+const USER_PREFIX = /^\s*as\s+(?:the\s+)?([A-Za-z][\w-]{0,29})\s*:\s*/i
+
 export function parseStep(input: string): ParseResult {
-  const text = normalizeSentence(input)
+  const full = normalizeSentence(input)
+  const { user, rest } = splitUser(full)
+  if (user && !rest) return { ok: false, error: `Write what ${user} should do after "As ${user}:".`, text: full }
+  if (!user) return parseStepBody(full)
+  const r = parseStepBody(normalizeSentence(rest))
+  const text = `As ${user}: ${r.text}`
+  return r.ok ? { ...r, text, user, meaning: `As ${user}: ${r.meaning}` } : { ...r, text }
+}
+
+function parseStepBody(text: string): ParseResult {
   if (!text) return { ok: false, error: "Write what the step should do.", text }
 
   let optional = false
@@ -736,7 +757,7 @@ export function describeCommand(cmd: Command): string {
     case "assertEnabled": return `Check ${describeTarget(cmd.target)} is ${cmd.negate ? "disabled" : "enabled"}`
     case "assertChecked": return `Check ${describeTarget(cmd.target)} is ${cmd.negate ? "not " : ""}ticked`
     case "setVariable":
-      return `Remember {${cmd.name}} = ${cmd.source.from === "literal" ? q(cmd.source.value) : cmd.source.from === "element" ? `the text of ${describeTarget(cmd.source.target)}` : cmd.source.from === "url" ? "the current address" : "the page title"}`
+      return `Remember {${cmd.name}} = ${cmd.source.from === "literal" ? q(cmd.source.value) : cmd.source.from === "element" ? `the text of ${describeTarget(cmd.source.target)}` : cmd.source.from === "url" ? "the current address" : cmd.source.from === "after" ? `the word after ${q(cmd.source.label)}` : "the page title"}`
     case "executeJs": return "Run JavaScript in the page; the result is kept in {js-result}"
     case "api": return `Send ${cmd.method} ${cmd.url}${Object.keys(cmd.headers).length ? ` with ${Object.keys(cmd.headers).length} header(s)` : ""}${cmd.body ? " and a body" : ""}; the reply is kept in {response}`
     case "upload": return `Upload ${q(cmd.file)} to ${describeTarget(cmd.target)}`

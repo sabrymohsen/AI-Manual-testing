@@ -92,8 +92,11 @@ export function parseSnapshot(yaml: string): SnapElement[] {
 }
 
 /** Elements worth listing to a tester: things to act on, and headings/alerts to check. */
+/** Text on the page (to check or remember), listed when it says something. */
+const TEXT_ROLES = new Set(["paragraph", "listitem", "strong", "emphasis", "code", "term", "definition", "caption", "time", "blockquote", "note", "text"])
+
 export function listedElements(els: SnapElement[]): SnapElement[] {
-  return els.filter((e) => INTERACTIVE_ROLES.has(e.role) || (CHECKABLE_ROLES.has(e.role) && (e.name || e.value)))
+  return els.filter((e) => INTERACTIVE_ROLES.has(e.role) || ((CHECKABLE_ROLES.has(e.role) || TEXT_ROLES.has(e.role)) && (e.name || e.value)))
 }
 
 /** The snapshot made compact for an AI prompt: no link targets or cursor hints, capped. */
@@ -156,7 +159,7 @@ export function jsLocatorToPython(js: string): string {
   return `page.${s}`
 }
 
-export type RecordAction = "click" | "fill" | "select" | "check" | "uncheck" | "hover" | "verify-visible" | "verify-text" | "press" | "goto"
+export type RecordAction = "click" | "fill" | "select" | "check" | "uncheck" | "hover" | "verify-visible" | "verify-text" | "press" | "goto" | "remember"
 
 const q = (s: string) => `"${s.replace(/"/g, "'")}"`
 
@@ -192,17 +195,46 @@ export function stepSentence(action: RecordAction, el: Pick<SnapElement, "role" 
       return `Hover over ${q(label)}`
     case "verify-visible":
       return el!.role === "heading" ? `Verify that the ${q(label)} heading is visible` : `Verify that ${q(label)} is visible`
+    case "remember": {
+      // value = the variable name; later steps use it as {name}.
+      if (!value) return null
+      const plan = rememberPlan(el!)
+      if (plan.after) return `Save the text after ${q(plan.after)} as {${value}}`
+      const kind = el!.role === "heading" ? " heading" : el!.role === "link" ? " link" : FIELD_ROLES.has(el!.role) ? " field" : ""
+      return `Save the text of ${kind ? "the " : ""}${q(label)}${kind} as {${value}}`
+    }
   }
   return null
 }
 
+/**
+ * How to remember an element's text so a replay finds it again: text like
+ * "Your request number is REQ-1042" changes every run, so keep the word after
+ * the fixed part ("Your request number is"). Otherwise the element's own text.
+ */
+export function rememberPlan(el: Pick<SnapElement, "role" | "name" | "value">): { value: string; after?: string } {
+  const text = (el.value || el.name || "").replace(/\s+/g, " ").trim()
+  const words = text.split(" ")
+  const i = words.findIndex((w) => /\d/.test(w))
+  const prefix = i > 0 ? words.slice(0, i).join(" ").replace(/[\s:#=\-–—]+$/, "") : ""
+  if (prefix.length >= 3 && /\p{L}/u.test(prefix) && !FIELD_ROLES.has(el.role)) {
+    return { value: words[i].replace(/^[#:]+/, "").replace(/[.,;:!?)\]"'»]+$/, ""), after: prefix }
+  }
+  return { value: text }
+}
+
+/** Prefixes a step with the user who does it ("As reviewer: …"). */
+export function asUser(sentence: string, user?: string | null): string {
+  return user ? `As ${user}: ${sentence}` : sentence
+}
+
 /** Actions that make sense for an element (Record mode's menu). */
 export function actionsFor(el: Pick<SnapElement, "role">): RecordAction[] {
-  if (FIELD_ROLES.has(el.role)) return ["fill", "verify-visible", "click"]
+  if (FIELD_ROLES.has(el.role)) return ["fill", "verify-visible", "click", "remember"]
   if (el.role === "combobox" || el.role === "listbox") return ["select", "fill", "click", "verify-visible"]
   if (el.role === "checkbox" || el.role === "switch" || el.role === "radio") return ["check", "uncheck", "verify-visible"]
-  if (INTERACTIVE_ROLES.has(el.role)) return ["click", "hover", "verify-visible"]
-  return ["verify-visible", "click"]
+  if (INTERACTIVE_ROLES.has(el.role)) return ["click", "hover", "verify-visible", "remember"]
+  return ["verify-visible", "remember", "click"]
 }
 
 /** "- 0: (current) [Title](url)" from tab-list → the current page. */

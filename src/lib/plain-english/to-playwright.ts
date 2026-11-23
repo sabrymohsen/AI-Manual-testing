@@ -1,4 +1,4 @@
-import { parseStep, type Command } from "./grammar"
+import { parseStep, splitUser, type Command } from "./grammar"
 
 /**
  * Plain-English steps → a Playwright test file (JavaScript).
@@ -95,7 +95,17 @@ export function stepsToPlaywright(test: StepsTest): CompileResult {
 
   const rows = dataRows(test.data)
   const ind = rows.length ? "    " : "  "
+  // "As reviewer: …" steps: each user gets their own browser context (own login).
+  const stepUsers = sentences.map((t) => splitUser(t).user)
+  const multiUser = stepUsers.some(Boolean)
+  const firstUser = stepUsers[0] || ""
+  let currentUser = firstUser
   sentences.forEach((sentence, i) => {
+    const user = stepUsers[i]
+    if (multiUser && user && user !== currentUser) {
+      body.push(`${ind}page = await asUser(${js(user)})`)
+      currentUser = user
+    }
     const parsed = parseStep(sentence)
     if (!parsed.ok) {
       errors.push({ line: i + 1, text: sentence, error: parsed.error })
@@ -115,21 +125,42 @@ export function stepsToPlaywright(test: StepsTest): CompileResult {
   })
 
   const name = test.name || "Untitled test"
-  const setup = (variables: string) =>
-    usesRuntime ? [`${ind}qa.setup(page, {`, `${ind}  steps: [`, ...sentences.map((t) => `${ind}    ${js(t)},`), `${ind}  ],`, `${ind}  variables: ${variables},`, `${ind}})`, ""] : []
+  const users = multiUser
+    ? [
+        `${ind}// Each user has their own browser (their own login); {variables} are shared.`,
+        `${ind}let page = firstPage`,
+        `${ind}const users = { ${js(firstUser)}: firstPage }`,
+        `${ind}const asUser = async (user) => {`,
+        `${ind}  users[user] ??= await (await browser.newContext()).newPage()`,
+        ...(usesRuntime ? [`${ind}  qa.share(page, users[user])`] : []),
+        `${ind}  return users[user]`,
+        `${ind}}`,
+        "",
+      ]
+    : []
+  const setup = (variables: string) => [
+    ...users,
+    ...(usesRuntime ? [`${ind}qa.setup(page, {`, `${ind}  steps: [`, ...sentences.map((t) => `${ind}    ${js(t)},`), `${ind}  ],`, `${ind}  variables: ${variables},`, `${ind}})`, ""] : []),
+  ]
+  const fixtures = multiUser ? "{ page: firstPage, browser }" : "{ page }"
+  // The other users' browsers close when the test ends, pass or fail.
+  if (multiUser && body.length) {
+    body.unshift(`${ind}try {`)
+    body.push(`${ind}} finally {`, `${ind}  for (const p of Object.values(users)) if (p !== firstPage) await p.context().close().catch(() => {})`, `${ind}}`)
+  }
   const testBlock = rows.length
     ? [
         "// Test data: the test runs once for each row.",
         `const rows = ${JSON.stringify(rows, null, 2).replace(/\n/g, "\n")}`,
         "",
         "for (const [i, row] of rows.entries()) {",
-        `  test(\`${name.replace(/[`\\$]/g, "\\$&")} — row \${i + 1}\`, async ({ page }) => {`,
+        `  test(\`${name.replace(/[`\\$]/g, "\\$&")} — row \${i + 1}\`, async (${fixtures}) => {`,
         ...setup("{ ...vars, ...row }"),
         ...(body.length ? body : ["    // No steps yet."]),
         "  })",
         "}",
       ]
-    : [`test(${js(name)}, async ({ page }) => {`, ...setup("vars"), ...(body.length ? body : ["  // No steps yet."]), "})"]
+    : [`test(${js(name)}, async (${fixtures}) => {`, ...setup("vars"), ...(body.length ? body : ["  // No steps yet."]), "})"]
 
   const lines = [
     GENERATED_MARKER,
