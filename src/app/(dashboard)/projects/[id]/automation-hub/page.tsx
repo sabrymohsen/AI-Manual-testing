@@ -48,6 +48,7 @@ import {
 } from "lucide-react"
 import HubTestsSection from "@/components/automation-hub/hub-tests"
 import HubRunsSection from "@/components/automation-hub/hub-runs"
+import { BrowserAgentSection } from "@/components/automation-hub/browser-agent/browser-agent"
 import VisualRecorderSection from "@/components/automation-hub/visual-recorder"
 import EvidenceVaultSection from "@/components/automation-hub/evidence-vault"
 import TraceViewerSection from "@/components/automation-hub/trace-viewer"
@@ -131,7 +132,7 @@ export default function AutomationHubPage() {
 
   // Global Unified States
   const [activeTab, setActiveTab] = useState<
-    "Tests" | "Runs" | "Recorder" | "Evidence" | "Trace" | "Diagnosis" | "Heal" | "Flakes" | "Matrix" | "Visual" | "Video" | "Agent" | "DataConfig"
+    "Tests" | "Runs" | "Recorder" | "BrowserAgent" | "Evidence" | "Trace" | "Diagnosis" | "Heal" | "Flakes" | "Matrix" | "Visual" | "Video" | "Agent" | "DataConfig"
   >("Tests")
   // ?tab=runs&run=<id> — links from bugs and test cases open that run. Read
   // after mount so the server and first client render agree.
@@ -143,6 +144,7 @@ export default function AutomationHubPage() {
     const t = sp.get("tab")
     if (t === "runs") setActiveTab("Runs")
     else if (t === "recorder") setActiveTab("Recorder")
+    else if (t === "agent") setActiveTab("BrowserAgent")
     else if (t === "tests") setActiveTab("Tests")
     setInitialRunId(sp.get("run"))
     // ?test=<name> — e.g. a test just made from a test case.
@@ -458,6 +460,7 @@ export default function AutomationHubPage() {
             { id: "Tests", label: "Tests", icon: Code },
             { id: "Runs", label: "Runs", icon: ListRestart },
             { id: "Recorder", label: "Recorder", icon: Camera },
+            { id: "BrowserAgent", label: "Browser Agent", icon: Bot },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -474,10 +477,10 @@ export default function AutomationHubPage() {
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <SlidersHorizontal size={15} className="text-muted-foreground" />
           <select
-            value={["Tests", "Runs", "Recorder"].includes(activeTab) ? "" : activeTab}
+            value={["Tests", "Runs", "Recorder", "BrowserAgent"].includes(activeTab) ? "" : activeTab}
             onChange={(e) => e.target.value && setActiveTab(e.target.value as any)}
             className={`h-10 rounded-xl border px-3 text-sm font-semibold ${
-              ["Tests", "Runs", "Recorder"].includes(activeTab) ? "bg-card text-muted-foreground" : "border-primary/25 bg-primary/10 text-primary"
+              ["Tests", "Runs", "Recorder", "BrowserAgent"].includes(activeTab) ? "bg-card text-muted-foreground" : "border-primary/25 bg-primary/10 text-primary"
             }`}
             aria-label="More tools"
           >
@@ -511,8 +514,22 @@ export default function AutomationHubPage() {
         />
       )}
 
+      {activeTab === "BrowserAgent" && (
+        <BrowserAgentSection
+          projectId={projectId}
+          onOpenRun={(id) => {
+            setInitialRunId(id)
+            setActiveTab("Runs")
+          }}
+          onOpenTests={(name) => {
+            setFocusTestName(name)
+            setActiveTab("Tests")
+          }}
+        />
+      )}
+
       {/* HUB MAIN WORKSPACE (analysis tools) */}
-      {["Tests", "Runs", "Recorder"].includes(activeTab) ? null : loading ? (
+      {["Tests", "Runs", "Recorder", "BrowserAgent"].includes(activeTab) ? null : loading ? (
         <div className="py-32 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
           <Loader2 className="animate-spin text-primary" size={32} />
           <span className="font-semibold text-muted-foreground text-sm">Loading…</span>

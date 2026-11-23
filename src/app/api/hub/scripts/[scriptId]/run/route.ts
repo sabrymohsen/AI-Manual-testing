@@ -18,6 +18,9 @@ export async function POST(request: NextRequest, { params }: { params: { scriptI
   if ((auth.script as any).mode === "local") {
     return NextResponse.json({ error: "This project runs on a tester's computer — run it from the QA Engine desktop app." }, { status: 400 })
   }
+  if ((auth.script as any).mode === "agent") {
+    return NextResponse.json({ error: "This test case is run by the Browser Agent — run it again from the Browser Agent tab." }, { status: 400 })
+  }
   try {
     const target = await resolveTarget(body.targetId)
     const executionId = await startScriptRun(

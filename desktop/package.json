@@ -1,7 +1,7 @@
 {
   "name": "qa-engine-desktop",
   "productName": "QA Engine",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "QA Engine desktop app for macOS and Windows",
   "author": "QA Engine",
   "private": true,
@@ -14,6 +14,7 @@
     "dist": "electron-builder --mac --win"
   },
   "dependencies": {
+    "@playwright/cli": "0.1.13",
     "electron-updater": "^6.8.11"
   },
   "devDependencies": {
@@ -89,6 +90,11 @@
         "repo": "AI-Manual-testing",
         "releaseType": "release"
       }
+    ],
+    "asarUnpack": [
+      "node_modules/@playwright/cli/**",
+      "node_modules/playwright/**",
+      "node_modules/playwright-core/**"
     ]
   },
   "allowScripts": {

@@ -58,8 +58,8 @@ interface HubTest {
   folder: string
   shared: boolean
   accessibilityEnabled: boolean
-  /** "steps" = no-code plain-English test (code is generated); "code" = JavaScript; "local" = a project on a tester's computer. */
-  mode?: "steps" | "code" | "local"
+  /** "steps" = no-code plain-English test (code is generated); "code" = JavaScript; "local" = a project on a tester's computer; "agent" = a manual test case the Browser Agent ran. */
+  mode?: "steps" | "code" | "local" | "agent"
   steps?: { text: string; expected?: string }[] | null
   data?: { columns: string[]; rows: string[][] } | null
   lastExecution: null | { id: string; status: string; createdAt: string; passed: number; failed: number; total: number }
@@ -707,6 +707,7 @@ export default function HubTestsSection({
                         {t.type === "API" && <span className="rounded bg-muted px-1 text-[10px] font-semibold text-muted-foreground">API</span>}
                         {t.mode === "steps" && <span className="rounded bg-primary/10 px-1 text-[10px] font-medium text-primary" title="Written as plain-English steps">No-code</span>}
                         {t.mode === "local" && <span className="rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground" title="Runs on a tester's computer">Computer</span>}
+                        {t.mode === "agent" && <span className="rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground" title="A manual test case run by the Browser Agent — run it from that tab">Agent</span>}
                         {t.shared && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
                       </button>
                     )

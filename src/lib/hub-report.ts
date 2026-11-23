@@ -42,6 +42,11 @@ export interface HubStepResult {
   status: "passed" | "failed" | "skipped"
   durationMs: number
   error?: string
+  /** What the page showed (Browser Agent runs of manual test cases). */
+  actual?: string
+  expected?: string
+  /** Absolute path of the step's screenshot inside the hub workspace. */
+  screenshot?: string
 }
 
 export interface PageElement {

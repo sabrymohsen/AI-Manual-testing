@@ -21,6 +21,11 @@ const info = {
       return () => ipcRenderer.removeListener("desktop:pw-log", h)
     },
   },
+  // Browser Agent on this computer: playwright-cli with the tester's own Chrome/Edge.
+  ba: {
+    info: () => ipcRenderer.invoke("desktop:ba-info"),
+    exec: (session, cmd, args, opts) => ipcRenderer.invoke("desktop:ba-exec", session, cmd, args, opts),
+  },
   // AI on this computer (Ollama). The main process only answers our server's pages.
   ai: {
     status: () => ipcRenderer.invoke("desktop:ai-status"),

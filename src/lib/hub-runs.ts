@@ -50,7 +50,7 @@ export async function scriptsForScope(projectId: string, scope: RunScope) {
     if (scope.tag) and.push({ tags: { has: scope.tag } })
   }
   // Projects on testers' computers run from the desktop app, never on the server.
-  return prisma.testScript.findMany({ where: { AND: [...and, { mode: { not: "local" } }] }, orderBy: [{ folder: "asc" }, { name: "asc" }] })
+  return prisma.testScript.findMany({ where: { AND: [...and, { mode: { notIn: ["local", "agent"] } }] }, orderBy: [{ folder: "asc" }, { name: "asc" }] })
 }
 
 export async function startScopedRun(

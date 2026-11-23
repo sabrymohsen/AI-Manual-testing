@@ -49,7 +49,9 @@ const groupStatus = (runs: RunRow[]) =>
         ? "Cancelled"
         : "Passed"
 
-const SOURCE_LABEL: Record<string, string> = { manual: "Manual", rerun: "Re-run", schedule: "Schedule", ci: "CI" }
+const SOURCE_LABEL: Record<string, string> = { manual: "Manual", rerun: "Re-run", schedule: "Schedule", ci: "CI", agent: "Browser Agent", local: "Computer" }
+/** Runs the server can't repeat: Browser Agent runs (re-run them from that tab) and laptop projects. */
+const notRerunnable = (source?: string | null) => source === "agent" || source === "local"
 
 interface Filters {
   q: string
@@ -329,14 +331,16 @@ export default function HubRunsSection({
             ) : (
               <>
                 {!nested && reportLinks(r.id)}
-                <button
-                  onClick={() => rerun(r.id, { rerunExecutionIds: [r.id] }, "Re-run")}
-                  disabled={busy === r.id}
-                  className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
-                  title="Run this test file again"
-                >
-                  {busy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Re-run
-                </button>
+                {!notRerunnable(r.triggerSource) && (
+                  <button
+                    onClick={() => rerun(r.id, { rerunExecutionIds: [r.id] }, "Re-run")}
+                    disabled={busy === r.id}
+                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                    title="Run this test file again"
+                  >
+                    {busy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Re-run
+                  </button>
+                )}
               </>
             )}
           </span>
@@ -499,7 +503,7 @@ export default function HubRunsSection({
                       </button>
                     ) : (
                       <>
-                        {failedCount > 0 && (
+                        {failedCount > 0 && !notRerunnable(first.triggerSource) && (
                           <button
                             onClick={() => rerun(g.key, { rerunFailedOfBatch: g.batchId }, "Re-running failed tests")}
                             disabled={busy === g.key}

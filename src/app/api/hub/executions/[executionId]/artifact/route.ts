@@ -15,7 +15,8 @@ const TYPES: Record<string, string> = {
   ".zip": "application/zip",
 }
 
-// GET /api/hub/executions/{id}/artifact?test=<index>&kind=screenshot|video|trace
+// GET /api/hub/executions/{id}/artifact?test=<index>&kind=screenshot|video|trace[&step=<index>]
+// (step: that step's screenshot — Browser Agent runs record one per step)
 // Serves one test's screenshot, video or trace from the run's results. Only
 // paths recorded on the run and inside the hub workspace are ever served.
 export async function GET(request: NextRequest, { params }: { params: { executionId: string } }) {
@@ -31,7 +32,12 @@ export async function GET(request: NextRequest, { params }: { params: { executio
 
   const execution = await prisma.testExecution.findUnique({ where: { id: params.executionId }, select: { results: true } })
   const result = Array.isArray(execution?.results) ? (execution!.results as any[])[index] : null
-  const file: string | undefined = result?.[kind]
+  const stepParam = request.nextUrl.searchParams.get("step")
+  const step = stepParam === null ? null : Number(stepParam)
+  if (step !== null && (!Number.isInteger(step) || step < 0 || kind !== "screenshot")) {
+    return NextResponse.json({ error: "step must be a step index, with kind=screenshot" }, { status: 400 })
+  }
+  const file: string | undefined = step === null ? result?.[kind] : result?.steps?.[step]?.screenshot
   if (!file) return NextResponse.json({ error: "Not recorded for this test" }, { status: 404 })
 
   const resolved = path.resolve(file)

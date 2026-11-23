@@ -36,7 +36,7 @@ export interface HubTestResultView {
   retries: number
   error?: { message: string; snippet?: string; line?: number }
   /** Named steps (a no-code test's sentences) with their outcome. */
-  steps?: { title: string; status: "passed" | "failed" | "skipped"; durationMs: number; error?: string }[]
+  steps?: { title: string; status: "passed" | "failed" | "skipped"; durationMs: number; error?: string; expected?: string; actual?: string; screenshot?: string }[]
   /** Elements on the page when it failed. */
   page?: { role: string; name: string }[]
   screenshot?: string
@@ -175,7 +175,7 @@ export default function HubRunResults({
           {failedFirst.map(({ r, i }) => {
             const traceId = traceIdFor(execution.id, r.trace)
             const expanded = !!open[i]
-            const hasDetail = !!(r.error || r.screenshot || r.trace || r.video)
+            const hasDetail = !!(r.error || r.screenshot || r.trace || r.video || r.steps?.length)
             return (
               <li key={i} className="text-sm">
                 <button
@@ -196,7 +196,7 @@ export default function HubRunResults({
 
                 {expanded && (
                   <div className="space-y-3 border-t bg-muted/60 px-3 py-3 pl-11">
-                    {r.steps && r.steps.length > 0 && <StepTimeline r={r} onFixStep={onFixStep} />}
+                    {r.steps && r.steps.length > 0 && <StepTimeline r={r} onFixStep={onFixStep} executionId={execution.id} testIndex={i} />}
                     {r.error && !(r.steps && r.steps.length) && <Explain r={r} onFixStep={onFixStep} />}
                     {r.error && (
                       <details className="group" open={!(r.steps && r.steps.length) && !r.page}>
@@ -288,7 +288,17 @@ export default function HubRunResults({
 }
 
 /** Each step with ✓ / ✗, and the explanation under the one that failed. */
-function StepTimeline({ r, onFixStep }: { r: HubTestResultView; onFixStep?: (stepText: string, newText: string) => void }) {
+function StepTimeline({
+  r,
+  onFixStep,
+  executionId,
+  testIndex,
+}: {
+  r: HubTestResultView
+  onFixStep?: (stepText: string, newText: string) => void
+  executionId: string
+  testIndex: number
+}) {
   const steps = r.steps || []
   const failedAt = steps.findIndex((s) => s.status === "failed")
   const testFailed = !["passed", "skipped"].includes(r.status)
@@ -314,7 +324,38 @@ function StepTimeline({ r, onFixStep }: { r: HubTestResultView; onFixStep?: (ste
                 </span>
                 <span className="shrink-0 text-[11px] text-muted-foreground">{notReached ? "not run" : formatDuration(st.durationMs)}</span>
               </div>
-              {st.status === "failed" && (
+              {(st.expected || st.actual) && !notReached && (
+                <div className="ml-12 mt-1 space-y-0.5 text-xs">
+                  {st.expected && (
+                    <p dir="auto" className="text-muted-foreground">
+                      <span className="font-medium">Expected:</span> {st.expected}
+                    </p>
+                  )}
+                  {st.actual && (
+                    <p dir="auto" className={st.status === "failed" ? "text-rose-700" : "text-foreground"}>
+                      <span className="font-medium">Actual:</span> {st.actual}
+                    </p>
+                  )}
+                </div>
+              )}
+              {st.screenshot && (
+                <a
+                  href={`/api/hub/executions/${executionId}/artifact?test=${testIndex}&kind=screenshot&step=${i}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-12 mt-1 block w-fit"
+                  title="Open full size"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/hub/executions/${executionId}/artifact?test=${testIndex}&kind=screenshot&step=${i}`}
+                    alt={`Step ${i + 1}`}
+                    loading="lazy"
+                    className="max-h-40 rounded border"
+                  />
+                </a>
+              )}
+              {st.status === "failed" && !st.actual && (
                 <div className="ml-12 mt-1.5">
                   <Explain r={r} step={st} onFixStep={onFixStep} />
                 </div>

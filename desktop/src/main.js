@@ -14,6 +14,7 @@ const localAi = require("./local-ai")
 const updater = require("./updater")
 const pageTools = require("./page-tools")
 const localProjects = require("./local-projects")
+const browserAgent = require("./browser-agent")
 
 const PARTITION = "persist:qa-engine" // keeps cookies (the login) across restarts
 
@@ -395,6 +396,7 @@ function fromAppPage(event) {
 }
 localAi.register(fromAppPage)
 localProjects.register(fromAppPage)
+browserAgent.register(fromAppPage)
 ipcMain.handle("desktop:check-update", (event) => {
   if (!fromAppPage(event)) throw new Error("Not allowed")
   return updater.check(true)
