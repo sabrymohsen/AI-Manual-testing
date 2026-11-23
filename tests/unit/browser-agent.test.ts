@@ -293,3 +293,91 @@ describe("remembering a value inside a sentence", () => {
     expect(py).toContain('request_id = (page.get_by_text("Your request number is").first.inner_text().split("Your request number is", 1)[-1].split() or [""])[0]')
   })
 })
+
+import { suggestRoles, userKey, loginValues } from "@/lib/brd/test-users"
+import { usersInstructions, buildGenerationContext } from "@/lib/brd/generation-context"
+
+describe("BRD test users", () => {
+  it("makes one-word keys from roles", () => {
+    expect(userKey("Case worker")).toBe("case_worker")
+    expect(userKey("The Reviewer", ["reviewer"])).toBe("reviewer_2")
+    expect(userKey("المراجع")).toBe("المراجع")
+    expect(userKey("مقدم الطلب")).toBe("مقدم_الطلب")
+    expect(userKey("123")).toBe("user")
+  })
+
+  it("finds the roles a BRD mentions", () => {
+    const roles = suggestRoles([
+      "As a case worker, I want to review the request",
+      "As an applicant I want to submit a housing request",
+      "بصفتي مقدم الطلب، أرغب في تقديم طلب سكن",
+      "As a case worker, I can reject",
+    ])
+    expect(roles).toEqual(["case worker", "applicant", "مقدم الطلب"])
+  })
+
+  it("steps can name Arabic users", () => {
+    expect(splitUser("As مقدم_الطلب: اضغط زر إرسال")).toEqual({ user: "مقدم_الطلب", rest: "اضغط زر إرسال" })
+  })
+
+  it("tells the AI the roles, never the logins", () => {
+    const users = [
+      { key: "applicant", role: "Applicant" },
+      { key: "reviewer", role: "Reviewer" },
+    ]
+    const text = buildGenerationContext(
+      { id: "1", key: "FR-1", title: "Approve", description: "Reviewer approves", taskId: null, acceptanceCriteria: [], section: null, parentKey: null, priority: null, status: "active" },
+      [],
+      [],
+      false,
+      users
+    )
+    expect(text).toContain("- reviewer = Reviewer")
+    expect(text).toContain('"As applicant: Log in with {applicant_username} and {applicant_password}"')
+    expect(text).toContain("{request_id}")
+    expect(usersInstructions(users, true).join("\n")).toContain("{applicant_password}")
+    const { values, secrets } = loginValues([{ key: "reviewer", username: "rev1", password: "s3cret" }])
+    expect(values).toEqual({ reviewer_username: "rev1", reviewer_password: "s3cret" })
+    expect(secrets).toEqual({ reviewer_password: "s3cret" })
+  })
+})
+
+import { withLoginSteps, withRememberSteps } from "@/lib/browser-agent/user-steps"
+
+describe("runnable multi-user cases", () => {
+  const users = [
+    { key: "applicant", role: "Applicant" },
+    { key: "reviewer", role: "Reviewer" },
+  ]
+  const generated = [
+    { action: "As applicant: Navigate to the return request submission page.", expected: "The page is displayed." },
+    { action: "As applicant: Fill in the title and submit the request.", expected: "The request number {request_id} is displayed." },
+    { action: "As reviewer: Navigate to the reviewer inbox page.", expected: "The inbox is displayed." },
+    { action: "As reviewer: Open the request {request_id}.", expected: "Details for {request_id} are displayed." },
+  ]
+
+  it("logs each user in and remembers values passed between them", () => {
+    const steps = withLoginSteps(withRememberSteps(generated, []), users)
+    expect(steps.map((s) => s.action)).toEqual([
+      "As applicant: Log in with {applicant_username} and {applicant_password}",
+      generated[0].action,
+      generated[1].action,
+      "As applicant: Remember the request id shown on the page as {request_id}",
+      "As reviewer: Log in with {reviewer_username} and {reviewer_password}",
+      generated[2].action,
+      generated[3].action,
+    ])
+    // Running it again changes nothing.
+    expect(withLoginSteps(withRememberSteps(steps, []), users)).toEqual(steps)
+  })
+
+  it("keeps a case that already logs in and remembers", () => {
+    const ok = [
+      { action: "As reviewer: Sign in with {reviewer_username} and {reviewer_password}", expected: "" },
+      { action: "As reviewer: Save the number as {n}", expected: "{n} shown" },
+      { action: "As reviewer: Search {n}", expected: "" },
+    ]
+    expect(withLoginSteps(withRememberSteps(ok, []), users)).toEqual(ok)
+    expect(withRememberSteps([{ action: "Type {title}", expected: "{title} shown" }], ["title"])).toHaveLength(1)
+  })
+})

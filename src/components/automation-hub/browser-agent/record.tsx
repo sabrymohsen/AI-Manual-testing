@@ -161,7 +161,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
 
   const addUser = () => {
     const u = newUser.trim()
-    if (!/^[A-Za-z][\w-]{0,29}$/.test(u)) return toast.error("A user name is one word in English letters, like reviewer or approver_2")
+    if (!/^[\p{L}][\p{L}\p{N}_-]{0,29}$/u.test(u)) return toast.error("A user name is one word (letters, numbers, _ or -), like reviewer or approver_2")
     if (!users.includes(u)) setUsers((x) => [...x, u])
     setUser(u)
     setNewUser("")

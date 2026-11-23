@@ -3144,6 +3144,7 @@ model BrdDocument {
   analyses         BrdAnalysis[]
   reviews          BrdReview[]
   questions        BrdQuestion[]
+  testUsers        BrdTestUser[]
   /// Readiness gate: a tester chose to design tests before every open question
   /// was answered. Who, why and when; cleared when they withdraw it.
   gateOverrideById   String?
@@ -4061,3 +4062,30 @@ model AiJob {
   @@index([userId, status])
   @@index([userId, createdAt])
 }
+
+/// A user of the system this BRD describes (applicant, reviewer…), with the
+/// login the tests use. Generated test cases write their steps as
+/// "As <key>: …" and the Browser Agent logs each one in in its own browser.
+/// The password is AES-256-GCM encrypted (src/lib/crypto) and never returned
+/// to the page that lists users.
+model BrdTestUser {
+  id                String      @id @default(uuid())
+  brdId             String
+  brd               BrdDocument @relation(fields: [brdId], references: [id], onDelete: Cascade)
+  /// Role as the BRD names it ("Case worker", "المراجع").
+  role              String
+  /// One word used in steps: "As case_worker: …". Unique per BRD.
+  key               String
+  username          String
+  passwordEncrypted Json?
+  loginUrl          String?
+  notes             String?     @db.Text
+  createdById       String?
+  createdByName     String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([brdId, key])
+  @@index([brdId])
+}
+

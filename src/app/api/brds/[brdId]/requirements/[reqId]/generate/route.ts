@@ -8,6 +8,8 @@ import { impactsFor, mustCover } from "@/lib/brd/impact"
 import { buildGenerationContext, asList, type GenReq as Req } from "@/lib/brd/generation-context"
 import { loadGate, recordOverride } from "@/lib/brd/questions"
 import { questionsFor } from "@/lib/brd/readiness"
+import { splitUser } from "@/lib/plain-english/grammar"
+import { withLoginSteps, withRememberSteps } from "@/lib/browser-agent/user-steps"
 
 const schema = z.object({
   count: z.number().int().min(1).max(10).optional(),
@@ -104,7 +106,7 @@ async function generateForRequirement(
   const project = await prisma.project.findUnique({ where: { id: brd.projectId }, select: { webAppUrl: true } })
   const arabic = /[؀-ۿ]/.test(`${req.title} ${req.description}`)
 
-  const [all, questions] = await Promise.all([
+  const [all, questions, users] = await Promise.all([
     prisma.brdRequirement.findMany({
       where: { brdId: brd.id },
       select: { id: true, key: true, title: true, description: true, acceptanceCriteria: true, section: true, parentKey: true, priority: true, status: true },
@@ -113,11 +115,14 @@ async function generateForRequirement(
       where: { brdId: brd.id, status: "Open" },
       select: { key: true, priority: true, status: true, question: true, relatedKeys: true },
     }),
+    // Role names and step keys only: logins never go to the AI.
+    prisma.brdTestUser.findMany({ where: { brdId: brd.id }, select: { key: true, role: true }, orderBy: { createdAt: "asc" } }),
   ])
   const asImpact = (r: (typeof all)[number]) => ({ ...r, acceptanceCriteria: asList(r.acceptanceCriteria) })
   const impacted = mustCover(impactsFor(asImpact(req as any), all.map(asImpact))).slice(0, 3)
   const openQs = questionsFor(req.key, questions)
-  const text = buildGenerationContext(req, impacted, openQs, arabic)
+  const text = buildGenerationContext(req, impacted, openQs, arabic, users)
+  const roleOf = new Map(users.map((u) => [u.key.toLowerCase(), u]))
   const byKey = new Map(impacted.map((i) => [i.key.toLowerCase(), i.id]))
   const openKeys = new Set(questions.map((q) => q.key.toLowerCase()))
 
@@ -161,10 +166,19 @@ async function generateForRequirement(
         ...(blockedBy.length ? ["blocked-open-question"] : []),
         ...(override ? ["tester-override"] : []),
       ]
+      // Runnable by the Browser Agent whatever the AI wrote: each user logs in first,
+      // and a value one step shows and a later step uses is remembered.
+      let steps = (g.steps ?? []).map((s) => ({ action: s.actionDescription || "—", expected: s.expectedResult || "" }))
+      if (users.length) steps = withLoginSteps(withRememberSteps(steps, [], arabic), users, arabic)
+      // The users this case's steps act as ("As reviewer: …"), named in its preconditions.
+      const caseUsers = Array.from(new Set((g.steps ?? []).map((s) => splitUser(s.actionDescription || "").user?.toLowerCase()).filter(Boolean) as string[]))
+        .map((k) => roleOf.get(k))
+        .filter(Boolean) as { key: string; role: string }[]
       const note = [
+        caseUsers.length ? `${arabic ? "المستخدمون" : "Users"}: ${caseUsers.map((u) => `${u.key} (${u.role})`).join(", ")}` : null,
         blockedBy.length ? `BLOCKED by open question ${blockedBy.join(", ")}: the expected result is not confirmed yet.` : null,
         override ? "Designed under a tester override of the readiness gate." : null,
-      ].filter(Boolean).join(" ")
+      ].filter(Boolean).join("\n")
       const tc = await tx.testCase.create({
         data: {
           projectId: brd.projectId,
@@ -177,10 +191,10 @@ async function generateForRequirement(
           suiteId: suiteId ?? null,
           tags: Array.from(new Set(["brd", tag, ...extraTags, ...aiTags].map((t) => String(t).slice(0, 40)))).slice(0, 12),
           steps: {
-            create: (g.steps ?? []).map((s, i) => ({
+            create: steps.map((s, i) => ({
               stepNumber: i + 1,
-              actionDescription: s.actionDescription || "—",
-              expectedResult: s.expectedResult || "",
+              actionDescription: s.action,
+              expectedResult: s.expected,
             })),
           },
           // Linked to this requirement, and a regression case also to the requirement it protects.

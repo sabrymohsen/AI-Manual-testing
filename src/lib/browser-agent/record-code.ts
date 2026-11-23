@@ -20,7 +20,7 @@ export interface RecordedAction {
 const jsStr = (s: string) => `'${s.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/\n/g, "\\n")}'`
 const pyStr = (s: string) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n")}"`
 const dataRef = (v: string) => v.match(/^\{([\p{L}\p{N}_-]+)\}$/u)?.[1]
-const ident = (s: string) => s.replace(/[^A-Za-z0-9_]/g, "_").replace(/^(\d)/, "_$1")
+const ident = (s: string) => s.replace(/[^\p{L}\p{N}_]/gu, "_").replace(/^(\d)/, "_$1")
 const FIELD = /\.(?:getByRole\('(?:textbox|searchbox|spinbutton)'|getByLabel|getByPlaceholder)/
 
 /** What the generated code needs to know across lines. */

@@ -52,12 +52,15 @@ Reply with JSON only, one of:
 {"action":"remember","name":"request_id","value":"REQ-1042","why":"..."}  keep a value shown on the page for later steps
 {"done":true,"passed":true|false,"actual":"what the page shows now"}
 Rules:
+- First compare the EXPECTED RESULT with the outline: if it is already true (e.g. the step says to open a page that is already shown), reply "done" right away without acting.
+- Never repeat an action that is marked "nothing changed"; try something else (fill a required field first, another element) or reply done with passed=false.
 - Do exactly what the current step says, nothing more. Use only refs that are in the outline you were given now.
 - When the step's action is complete (or the step only checks something), compare the EXPECTED RESULT with the outline and reply "done".
 - passed=true only if the outline clearly shows the expected result. If it shows something else, an error, or you cannot find what the step needs, passed=false.
 - "actual" is one or two factual sentences about what the page shows, in the same language as the step.
 - Test data is written as {name}; use the placeholder as the value, never invent passwords.
 - When the step says to remember, save or note a value (a request number, an ID, a total), reply "remember" with a short snake_case name (the one the step gives, if any) and the exact text copied from the outline, then continue. Later steps use it as {name}.
+- A {name} in the step or expected result that is neither test data nor remembered is a value this step produces: once it shows on the page, reply "remember" with that name. If you must TYPE such a {name}, type a realistic sample value instead and remember it under that name afterwards.
 - Each user in the test has their own browser and their own login. When you act as a user, log in with that user's test data if the step says to.
 - If an action failed, try a different element or approach once; after repeated failures reply done with passed=false.`
 

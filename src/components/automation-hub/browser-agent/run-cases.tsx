@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { AgentBrowser, fillData, parseTestData, sleep } from "@/lib/browser-agent/client"
 import { parseSnapshot, redactSecrets } from "@/lib/browser-agent/snapshot"
 import { splitUser } from "@/lib/plain-english/grammar"
+import { withLoginSteps, withRememberSteps } from "@/lib/browser-agent/user-steps"
 import { LiveView, type AgentSettings } from "./browser-agent"
 
 interface CaseStep {
@@ -16,7 +17,25 @@ interface CaseStep {
 interface TestCaseItem {
   id: string
   title: string
+  preconditions?: string | null
+  /** The BRDs it was generated from: their test users log in for the run. */
+  brdIds?: string[]
   steps: CaseStep[]
+}
+interface BrdUsers {
+  id: string
+  name: string
+  users: { key: string; role: string; loginUrl: string | null; hasPassword: boolean }[]
+}
+
+/** A case's users from its BRDs (the first BRD wins a shared key). */
+function caseUsers(tc: TestCaseItem, brds: BrdUsers[]) {
+  const out: (BrdUsers["users"][number] & { brd: string })[] = []
+  for (const id of tc.brdIds || []) {
+    const b = brds.find((x) => x.id === id)
+    for (const u of b?.users || []) if (!out.some((o) => o.key.toLowerCase() === u.key.toLowerCase())) out.push({ ...u, brd: b!.name })
+  }
+  return out
 }
 type StepStatus = "pending" | "running" | "passed" | "failed" | "skipped"
 interface StepRun {
@@ -52,6 +71,7 @@ function parseAdHoc(text: string): CaseStep[] {
 
 export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: string; settings: AgentSettings; onOpenRun: (id: string) => void }) {
   const [cases, setCases] = useState<TestCaseItem[] | null>(null)
+  const [brds, setBrds] = useState<BrdUsers[]>([])
   const [search, setSearch] = useState("")
   const [picked, setPicked] = useState<string[]>([])
   const [adHoc, setAdHoc] = useState(false)
@@ -69,7 +89,10 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
   useEffect(() => {
     fetch(`/api/hub/browser-agent/cases?projectId=${encodeURIComponent(projectId)}`)
       .then((r) => r.json())
-      .then((d) => setCases(d.cases || []))
+      .then((d) => {
+        setCases(d.cases || [])
+        setBrds(d.brds || [])
+      })
       .catch(() => setCases([]))
   }, [projectId])
 
@@ -89,13 +112,26 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
       ? [{ id: "", title: adHocTitle.trim() || "Quick test", steps: parseAdHoc(adHocSteps) }]
       : (cases || []).filter((c) => picked.includes(c.id))
     if (!list.length || list.some((c) => !c.steps.length)) return toast.error(adHoc ? "Write at least one step" : "Pick at least one test case")
-    if (!/^https?:\/\//i.test(settings.startUrl.trim())) return toast.error("Enter the start page address (https://…)")
+    const hasStart = /^https?:\/\//i.test(settings.startUrl.trim())
+    const firstUserHasLogin = (tc: TestCaseItem) => {
+      const first = splitUser(tc.steps[0]?.action || "").user
+      return !!caseUsers(tc, brds).find((u) => u.key.toLowerCase() === (first || "").toLowerCase())?.loginUrl
+    }
+    if (!hasStart && !list.every(firstUserHasLogin)) return toast.error("Enter the start page address (https://…)")
     const { data, secrets } = parseTestData(settings.testData)
     const batchId = list.length > 1 ? crypto.randomUUID() : undefined
 
     stopRef.current = false
     setRunning(true)
     setLog([])
+
+    // Cases from a BRD: each user logs in first, values passed between users are remembered.
+    list.forEach((tc, i) => {
+      const users = caseUsers(tc, brds)
+      if (!users.length) return
+      const ar = /[؀-ۿ]/.test(tc.steps.map((s) => s.action).join(" "))
+      list[i] = { ...tc, steps: withLoginSteps(withRememberSteps(tc.steps, Object.keys(data), ar), users, ar) }
+    })
     setRuns(list.map((c) => ({ id: c.id || null, title: c.title, status: "queued", steps: c.steps.map((s) => ({ ...s, status: "pending", actions: [], durationMs: 0 })) })))
 
     for (let ci = 0; ci < list.length; ci++) {
@@ -105,6 +141,40 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
       }
       const tc = list[ci]
       const caseStarted = Date.now()
+      // The BRD's users: logins fill {reviewer_username} / {reviewer_password}.
+      const users = caseUsers(tc, brds)
+      const usedKeys = Array.from(new Set(tc.steps.map((s) => splitUser(s.action).user).filter(Boolean) as string[]))
+      const missing = users.length ? usedKeys.filter((k) => !users.some((u) => u.key.toLowerCase() === k.toLowerCase())) : []
+      const noPassword = users.filter((u) => !u.hasPassword && usedKeys.some((k) => k.toLowerCase() === u.key.toLowerCase()))
+      if (missing.length || noPassword.length) {
+        const where = users[0]?.brd ? ` Add ${missing.length + noPassword.length === 1 ? "it" : "them"} in BRD Hub → ${users[0].brd} → Test users.` : ""
+        const msg = [missing.length ? `No login for: ${missing.join(", ")}.` : "", noPassword.length ? `No password for: ${noPassword.map((u) => u.key).join(", ")}.` : ""].filter(Boolean).join(" ") + where
+        patchRun(ci, (r) => ({ ...r, status: "error", error: msg }))
+        say(`✗ ${tc.title}: ${msg}`)
+        continue
+      }
+      const caseData: Record<string, string> = { ...data }
+      const caseSecrets: Record<string, string> = { ...secrets }
+      for (const u of users) {
+        // Names the AI may use; on the server the values are filled in there.
+        caseData[`${u.key}_username`] ??= `{${u.key}_username}`
+        caseData[`${u.key}_password`] ??= `{${u.key}_password}`
+        caseSecrets[`${u.key}_password`] ??= ""
+      }
+      if (users.length && settings.runsOn === "computer") {
+        // On this computer the desktop app types the login, so it needs the values.
+        const res = await fetch("/api/hub/browser-agent/logins", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectId, brdIds: tc.brdIds }),
+        })
+        const d = await res.json().catch(() => ({}))
+        for (const u of d.users || []) {
+          caseData[`${u.key}_username`] = u.username
+          caseData[`${u.key}_password`] = u.password
+          if (u.password) caseSecrets[`${u.key}_password`] = u.password
+        }
+      }
       const browsers = new Map<string, AgentBrowser>()
       browsersRef.current = browsers
       // Values the agent copied from the page ("Remember the request number as {request_id}").
@@ -129,9 +199,13 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
           let browser = browsers.get(user)
           if (!browser) {
             browser = new AgentBrowser(projectId, settings.runsOn, settings.headed)
+            browser.brdIds = tc.brdIds || []
             browsers.set(user, browser)
-            if (user) note(`  ⇢ ${user}: own browser`)
-            await browser.openAt(settings.startUrl.trim())
+            const login = users.find((u) => u.key.toLowerCase() === user.toLowerCase())
+            const url = login?.loginUrl || settings.startUrl.trim()
+            if (!/^https?:\/\//i.test(url)) throw new Error(`No page to open for ${user || "the test"}: set the start page, or ${user ? `${user}'s` : "the user's"} login page in the BRD's Test users.`)
+            if (user) note(`  ⇢ ${user}${login ? ` (${login.role})` : ""}: own browser${login?.loginUrl ? " at their login page" : ""}`)
+            await browser.openAt(url)
             show(browser)
             setShot(await browser.screenshot())
           }
@@ -142,8 +216,8 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
           const done: { action: string; error?: string }[] = []
           for (;;) {
             if (stopRef.current) break
-            const snap = redactSecrets(await browser.snapshot(), secrets)
-            const res = await fetch("/api/hub/browser-agent/next", {
+            const snap = redactSecrets(await browser.snapshot(), caseSecrets)
+            const ask = () => fetch("/api/hub/browser-agent/next", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -154,12 +228,21 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
                 user: user || undefined,
                 page: { ...browser.page, snapshot: snap },
                 done,
-                dataNames: Object.keys(data),
+                dataNames: Object.keys(caseData),
                 remembered,
               }),
             })
-            const next = await res.json().catch(() => ({}))
+            let res = await ask()
+            let next = await res.json().catch(() => ({}))
+            // A slow local model can time out once; ask again before giving up.
+            if (!res.ok && /time ?out|aborted/i.test(String(next.error))) {
+              note("     · the AI was slow, asking again")
+              res = await ask()
+              next = await res.json().catch(() => ({}))
+            }
             if (!res.ok) throw new Error(next.error || "The AI call failed")
+            // "reviewer_password" written without braces means the placeholder.
+            if (typeof next.value === "string" && Object.prototype.hasOwnProperty.call({ ...caseData, ...remembered }, next.value.trim())) next.value = `{${next.value.trim()}}`
             if (next.kind === "done") {
               sr.status = next.passed ? "passed" : "failed"
               sr.actual = next.actual
@@ -179,17 +262,33 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
             const els = parseSnapshot(snap)
             const el = next.ref ? els.find((e) => e.ref === next.ref) : null
             const label = el ? `${el.role} "${el.name || el.value || next.ref}"` : ""
-            const shownValue = next.value && !Object.keys(secrets).some((n) => next.value.includes(`{${n}}`)) ? ` "${next.value}"` : next.value ? " (secret)" : ""
+            const shownValue = next.value && !Object.keys(caseSecrets).some((n) => next.value.includes(`{${n}}`)) ? ` "${next.value}"` : next.value ? " (secret)" : ""
             const desc = `${next.cmd}${label ? ` ${label}` : ""}${next.cmd === "fill" || next.cmd === "select" || next.cmd === "press" || next.cmd === "goto" ? shownValue : ""}`
             let error: string | undefined
             if (next.cmd === "wait") {
               await sleep(Math.min(5, Math.max(1, Number(next.value) || 1)) * 1000)
             } else {
-              const values = { ...data, ...remembered }
+              // Login placeholders stay as written for the server to fill (their value is the placeholder itself).
+              // A {name} nobody gave a value ("{return_title}"): type a readable sample and remember it.
+              if (next.value && ["fill", "type"].includes(next.cmd)) {
+                for (const m of String(next.value).matchAll(/\{([\p{L}\p{N}_ -]{1,40})\}/gu)) {
+                  const n = m[1]
+                  if (n in caseData || n in remembered) continue
+                  remembered[n] = `Test ${n.replace(/[_-]+/g, " ").trim()} ${String(Date.now()).slice(-4)}`
+                  note(`     · {${n}} has no value: using "${remembered[n]}"`)
+                }
+              }
+              const values = { ...caseData, ...remembered }
               const args = next.ref ? [next.ref, ...(next.value !== undefined && ["fill", "select"].includes(next.cmd) ? [fillData(next.value, values)] : [])] : next.value ? [fillData(next.value, values)] : []
               const r = await browser.exec(next.cmd, args).catch((e: any) => ({ ok: false, error: e?.message }) as any)
               if (!r.ok) error = r.error || "failed"
               show(browser)
+            }
+            // The same action again on an unchanged page: tell the AI it did nothing.
+            // (Clicks only: a filled password field looks the same in the outline.)
+            if (!error && (next.cmd === "click" || next.cmd === "dblclick")) {
+              const after = redactSecrets(await browser.snapshot().catch(() => snap), caseSecrets)
+              if (after === snap) error = "nothing changed on the page — don't repeat it"
             }
             done.push({ action: desc, error })
             sr.actions.push(error ? `${desc} — failed: ${error.slice(0, 200)}` : desc)
@@ -301,7 +400,18 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
                         <span className="block truncate text-[13px] font-medium text-foreground" dir="auto">
                           {c.title}
                         </span>
-                        <span className="text-xs font-normal text-muted-foreground">{c.steps.length} steps</span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {c.steps.length} steps
+                          {caseUsers(c, brds).length > 0 && (
+                            <span dir="auto">
+                              {" · "}
+                              {caseUsers(c, brds)
+                                .filter((u) => c.steps.some((s) => splitUser(s.action).user?.toLowerCase() === u.key.toLowerCase()))
+                                .map((u) => u.role)
+                                .join(", ") || `${caseUsers(c, brds).length} BRD users`}
+                            </span>
+                          )}
+                        </span>
                       </span>
                     </label>
                   ))
@@ -322,6 +432,8 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
             <span className="text-xs font-normal text-muted-foreground">Each step: the AI acts, then checks the expected result.</span>
           </div>
           <p className="mt-2 text-xs font-normal text-muted-foreground">
+            Cases made from a BRD log in with that BRD&apos;s test users (BRD Hub → Test users); no test data needed.
+            <br />
             More than one user? Start a step with <span className="font-mono">As reviewer:</span> — each user gets their own browser and login, and stays signed in.
             Say “remember the request number as {"{request_id}"}” to use a value from the page in later steps.
           </p>

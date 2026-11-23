@@ -1,6 +1,6 @@
 {
   "name": "ai-manual-qa-tester",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "private": true,
   "scripts": {
     "predev": "node scripts/ensure-env.mjs",

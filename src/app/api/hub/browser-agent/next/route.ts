@@ -38,7 +38,7 @@ export async function POST(request: Request) {
           .slice(0, 30)
           .map(([k, v]) => [k, (v as string).slice(0, 300)])
       ),
-      user: typeof body.user === "string" && /^[A-Za-z][\w-]{0,29}$/.test(body.user) ? body.user : undefined,
+      user: typeof body.user === "string" && /^[\p{L}][\p{L}\p{N}_-]{0,29}$/u.test(body.user) ? body.user : undefined,
     })
     return NextResponse.json(next)
   } catch (e: any) {

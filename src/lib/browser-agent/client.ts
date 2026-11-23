@@ -29,6 +29,8 @@ export function desktopBa(): DesktopBa | null {
 export class AgentBrowser {
   session = ""
   page: { title: string; url: string } | null = null
+  /** The test case's BRDs: on the server, their users' logins are filled in there. */
+  brdIds: string[] = []
 
   constructor(
     private projectId: string,
@@ -50,7 +52,7 @@ export class AgentBrowser {
       const res = await fetch("/api/hub/browser-agent/exec", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: this.projectId, session: this.session, cmd, args }),
+        body: JSON.stringify({ projectId: this.projectId, session: this.session, cmd, args, ...(this.brdIds.length ? { brdIds: this.brdIds } : {}) }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) {

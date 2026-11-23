@@ -669,7 +669,8 @@ export function splitUser(sentence: string): { user: string | null; rest: string
   const m = USER_PREFIX.exec(sentence)
   return m ? { user: m[1], rest: sentence.slice(m[0].length).trim() } : { user: null, rest: sentence }
 }
-const USER_PREFIX = /^\s*as\s+(?:the\s+)?([A-Za-z][\w-]{0,29})\s*:\s*/i
+// Letters first; Arabic role keys too ("As المراجع: …").
+const USER_PREFIX = /^\s*as\s+(?:the\s+)?([\p{L}][\p{L}\p{N}_-]{0,29})\s*:\s*/iu
 
 export function parseStep(input: string): ParseResult {
   const full = normalizeSentence(input)
