@@ -57,6 +57,8 @@ storage/story-agent-runs/
 storage/visual-tests/
 # Automation Hub Visual Diff baselines/current/diffs (served by /api/hub/visual/image)
 storage/visual/
+storage/bug-screenshots/
+storage/bug-imports/
 # Local agent tooling state
 .claude-flow/
 .swarm/

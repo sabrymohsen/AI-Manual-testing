@@ -12,6 +12,7 @@ import RebuildTrackerBugsModal from "@/components/bug-reports/rebuild-tracker-bu
 import CreateBugBoardModal from "@/components/bug-reports/create-bug-board-modal"
 import BugStatusMappingModal from "@/components/bug-reports/bug-status-mapping-modal"
 import QaReportModal from "@/components/bug-reports/qa-report-modal"
+import ImportPdfBugsModal from "@/components/bug-reports/import-pdf-bugs-modal"
 import { ModuleSelect, useProjectModules } from "@/components/bug-reports/module-select"
 import { LinkedRequirementsSelector } from "@/components/test-cases/linked-requirements-selector"
 import { RequirementLink } from "@/components/requirements/requirement-link"
@@ -56,7 +57,8 @@ import {
   GitCompare,
   AlertTriangle,
   Download,
-  FileBarChart
+  FileBarChart,
+  FileUp
 } from "lucide-react"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import { BugTriagePanel } from "@/components/bug-reports/bug-triage-panel"
@@ -539,6 +541,7 @@ export default function ProjectBugReportsPage() {
   const [showStatusMappingModal, setShowStatusMappingModal] = useState(false)
   // Downloadable QA/UAT testing report composed from this project's suites and bugs.
   const [showQaReportModal, setShowQaReportModal] = useState(false)
+  const [showImportPdfModal, setShowImportPdfModal] = useState(false)
 
   // Inline editing state inside Drawer
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -1716,6 +1719,11 @@ export default function ProjectBugReportsPage() {
             icon: RefreshCw
           },
           {
+            label: "Import from PDF",
+            onClick: () => setShowImportPdfModal(true),
+            icon: FileUp
+          },
+          {
             label: "QA Report",
             onClick: () => setShowQaReportModal(true),
             icon: FileBarChart
@@ -2074,6 +2082,9 @@ export default function ProjectBugReportsPage() {
             </Button>
             <Button onClick={() => router.push(`/projects/${projectId}/live-qa-session`)} variant="outline" size="sm" className="h-9 hover:bg-muted/50 border-border">
               Live QA Session
+            </Button>
+            <Button onClick={() => setShowImportPdfModal(true)} variant="outline" size="sm" className="h-9 hover:bg-muted/50 border-border">
+              Import from PDF
             </Button>
           </div>
         </div>
@@ -3406,6 +3417,16 @@ export default function ProjectBugReportsPage() {
         open={showRebuildModal}
         onClose={() => setShowRebuildModal(false)}
         onCompleted={loadBugsList}
+      />
+
+      {/* Bugs from an automation run's bug report PDF, with their screenshots. */}
+      <ImportPdfBugsModal
+        projectId={projectId}
+        open={showImportPdfModal}
+        onClose={() => setShowImportPdfModal(false)}
+        modules={projectModules}
+        onImported={loadBugsList}
+        onOpenBug={handleOpenDetail}
       />
 
       {/* Downloadable QA/UAT testing report — pre-filled, editable, self-contained. */}

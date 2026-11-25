@@ -42,7 +42,8 @@ export async function GET(_request: Request, { params }: { params: { path: strin
 
   // BRDs are stored as brds/<projectId>/… — only that project's members may read them.
   const parts = storageSegments(filePath)
-  if (parts[0] === "brds" && parts[1]) {
+  // PDF bug imports (bug-imports/<projectId>/…) follow the same rule.
+  if ((parts[0] === "brds" || parts[0] === "bug-imports") && parts[1]) {
     if (!(await canUseProject(parts[1], auth.session!.user.id, "read"))) {
       return new NextResponse("File not found", { status: 404 })
     }
