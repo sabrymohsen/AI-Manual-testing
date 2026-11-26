@@ -36,6 +36,7 @@ import { TaskDetailsSidebar } from "./task-details-sidebar"
 import { TaskLinkedBrds } from "./task-linked-brds"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import { TaskActivity } from "./task-activity"
+import { StoryGlance, TYPE_ACCENT, WorkflowPath } from "./story-overview"
 import { STATUS_COLORS, STATUS_ORDER, TYPE_META } from "./task-detail-config"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
 import { initials } from "@/components/scrum/shared"
@@ -182,6 +183,8 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
 
   return (
     <TooltipProvider delayDuration={200}>
+      {/* Type colour along the top: green story, red bug, blue task… */}
+      <div className={cn("h-1 shrink-0", TYPE_ACCENT[task.type] ?? "bg-primary")} aria-hidden />
       {/* ── Top Bar Header (Theme Unified) ── */}
       <div className="flex items-center justify-between border-b border-border px-6 py-3 bg-card/60 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
@@ -278,6 +281,12 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
                 {formatDistanceToNow(new Date(task.updatedAt), { addSuffix: true })}
               </span>
             </div>
+          </div>
+
+          {/* Where it is, and how it's doing */}
+          <div className="space-y-4 rounded-2xl border bg-muted/30 p-4">
+            <WorkflowPath status={task.status} onChange={(s) => save({ status: s })} />
+            <StoryGlance task={task} />
           </div>
 
           <DescriptionBlock task={task} onSave={save} />
