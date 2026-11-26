@@ -61,7 +61,8 @@ import {
   Code,
   ListOrdered,
   FileCheck,
-  AlertCircle
+  AlertCircle,
+  History,
 } from "@/components/ui/icons"
 import { generatePlaywrightCode } from "@/lib/recording/code-generators"
 
@@ -181,6 +182,24 @@ export default function LiveQASessionPage() {
   const [recording, setRecording] = useState(false)
   const [uploadingRecording, setUploadingRecording] = useState(false)
   const [stepRecording, setStepRecording] = useState(false)
+  // Start options, remembered per browser. Steps on by default: the setup page
+  // promises that your steps are recorded, so they now are.
+  const [autoSteps, setAutoStepsState] = useState(true)
+  const [autoVideo, setAutoVideoState] = useState(false)
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem("lqa.recordOptions") || "{}")
+      if (typeof v.steps === "boolean") setAutoStepsState(v.steps)
+      if (typeof v.video === "boolean") setAutoVideoState(v.video)
+    } catch {}
+  }, [])
+  const saveRecordOptions = (next: { steps: boolean; video: boolean }) => {
+    try { localStorage.setItem("lqa.recordOptions", JSON.stringify(next)) } catch {}
+  }
+  const setAutoSteps = (v: boolean) => { setAutoStepsState(v); saveRecordOptions({ steps: v, video: autoVideo }) }
+  const setAutoVideo = (v: boolean) => { setAutoVideoState(v); saveRecordOptions({ steps: autoSteps, video: v }) }
+  // Video can only start once the first frame of the live view has arrived.
+  const pendingAutoVideoRef = useRef(false)
   const [togglingSteps, setTogglingSteps] = useState(false)
   const [recStartedAt, setRecStartedAt] = useState<number | null>(null)
   const [recordings, setRecordings] = useState<SessionClip[]>([])
@@ -805,6 +824,14 @@ export default function LiveQASessionPage() {
     }
   }, [sessionId, sessionStatus, showLivePreview, fullView, zoom])
 
+  useEffect(() => {
+    if (hasFrame && pendingAutoVideoRef.current) {
+      pendingAutoVideoRef.current = false
+      handleStartRecording()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasFrame])
+
   // ── Session Controls ───────────────────────────────────────────────────────
   async function handleStartSession(e: React.FormEvent) {
     e.preventDefault()
@@ -850,13 +877,32 @@ export default function LiveQASessionPage() {
         setSessionId(data.session.id)
         setSessionStatus(data.session.status)
         setSessionStartedAt(data.session.startedAt ? new Date(data.session.startedAt).getTime() : Date.now())
-        setToast({ message: "Live browser workstation launched! Interact directly in the viewport below.", type: "success" })
+        if (autoSteps) {
+          fetch(`/api/recording/${data.session.id}/step-recording`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: true }),
+          })
+            .then((r) => { if (r.ok) setStepRecording(true) })
+            .catch(() => {})
+        }
+        pendingAutoVideoRef.current = autoVideo
+        setToast({
+          message: autoSteps
+            ? "Session started. Your steps are being recorded."
+            : "Session started. Use the browser below.",
+          type: "success",
+        })
       } else {
-        const err = await res.json()
-        setStartError(err.error || "Failed to start live QA browser session")
+        const err = await res.json().catch(() => ({}))
+        setStartError(
+          res.status === 503
+            ? "The browser service isn't running, so the session couldn't open. Ask whoever runs this server to start the recorder service, then try again."
+            : err.error || "The session couldn't start. Try again."
+        )
       }
     } catch {
-      setStartError("Network error starting browser workstation")
+      setStartError("Couldn't reach the server. Check your connection and try again.")
     } finally {
       setStartingSession(false)
     }
@@ -1232,7 +1278,7 @@ export default function LiveQASessionPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-background">
+    <div className="flex h-full w-full overflow-hidden bg-background">
 
       {/* End session confirmation */}
       <ConfirmDialog
@@ -1254,7 +1300,7 @@ export default function LiveQASessionPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-4 right-4 z-[9999] px-4 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 animate-in slide-in-from-top duration-300 max-w-md ${
+        <div role="status" className={`fixed bottom-4 right-4 z-[9999] px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 animate-in slide-in-from-bottom duration-300 max-w-md ${
           toast.type === "success" 
             ? "bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-950/90 dark:border-emerald-800 dark:text-emerald-100" 
             : "bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-950/90 dark:border-rose-800 dark:text-rose-100"
@@ -1267,311 +1313,219 @@ export default function LiveQASessionPage() {
       )}
 
       {loading ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground animate-pulse font-semibold">
-          <BusyDot />
-          <span>Initializing Live QA Workstation...</span>
+        <div className="mx-auto w-full max-w-5xl space-y-4 px-6 py-8" aria-busy="true" aria-label="Loading">
+          <div className="h-8 w-56 animate-pulse rounded-lg bg-muted" />
+          <div className="h-80 animate-pulse rounded-2xl bg-muted" />
         </div>
       ) : !sessionId ? (
-        
-        // ═════════════════════════════════════════════════════════════════════
-        // INITIAL WORKSTATION SETUP FORM (REDESIGNED FULL-WIDTH 2-COLUMN)
-        // ═════════════════════════════════════════════════════════════════════
-        <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-8 py-8 space-y-8 select-none text-xs font-medium">
-          
-          {/* Header Banner - Full Width */}
-          <div className="relative overflow-hidden rounded-xl bg-indigo-950 p-8 text-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-primary/20">
-            <div className="absolute -top-12 -right-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-            <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-              <div className="space-y-3 max-w-2xl">
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-indigo-300 border border-primary/30">
-                    <Sparkles className="h-3 w-3" /> Manual testing
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <CheckCircle2 className="h-3 w-3" /> Live browser stream
-                  </span>
-                </div>
-
-                <h1 className="text-3xl font-semibold tracking-tight text-white flex items-center gap-3">
-                  <Zap className="h-8 w-8 text-indigo-400 fill-current" /> Live QA Session
-                </h1>
-                <p className="text-xs text-slate-300 font-normal leading-relaxed">
-                  Open a real browser inside the app and test by hand. Your steps and a video are recorded, and any moment can become a bug with its screenshot.
+        // ── Setup: one short form, the start button always in view ──────────
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-5xl px-6 py-8">
+            <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h1 className="heading-5 text-foreground">Live QA Session</h1>
+                <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                  Test a site by hand in a real browser inside the app. Your clicks and typing become steps, and any moment can become a bug with its screenshot attached.
                 </p>
-
-                {/* Presets Bar */}
-                <div className="pt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-medium text-muted-foreground mr-1">Presets:</span>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset({ title: "Quick Exploratory Smoke Test", browser: "Chromium", viewport: "Desktop", priority: "High" })}
-                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
-                  >
-                    <Zap size={12} className="text-amber-400" /> Smoke Test
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset({ title: "Mobile Responsiveness Audit", browser: "WebKit", viewport: "Mobile", priority: "Medium" })}
-                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
-                  >
-                    <Smartphone size={12} className="text-indigo-400" /> Mobile Layout
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset({ title: "Role Security & Permissions Audit", browser: "Firefox", viewport: "Desktop", priority: "Critical" })}
-                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
-                  >
-                    <ShieldCheck size={12} className="text-emerald-400" /> Security Audit
-                  </button>
-                </div>
               </div>
-
-              <div className="flex flex-col items-start lg:items-end gap-3 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => router.push(`/projects/${projectId}/live-qa-history`)}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-semibold transition-all text-white backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-                >
-                  <Activity className="h-4 w-4 text-indigo-300" /> Session history
-                </button>
-              </div>
+              <Button variant="outline" size="sm" className="h-9 gap-2 text-xs" onClick={() => router.push(`/projects/${projectId}/live-qa-history`)}>
+                <History className="h-4 w-4" /> Session history
+              </Button>
             </div>
-          </div>
 
-          {/* 2-Column Grid Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Form Column (8 columns / 66% width) */}
-            <div className="lg:col-span-8 space-y-6">
-              <form onSubmit={handleStartSession} className="space-y-6">
-                
-                {/* Session Identity Card */}
-                <div className="p-6 rounded-xl border bg-card space-y-4 shadow-sm">
-                  <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" /> Session details
-                  </h3>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="work-title" className="font-semibold text-xs">Session title *</Label>
+            <form onSubmit={handleStartSession} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+              <div className="space-y-5 rounded-2xl border bg-card p-6 shadow-sm">
+                {/* What */}
+                <div className="space-y-2">
+                  <Label htmlFor="work-url" className="text-sm font-semibold">Start page</Label>
+                  <div className="relative">
+                    <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                      id="work-title"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      id="work-url"
+                      value={startUrl}
+                      onChange={(e) => setStartUrl(e.target.value)}
                       required
-                      placeholder="e.g. Verify Checkout Payment Gateway with 3DS Challenge"
-                      className="h-10 text-xs font-medium"
+                      autoFocus
+                      placeholder="https://example.com/login"
+                      className="h-11 pl-9 font-mono text-sm"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="work-title" className="text-sm font-semibold">What are you testing?</Label>
+                  <Input
+                    id="work-title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    placeholder="e.g. Checkout with a saved card"
+                    className="h-10 text-sm"
+                  />
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-xs text-muted-foreground">Start from:</span>
+                    {[
+                      { label: "Smoke test", icon: Zap, p: { title: "Quick smoke test", browser: "Chromium", viewport: "Desktop", priority: "High" } },
+                      { label: "Mobile layout", icon: Smartphone, p: { title: "Mobile layout check", browser: "WebKit", viewport: "Mobile", priority: "Medium" } },
+                      { label: "Roles and permissions", icon: ShieldCheck, p: { title: "Roles and permissions check", browser: "Firefox", viewport: "Desktop", priority: "Critical" } },
+                    ].map(({ label, icon: Icon, p }) => (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => applyPreset(p as any)}
+                        className="inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      >
+                        <Icon className="h-3.5 w-3.5" /> {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="work-url" className="font-semibold text-xs">Start page URL *</Label>
-                    <div className="relative">
-                      <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="work-url"
-                        value={startUrl}
-                        onChange={(e) => setStartUrl(e.target.value)}
-                        required
-                        placeholder="https://example.com/login"
-                        className="pl-8 h-10 text-xs font-mono"
-                      />
+                <div className="grid gap-5 sm:grid-cols-2">
+                  {/* Browser */}
+                  <fieldset className="space-y-2">
+                    <legend className="mb-2 text-sm font-semibold">Browser</legend>
+                    <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1" role="radiogroup">
+                      {([
+                        ["Chromium", "Chrome"],
+                        ["Firefox", "Firefox"],
+                        ["WebKit", "Safari"],
+                      ] as const).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={browserType === id}
+                          onClick={() => setBrowserType(id)}
+                          className={`h-8 rounded-md text-xs font-medium transition-colors ${browserType === id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
+                  </fieldset>
+
+                  {/* Device */}
+                  <fieldset className="space-y-2">
+                    <legend className="mb-2 text-sm font-semibold">Screen size</legend>
+                    <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1" role="radiogroup">
+                      {([
+                        ["Desktop", "Desktop", Laptop, "1280 × 800"],
+                        ["Tablet", "Tablet", TabletIcon, "768 × 1024"],
+                        ["Mobile", "Phone", Smartphone, "375 × 667"],
+                      ] as const).map(([id, label, Icon, dim]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          role="radio"
+                          aria-checked={viewport === id}
+                          title={dim}
+                          onClick={() => setViewport(id)}
+                          className={`flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-medium transition-colors ${viewport === id ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          <Icon className="h-3.5 w-3.5" /> {label}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  {/* Login */}
+                  <div className="space-y-2">
+                    <Label htmlFor="work-cred" className="text-sm font-semibold">Sign in as</Label>
+                    <select
+                      id="work-cred"
+                      value={credentialId}
+                      onChange={(e) => setCredentialId(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-xs"
+                    >
+                      <option value="">Don&apos;t sign in</option>
+                      {project?.credentials.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.roleName} ({c.username})
+                        </option>
+                      ))}
+                    </select>
+                    {!project?.credentials.length && (
+                      <p className="text-xs text-muted-foreground">No saved logins yet. You can add one during the session.</p>
+                    )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label className="font-semibold text-xs">Default priority</Label>
-                    <div className="grid grid-cols-4 gap-2">
+                  {/* Priority */}
+                  <fieldset className="space-y-2">
+                    <legend className="mb-2 text-sm font-semibold">Priority for bugs you file</legend>
+                    <div className="grid grid-cols-4 gap-1 rounded-lg bg-muted p-1" role="radiogroup">
                       {["Low", "Medium", "High", "Critical"].map((p) => (
                         <button
                           key={p}
                           type="button"
+                          role="radio"
+                          aria-checked={priority === p}
                           onClick={() => setPriority(p)}
-                          className={`h-9 rounded-xl border text-xs font-semibold transition-all ${
-                            priority === p
-                              ? p === "Critical"
-                                ? "bg-rose-600 text-white border-rose-600 shadow-sm"
-                                : p === "High"
-                                ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-                                : "bg-primary text-white border-primary shadow-sm"
-                              : "bg-background text-muted-foreground border-input hover:bg-muted"
-                          }`}
+                          className={`h-7 rounded-md text-xs font-medium transition-colors ${priority === p ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                         >
                           {p}
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </fieldset>
                 </div>
 
-                {/* Browser & Viewport Platform Selection Grid */}
-                <div className="p-6 rounded-xl border bg-card space-y-6 shadow-sm">
-                  <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                    <Laptop className="h-4 w-4 text-primary" /> Browser and device
-                  </h3>
+                <div className="space-y-2">
+                  <Label htmlFor="work-precond" className="text-sm font-semibold">
+                    Before you start <span className="font-normal text-muted-foreground">(optional)</span>
+                  </Label>
+                  <Input
+                    id="work-precond"
+                    value={preconditions}
+                    onChange={(e) => setPreconditions(e.target.value)}
+                    placeholder="e.g. The account has an active subscription"
+                    className="h-9 text-xs"
+                  />
+                </div>
+              </div>
 
-                  {/* Browser Cards */}
-                  <div className="space-y-2">
-                    <Label className="font-semibold text-xs">Browser</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { id: "Chromium", label: "Chromium", desc: "Chrome / Edge CDP Engine" },
-                        { id: "Firefox", label: "Mozilla Firefox", desc: "Gecko Browser Engine" },
-                        { id: "WebKit", label: "Apple WebKit", desc: "Safari Browser Engine" }
-                      ].map((b) => (
-                        <div
-                          key={b.id}
-                          onClick={() => setBrowserType(b.id as any)}
-                          className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
-                            browserType === b.id
-                              ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-600/20 shadow-sm"
-                              : "border-input bg-background hover:bg-muted/40"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-semibold text-xs text-foreground">{b.label}</span>
-                            {browserType === b.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
-                          </div>
-                          <span className="text-xs text-muted-foreground">{b.desc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Viewport Cards */}
-                  <div className="space-y-2">
-                    <Label className="font-semibold text-xs">Target Device Layout</Label>
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { id: "Desktop", label: "Desktop Workspace", dim: "1280 × 800", icon: Laptop },
-                        { id: "Tablet", label: "Tablet Device", dim: "768 × 1024", icon: TabletIcon },
-                        { id: "Mobile", label: "Mobile Device", dim: "375 × 667", icon: Smartphone }
-                      ].map((v) => {
-                        const Icon = v.icon
-                        return (
-                          <div
-                            key={v.id}
-                            onClick={() => setViewport(v.id as any)}
-                            className={`p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
-                              viewport === v.id
-                                ? "border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 ring-2 ring-indigo-600/20 shadow-sm"
-                                : "border-input bg-background hover:bg-muted/40"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              <Icon className={`h-4 w-4 ${viewport === v.id ? "text-primary" : "text-muted-foreground"}`} />
-                              <span className="font-semibold text-xs text-foreground">{v.label}</span>
-                            </div>
-                            <span className="text-xs font-mono text-muted-foreground">{v.dim}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Credentials & Preconditions */}
-                  <div className="grid grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="work-cred" className="font-semibold text-xs">Pre-Authenticated Role Context</Label>
-                      <select
-                        id="work-cred"
-                        value={credentialId}
-                        onChange={(e) => setCredentialId(e.target.value)}
-                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold"
-                      >
-                        <option value="">-- Anonymous / No Login --</option>
-                        {project?.credentials.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.roleName} ({c.username})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="work-precond" className="font-semibold text-xs">Preconditions</Label>
-                      <Input
-                        id="work-precond"
-                        value={preconditions}
-                        onChange={(e) => setPreconditions(e.target.value)}
-                        placeholder="e.g. Active subscription with $50 balance"
-                        className="h-10 text-xs"
-                      />
-                    </div>
-                  </div>
+              {/* Right: what gets recorded, and the start button */}
+              <div className="space-y-4">
+                <div className="space-y-3 rounded-2xl border bg-card p-5 shadow-sm">
+                  <p className="text-sm font-semibold text-foreground">While you test</p>
+                  <RecordSwitch
+                    on={autoSteps}
+                    onChange={setAutoSteps}
+                    icon={MousePointerClick}
+                    label="Record my steps"
+                    hint="Clicks and typing become steps you can replay as an automated test."
+                  />
+                  <RecordSwitch
+                    on={autoVideo}
+                    onChange={setAutoVideo}
+                    icon={Video}
+                    label="Record video"
+                    hint="Saves a video of the browser. You can start and stop it any time."
+                  />
+                  <p className="border-t pt-3 text-xs text-muted-foreground">
+                    Console errors and failed network requests are always captured, and attached to bugs you file.
+                  </p>
                 </div>
 
                 {startError && (
-                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 flex items-center gap-3">
-                    <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
-                    <p className="text-xs font-semibold">{startError}</p>
+                  <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-900">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                    <p>{startError}</p>
                   </div>
                 )}
 
-                <Button
-                  type="submit"
-                  disabled={startingSession}
-                  className="w-full flex items-center justify-center gap-2 font-semibold h-12 text-sm rounded-xl bg-indigo-600 text-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] shadow-indigo-500/25 transition-all cursor-pointer"
-                >
+                <Button type="submit" disabled={startingSession} className="h-11 w-full gap-2 text-sm font-semibold">
                   {startingSession ? (
                     <>
-                      <BusyDot />
-                      <span>Spinning up Headless Browser Workstation...</span>
+                      <BusyDot /> Opening the browser…
                     </>
                   ) : (
                     <>
-                      <Play className="h-5 w-5 fill-current" />
-                      <span>Launch Live QA Browser Workstation</span>
+                      <Play className="h-4 w-4 fill-current" /> Start session
                     </>
                   )}
                 </Button>
-              </form>
-            </div>
-
-            {/* Right Sidebar Intelligence Column (4 columns / 34% width) */}
-            <div className="lg:col-span-4 space-y-6">
-              {/* Launch Configuration Summary */}
-              <div className="p-6 rounded-xl border bg-card space-y-4 shadow-sm">
-                <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" /> Session setup
-                </h3>
-
-                <div className="space-y-3 divide-y divide-border/50 text-xs">
-                  <div className="pt-2 flex items-center justify-between">
-                    <span className="text-muted-foreground font-semibold">Engine</span>
-                    <span className="font-semibold text-foreground bg-indigo-50 dark:bg-indigo-950/50 px-3 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{browserType}</span>
-                  </div>
-                  <div className="pt-2 flex items-center justify-between">
-                    <span className="text-muted-foreground font-semibold">Resolution</span>
-                    <span className="font-mono font-semibold text-foreground">{viewport === "Desktop" ? "1280 × 800" : viewport === "Tablet" ? "768 × 1024" : "375 × 667"}</span>
-                  </div>
-                  <div className="pt-2 flex items-center justify-between">
-                    <span className="text-muted-foreground font-semibold">Stream quality</span>
-                    {/* The worker reports its profile once a session starts; nothing is claimed before that. */}
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {streamQuality ? streamQuality.charAt(0).toUpperCase() + streamQuality.slice(1) : "Set when the session starts"}
-                    </span>
-                  </div>
-                  <div className="pt-2 flex items-center justify-between">
-                    <span className="text-muted-foreground font-semibold">Stream</span>
-                    <span className="font-semibold text-primary dark:text-indigo-400">CDP WebSocket</span>
-                  </div>
-                </div>
               </div>
-
-
-
-              {/* Features & Guidelines Card */}
-              <div className="p-6 rounded-xl border border-indigo-200 bg-indigo-50/60 dark:border-indigo-900/60 dark:bg-indigo-950/30 space-y-3">
-                <div className="flex items-center gap-2 font-semibold text-xs text-indigo-950 dark:text-indigo-200">
-                  <Info className="h-4 w-4 text-primary shrink-0" />
-                  <span>What a session records</span>
-                </div>
-                <ul className="space-y-2 text-xs text-primary dark:text-indigo-300 leading-relaxed font-medium list-disc list-inside">
-                  <li><b>Steps</b>: your clicks and typing, which can be replayed as an automated test.</li>
-                  <li><b>Bugs</b>: filed from any moment, with the screenshot, console log and steps attached.</li>
-                  <li><b>Network and console</b>: HTTP status codes and JavaScript errors as they happen.</li>
-                </ul>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       ) : (
@@ -1581,187 +1535,122 @@ export default function LiveQASessionPage() {
         // ═════════════════════════════════════════════════════════════════════
         <div className={fullView ? "fixed inset-0 z-40 bg-background flex flex-col min-h-0" : "flex-1 flex flex-col min-h-0"}>
 
-          {/* ── Top Header Control Bar ── */}
-          <header className="px-4 py-2 border-b bg-card flex items-center justify-between gap-3 shrink-0 flex-wrap shadow-xs">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="relative flex h-3 w-3 shrink-0">
-                {sessionStatus === "Active" && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                )}
-                <span className={`relative inline-flex rounded-full h-3 w-3 ${
-                  sessionStatus === "Active" ? "bg-emerald-500" : "bg-amber-500"
-                }`} />
+          {/* ── Top bar: what's running, what's being recorded, and the actions ── */}
+          <header className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b bg-card px-4 py-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
+                {sessionStatus === "Active" && <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />}
+                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${sessionStatus === "Active" ? "bg-emerald-500" : "bg-amber-500"}`} />
               </span>
               <div className="min-w-0">
-                <h1 className="text-xs font-semibold text-foreground truncate max-w-xs flex items-center gap-2" title={title}>
-                  {title}
-                </h1>
-                <p className="text-xs text-muted-foreground font-semibold flex items-center gap-2">
-                  <span className="text-xs px-2 py-0.2 rounded bg-muted font-medium">{browserType}</span>
-                  <span>&middot;</span>
-                  <span>{connectionStatus}</span>
-                  <span>&middot;</span>
-                  <Clock size={11} className="text-primary" />
-                  <span className="tabular-nums font-semibold text-foreground">{fmtElapsed(sessionStartedAt)}</span>
+                <h1 className="max-w-[18rem] truncate text-sm font-semibold text-foreground" title={title}>{title}</h1>
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{browserType === "Chromium" ? "Chrome" : browserType === "WebKit" ? "Safari" : "Firefox"}</span>
+                  <span>{viewport === "Mobile" ? "Phone" : viewport}</span>
+                  <span className="inline-flex items-center gap-1 tabular-nums text-foreground">
+                    <Clock size={11} aria-hidden /> {fmtElapsed(sessionStartedAt)}
+                  </span>
+                  {sessionStatus !== "Active" && <span className="rounded bg-amber-500/15 px-1.5 font-medium text-amber-700">Paused</span>}
                 </p>
               </div>
             </div>
 
-            {/* Control Button Clusters */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Recording switches */}
+            <div className="flex items-center gap-1 rounded-lg border bg-muted/40 p-0.5">
+              <button
+                type="button"
+                onClick={handleToggleStepRecording}
+                disabled={togglingSteps}
+                aria-pressed={stepRecording}
+                title={stepRecording ? "Stop recording steps" : "Record your clicks and typing as steps"}
+                className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                  stepRecording ? "bg-rose-500/10 text-rose-600" : "text-foreground hover:bg-background"
+                }`}
+              >
+                {stepRecording ? <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden /> : <MousePointerClick className="h-3.5 w-3.5" />}
+                {stepRecording ? `Recording steps (${recordedSteps.length})` : "Record steps"}
+              </button>
+              <button
+                type="button"
+                onClick={recording ? handleStopRecording : handleStartRecording}
+                disabled={uploadingRecording}
+                aria-pressed={recording}
+                title={recording ? "Stop and save the video" : "Record a video of the browser"}
+                className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                  recording ? "bg-rose-500/10 text-rose-600" : "text-foreground hover:bg-background"
+                }`}
+              >
+                {uploadingRecording ? <BusyDot /> : recording ? <span className="h-2 w-2 animate-pulse rounded-full bg-rose-500" aria-hidden /> : <Video className="h-3.5 w-3.5" />}
+                {uploadingRecording ? "Saving video…" : recording ? <span className="tabular-nums">Video {fmtElapsed(recStartedAt)}</span> : "Record video"}
+              </button>
+            </div>
 
-              {/* Cluster: Screenshot Capture */}
-              <div className="flex items-center rounded-xl border bg-muted/40 p-0.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleTakeScreenshot(false)}
-                  disabled={capturingScreenshot}
-                  className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
-                  title="Capture visible viewport & annotate"
-                >
-                  {capturingScreenshot ? <BusyDot /> : <Camera className="h-3.5 w-3.5 text-primary" />}
-                  <span>Screenshot</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleTakeScreenshot(true)}
-                  disabled={capturingScreenshot}
-                  className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
-                  title="Capture entire scrollable page"
-                >
-                  <Maximize className="h-3.5 w-3.5 text-primary" />
-                  <span>Full Page</span>
-                </Button>
-              </div>
-
-              {/* Cluster: Saved logins */}
+            {/* Capture */}
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleTakeScreenshot(false)}
+                disabled={capturingScreenshot}
+                className="h-8 gap-1.5 px-2.5 text-xs"
+                title="Screenshot of what's on screen, then mark it up"
+              >
+                {capturingScreenshot ? <BusyDot /> : <Camera className="h-4 w-4" />} Screenshot
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => handleTakeScreenshot(true)}
+                disabled={capturingScreenshot}
+                className="h-8 w-8 p-0"
+                title="Screenshot of the whole page, including what's below the fold"
+                aria-label="Full-page screenshot"
+              >
+                <Maximize className="h-4 w-4" />
+              </Button>
               {sessionId && (
-                <div className="flex items-center rounded-xl border bg-muted/40 p-0.5">
-                  <SessionLogins
-                    sessionId={sessionId}
-                    logins={project?.credentials ?? []}
-                    onSaved={reloadProjectLogins}
-                    notify={(message, type) => setToast({ message, type })}
-                  />
-                </div>
+                <SessionLogins
+                  sessionId={sessionId}
+                  logins={project?.credentials ?? []}
+                  onSaved={reloadProjectLogins}
+                  notify={(message, type) => setToast({ message, type })}
+                />
               )}
+            </div>
 
-              {/* Cluster: Video & Step Recording */}
-              <div className="flex items-center rounded-xl border bg-muted/40 p-0.5 gap-1">
-                {stepRecording ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleToggleStepRecording}
-                    disabled={togglingSteps}
-                    className="h-7 px-3 text-xs font-semibold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-                    <span>Steps ({recordedSteps.length})</span>
-                    <Square size={10} className="fill-current" />
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleToggleStepRecording}
-                    disabled={togglingSteps}
-                    className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
-                    title="Record user clicks and inputs into step timeline"
-                  >
-                    <MousePointerClick className="h-3.5 w-3.5 text-primary" />
-                    <span>Record Steps</span>
-                  </Button>
-                )}
-
-                {recording ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleStopRecording}
-                    className="h-7 px-3 text-xs font-semibold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
-                  >
-                    <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                    <span className="tabular-nums">{fmtElapsed(recStartedAt)}</span>
-                    <Square size={10} className="fill-current" />
-                  </Button>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleStartRecording}
-                    disabled={uploadingRecording}
-                    className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
-                    title="Record live browser view as WebM video clip"
-                  >
-                    {uploadingRecording ? <BusyDot /> : <Video className="h-3.5 w-3.5 text-primary" />}
-                    <span>Record Video</span>
-                  </Button>
-                )}
-              </div>
-
-              {/* Cluster: Bug & Diagnostics */}
-              <div className="flex items-center gap-1">
-                <Button
-                  size="sm"
-                  onClick={() => setShowBugDrawer(true)}
-                  className="h-7 px-3 text-xs font-semibold gap-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs"
-                >
-                  <Bug className="h-3.5 w-3.5" />
-                  <span>Create Bug</span>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRightTab("diagnostics")}
-                  className={`h-7 px-3 text-xs font-semibold gap-2 rounded-xl ${
-                    consoleErrors.length > 0 || networkErrors.length > 0
-                      ? "border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-950/40"
-                      : "border-input text-muted-foreground"
-                  }`}
-                >
-                  <Terminal className="h-3.5 w-3.5" />
-                  <span>Logs</span>
-                  {(consoleErrors.length > 0 || networkErrors.length > 0) && (
-                    <span className="px-2 py-0.2 rounded-full bg-rose-600 text-white text-xs">
-                      {consoleErrors.length + networkErrors.length}
-                    </span>
-                  )}
-                </Button>
-              </div>
-
-              {/* Cluster: Completion */}
-              <div className="flex items-center gap-1 border-l pl-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePauseResume}
-                  className="h-7 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                >
-                  {sessionStatus === "Active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-emerald-500" />}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleEndSession(true)}
-                  className="h-7 px-3 text-xs font-semibold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  <span>Complete &amp; Save</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowEndConfirm(true)}
-                  className="h-7 px-2 text-muted-foreground hover:text-rose-600"
-                  title="Cancel session"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
+            <div className="ms-auto flex items-center gap-1.5">
+              <Button size="sm" onClick={() => setShowBugDrawer(true)} className="h-8 gap-1.5 bg-rose-600 text-xs text-white hover:bg-rose-700">
+                <Bug className="h-4 w-4" /> Report a bug
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePauseResume}
+                className="h-8 gap-1.5 px-2.5 text-xs"
+                title={sessionStatus === "Active" ? "Pause the session timer" : "Resume"}
+              >
+                {sessionStatus === "Active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 text-emerald-600" />}
+                {sessionStatus === "Active" ? "Pause" : "Resume"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => handleEndSession(true)}
+                disabled={endingSession}
+                className="h-8 gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+                title="End the session and keep everything it captured"
+              >
+                {endingSession ? <BusyDot /> : <CheckCircle2 className="h-4 w-4" />} Finish
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowEndConfirm(true)}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600"
+                title="Cancel the session"
+                aria-label="Cancel the session"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           </header>
 
@@ -1863,18 +1752,25 @@ export default function LiveQASessionPage() {
                     <select
                       value={streamQuality}
                       onChange={(e) => changeStreamQuality(e.target.value as "sharp" | "balanced" | "fast")}
-                      title="Live view quality. Sharp: crisp text, needs a fast connection (best in the desktop app). Fast: lower quality for slow connections."
+                      title="Picture quality. Sharp: crisp text, needs a fast connection. Fast: for slow connections."
+                      aria-label="Picture quality"
                       className="h-6 shrink-0 rounded-md border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-slate-200 focus:outline-none"
                     >
-                      <option value="sharp">Sharp</option>
-                      <option value="balanced">Balanced</option>
-                      <option value="fast">Fast</option>
+                      <option value="sharp">Sharp picture</option>
+                      <option value="balanced">Balanced picture</option>
+                      <option value="fast">Fast picture</option>
                     </select>
                   )}
 
                   {/* Stream Mode Indicator */}
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                    {streamMode === "streaming" ? "CDP Stream" : streamMode}
+                  <span
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${
+                      streamMode === "streaming" ? "border-emerald-500/30 bg-emerald-500/20 text-emerald-300" : "border-amber-500/30 bg-amber-500/20 text-amber-300"
+                    }`}
+                    title={streamMode === "streaming" ? "You're seeing the browser live" : "Connecting to the browser"}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${streamMode === "streaming" ? "bg-emerald-400" : "bg-amber-400"}`} aria-hidden />
+                    {streamMode === "streaming" ? "Live" : streamMode === "connecting" ? "Connecting…" : "Snapshots"}
                   </span>
 
                   <button
@@ -1995,7 +1891,7 @@ export default function LiveQASessionPage() {
                   {/* Watermark / Guidance Overlay */}
                   <div className="absolute bottom-3 left-3 px-3 py-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-xs text-slate-300 font-semibold flex items-center gap-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity">
                     <MousePointerClick size={12} className="text-indigo-400" />
-                    <span>Interact directly in the screen above</span>
+                    <span>Click and type here to use the site</span>
                   </div>
                 </div>
 
@@ -2015,7 +1911,7 @@ export default function LiveQASessionPage() {
                     }`}
                   >
                     <ListOrdered size={14} />
-                    <span className="text-xs">Steps</span>
+                    <span className="text-xs">Steps{recordedSteps.length ? ` ${recordedSteps.length}` : ""}</span>
                   </button>
 
                   <button
@@ -2025,7 +1921,7 @@ export default function LiveQASessionPage() {
                     }`}
                   >
                     <Camera size={14} />
-                    <span className="text-xs">Shots ({screenshots.length})</span>
+                    <span className="text-xs">Screenshots{screenshots.length ? ` ${screenshots.length}` : ""}</span>
                   </button>
 
                   <button
@@ -2035,7 +1931,7 @@ export default function LiveQASessionPage() {
                     }`}
                   >
                     <Video size={14} />
-                    <span className="text-xs">Clips ({recordings.length})</span>
+                    <span className="text-xs">Videos{recordings.length ? ` ${recordings.length}` : ""}</span>
                   </button>
 
                   <button
@@ -2054,8 +1950,13 @@ export default function LiveQASessionPage() {
                       rightTab === "diagnostics" ? "bg-background text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Terminal size={14} />
-                    <span className="text-xs">Logs</span>
+                    <Terminal size={14} className={consoleErrors.length + networkErrors.length > 0 ? "text-rose-500" : ""} />
+                    <span className="text-xs">
+                      Errors
+                      {consoleErrors.length + networkErrors.length > 0 && (
+                        <span className="ms-1 rounded-full bg-rose-600 px-1.5 text-white">{consoleErrors.length + networkErrors.length}</span>
+                      )}
+                    </span>
                   </button>
                 </div>
 
@@ -2066,7 +1967,7 @@ export default function LiveQASessionPage() {
                   {rightTab === "steps" && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-foreground text-xs">Scenario Step Timeline</span>
+                        <span className="font-medium text-foreground text-xs">Recorded steps</span>
                         <div className="flex items-center gap-2">
                           <Button
                             size="sm"
@@ -2075,7 +1976,7 @@ export default function LiveQASessionPage() {
                             className="h-7 text-xs font-semibold gap-1"
                           >
                             {copiedCode ? <Check size={12} className="text-emerald-500" /> : <Code size={12} />}
-                            {copiedCode ? "Copied!" : "Export Code"}
+                            {copiedCode ? "Copied" : "Copy as code"}
                           </Button>
                           <Button
                             size="sm"
@@ -2092,7 +1993,9 @@ export default function LiveQASessionPage() {
                           <MousePointerClick className="mx-auto h-8 w-8 text-slate-300" />
                           <p className="font-semibold text-xs">No steps captured yet.</p>
                           <p className="text-xs max-w-xs mx-auto">
-                            Click <b>Record Steps</b> in the header toolbar to capture your live browser clicks &amp; inputs into steps.
+                            {stepRecording
+                              ? "Click or type in the browser and each action appears here."
+                              : <>Turn on <b>Record steps</b> at the top to capture your clicks and typing.</>}
                           </p>
                         </div>
                       ) : (
@@ -2105,7 +2008,7 @@ export default function LiveQASessionPage() {
                                     {step.stepNumber}
                                   </span>
                                   <span className="font-medium text-xs text-foreground">
-                                    {step.actionType}
+                                    {stepLabel(step.actionType)}
                                   </span>
                                 </div>
                                 <button
@@ -2209,7 +2112,7 @@ export default function LiveQASessionPage() {
                           <Video className="mx-auto h-8 w-8 text-slate-300" />
                           <p className="font-semibold text-xs">No video clips recorded yet.</p>
                           <p className="text-xs max-w-xs mx-auto">
-                            Click <b>Record Video</b> in the header toolbar to record live stream clips.
+                            Press <b>Record video</b> at the top to record the browser.
                           </p>
                         </div>
                       ) : (
@@ -2671,3 +2574,64 @@ export default function LiveQASessionPage() {
     </div>
   )
 }
+
+function RecordSwitch({
+  on,
+  onChange,
+  icon: Icon,
+  label,
+  hint,
+}: {
+  on: boolean
+  onChange: (v: boolean) => void
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  hint: string
+}) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-medium text-foreground">{label}</span>
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={() => onChange(!on)}
+        className={`relative mt-0.5 inline-block h-5 w-9 shrink-0 rounded-full transition-colors ${on ? "bg-primary" : "bg-muted-foreground/30"}`}
+      >
+        <span className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+      </button>
+    </label>
+  )
+}
+
+/** Plain words for recorded step types (the raw ones read like "open_url"). */
+const STEP_LABELS: Record<string, string> = {
+  open_url: "Open page",
+  navigate: "Go to page",
+  click: "Click",
+  dblclick: "Double-click",
+  fill: "Type",
+  type: "Type",
+  press: "Press key",
+  select: "Choose option",
+  check: "Tick",
+  uncheck: "Untick",
+  hover: "Hover",
+  upload: "Upload file",
+  wait: "Wait",
+  wait_for_text: "Wait for text",
+  assert: "Check",
+  take_screenshot: "Screenshot",
+  note: "Note",
+  manual: "Manual step",
+}
+function stepLabel(type: string | null | undefined) {
+  if (!type) return "Step"
+  return STEP_LABELS[type] ?? type.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
+}
+
