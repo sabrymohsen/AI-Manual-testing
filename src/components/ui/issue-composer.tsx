@@ -12,6 +12,7 @@
  *   └──────────────────────────────────────────┘
  */
 
+import { BusyDot } from "@/components/ui/skeleton"
 import * as React from "react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
@@ -108,7 +109,7 @@ export function ComposerDialog({
               disabled={!canSubmit || submitting}
               className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              {submitting && <BusyDot />}
               {submitLabel}
               <kbd className="hidden rounded bg-primary-foreground/20 px-1 font-sans text-xs sm:inline">⌘↵</kbd>
             </button>

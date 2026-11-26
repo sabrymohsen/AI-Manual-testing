@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useEffect, useCallback } from "react"
 import {
   ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock,
@@ -100,7 +101,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
           className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
           title="Refresh module status"
         >
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+          {loading ? <BusyDot /> : <RefreshCw className="h-3.5 w-3.5" />}
         </Button>
       </div>
 
@@ -109,7 +110,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
           {/* Loading */}
           {loading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground py-4 justify-center">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading modules…
+              <BusyDot /> Loading modules…
             </div>
           )}
 

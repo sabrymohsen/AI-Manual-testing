@@ -1,5 +1,8 @@
 "use client"
 
+import { useConfirm } from "@/components/ui/alert-provider"
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -157,6 +160,7 @@ export function MultiElementPicker({
     } catch { return undefined }
   }
 
+  const confirm = useConfirm()
   const mergedElements = (session?.elements || []).map((e) => ({
     ...e,
     suggestedName: edits[e.id]?.name ?? e.suggestedName,
@@ -198,7 +202,7 @@ export function MultiElementPicker({
         body: JSON.stringify({ mode, testCaseId }),
       })
       const data = await res.json()
-      if (res.ok) { setAppendFor(null); alert(`Test case ${mode === "append" ? "updated" : "created"}: ${data.testCase?.title || ""}`) }
+      if (res.ok) { setAppendFor(null); toast.success(`Test case ${mode === "append" ? "updated" : "created"}: ${data.testCase?.title || ""}`) }
       else setError(data.error || "Failed to convert collection")
     } catch { setError("Network error converting collection") }
   }
@@ -218,7 +222,7 @@ export function MultiElementPicker({
     if (!bugFor || !session?.sessionId) return
     await command("bug", { elementId: bugFor.id, title: bugTitle })
     setBugFor(null); setBugTitle("")
-    alert("Bug created from element.")
+    toast.success("Bug created from element.")
   }
 
   const isLive = !!session?.sessionId && session.status !== "Stopped"
@@ -231,7 +235,7 @@ export function MultiElementPicker({
           <span className="text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 px-2 py-0.5 rounded">New</span>
         </h3>
         {session && (
-          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
             session.status === "Active" ? "bg-emerald-100 text-emerald-700" :
             session.status === "Paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
           }`}>{session.status} · {mergedElements.length} elements</span>
@@ -260,7 +264,7 @@ export function MultiElementPicker({
             </select>
           </div>
           <Button onClick={startSession} disabled={starting} className="bg-primary hover:bg-primary/90 text-white gap-2 h-10">
-            {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
+            {starting ? <BusyDot /> : <Play className="h-4 w-4 fill-current" />}
             Start Session
           </Button>
         </div>
@@ -331,7 +335,7 @@ export function MultiElementPicker({
               <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => createTestCase(c.id, "create")}><Plus className="h-3 w-3" /> Test Case</Button>
               <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => openAppend(c.id)}><ListPlus className="h-3 w-3" /> Append</Button>
               <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => exportJson(c.elements)}><Download className="h-3 w-3" /></Button>
-              <Button size="sm" variant="outline" className="gap-1 h-7 text-red-600" onClick={async () => { if (confirm(`Delete collection "${c.name}"?`)) { await fetch(`/api/projects/${projectId}/element-collections/${c.id}`, { method: "DELETE" }); loadCollections() } }}><Trash2 className="h-3 w-3" /></Button>
+              <Button size="sm" variant="outline" className="gap-1 h-7 text-red-600" onClick={async () => { if (await confirm({ title: `Delete collection "${c.name}"?`, confirmLabel: "Delete collection", variant: "danger" })) { await fetch(`/api/projects/${projectId}/element-collections/${c.id}`, { method: "DELETE" }); loadCollections() } }}><Trash2 className="h-3 w-3" /></Button>
             </div>
             {appendFor === c.id && (
               <div className="w-full flex items-center gap-2 mt-2 pt-2 border-t">
@@ -357,7 +361,7 @@ export function MultiElementPicker({
             <p className="text-xs text-muted-foreground">{mergedElements.length} elements will be saved.</p>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setSaveOpen(false)}>Cancel</Button>
-              <Button onClick={saveCollection} disabled={saving} className="gap-1">{saving && <Loader2 className="h-4 w-4 animate-spin" />} Save</Button>
+              <Button onClick={saveCollection} disabled={saving} className="gap-1">{saving && <BusyDot />} Save</Button>
             </div>
           </div>
         </div>

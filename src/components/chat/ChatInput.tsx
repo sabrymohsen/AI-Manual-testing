@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import React, { useState, useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -208,7 +210,7 @@ export function ChatInput({
         const data = await res.json();
         setAttachments((prev) => [...prev, data]);
       } else {
-        alert("Upload failed. Limit is 50MB.");
+        toast.error("Upload failed. Limit is 50MB.");
       }
     } catch (err) {
       console.error("File upload error:", err);
@@ -394,7 +396,7 @@ export function ChatInput({
           title="Attach File"
         >
           {isUploading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <BusyDot />
           ) : (
             <Paperclip className="h-5 w-5" />
           )}

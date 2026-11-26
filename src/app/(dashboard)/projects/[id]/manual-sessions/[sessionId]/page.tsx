@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useEffect, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -198,7 +199,7 @@ export default function ManualSessionWorkspace() {
       setSelectedCaseIds([])
       await fetchSessionDetails()
     } catch (err: any) {
-      alert(err.message || "Failed to update selected cases")
+      toast.error(err.message || "Failed to update selected cases")
     } finally {
       setBulkUpdating(false)
     }
@@ -299,7 +300,7 @@ export default function ManualSessionWorkspace() {
       updateLocalStepResult(stepResultId, { status })
       goToNextStep()
     } catch (err: any) {
-      alert("Failed to save result: " + err.message)
+      toast.error("Failed to save result: " + err.message)
     }
   }
 
@@ -336,7 +337,7 @@ export default function ManualSessionWorkspace() {
       setFailingStepId(null)
       goToNextStep()
     } catch (err: any) {
-      alert("Error saving failure: " + err.message)
+      toast.error("Error saving failure: " + err.message)
     }
   }
 
@@ -360,10 +361,10 @@ export default function ManualSessionWorkspace() {
         })
       }
       
-      alert(`Bug report created successfully: "${bug.title}"`)
+      toast.success(`Bug report created successfully: "${bug.title}"`)
       fetchSessionDetails()
     } catch (err: any) {
-      alert("Failed to create bug: " + err.message)
+      toast.error("Failed to create bug: " + err.message)
     }
   }
 
@@ -394,10 +395,10 @@ export default function ManualSessionWorkspace() {
       setBugExpected("")
       setBugActual("")
       
-      alert("Bug report created successfully!")
+      toast.success("Bug report created successfully!")
       fetchSessionDetails()
     } catch (err: any) {
-      alert("Failed to create bug: " + err.message)
+      toast.error("Failed to create bug: " + err.message)
     }
   }
 
@@ -497,7 +498,7 @@ export default function ManualSessionWorkspace() {
       setAnnotatingStepId(null)
       setAnnotatingSrc(null)
     } catch (err: any) {
-      alert("Failed to upload screenshot: " + err.message)
+      toast.error("Failed to upload screenshot: " + err.message)
     }
   }
 
@@ -534,7 +535,7 @@ export default function ManualSessionWorkspace() {
       setExploratoryNoteScreenshot(null)
       fetchSessionDetails()
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message)
     } finally {
       setSavingNotes(false)
     }
@@ -795,7 +796,7 @@ export default function ManualSessionWorkspace() {
                   <div key={b.id} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between text-xs">
                     <div>
                       <span className="font-semibold text-foreground block truncate max-w-[200px]">{b.title}</span>
-                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Severity: {b.severity}</span>
+                      <span className="text-xs text-muted-foreground   font-mono">Severity: {b.severity}</span>
                     </div>
                     <Bug size={14} className="text-red-500" />
                   </div>
@@ -1239,7 +1240,7 @@ export default function ManualSessionWorkspace() {
                             <button
                               type="button"
                               onClick={() => handleMarkStepStatus(step.id, "Passed")}
-                              className={`h-7 px-3 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg border flex items-center gap-1 transition-all ${
                                 step.status === "Passed" ? "bg-green-500/10 border-green-500 text-green-700 dark:text-green-400" : "bg-card border-border text-muted-foreground hover:text-green-600 hover:bg-green-500/10"
                               }`}
                             >
@@ -1253,7 +1254,7 @@ export default function ManualSessionWorkspace() {
                                 setFailureNotes("")
                                 setCreateBugWithFailure(true)
                               }}
-                              className={`h-7 px-3 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg border flex items-center gap-1 transition-all ${
                                 step.status === "Failed" ? "bg-red-500/10 border-red-500 text-red-600 dark:text-red-400" : "bg-card border-border text-muted-foreground hover:text-red-600 hover:bg-red-500/10"
                               }`}
                             >
@@ -1262,7 +1263,7 @@ export default function ManualSessionWorkspace() {
                             <button
                               type="button"
                               onClick={() => handleMarkStepStatus(step.id, "Blocked")}
-                              className={`h-7 px-3 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg border flex items-center gap-1 transition-all ${
                                 step.status === "Blocked" ? "bg-orange-500/10 border-orange-500 text-orange-700 dark:text-orange-400" : "bg-card border-border text-muted-foreground hover:text-orange-600 hover:bg-orange-500/10"
                               }`}
                             >
@@ -1271,7 +1272,7 @@ export default function ManualSessionWorkspace() {
                             <button
                               type="button"
                               onClick={() => handleMarkStepStatus(step.id, "Warning")}
-                              className={`h-7 px-3 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg border flex items-center gap-1 transition-all ${
                                 step.status === "Warning" ? "bg-amber-500/10 border-amber-500 text-amber-600 dark:text-amber-400" : "bg-card border-border text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10"
                               }`}
                             >
@@ -1280,7 +1281,7 @@ export default function ManualSessionWorkspace() {
                             <button
                               type="button"
                               onClick={() => handleMarkStepStatus(step.id, "Skipped")}
-                              className={`h-7 px-3 text-xs font-bold rounded-lg border flex items-center gap-1 transition-all ${
+                              className={`h-7 px-3 text-xs font-semibold rounded-lg border flex items-center gap-1 transition-all ${
                                 step.status === "Skipped" ? "bg-muted border-border text-foreground" : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                               }`}
                             >
@@ -1328,7 +1329,7 @@ export default function ManualSessionWorkspace() {
             {activeTab === "details" && (
               <div className="space-y-4">
                 <div className="bg-card p-3 rounded-lg border border-border space-y-2">
-                  <h3 className="text-xs font-semibold uppercase text-muted-foreground">Environment Details</h3>
+                  <h3 className="text-xs font-semibold  text-muted-foreground">Environment Details</h3>
                   <div className="text-xs space-y-1 text-foreground">
                     <div className="flex justify-between"><span className="text-muted-foreground">Browser:</span> <span>{session.browserType}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Viewport:</span> <span>{session.viewport}</span></div>
@@ -1338,7 +1339,7 @@ export default function ManualSessionWorkspace() {
                 </div>
 
                 <div className="bg-card p-3 rounded-lg border border-border space-y-2">
-                  <h3 className="text-xs font-semibold uppercase text-muted-foreground">Hotkeys Quick Cheat</h3>
+                  <h3 className="text-xs font-semibold  text-muted-foreground">Hotkeys Quick Cheat</h3>
                   <div className="text-xs font-mono space-y-2 text-muted-foreground">
                     <div><span className="text-primary font-semibold bg-background px-1 rounded">P</span> : Pass Step</div>
                     <div><span className="text-red-600 dark:text-red-400 font-semibold bg-background px-1 rounded">F</span> : Fail Step</div>
@@ -1356,7 +1357,7 @@ export default function ManualSessionWorkspace() {
             {activeTab === "notes" && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-2 uppercase">Append Session Note</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2 ">Append Session Note</label>
                   <textarea
                     value={sessionNotes}
                     onChange={(e) => setSessionNotes(e.target.value)}
@@ -1373,7 +1374,7 @@ export default function ManualSessionWorkspace() {
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ name: session.name, note: sessionNotes })
                         })
-                        alert("Session note logged successfully!")
+                        toast.success("Session note logged successfully!")
                         setSessionNotes("")
                         fetchSessionDetails()
                       } catch {} finally {
@@ -1388,7 +1389,7 @@ export default function ManualSessionWorkspace() {
                 </div>
 
                 <div className="border-t border-border pt-4 space-y-3">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase">Logged Notes feed ({session.notes.length})</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground ">Logged Notes feed ({session.notes.length})</h4>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {session.notes.map((n) => (
                       <div key={n.id} className="p-3 bg-card border border-border rounded-lg text-xs">
@@ -1405,7 +1406,7 @@ export default function ManualSessionWorkspace() {
 
             {activeTab === "bugs" && (
               <div className="space-y-3">
-                <h3 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Bugs logged in this session ({session.bugs.length})</h3>
+                <h3 className="text-xs font-semibold  text-muted-foreground mb-2">Bugs logged in this session ({session.bugs.length})</h3>
                 {session.bugs.length === 0 ? (
                   <p className="text-xs text-muted-foreground ">No bug reports created during this session.</p>
                 ) : (

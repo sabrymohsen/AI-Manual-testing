@@ -2653,7 +2653,11 @@ model HealingEvent {
   pageUrl          String
   testName         String
   status           String // "recovered" | "failed" | "needs_review"
+  // Project the run belonged to. Null for events recorded before projects were tracked.
+  projectId        String?
   createdAt        DateTime @default(now())
+
+  @@index([projectId, createdAt])
 }
 
 model FlakyTest {

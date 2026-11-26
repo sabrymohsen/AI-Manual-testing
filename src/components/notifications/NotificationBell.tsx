@@ -237,7 +237,7 @@ export function NotificationBell({ token }: { token: string }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
-                          <p className={`truncate text-xs ${!n.read ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
+                          <p className={`truncate text-xs ${!n.read ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>
                             {n.title}
                           </p>
                           <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
@@ -249,7 +249,7 @@ export function NotificationBell({ token }: { token: string }) {
                           </span>
                         )}
                       </div>
-                      <div className="flex shrink-0 flex-col items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex shrink-0 flex-col items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100">
                         {!n.read && (
                           <button
                             onClick={(e) => handleMarkRead(n, e)}

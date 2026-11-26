@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -230,10 +232,10 @@ export default function QAAgentTelemetryDetailPage() {
       if (res.ok) {
         fetchRunDetails(true)
       } else {
-        alert("Failed to approve plan")
+        toast.error("Failed to approve plan")
       }
     } catch {
-      alert("Error approving plan")
+      toast.error("Error approving plan")
     } finally {
       setApproving(false)
     }
@@ -273,13 +275,13 @@ export default function QAAgentTelemetryDetailPage() {
         body: JSON.stringify({ findingId })
       })
       if (res.ok) {
-        alert("Bug report created successfully!")
+        toast.success("Bug report created successfully!")
         fetchRunDetails(false)
       } else {
-        alert("Failed to create bug report")
+        toast.error("Failed to create bug report")
       }
     } catch {
-      alert("Error generating bug")
+      toast.error("Error generating bug")
     }
   }
 
@@ -297,12 +299,12 @@ export default function QAAgentTelemetryDetailPage() {
       if (res.ok) {
         const data = await res.json()
         const { created, duplicated, skipped } = data.summary
-        alert(`Plan saved as test cases!\nCreated: ${created}\nDuplicates Skipped: ${duplicated}\nIgnored: ${skipped}`)
+        toast.success(`Plan saved as test cases!\nCreated: ${created}\nDuplicates Skipped: ${duplicated}\nIgnored: ${skipped}`)
       } else {
-        alert("Failed to save plan as test cases")
+        toast.error("Failed to save plan as test cases")
       }
     } catch {
-      alert("Error saving test cases")
+      toast.error("Error saving test cases")
     } finally {
       setSavingTests(false)
     }
@@ -355,7 +357,7 @@ export default function QAAgentTelemetryDetailPage() {
   if (loading && !run) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin text-indigo-650" />
+        <BusyDot />
         <p className="text-sm text-muted-foreground font-semibold">Syncing live worker telemetry stream...</p>
       </div>
     )
@@ -422,8 +424,8 @@ export default function QAAgentTelemetryDetailPage() {
         <div className="flex items-center gap-2">
           {!["Completed", "Failed", "Cancelled"].includes(run.status) && (
             <>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-indigo-955/10 border border-primary/25 dark:border-indigo-900/50 text-xs font-semibold text-indigo-650 dark:text-indigo-400 animate-pulse">
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Live Updates Streaming
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-indigo-950/10 border border-primary/25 dark:border-indigo-900/50 text-xs font-semibold text-indigo-600 dark:text-indigo-400 animate-pulse">
+                <BusyDot /> Live Updates Streaming
               </div>
               <Button variant="outline" size="sm" onClick={() => setShowCancelModal(true)} disabled={cancelling} className="h-9 rounded-xl text-xs font-semibold">
                 Cancel Run
@@ -444,8 +446,8 @@ export default function QAAgentTelemetryDetailPage() {
       {/* Observability Warnings */}
       {/* 30s Queued Warning */}
       {run.status === "Queued" && queuedSeconds > 30 && queuedSeconds <= 120 && (
-        <div className="p-4 border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-955/10 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-450 flex items-start gap-3 shadow-sm animate-in fade-in">
-          <AlertTriangle className="h-4.5 w-4.5 text-amber-550 shrink-0" />
+        <div className="p-4 border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/10 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-500 flex items-start gap-3 shadow-sm animate-in fade-in">
+          <AlertTriangle className="h-4.5 w-4.5 text-amber-600 shrink-0" />
           <div>
             <span className="font-semibold">Still waiting for worker...</span> This usually means the worker is not running or the queue is not being processed.
           </div>
@@ -454,18 +456,18 @@ export default function QAAgentTelemetryDetailPage() {
 
       {/* 2m Queued Warning */}
       {run.status === "Queued" && queuedSeconds > 120 && (
-        <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-955/10 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-455 flex flex-col gap-3 shadow-sm animate-in fade-in">
+        <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/10 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-400 flex flex-col gap-3 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-4.5 w-4.5 text-rose-550 shrink-0" />
+            <AlertTriangle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
             <div>
               <span className="font-semibold">Agent worker did not pick up this run within 2 minutes.</span> Please start the worker: <code className="bg-rose-100 dark:bg-rose-950 px-1 py-0.5 rounded font-mono font-semibold">npm run worker</code>
             </div>
           </div>
           <div className="flex gap-2 pl-8">
-            <Button onClick={() => fetchRunDetails(false)} size="sm" variant="outline" className="h-7 text-xs rounded-lg border-rose-350 dark:border-rose-800 text-rose-850 dark:text-rose-400 bg-white dark:bg-slate-900">
+            <Button onClick={() => fetchRunDetails(false)} size="sm" variant="outline" className="h-7 text-xs rounded-lg border-rose-350 dark:border-rose-800 text-rose-800 dark:text-rose-400 bg-white dark:bg-slate-900">
               Retry Worker Check
             </Button>
-            <Button onClick={() => setShowCancelModal(true)} size="sm" variant="outline" className="h-7 text-xs rounded-lg border-rose-350 dark:border-rose-800 text-rose-850 dark:text-rose-400 bg-white dark:bg-slate-900">
+            <Button onClick={() => setShowCancelModal(true)} size="sm" variant="outline" className="h-7 text-xs rounded-lg border-rose-350 dark:border-rose-800 text-rose-800 dark:text-rose-400 bg-white dark:bg-slate-900">
               Cancel Run
             </Button>
             <Button onClick={() => setShowForceStopModal(true)} size="sm" variant="destructive" className="h-7 text-xs rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold">
@@ -477,8 +479,8 @@ export default function QAAgentTelemetryDetailPage() {
 
       {/* Phase Slow Warnings */}
       {["Analyzing", "Scanning", "ScanningPage", "LaunchingBrowser", "OpeningTargetUrl", "WorkerStarted"].includes(run.currentPhase || run.status) && phaseSeconds > 60 && (
-        <div className="p-4 border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-955/10 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-450 flex items-start gap-3 shadow-sm animate-in fade-in">
-          <AlertTriangle className="h-4.5 w-4.5 text-amber-550 shrink-0" />
+        <div className="p-4 border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/10 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-500 flex items-start gap-3 shadow-sm animate-in fade-in">
+          <AlertTriangle className="h-4.5 w-4.5 text-amber-600 shrink-0" />
           <div>
             <span className="font-semibold">This phase is taking longer than expected.</span> Browser launch or target URL DOM analysis is taking over 60 seconds.
           </div>
@@ -486,8 +488,8 @@ export default function QAAgentTelemetryDetailPage() {
       )}
 
       {["Planning", "Generating", "PlanningTests"].includes(run.currentPhase || run.status) && phaseSeconds > 30 && (
-        <div className="p-4 border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-955/10 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-450 flex items-start gap-3 shadow-sm animate-in fade-in">
-          <AlertTriangle className="h-4.5 w-4.5 text-amber-550 shrink-0" />
+        <div className="p-4 border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/10 rounded-xl text-xs font-semibold text-amber-700 dark:text-amber-500 flex items-start gap-3 shadow-sm animate-in fade-in">
+          <AlertTriangle className="h-4.5 w-4.5 text-amber-600 shrink-0" />
           <div>
             <span className="font-semibold">This phase is taking longer than expected.</span> Creating test scenarios from page analysis usually finishes in under 30 seconds.
           </div>
@@ -496,9 +498,9 @@ export default function QAAgentTelemetryDetailPage() {
 
       {/* Stuck 5-minute Warning */}
       {!["Completed", "Failed", "Cancelled"].includes(run.status) && phaseSeconds > 300 && (
-        <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-955/10 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-455 flex flex-col gap-3 shadow-sm animate-in fade-in">
+        <div className="p-4 border border-rose-200 dark:border-rose-900 bg-rose-50/50 dark:bg-rose-950/10 rounded-xl text-xs font-semibold text-rose-700 dark:text-rose-400 flex flex-col gap-3 shadow-sm animate-in fade-in">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="h-4.5 w-4.5 text-rose-550 shrink-0" />
+            <AlertTriangle className="h-4.5 w-4.5 text-rose-600 shrink-0" />
             <div>
               <span className="font-semibold">This run appears stuck.</span> The active step has been running in the same phase for over 5 minutes.
             </div>
@@ -539,7 +541,7 @@ export default function QAAgentTelemetryDetailPage() {
               style={{ width: `${run.progress || 5}%` }}
             />
           </div>
-          <div className="flex justify-between items-center text-xs text-slate-450 font-medium">
+          <div className="flex justify-between items-center text-xs text-slate-500 font-medium">
             <span>Started</span>
             <span>{run.currentPhase || run.status} ({run.progress || 5}%)</span>
             <span>Completed</span>
@@ -547,8 +549,8 @@ export default function QAAgentTelemetryDetailPage() {
         </div>
 
         {/* What is happening now? Panel */}
-        <div className="p-4 bg-primary/10 dark:bg-indigo-955/5 border border-indigo-150 dark:border-indigo-900/40 rounded-xl space-y-1">
-          <h4 className="text-xs font-medium text-indigo-650 dark:text-indigo-400">What is happening now?</h4>
+        <div className="p-4 bg-primary/10 dark:bg-indigo-950/5 border border-indigo-150 dark:border-indigo-900/40 rounded-xl space-y-1">
+          <h4 className="text-xs font-medium text-indigo-600 dark:text-indigo-400">What is happening now?</h4>
           <p className="text-xs text-foreground dark:text-slate-350 leading-relaxed font-semibold">
             {getWhatIsHappeningMessage(run.status, run.currentPhase)}
           </p>
@@ -556,11 +558,11 @@ export default function QAAgentTelemetryDetailPage() {
 
         {/* Heartbeat Status */}
         <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground dark:text-muted-foreground pt-1">
-          <span className="text-slate-450 text-xs font-medium">Worker Heartbeat:</span>
-          <span className={`px-3 py-0.5 rounded-full text-xs uppercase font-semibold tracking-wider ${
-            run.workerHealth?.status === "Healthy" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-955/20 dark:text-emerald-450" :
-            run.workerHealth?.status === "Warning" ? "bg-amber-50 text-amber-700 dark:bg-amber-955/20 dark:text-amber-450" :
-            "bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-455"
+          <span className="text-slate-500 text-xs font-medium">Worker Heartbeat:</span>
+          <span className={`px-3 py-0.5 rounded-full text-xs  font-semibold  ${
+            run.workerHealth?.status === "Healthy" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-500" :
+            run.workerHealth?.status === "Warning" ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-500" :
+            "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400"
           }`}>
             {run.workerHealth?.status || "Waiting for worker"}
           </span>
@@ -572,7 +574,7 @@ export default function QAAgentTelemetryDetailPage() {
         {/* Session Context Metadata Grid */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 pt-4 border-t border-dashed text-xs">
           <div>
-            <span className="text-slate-450 block font-medium text-xs mb-1">Target URL</span>
+            <span className="text-slate-500 block font-medium text-xs mb-1">Target URL</span>
             <span className="font-semibold text-slate-705 dark:text-slate-200 flex items-center gap-2">
               <span className="truncate max-w-[200px]" title={run.scope?.targetUrl || run.project.webAppUrl}>
                 {run.scope?.targetUrl || run.project.webAppUrl}
@@ -583,17 +585,17 @@ export default function QAAgentTelemetryDetailPage() {
             </span>
           </div>
           <div>
-            <span className="text-slate-455 block font-medium text-xs mb-1">Credential / Role</span>
+            <span className="text-slate-400 block font-medium text-xs mb-1">Credential / Role</span>
             <span className="font-semibold text-foreground dark:text-slate-205">
               {run.credentialRole ? `Role: ${run.credentialRole}` : "Public Scan (No Login)"}
             </span>
           </div>
           <div>
-            <span className="text-slate-455 block font-medium text-xs mb-1">Goal</span>
+            <span className="text-slate-400 block font-medium text-xs mb-1">Goal</span>
             <span className="font-semibold text-slate-705 dark:text-slate-350">{run.goal}</span>
           </div>
           <div>
-            <span className="text-slate-455 block font-medium text-xs mb-1">Environment</span>
+            <span className="text-slate-400 block font-medium text-xs mb-1">Environment</span>
             <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-105 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               {run.scope?.environment || "Development"}
             </span>
@@ -662,8 +664,8 @@ export default function QAAgentTelemetryDetailPage() {
             }
 
             return (
-              <div key={stage} className="flex flex-col items-center md:items-start text-center md:text-left space-y-2 p-3 rounded-xl border border-transparent hover:bg-muted/40 dark:hover:bg-slate-850/40 transition-colors">
-                <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-sm border shadow-sm transition-all ${
+              <div key={stage} className="flex flex-col items-center md:items-start text-center md:text-left space-y-2 p-3 rounded-xl border border-transparent hover:bg-muted/40 dark:hover:bg-slate-800/40 transition-colors">
+                <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-semibold text-sm border shadow-sm transition-all ${
                   isCompleted ? "bg-emerald-500 border-emerald-500 text-white" :
                   isActive ? "bg-primary border-primary text-white scale-105 animate-pulse animate-duration-1000" :
                   "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
@@ -671,7 +673,7 @@ export default function QAAgentTelemetryDetailPage() {
                   {isCompleted ? <CheckCircle2 className="h-4.5 w-4.5" /> : idx + 1}
                 </div>
                 <div>
-                  <h4 className={`text-xs font-semibold ${isActive ? "text-indigo-650 dark:text-indigo-400" : isCompleted ? "text-emerald-600 dark:text-emerald-450" : "text-muted-foreground"}`}>
+                  <h4 className={`text-xs font-semibold ${isActive ? "text-indigo-600 dark:text-indigo-400" : isCompleted ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground"}`}>
                     {labelMap[stage]}
                   </h4>
                 </div>
@@ -685,7 +687,7 @@ export default function QAAgentTelemetryDetailPage() {
       <div className="grid gap-6 md:grid-cols-2">
         {/* Queue Diagnostics */}
         <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-4">
-          <h3 className="text-xs font-medium text-slate-450 pb-2 border-b">Queue Diagnostics</h3>
+          <h3 className="text-xs font-medium text-slate-500 pb-2 border-b">Queue Diagnostics</h3>
           {run.queueDiagnostics ? (
             <div className="grid gap-3 grid-cols-2 text-xs font-semibold text-foreground dark:text-slate-300">
               <div>
@@ -700,9 +702,9 @@ export default function QAAgentTelemetryDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground block text-xs font-medium mb-0.5">Job State</span>
-                <span className={`px-2 py-0.5 rounded font-mono text-xs uppercase font-bold ${
+                <span className={`px-2 py-0.5 rounded font-mono text-xs  font-semibold ${
                   run.queueDiagnostics.jobState === "active" ? "bg-indigo-50 text-indigo-755 dark:bg-indigo-950/20 dark:text-indigo-400" :
-                  run.queueDiagnostics.jobState === "waiting" ? "bg-amber-50 text-amber-700 dark:bg-amber-955/20 dark:text-amber-400 animate-pulse" :
+                  run.queueDiagnostics.jobState === "waiting" ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 animate-pulse" :
                   "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                 }`}>
                   {run.queueDiagnostics.jobState}
@@ -710,31 +712,31 @@ export default function QAAgentTelemetryDetailPage() {
               </div>
               <div>
                 <span className="text-muted-foreground block text-xs font-medium mb-0.5">Worker Status</span>
-                <span className={`font-semibold ${run.queueDiagnostics.workerOnline ? "text-emerald-650" : "text-rose-650"}`}>
+                <span className={`font-semibold ${run.queueDiagnostics.workerOnline ? "text-emerald-600" : "text-rose-600"}`}>
                   {run.queueDiagnostics.workerOnline ? "Online" : "Offline / Unknown"}
                 </span>
               </div>
               <div className="col-span-2 pt-3 border-t grid grid-cols-3 gap-3 text-center text-xs">
-                <div className="bg-muted/50 dark:bg-slate-850 p-2 rounded-xl">
+                <div className="bg-muted/50 dark:bg-slate-800 p-2 rounded-xl">
                   <span className="text-muted-foreground block font-semibold mb-0.5">Waiting</span>
-                  <span className="text-slate-850 dark:text-slate-250 font-semibold text-sm">{run.queueDiagnostics.waitingJobs}</span>
+                  <span className="text-slate-800 dark:text-slate-250 font-semibold text-sm">{run.queueDiagnostics.waitingJobs}</span>
                 </div>
-                <div className="bg-muted/50 dark:bg-slate-850 p-2 rounded-xl">
+                <div className="bg-muted/50 dark:bg-slate-800 p-2 rounded-xl">
                   <span className="text-muted-foreground block font-semibold mb-0.5">Active</span>
-                  <span className="text-slate-850 dark:text-slate-250 font-semibold text-sm">{run.queueDiagnostics.activeJobs}</span>
+                  <span className="text-slate-800 dark:text-slate-250 font-semibold text-sm">{run.queueDiagnostics.activeJobs}</span>
                 </div>
-                <div className="bg-muted/50 dark:bg-slate-850 p-2 rounded-xl">
+                <div className="bg-muted/50 dark:bg-slate-800 p-2 rounded-xl">
                   <span className="text-muted-foreground block font-semibold mb-0.5">Failed</span>
-                  <span className="text-slate-850 dark:text-slate-250 font-semibold text-sm">{run.queueDiagnostics.failedJobs}</span>
+                  <span className="text-slate-800 dark:text-slate-250 font-semibold text-sm">{run.queueDiagnostics.failedJobs}</span>
                 </div>
               </div>
               {run.queueDiagnostics.jobState === "waiting" && run.status === "Queued" && (
-                <div className="col-span-2 p-3 bg-amber-50/50 dark:bg-amber-955/5 border border-amber-200/50 dark:border-amber-900/55 rounded-xl text-xs text-amber-800 dark:text-amber-400 leading-normal font-medium">
+                <div className="col-span-2 p-3 bg-amber-50/50 dark:bg-amber-950/5 border border-amber-200/50 dark:border-amber-900/55 rounded-xl text-xs text-amber-800 dark:text-amber-400 leading-normal font-medium">
                   <strong>Status:</strong> Job is waiting in queue. Worker has not picked it up yet.
                 </div>
               )}
               {!run.queueDiagnostics.jobId && (
-                <div className="col-span-2 p-3 bg-rose-50/50 dark:bg-rose-955/5 border border-rose-200/50 dark:border-rose-900/55 rounded-xl text-xs text-rose-800 dark:text-rose-455 leading-normal font-medium">
+                <div className="col-span-2 p-3 bg-rose-50/50 dark:bg-rose-950/5 border border-rose-200/50 dark:border-rose-900/55 rounded-xl text-xs text-rose-800 dark:text-rose-400 leading-normal font-medium">
                   <strong>Critical Error:</strong> No queue job ID found. The run was created but not added to queue correctly.
                 </div>
               )}
@@ -746,20 +748,20 @@ export default function QAAgentTelemetryDetailPage() {
 
         {/* Live Activity Feed */}
         <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-4">
-          <h3 className="text-xs font-medium text-slate-450 pb-2 border-b">Live Activity Feed</h3>
+          <h3 className="text-xs font-medium text-slate-500 pb-2 border-b">Live Activity Feed</h3>
           {(!run.events || run.events.length === 0) ? (
-            <div className="text-slate-450 text-xs py-4">Waiting for activity logs...</div>
+            <div className="text-slate-500 text-xs py-4">Waiting for activity logs...</div>
           ) : (
             <div className="space-y-3 max-h-[175px] overflow-y-auto pr-1">
               {run.events.map((evt) => (
                 <div key={evt.id} className="flex items-start gap-3 text-xs leading-normal animate-in fade-in duration-300">
-                  <span className="font-mono text-xs text-slate-450 shrink-0 bg-muted/50 dark:bg-slate-850 px-2 py-0.5 rounded select-none">
+                  <span className="font-mono text-xs text-slate-500 shrink-0 bg-muted/50 dark:bg-slate-800 px-2 py-0.5 rounded select-none">
                     {evt.createdAt ? new Date(evt.createdAt).toLocaleTimeString() : ""}
                   </span>
                   <div className="flex-1">
                     <span className="text-foreground dark:text-slate-300 font-semibold">{evt.message}</span>
                     {evt.phase && (
-                      <span className="ml-2 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-650 dark:bg-indigo-950/20 dark:text-indigo-400">
+                      <span className="ml-2 px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-950/20 dark:text-indigo-400">
                         {evt.phase}
                       </span>
                     )}
@@ -783,13 +785,13 @@ export default function QAAgentTelemetryDetailPage() {
         </div>
         <div className="p-4 border rounded-xl bg-white dark:bg-slate-900 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground">Metrics</span>
-          <h4 className="text-sm font-semibold mt-1 text-slate-850 dark:text-slate-100">
+          <h4 className="text-sm font-semibold mt-1 text-slate-800 dark:text-slate-100">
             {run.status === "Queued" ? "Pending" : `Passed: ${passedCount} | Failed: ${failedCount}`}
           </h4>
         </div>
         <div className="p-4 border rounded-xl bg-white dark:bg-slate-900 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground">Passed Steps</span>
-          <h4 className="text-xl font-semibold mt-1 text-slate-850 dark:text-slate-100">{passedCount}</h4>
+          <h4 className="text-xl font-semibold mt-1 text-slate-800 dark:text-slate-100">{passedCount}</h4>
         </div>
         <div className="p-4 border rounded-xl bg-white dark:bg-slate-900 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground">Self-Healed</span>
@@ -807,14 +809,14 @@ export default function QAAgentTelemetryDetailPage() {
 
       {/* Semi-Autonomous plan approval UI */}
       {run.status === "WaitingForApproval" && editingPlanTests && (
-        <div className="p-6 border border-purple-150 dark:border-purple-955 rounded-xl bg-purple-50/10 dark:bg-purple-955/5 shadow-md space-y-4">
+        <div className="p-6 border border-purple-150 dark:border-purple-950 rounded-xl bg-purple-50/10 dark:bg-purple-950/5 shadow-md space-y-4">
           <div className="flex justify-between items-center border-b pb-3">
             <div className="flex items-center gap-2">
               <Brain className="h-5 w-5 text-purple-500" />
               <h3 className="text-base font-semibold text-foreground dark:text-slate-50">Review and Approve Suggested Plan</h3>
             </div>
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleApprovePlan} disabled={approving} className="bg-purple-650 hover:bg-purple-750 text-white font-semibold rounded-xl text-xs h-8">
+              <Button size="sm" onClick={handleApprovePlan} disabled={approving} className="bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl text-xs h-8">
                 {approving ? "Enqueuing Execution..." : "Approve and Run Plan"}
               </Button>
             </div>
@@ -840,7 +842,7 @@ export default function QAAgentTelemetryDetailPage() {
 
       {/* Spawned E2E Executions Accordion list */}
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+        <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <LayoutGrid className="h-5 w-5 text-muted-foreground" /> Spawned E2E Executions
         </h3>
 
@@ -850,19 +852,19 @@ export default function QAAgentTelemetryDetailPage() {
           </div>
         ) : (
           <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-md">
-            <div className="p-4 bg-muted/50 dark:bg-slate-850 font-semibold text-xs text-muted-foreground border-b">
+            <div className="p-4 bg-muted/50 dark:bg-slate-800 font-semibold text-xs text-muted-foreground border-b">
               Step Results Log ({run.steps.length} steps)
             </div>
             <div className="divide-y divide-border dark:divide-slate-800">
               {run.steps.map((step) => (
-                <div key={step.id} className="p-4 space-y-3 hover:bg-muted/30 dark:hover:bg-slate-850/20 transition-colors">
+                <div key={step.id} className="p-4 space-y-3 hover:bg-muted/30 dark:hover:bg-slate-800/20 transition-colors">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                     <div className="flex items-start gap-3 text-xs">
-                      <span className="font-semibold text-slate-450 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded select-none shrink-0">
+                      <span className="font-semibold text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded select-none shrink-0">
                         Step {step.stepNumber}
                       </span>
                       <div>
-                        <p className="font-semibold text-slate-850 dark:text-slate-100">{step.name}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{step.name}</p>
                         {step.details?.expected && (
                           <p className="text-xs text-muted-foreground font-semibold mt-1">Expected: {step.details.expected}</p>
                         )}
@@ -871,10 +873,10 @@ export default function QAAgentTelemetryDetailPage() {
                         )}
                       </div>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 ${
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold   shrink-0 ${
                       step.status === "Passed" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400" :
-                      step.status === "Failed" ? "bg-rose-50 text-rose-600 dark:bg-rose-955/20 dark:text-rose-455" :
-                      step.status === "SelfHealed" ? "bg-amber-50 text-amber-600 dark:bg-amber-955/20 dark:text-amber-400" :
+                      step.status === "Failed" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400" :
+                      step.status === "SelfHealed" ? "bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400" :
                       step.status === "Skipped" ? "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400" :
                       "bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 animate-pulse"
                     }`}>
@@ -883,7 +885,7 @@ export default function QAAgentTelemetryDetailPage() {
                   </div>
 
                   {step.status === "SelfHealed" && step.details?.healingLogs && (
-                    <div className="p-3 bg-amber-50/50 dark:bg-amber-955/10 border border-amber-200/50 dark:border-amber-900/50 rounded-xl space-y-1 animate-in fade-in">
+                    <div className="p-3 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/50 rounded-xl space-y-1 animate-in fade-in">
                       <div className="flex items-center gap-1 text-xs font-semibold text-amber-600">
                         <AlertTriangle className="h-3.5 w-3.5 fill-amber-100 text-amber-600" />
                         Self-Healing Recovery Logs
@@ -895,9 +897,9 @@ export default function QAAgentTelemetryDetailPage() {
                   )}
 
                   {step.status === "Skipped" && (
-                    <div className="p-3 bg-muted/50 dark:bg-slate-850/60 border border-border dark:border-slate-800 rounded-xl space-y-1 animate-in fade-in">
+                    <div className="p-3 bg-muted/50 dark:bg-slate-800/60 border border-border dark:border-slate-800 rounded-xl space-y-1 animate-in fade-in">
                       <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                        <ShieldAlert className="h-3.5 w-3.5 text-slate-450" />
+                        <ShieldAlert className="h-3.5 w-3.5 text-slate-500" />
                         Safety Sandbox Intercepted Action
                       </div>
                       <p className="text-xs text-muted-foreground dark:text-muted-foreground leading-normal">
@@ -907,8 +909,8 @@ export default function QAAgentTelemetryDetailPage() {
                   )}
 
                   {step.error && step.status === "Failed" && (
-                    <div className="p-3 bg-rose-50/40 dark:bg-rose-955/10 border border-rose-200/50 dark:border-rose-900/50 rounded-xl animate-in fade-in">
-                      <p className="text-xs text-rose-700 dark:text-rose-455 font-mono leading-normal whitespace-pre-line">
+                    <div className="p-3 bg-rose-50/40 dark:bg-rose-950/10 border border-rose-200/50 dark:border-rose-900/50 rounded-xl animate-in fade-in">
+                      <p className="text-xs text-rose-700 dark:text-rose-400 font-mono leading-normal whitespace-pre-line">
                         {step.error}
                       </p>
                     </div>
@@ -932,7 +934,7 @@ export default function QAAgentTelemetryDetailPage() {
       {/* Grid of Auto-Generated Findings */}
       {run.findings && run.findings.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+          <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Bug className="h-5 w-5 text-red-500" /> Auto-Generated Bug Findings
           </h3>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -943,22 +945,22 @@ export default function QAAgentTelemetryDetailPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <h4 className="font-semibold text-sm text-foreground dark:text-slate-200 leading-tight">{f.title}</h4>
-                  <span className={`px-2 py-0.5 text-xs font-semibold uppercase rounded ${
+                  <span className={`px-2 py-0.5 text-xs font-semibold  rounded ${
                     f.severity === "Critical" ? "bg-red-150 text-red-700" :
                     f.severity === "High" ? "bg-amber-100 text-amber-700" :
-                    "bg-muted text-slate-650"
+                    "bg-muted text-slate-600"
                   }`}>{f.severity}</span>
                 </div>
-                <p className="text-xs text-slate-550 dark:text-muted-foreground leading-relaxed font-semibold">{f.description}</p>
+                <p className="text-xs text-slate-600 dark:text-muted-foreground leading-relaxed font-semibold">{f.description}</p>
                 {f.evidence?.error && (
-                  <div className="p-2 bg-muted/50 dark:bg-slate-850 text-xs font-mono rounded text-rose-650 overflow-x-auto max-h-24">
+                  <div className="p-2 bg-muted/50 dark:bg-slate-800 text-xs font-mono rounded text-rose-600 overflow-x-auto max-h-24">
                     {f.evidence.error}
                   </div>
                 )}
                 <div className="pt-3 border-t border-dashed flex justify-between items-center gap-2">
-                  <span className="text-xs text-muted-foreground font-semibold font-mono uppercase">{f.type}</span>
+                  <span className="text-xs text-muted-foreground font-semibold font-mono ">{f.type}</span>
                   {f.bugReportId ? (
-                    <span className="inline-flex items-center gap-1 text-xs text-emerald-650 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
+                    <span className="inline-flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded">
                       <Check className="h-3 w-3" /> Defect Filed
                     </span>
                   ) : (
@@ -987,9 +989,9 @@ export default function QAAgentTelemetryDetailPage() {
             </div>
           </div>
 
-          <div className="p-4 bg-muted/20 dark:bg-slate-955/10 rounded-xl space-y-2">
+          <div className="p-4 bg-muted/20 dark:bg-slate-950/10 rounded-xl space-y-2">
             <div className="text-xs font-semibold text-foreground dark:text-slate-350">Recommendations & Next Actions:</div>
-            <p className="text-xs text-slate-550 dark:text-muted-foreground leading-relaxed whitespace-pre-line font-semibold">
+            <p className="text-xs text-slate-600 dark:text-muted-foreground leading-relaxed whitespace-pre-line font-semibold">
               {run.summary?.markdownSummary || "Sweep completed successfully. No immediate critical bugs triggered."}
             </p>
           </div>

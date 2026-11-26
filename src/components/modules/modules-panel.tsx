@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -533,7 +534,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
       {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-12 text-xs text-muted-foreground font-semibold">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading modules…
+          <BusyDot /> Loading modules…
         </div>
       ) : ordered.length === 0 ? (
         <div className="p-10 border border-dashed rounded-xl text-center space-y-1">
@@ -658,7 +659,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                         <span className="text-muted-foreground">—</span>
                       ) : (
                         <span
-                          className={`font-bold ${
+                          className={`font-semibold ${
                             rate >= 90 ? "text-emerald-600" : rate >= 60 ? "text-amber-600" : "text-rose-600"
                           }`}
                         >
@@ -775,7 +776,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
 
             {loadingImportable ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading the tracker…
+                <BusyDot /> Reading the tracker…
               </div>
             ) : importUnavailable ? (
               <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3 font-medium">

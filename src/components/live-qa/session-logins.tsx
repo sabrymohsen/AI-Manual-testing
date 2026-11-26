@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState } from "react"
 import { KeyRound, Loader2, LogIn, Save } from "@/components/ui/icons"
 
@@ -119,7 +120,7 @@ export function SessionLogins({
                     className="h-6 rounded-md border px-2 text-xs font-semibold hover:bg-muted disabled:opacity-50"
                     title="Fill the username and password into the page"
                   >
-                    {busy === l.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Fill"}
+                    {busy === l.id ? <BusyDot /> : "Fill"}
                   </button>
                   <button
                     type="button"
@@ -128,7 +129,7 @@ export function SessionLogins({
                     className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
                     title="Fill and sign in"
                   >
-                    {busy === l.id + ":submit" ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogIn className="h-3 w-3" />}
+                    {busy === l.id + ":submit" ? <BusyDot /> : <LogIn className="h-3 w-3" />}
                     Sign in
                   </button>
                 </li>
@@ -155,7 +156,7 @@ export function SessionLogins({
                 onClick={save}
                 className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
               >
-                {busy === "save" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                {busy === "save" ? <BusyDot /> : <Save className="h-3 w-3" />}
                 Save
               </button>
             </div>

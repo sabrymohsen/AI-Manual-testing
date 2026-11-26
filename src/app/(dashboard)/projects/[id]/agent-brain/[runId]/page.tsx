@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -184,7 +185,7 @@ export default function AgentBrainTelemetryDetailPage() {
   if (loading && !run) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin text-indigo-650" />
+        <BusyDot />
         <p className="text-sm text-muted-foreground font-semibold">Loading live telemetry stream...</p>
       </div>
     )
@@ -223,8 +224,8 @@ export default function AgentBrainTelemetryDetailPage() {
         <div className="flex items-center gap-2">
           {["Queued", "Understanding", "Planning", "Executing", "Reporting"].includes(run.status) && (
             <>
-              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-indigo-955/10 border border-primary/25 dark:border-indigo-900/50 text-xs font-semibold text-indigo-650 dark:text-indigo-400 animate-pulse">
-                <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Stream Sync Active
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary/10 dark:bg-indigo-950/10 border border-primary/25 dark:border-indigo-900/50 text-xs font-semibold text-indigo-600 dark:text-indigo-400 animate-pulse">
+                <BusyDot /> Stream Sync Active
               </div>
               <Button variant="outline" size="sm" onClick={() => setShowCancelModal(true)} disabled={cancelling} className="h-9 rounded-xl text-xs font-semibold">
                 Cancel Run
@@ -239,7 +240,7 @@ export default function AgentBrainTelemetryDetailPage() {
 
       {/* 1. Timeline Stages Tracker */}
       <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md">
-        <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wider mb-6">Agent Cognitive Timeline</h3>
+        <h3 className="text-sm font-semibold  text-muted-foreground  mb-6">Agent Cognitive Timeline</h3>
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 md:gap-2">
           {stages.map((stage, idx) => {
             const isCompleted = idx < currentStageIndex || run.status === "Completed"
@@ -254,8 +255,8 @@ export default function AgentBrainTelemetryDetailPage() {
             }
 
             return (
-              <div key={stage} className="flex flex-col items-center md:items-start text-center md:text-left space-y-2 p-3 rounded-xl border border-transparent hover:bg-muted/40 dark:hover:bg-slate-850/40 transition-colors">
-                <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-bold text-sm border shadow-sm transition-all ${
+              <div key={stage} className="flex flex-col items-center md:items-start text-center md:text-left space-y-2 p-3 rounded-xl border border-transparent hover:bg-muted/40 dark:hover:bg-slate-800/40 transition-colors">
+                <div className={`h-8 w-8 rounded-xl flex items-center justify-center font-semibold text-sm border shadow-sm transition-all ${
                   isCompleted ? "bg-emerald-500 border-emerald-500 text-white" :
                   isActive ? "bg-primary border-primary text-white scale-105 animate-pulse" :
                   "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400"
@@ -263,7 +264,7 @@ export default function AgentBrainTelemetryDetailPage() {
                   {isCompleted ? <CheckCircle2 className="h-4.5 w-4.5" /> : idx + 1}
                 </div>
                 <div>
-                  <h4 className={`text-xs font-semibold ${isActive ? "text-primary dark:text-indigo-400" : isCompleted ? "text-emerald-600 dark:text-emerald-450" : "text-muted-foreground"}`}>
+                  <h4 className={`text-xs font-semibold ${isActive ? "text-primary dark:text-indigo-400" : isCompleted ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground"}`}>
                     {stage}
                   </h4>
                   <p className="text-xs text-muted-foreground mt-0.5 leading-normal">
@@ -284,7 +285,7 @@ export default function AgentBrainTelemetryDetailPage() {
             <span className="text-xs font-medium text-muted-foreground">Planning Duration</span>
             <Clock className="h-4 w-4 text-amber-500" />
           </div>
-          <h4 className="text-2xl font-semibold mt-2 text-slate-850 dark:text-slate-100">
+          <h4 className="text-2xl font-semibold mt-2 text-slate-800 dark:text-slate-100">
             {run.metrics?.planningDurationMs ? formatDuration(run.metrics.planningDurationMs) : "-"}
           </h4>
           <p className="text-xs text-muted-foreground mt-1 flex items-center gap-0.5">
@@ -298,7 +299,7 @@ export default function AgentBrainTelemetryDetailPage() {
             <span className="text-xs font-medium text-muted-foreground">Avg Step Duration</span>
             <Activity className="h-4 w-4 text-primary" />
           </div>
-          <h4 className="text-2xl font-semibold mt-2 text-slate-850 dark:text-slate-100">
+          <h4 className="text-2xl font-semibold mt-2 text-slate-800 dark:text-slate-100">
             {run.metrics?.averageStepDurationMs ? formatDuration(run.metrics.averageStepDurationMs) : "-"}
           </h4>
           <p className="text-xs text-muted-foreground mt-1">
@@ -312,7 +313,7 @@ export default function AgentBrainTelemetryDetailPage() {
             <span className="text-xs font-medium text-muted-foreground">Locator Resolution</span>
             <Compass className="h-4 w-4 text-purple-500" />
           </div>
-          <h4 className="text-2xl font-semibold mt-2 text-slate-850 dark:text-slate-100">
+          <h4 className="text-2xl font-semibold mt-2 text-slate-800 dark:text-slate-100">
             {run.metrics?.locatorResolutionMs ? `${run.metrics.locatorResolutionMs.toFixed(1)}ms` : "-"}
           </h4>
           <p className="text-xs text-muted-foreground mt-1">
@@ -326,7 +327,7 @@ export default function AgentBrainTelemetryDetailPage() {
             <span className="text-xs font-medium text-muted-foreground">Memory Lookup</span>
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </div>
-          <h4 className="text-2xl font-semibold mt-2 text-slate-850 dark:text-slate-100">
+          <h4 className="text-2xl font-semibold mt-2 text-slate-800 dark:text-slate-100">
             {run.metrics?.memoryLookupMs ? `${run.metrics.memoryLookupMs.toFixed(1)}ms` : "-"}
           </h4>
           <p className="text-xs text-muted-foreground mt-1">
@@ -366,7 +367,7 @@ export default function AgentBrainTelemetryDetailPage() {
                     <strong className="text-muted-foreground block font-medium text-xs">Risk Areas</strong>
                     <div className="flex flex-wrap gap-2 mt-1">
                       {run.appUnderstanding.riskAreas?.map((r, i) => (
-                        <span key={i} className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-400 font-semibold">{r}</span>
+                        <span key={i} className="px-2 py-0.5 rounded bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400 font-semibold">{r}</span>
                       ))}
                     </div>
                   </div>
@@ -374,7 +375,7 @@ export default function AgentBrainTelemetryDetailPage() {
                     <strong className="text-muted-foreground block font-medium text-xs">Page Paths Mapped</strong>
                     <div className="space-y-1 mt-2 max-h-40 overflow-y-auto pr-1">
                       {run.appUnderstanding.pagesDetected?.map((p, i) => (
-                        <div key={i} className="p-2 border rounded-lg bg-muted/50 dark:bg-slate-850/40 font-mono text-xs truncate">{p}</div>
+                        <div key={i} className="p-2 border rounded-lg bg-muted/50 dark:bg-slate-800/40 font-mono text-xs truncate">{p}</div>
                       ))}
                     </div>
                   </div>
@@ -400,13 +401,13 @@ export default function AgentBrainTelemetryDetailPage() {
               {run.executionPlan?.executionPlan && run.executionPlan.executionPlan.length > 0 ? (
                 <div className="space-y-3">
                   {run.executionPlan.executionPlan.map((scenario, idx) => (
-                    <div key={idx} className="p-4 rounded-xl border border-border dark:border-slate-800 bg-muted/50 dark:bg-slate-850/30 space-y-2">
+                    <div key={idx} className="p-4 rounded-xl border border-border dark:border-slate-800 bg-muted/50 dark:bg-slate-800/30 space-y-2">
                       <div className="flex justify-between items-start">
                         <h4 className="text-xs font-semibold text-foreground dark:text-slate-200">{scenario.testName}</h4>
                         <div className="flex gap-2">
-                          <span className={`text-xs px-2 py-0.5 rounded font-semibold uppercase ${
+                          <span className={`text-xs px-2 py-0.5 rounded font-semibold  ${
                             scenario.priority === "Critical" ? "bg-red-50 text-red-700 dark:bg-red-950/20" :
-                            scenario.priority === "High" ? "bg-amber-50 text-amber-700 dark:bg-amber-955/20" :
+                            scenario.priority === "High" ? "bg-amber-50 text-amber-700 dark:bg-amber-950/20" :
                             "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-350"
                           }`}>{scenario.priority}</span>
                           <span className="text-xs px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 font-semibold">{scenario.strategy}</span>
@@ -426,7 +427,7 @@ export default function AgentBrainTelemetryDetailPage() {
 
       {/* 4. Executed runs list (Accordion list) */}
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+        <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <LayoutGrid className="h-5 w-5 text-muted-foreground" /> Playwright Executor Actions
         </h3>
 
@@ -448,11 +449,11 @@ export default function AgentBrainTelemetryDetailPage() {
                   {/* Collapsible Header */}
                   <div
                     onClick={() => toggleRunExpand(testRun.id)}
-                    className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-slate-850/40 select-none border-b border-transparent data-[expanded=true]:border-border dark:data-[expanded=true]:border-slate-800"
+                    className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 cursor-pointer hover:bg-muted/50 dark:hover:bg-slate-800/40 select-none border-b border-transparent data-[expanded=true]:border-border dark:data-[expanded=true]:border-slate-800"
                     data-expanded={isExpanded}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="text-slate-450 hover:text-muted-foreground transition-colors">
+                      <div className="text-slate-500 hover:text-muted-foreground transition-colors">
                         {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                       </div>
                       <div>
@@ -471,9 +472,9 @@ export default function AgentBrainTelemetryDetailPage() {
                         {healedCount > 0 && <span className="text-amber-600 ml-1">({healedCount} healed)</span>}
                         {skippedCount > 0 && <span className="text-muted-foreground ml-1">({skippedCount} skipped)</span>}
                       </div>
-                      <span className={`text-xs px-3 py-1 rounded-full font-bold uppercase ${
+                      <span className={`text-xs px-3 py-1 rounded-full font-semibold  ${
                         testRun.status === "Passed" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400" :
-                        testRun.status === "Failed" ? "bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-455" :
+                        testRun.status === "Failed" ? "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400" :
                         "bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400 animate-pulse"
                       }`}>{testRun.status}</span>
                     </div>
@@ -493,22 +494,22 @@ export default function AgentBrainTelemetryDetailPage() {
                                   <span className="font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">Step {step.stepNumber}</span>
                                   <p className="font-semibold text-foreground dark:text-slate-200">{step.actionDescription}</p>
                                 </div>
-                                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold uppercase tracking-wider ${
+                                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold   ${
                                   step.status === "Passed" ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400" :
-                                  step.status === "Failed" ? "bg-rose-50 text-rose-600 dark:bg-rose-955/20 dark:text-rose-455" :
-                                  step.status === "SelfHealed" ? "bg-amber-50 text-amber-600 dark:bg-amber-955/20 dark:text-amber-400" :
+                                  step.status === "Failed" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400" :
+                                  step.status === "SelfHealed" ? "bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400" :
                                   "bg-muted text-muted-foreground"
                                 }`}>{step.status === "SelfHealed" ? "Self Healed" : step.status}</span>
                               </div>
 
                               <div className="text-xs text-muted-foreground font-medium pl-3 border-l-2 border-border dark:border-slate-800 space-y-0.5">
                                 <div>Expected: <span className="text-foreground dark:text-slate-350">{step.expectedResult}</span></div>
-                                {step.actualResult && <div>Actual: <span className="text-slate-650 dark:text-muted-foreground ">&quot;{step.actualResult}&quot;</span></div>}
+                                {step.actualResult && <div>Actual: <span className="text-slate-600 dark:text-muted-foreground ">&quot;{step.actualResult}&quot;</span></div>}
                               </div>
 
                               {/* Self Healing logs */}
                               {step.status === "SelfHealed" && step.notes && (
-                                <div className="p-3 bg-amber-50/50 dark:bg-amber-955/10 border border-amber-200/50 dark:border-amber-900/50 rounded-xl space-y-1">
+                                <div className="p-3 bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/50 dark:border-amber-900/50 rounded-xl space-y-1">
                                   <div className="flex items-center gap-1 text-xs font-semibold text-amber-600">
                                     <AlertTriangle className="h-3.5 w-3.5" /> Self-Healing Recovery Logs
                                   </div>
@@ -518,8 +519,8 @@ export default function AgentBrainTelemetryDetailPage() {
 
                               {/* Error details */}
                               {step.status === "Failed" && step.errorDetails && (
-                                <div className="p-3 bg-rose-50/40 dark:bg-rose-955/10 border border-rose-200/50 dark:border-rose-900/50 rounded-xl">
-                                  <p className="text-xs text-rose-700 dark:text-rose-455 font-mono whitespace-pre-line leading-normal">{step.errorDetails}</p>
+                                <div className="p-3 bg-rose-50/40 dark:bg-rose-950/10 border border-rose-200/50 dark:border-rose-900/50 rounded-xl">
+                                  <p className="text-xs text-rose-700 dark:text-rose-400 font-mono whitespace-pre-line leading-normal">{step.errorDetails}</p>
                                 </div>
                               )}
 
@@ -545,19 +546,19 @@ export default function AgentBrainTelemetryDetailPage() {
       {/* 5. Bug Reports Grid */}
       {run.bugReports.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+          <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <Bug className="h-5 w-5 text-red-500 animate-bounce" /> Auto-Generated Defect Reports
           </h3>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {run.bugReports.map((bug) => (
-              <div key={bug.id} className="p-6 border border-red-150 dark:border-red-950/80 bg-red-50/10 dark:bg-red-955/5 rounded-xl shadow-sm space-y-3">
+              <div key={bug.id} className="p-6 border border-red-150 dark:border-red-950/80 bg-red-50/10 dark:bg-red-950/5 rounded-xl shadow-sm space-y-3">
                 <div className="flex justify-between items-start gap-2">
                   <h4 className="font-semibold text-sm text-red-800 dark:text-red-400 leading-tight">{bug.title}</h4>
                   <span className="px-2 py-0.5 text-xs font-medium rounded bg-red-100 text-red-700">{bug.severity}</span>
                 </div>
                 <div className="text-xs text-muted-foreground leading-relaxed border-t border-border dark:border-slate-800 pt-2 space-y-1">
-                  <div><strong>Steps:</strong> <p className="whitespace-pre-line text-xs font-mono mt-0.5 text-slate-650 dark:text-muted-foreground">{bug.stepsToReproduce}</p></div>
-                  <div className="border-t border-dashed my-2 pt-2"><strong>Expected:</strong> <span className="text-slate-650 dark:text-muted-foreground">{bug.expectedResult}</span></div>
+                  <div><strong>Steps:</strong> <p className="whitespace-pre-line text-xs font-mono mt-0.5 text-slate-600 dark:text-muted-foreground">{bug.stepsToReproduce}</p></div>
+                  <div className="border-t border-dashed my-2 pt-2"><strong>Expected:</strong> <span className="text-slate-600 dark:text-muted-foreground">{bug.expectedResult}</span></div>
                   <div><strong>Actual:</strong> <span className="text-rose-700 dark:text-rose-405">{bug.actualResult}</span></div>
                 </div>
               </div>

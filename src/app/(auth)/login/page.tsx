@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState } from "react"
 import Link from "next/link"
 import { ArrowRight, Eye, EyeOff, Loader2 } from "@/components/ui/icons"
@@ -48,7 +49,7 @@ export default function LoginPage() {
   return (
     <>
       <div className="space-y-2">
-        <p className="font-mono text-xs font-semibold text-violet-400 uppercase tracking-[0.25em]">// authenticate</p>
+        <p className="font-mono text-xs font-semibold text-violet-400  tracking-[0.25em]">{"// authenticate"}</p>
         <h1 className="text-2xl font-semibold tracking-tight text-white">Sign in to your engine</h1>
         <p className="text-xs text-muted-foreground">Enter your credentials to open the dashboard.</p>
       </div>
@@ -95,7 +96,7 @@ export default function LoginPage() {
         >
           {loading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" /> Signing in...
+              <BusyDot /> Signing in...
             </>
           ) : (
             <>

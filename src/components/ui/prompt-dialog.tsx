@@ -16,6 +16,7 @@ export function PromptDialog({
   confirmLabel,
   suggestions,
   initialValue = "",
+  allowEmpty = false,
   pending,
   onCancel,
   onSubmit,
@@ -30,6 +31,8 @@ export function PromptDialog({
   suggestions?: string[]
   /** Starting text, e.g. the current value when editing. */
   initialValue?: string
+  /** Let an empty value through (e.g. "leave empty to remove"). */
+  allowEmpty?: boolean
   pending?: boolean
   onCancel: () => void
   onSubmit: (value: string) => void
@@ -39,7 +42,7 @@ export function PromptDialog({
     if (open) setValue(initialValue)
   }, [open, initialValue])
 
-  const submit = () => value.trim() && onSubmit(value.trim())
+  const submit = () => (allowEmpty || value.trim()) && onSubmit(value.trim())
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
@@ -87,7 +90,7 @@ export function PromptDialog({
           <Button variant="ghost" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button size="sm" onClick={submit} disabled={!value.trim() || pending} className="gap-2">
+          <Button size="sm" onClick={submit} disabled={(!allowEmpty && !value.trim()) || pending} className="gap-2">
             {pending && <BusyDot />}
             {confirmLabel}
           </Button>

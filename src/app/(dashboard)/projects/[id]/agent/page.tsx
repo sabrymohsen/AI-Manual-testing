@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -169,10 +171,10 @@ export default function QAAgentDashboardPage() {
         router.push(`/projects/${params.id}/agent/runs/${runId}`)
       } else {
         const errorData = await res.json().catch(() => ({}))
-        alert(errorData.error || "Failed to trigger QA Agent Brain run.")
+        toast.error(errorData.error || "Failed to trigger QA Agent Brain run.")
       }
     } catch {
-      alert("Network error starting QA Agent run.")
+      toast.error("Network error starting QA Agent run.")
     } finally {
       setTriggering(false)
     }
@@ -202,17 +204,17 @@ export default function QAAgentDashboardPage() {
       case "Scanning":
         return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400">Scanning UI</span>
       case "Planning":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700 dark:bg-amber-955/20 dark:text-amber-400">Planning Tests</span>
+        return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400">Planning Tests</span>
       case "WaitingForApproval":
         return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400">Waiting for Approval</span>
       case "Running":
         return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 animate-pulse">Running Steps</span>
       case "Reporting":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-violet-50 text-violet-700 dark:bg-violet-955/20 dark:text-violet-400">Generating Report</span>
+        return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-violet-50 text-violet-700 dark:bg-violet-950/20 dark:text-violet-400">Generating Report</span>
       case "Completed":
         return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400">Completed</span>
       case "Failed":
-        return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-400">Failed</span>
+        return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400">Failed</span>
       case "Cancelled":
         return <span className="px-2 py-0.5 text-xs font-semibold rounded bg-muted text-muted-foreground">Cancelled</span>
       default:
@@ -223,7 +225,7 @@ export default function QAAgentDashboardPage() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+        <BusyDot />
         <p className="text-sm text-muted-foreground font-semibold">Loading QA Agent Brain...</p>
       </div>
     )
@@ -233,7 +235,7 @@ export default function QAAgentDashboardPage() {
     return (
       <div className="p-6 text-center">
         <p className="text-destructive font-semibold text-lg">Project not found</p>
-        <Link href="/projects" className="text-indigo-650 hover:underline mt-2 inline-block">Back to Projects</Link>
+        <Link href="/projects" className="text-indigo-600 hover:underline mt-2 inline-block">Back to Projects</Link>
       </div>
     )
   }
@@ -249,7 +251,7 @@ export default function QAAgentDashboardPage() {
               <span className="px-3 py-0.5 text-xs font-medium bg-primary text-white rounded-md">Local-First</span>
             </div>
             <p className="text-sm text-muted-foreground font-semibold mt-1">
-              Autonomous and Guided QA validation for: <span className="text-slate-850 dark:text-slate-200 font-semibold">{project.name}</span>
+              Autonomous and Guided QA validation for: <span className="text-slate-800 dark:text-slate-200 font-semibold">{project.name}</span>
             </p>
           </div>
         </div>
@@ -262,10 +264,10 @@ export default function QAAgentDashboardPage() {
       {!isOnboarded && (
         <div className="p-6 border border-indigo-150 dark:border-indigo-950/80 rounded-xl bg-indigo-50/20 dark:bg-indigo-950/5 shadow-sm space-y-4">
           <div className="flex items-center gap-2">
-            <Brain className="h-6 w-6 text-indigo-650 animate-bounce" />
+            <Brain className="h-6 w-6 text-indigo-600 animate-bounce" />
             <h3 className="text-lg font-semibold text-foreground dark:text-slate-50">What is QA Agent Brain?</h3>
           </div>
-          <p className="text-xs text-slate-650 dark:text-slate-350 leading-relaxed font-semibold">
+          <p className="text-xs text-slate-600 dark:text-slate-350 leading-relaxed font-semibold">
             QA Agent Brain helps you analyze your web app like a QA engineer. It can open your app, detect login pages, use saved project credentials, test the login flow, scan authenticated pages, generate test cases, capture evidence, and report issues.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 text-xs font-medium text-muted-foreground dark:text-slate-350">
@@ -288,31 +290,31 @@ export default function QAAgentDashboardPage() {
           <div className="grid gap-4 grid-cols-2 md:grid-cols-7 text-xs">
             <div className="p-4 rounded-xl border border-border bg-muted/30">
               <span className="font-semibold text-primary">1. Open App</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Launches the target project URL in an automated browser.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Launches the target project URL in an automated browser.</p>
             </div>
             <div className="p-4 rounded-xl border border-border bg-muted/30">
               <span className="font-semibold text-purple-600">2. Detect Login</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Identifies login/sign-in entry points and modals.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Identifies login/sign-in entry points and modals.</p>
             </div>
             <div className="p-4 rounded-xl border border-border bg-muted/30">
               <span className="font-semibold text-amber-600">3. Use Credentials</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Extracts saved credentials from Project Settings.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Extracts saved credentials from Project Settings.</p>
             </div>
             <div className="p-4 rounded-xl border border-border bg-muted/30">
               <span className="font-semibold text-rose-600">4. Verify Login</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Fills fields, clicks submit and verifies login success.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Fills fields, clicks submit and verifies login success.</p>
             </div>
             <div className="p-4 rounded-xl border border-border bg-muted/30">
               <span className="font-semibold text-emerald-600">5. Scan Pages</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Explores dashboard layouts and safe interactive controls.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Explores dashboard layouts and safe interactive controls.</p>
             </div>
             <div className="p-4 rounded-xl border border-border bg-muted/30">
               <span className="font-semibold text-blue-600">6. Generate Tests</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Constructs structured rule-based test plans.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Constructs structured rule-based test plans.</p>
             </div>
             <div className="p-4 rounded-xl border border-border bg-muted/30 col-span-2 md:col-span-1">
               <span className="font-semibold text-foreground dark:text-slate-300">7. Report Findings</span>
-              <p className="text-xs text-slate-550 dark:text-slate-450 mt-1">Logs console/network errors, screenshots, and generates reports.</p>
+              <p className="text-xs text-slate-600 dark:text-slate-500 mt-1">Logs console/network errors, screenshots, and generates reports.</p>
             </div>
           </div>
         </div>
@@ -323,12 +325,12 @@ export default function QAAgentDashboardPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Credentials Warning Card */}
           {showNoCredsWarning && (
-            <div className="p-6 border border-amber-250 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-955/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-in slide-in-from-top duration-300">
+            <div className="p-6 border border-amber-250 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-950/5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-in slide-in-from-top duration-300">
               <div className="flex gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div>
                   <h4 className="font-semibold text-sm text-amber-900 dark:text-amber-200">No credentials found for this project</h4>
-                  <p className="text-xs text-amber-650 dark:text-amber-400 mt-1 leading-relaxed font-semibold">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 leading-relaxed font-semibold">
                     QA Agent Brain can still scan public pages, but login testing requires credentials.
                   </p>
                 </div>
@@ -357,7 +359,7 @@ export default function QAAgentDashboardPage() {
           <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-6">
             <div className="flex justify-between items-center border-b pb-3 flex-wrap gap-2">
               <h3 className="text-lg font-semibold text-foreground dark:text-slate-50">Agent Workspace Setup</h3>
-              <span className="px-3 py-1 text-xs font-bold rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 border border-indigo-200">
+              <span className="px-3 py-1 text-xs font-semibold rounded-lg bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 border border-indigo-200">
                 {diagnostics?.aiProviderStatus === "AI Mode Configured" ? "Mode: Local AI Assisted" : "Mode: Free Rule-Based Mode"}
               </span>
             </div>
@@ -500,13 +502,13 @@ export default function QAAgentDashboardPage() {
                     onClick={() => setMode(modeItem.id)}
                     className={`cursor-pointer p-4 rounded-xl border transition-all relative flex flex-col justify-between ${
                       mode === modeItem.id
-                        ? "border-indigo-600 bg-indigo-50/10 dark:border-indigo-500 dark:bg-indigo-950/20 ring-2 ring-indigo-650/10"
+                        ? "border-indigo-600 bg-indigo-50/10 dark:border-indigo-500 dark:bg-indigo-950/20 ring-2 ring-indigo-600/10"
                         : "border-border hover:border-slate-350 dark:border-slate-800 dark:hover:border-slate-700 bg-background"
                     }`}
                   >
                     <div>
-                      <span className="text-xs font-semibold uppercase text-indigo-650 dark:text-indigo-400">{modeItem.title}</span>
-                      <p className="text-xs text-slate-550 mt-2 leading-relaxed font-semibold">{modeItem.desc}</p>
+                      <span className="text-xs font-semibold  text-indigo-600 dark:text-indigo-400">{modeItem.title}</span>
+                      <p className="text-xs text-slate-600 mt-2 leading-relaxed font-semibold">{modeItem.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -538,7 +540,7 @@ export default function QAAgentDashboardPage() {
               >
                 {triggering ? (
                   <>
-                    <RefreshCw className="h-4 w-4 animate-spin" /> Dispatching QA Agent...
+                    <BusyDot /> Dispatching QA Agent...
                   </>
                 ) : (
                   <>
@@ -555,7 +557,7 @@ export default function QAAgentDashboardPage() {
           {/* Safety Settings Card */}
           <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-4">
             <div className="flex items-center gap-2 border-b pb-3">
-              <div className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-650 rounded-xl">
+              <div className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-600 rounded-xl">
                 <ShieldAlert className="h-4 w-4" />
               </div>
               <div>
@@ -582,8 +584,8 @@ export default function QAAgentDashboardPage() {
                       : "border-border hover:border-slate-250 bg-muted/20"
                   }`}
                 >
-                  <span className="font-semibold text-slate-850 dark:text-slate-250">{level.title}</span>
-                  <p className="text-xs text-slate-450 leading-relaxed">{level.desc}</p>
+                  <span className="font-semibold text-slate-800 dark:text-slate-250">{level.title}</span>
+                  <p className="text-xs text-slate-500 leading-relaxed">{level.desc}</p>
                 </div>
               ))}
             </div>
@@ -600,10 +602,10 @@ export default function QAAgentDashboardPage() {
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold">Worker Status</span>
-                  <span className={`px-2 py-0.5 rounded font-semibold text-xs uppercase ${
+                  <span className={`px-2 py-0.5 rounded font-semibold text-xs  ${
                     diagnostics.workerOnline 
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
-                      : "bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-400"
+                      : "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400"
                   }`}>
                     {diagnostics.workerOnline ? "Online" : "Offline"}
                   </span>
@@ -611,8 +613,8 @@ export default function QAAgentDashboardPage() {
                 
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold">Queue Status</span>
-                  <span className={`px-2 py-0.5 rounded font-semibold text-xs uppercase ${
-                    diagnostics.activeJobs > 0 ? "bg-amber-50 text-amber-705 animate-pulse" : "bg-muted text-slate-650"
+                  <span className={`px-2 py-0.5 rounded font-semibold text-xs  ${
+                    diagnostics.activeJobs > 0 ? "bg-amber-50 text-amber-705 animate-pulse" : "bg-muted text-slate-600"
                   }`}>
                     {diagnostics.activeJobs > 0 ? "Active" : diagnostics.waitingJobs > 0 ? "Waiting" : "Idle"}
                   </span>
@@ -620,10 +622,10 @@ export default function QAAgentDashboardPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold">Playwright Status</span>
-                  <span className={`px-2 py-0.5 rounded font-semibold text-xs uppercase ${
+                  <span className={`px-2 py-0.5 rounded font-semibold text-xs  ${
                     diagnostics.playwrightInstalled 
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
-                      : "bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-400"
+                      : "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400"
                   }`}>
                     {diagnostics.playwrightInstalled ? "Installed" : "Missing"}
                   </span>
@@ -631,10 +633,10 @@ export default function QAAgentDashboardPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold">Target URL Validity</span>
-                  <span className={`px-2 py-0.5 rounded font-semibold text-xs uppercase ${
+                  <span className={`px-2 py-0.5 rounded font-semibold text-xs  ${
                     diagnostics.targetUrlValid 
                       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400" 
-                      : "bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-400"
+                      : "bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-400"
                   }`}>
                     {diagnostics.targetUrlValid ? "Valid" : "Invalid"}
                   </span>
@@ -642,7 +644,7 @@ export default function QAAgentDashboardPage() {
 
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground font-semibold">AI Provider Status</span>
-                  <span className="px-2 py-0.5 rounded font-medium text-xs bg-slate-100 text-slate-650 dark:bg-slate-800 dark:text-slate-300">
+                  <span className="px-2 py-0.5 rounded font-medium text-xs bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                     {diagnostics.aiProviderStatus || "Free Rule-Based Mode"}
                   </span>
                 </div>
@@ -650,7 +652,7 @@ export default function QAAgentDashboardPage() {
                 {diagnostics.lastHeartbeatAt && (
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground font-semibold">Last Heartbeat</span>
-                    <span className="text-slate-650 font-semibold dark:text-slate-350">
+                    <span className="text-slate-600 font-semibold dark:text-slate-350">
                       {new Date(diagnostics.lastHeartbeatAt).toLocaleTimeString()}
                     </span>
                   </div>
@@ -658,15 +660,15 @@ export default function QAAgentDashboardPage() {
 
                 <div className="border-t border-dashed my-2 pt-2 space-y-2">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-450 font-semibold">Active Agent Jobs</span>
+                    <span className="text-slate-500 font-semibold">Active Agent Jobs</span>
                     <span className="font-semibold text-foreground dark:text-slate-300">{diagnostics.activeJobs}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-450 font-semibold">Waiting Agent Jobs</span>
+                    <span className="text-slate-500 font-semibold">Waiting Agent Jobs</span>
                     <span className="font-semibold text-foreground dark:text-slate-300">{diagnostics.waitingJobs}</span>
                   </div>
                   <div className="flex justify-between items-center text-xs">
-                    <span className="text-slate-450 font-semibold">Failed Agent Jobs</span>
+                    <span className="text-slate-500 font-semibold">Failed Agent Jobs</span>
                     <span className="font-semibold text-foreground dark:text-slate-300">{diagnostics.failedJobs}</span>
                   </div>
                 </div>
@@ -679,7 +681,7 @@ export default function QAAgentDashboardPage() {
             <Info className="h-4 w-4 text-primary mt-0.5" />
             <div className="space-y-1">
               <span className="font-semibold text-foreground">Free Rule-Based Mode Active</span>
-              <p className="text-xs text-slate-450 leading-relaxed">No paid external AI key configured. Scenario planning runs locally using structural scan heuristic rules.</p>
+              <p className="text-xs text-slate-500 leading-relaxed">No paid external AI key configured. Scenario planning runs locally using structural scan heuristic rules.</p>
             </div>
           </div>
         </div>
@@ -687,7 +689,7 @@ export default function QAAgentDashboardPage() {
 
       {/* Historical Sessions table */}
       <div className="space-y-4 pt-4 border-t">
-        <h3 className="text-xl font-semibold text-slate-850 dark:text-slate-100 flex items-center gap-2">
+        <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
           <History className="h-5 w-5 text-muted-foreground" /> QA Agent Runs History
         </h3>
 
@@ -695,7 +697,7 @@ export default function QAAgentDashboardPage() {
           <div className="text-center border rounded-xl py-12 bg-white dark:bg-slate-900 shadow-sm">
             <History className="h-10 w-10 text-slate-300 mx-auto mb-3" />
             <h4 className="font-semibold text-sm text-foreground dark:text-slate-300">No agent sessions triggered</h4>
-            <p className="text-xs text-slate-450 max-w-xs mx-auto mt-2">
+            <p className="text-xs text-slate-500 max-w-xs mx-auto mt-2">
               Select your settings above and trigger the QA Agent Brain to scan layout components.
             </p>
           </div>
@@ -704,7 +706,7 @@ export default function QAAgentDashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
-                  <tr className="bg-muted/50 dark:bg-slate-850 border-b">
+                  <tr className="bg-muted/50 dark:bg-slate-800 border-b">
                     <th className="p-4 font-medium text-xs text-muted-foreground">Run ID / Created</th>
                     <th className="p-4 font-medium text-xs text-muted-foreground">Mode</th>
                     <th className="p-4 font-medium text-xs text-muted-foreground">Goal</th>
@@ -715,7 +717,7 @@ export default function QAAgentDashboardPage() {
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-slate-800">
                   {runs.map((run) => (
-                    <tr key={run.id} className="hover:bg-muted/50 dark:hover:bg-slate-850/40 transition-colors">
+                    <tr key={run.id} className="hover:bg-muted/50 dark:hover:bg-slate-800/40 transition-colors">
                       <td className="p-4">
                         <div className="font-semibold text-foreground dark:text-slate-200 font-mono text-xs">{run.id.substring(0, 8)}...</div>
                         <div className="text-xs text-muted-foreground font-semibold mt-1">
@@ -738,7 +740,7 @@ export default function QAAgentDashboardPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => setRunToCancel(run.id)}
-                            className="text-xs font-semibold text-rose-650 hover:text-rose-750 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 rounded-xl border-rose-200 dark:border-rose-900"
+                            className="text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/20 rounded-xl border-rose-200 dark:border-rose-900"
                           >
                             Cancel
                           </Button>
@@ -747,7 +749,7 @@ export default function QAAgentDashboardPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-xs font-semibold text-indigo-650 hover:text-primary rounded-xl"
+                            className="text-xs font-semibold text-indigo-600 hover:text-primary rounded-xl"
                           >
                             Telemetry <ExternalLink className="h-3.5 w-3.5 ml-1" />
                           </Button>

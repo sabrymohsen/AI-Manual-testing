@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
@@ -64,7 +65,7 @@ export default function VisualRunPage() {
   if (!data) {
     return (
       <div className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <BusyDot /> Loading…
       </div>
     )
   }
@@ -105,7 +106,7 @@ export default function VisualRunPage() {
         </div>
         {live && (
           <Button variant="outline" onClick={stop} disabled={stopping}>
-            {stopping ? <Loader2 className="animate-spin" /> : <Square />} Stop
+            {stopping ? <BusyDot /> : <Square />} Stop
           </Button>
         )}
       </div>
@@ -185,7 +186,7 @@ export default function VisualRunPage() {
           <div className="space-y-3 rounded-xl border bg-card p-6 lg:col-span-2">
             <h2 className="font-semibold text-foreground">By browser &amp; screen size</h2>
             <table className="w-full text-sm">
-              <thead className="text-left text-xs uppercase text-muted-foreground">
+              <thead className="text-left text-xs  text-muted-foreground">
                 <tr>
                   <th className="py-2">Environment</th>
                   <th className="py-2">Passed</th>

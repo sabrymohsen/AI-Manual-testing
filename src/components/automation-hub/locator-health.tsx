@@ -70,7 +70,7 @@ function relTime(iso: string): string {
   return `${Math.round(diff / 86_400_000)}d ago`
 }
 
-export default function LocatorHealthPanel() {
+export default function LocatorHealthPanel({ projectId }: { projectId?: string }) {
   const [locators, setLocators] = useState<LocatorHealth[]>([])
   const [atRisk, setAtRisk] = useState<LocatorHealth[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -83,7 +83,7 @@ export default function LocatorHealthPanel() {
   const [expanded, setExpanded] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch("/api/hub/locator-health")
+    fetch(projectId ? `/api/hub/locator-health?projectId=${encodeURIComponent(projectId)}` : "/api/hub/locator-health")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!d) return

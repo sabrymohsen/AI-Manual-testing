@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -109,7 +110,7 @@ export function AiJobsTray() {
       </p>
       {jobs.map((j) => (
         <div key={j.id} className="flex items-center gap-2 text-xs">
-          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+          <BusyDot />
           <span dir="auto" className="min-w-0 flex-1 truncate">
             {j.title}
           </span>

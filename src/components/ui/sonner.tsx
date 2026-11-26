@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import {
   CircleCheck,
   Info,
@@ -24,7 +25,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         info: <Info className="h-4 w-4" />,
         warning: <TriangleAlert className="h-4 w-4" />,
         error: <OctagonX className="h-4 w-4" />,
-        loading: <LoaderCircle className="h-4 w-4 animate-spin" />,
+        loading: <BusyDot />,
       }}
       toastOptions={{
         classNames: {

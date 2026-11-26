@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -144,7 +145,7 @@ export default function VisualTestsPage() {
 
       {tests === null ? (
         <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading visual tests…
+          <BusyDot /> Loading visual tests…
         </div>
       ) : tests.length === 0 ? (
         !choosing && (
@@ -201,7 +202,7 @@ export default function VisualTestsPage() {
                   <td className="px-4 py-3 text-right">
                     {t.type !== "Flow" && (
                       <Button size="sm" variant="outline" onClick={() => run(t.id)} disabled={starting === t.id}>
-                        {starting === t.id ? <Loader2 className="animate-spin" /> : <Play />} Run
+                        {starting === t.id ? <BusyDot /> : <Play />} Run
                       </Button>
                     )}
                   </td>

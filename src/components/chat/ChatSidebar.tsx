@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { ChatChannel, useChatStore } from "@/stores/chatStore";
 import { Plus, Hash, Lock, Circle, ChevronDown, ChevronRight, MessageSquare, Users } from "@/components/ui/icons";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -150,7 +150,8 @@ export function ChatSidebar({
               <DialogContent className="sm:max-w-md">
                 <form onSubmit={handleCreateChannel}>
                   <DialogHeader>
-                    <DialogTitle>Create Channel</DialogTitle>
+                    <DialogTitle>Create channel</DialogTitle>
+                    <DialogDescription className="body-6">A shared conversation for this project.</DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
                     <div className="grid gap-2">
@@ -323,7 +324,7 @@ export function ChatSidebar({
             className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-2 hover:text-muted-foreground dark:hover:text-slate-200"
           >
             {membersCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            <Users className="h-3.5 w-3.5 text-slate-450" />
+            <Users className="h-3.5 w-3.5 text-slate-500" />
             <span>Project Members</span>
           </button>
 
@@ -350,7 +351,7 @@ export function ChatSidebar({
                       <Circle
                         className={cn(
                           "h-2.5 w-2.5 rounded-full",
-                          online ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300 dark:fill-slate-800 dark:text-slate-850"
+                          online ? "fill-emerald-500 text-emerald-500" : "fill-slate-300 text-slate-300 dark:fill-slate-800 dark:text-slate-800"
                         )}
                       />
                     </button>

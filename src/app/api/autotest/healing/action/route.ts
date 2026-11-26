@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth()
@@ -20,6 +20,11 @@ export async function POST(request: NextRequest) {
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 })
+    }
+    // Only members of the event's project may approve or reject it.
+    if (event.projectId) {
+      const member = await requireProjectMember(event.projectId)
+      if (member.error) return unauthorizedResponse(member.error)
     }
 
     let updatedEvent

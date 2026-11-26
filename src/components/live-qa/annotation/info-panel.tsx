@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useRef, useState } from "react"
 import {
   Info,
@@ -161,7 +162,7 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
                   disabled={it.fmt === "pdf" && exportingPdf}
                   className="w-full px-3 py-2 text-left text-xs font-medium flex items-center gap-2 hover:bg-muted disabled:opacity-50"
                 >
-                  {it.fmt === "pdf" && exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <it.icon className="h-3.5 w-3.5 text-muted-foreground" />}
+                  {it.fmt === "pdf" && exportingPdf ? <BusyDot /> : <it.icon className="h-3.5 w-3.5 text-muted-foreground" />}
                   {it.label}
                 </button>
               ))}
@@ -172,7 +173,7 @@ export function InfoPanel({ metadata, setMetadata, onExport, onUploadCompare, on
         {/* ── Share ── */}
         <section>
           <button onClick={onShare} disabled={sharing} className="w-full h-9 rounded-md border text-xs font-semibold flex items-center justify-center gap-2 hover:bg-muted disabled:opacity-60">
-            {sharing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />} Share link
+            {sharing ? <BusyDot /> : <Share2 className="h-3.5 w-3.5" />} Share link
           </button>
           {shareUrl && (
             <div className="mt-2 flex items-center gap-1 border rounded-md p-2 bg-muted/50">

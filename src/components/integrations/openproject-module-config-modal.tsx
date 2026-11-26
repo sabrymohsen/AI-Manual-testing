@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useEffect, useCallback } from "react"
 import {
   X, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, ChevronDown, ChevronRight, LayoutDashboard
@@ -291,7 +292,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
 
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading...
+            <BusyDot /> Loading...
           </div>
         ) : (
           <div className="p-6 space-y-6">
@@ -374,7 +375,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                 disabled={testing || !canTestConnection}
                 className="h-8 text-xs font-semibold"
               >
-                {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
+                {testing ? <BusyDot /> : null}
                 {testing ? "Testing..." : "Test Connection"}
               </Button>
               {testing && (
@@ -460,7 +461,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                       <Label className="text-xs font-semibold">Target Column <span className="text-muted-foreground font-normal">(which column to place items in)</span></Label>
                       {loadingColumns ? (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground border rounded-lg px-3 py-2 bg-muted/30">
-                          <Loader2 className="h-3 w-3 animate-spin" /> Loading columns…
+                          <BusyDot /> Loading columns…
                         </div>
                       ) : boardColumns.length > 0 ? (
                         <select
@@ -677,7 +678,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                 size="sm"
                 className="h-8 px-4 text-xs font-semibold"
               >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
+                {saving ? <BusyDot /> : null}
                 {saving ? "Saving..." : "Save Feature Config"}
               </Button>
             </div>

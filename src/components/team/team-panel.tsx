@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState } from "react"
 import { useProjectTeam } from "@/hooks/use-project-team"
 import { RefreshCw, Plus, Trash2, UserPlus, Link2, Users } from "@/components/ui/icons"
@@ -65,7 +66,7 @@ export function TeamPanel({
             disabled={!connected || syncing}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? <BusyDot /> : <RefreshCw className="h-4 w-4" />}
             {syncing ? "Syncing…" : `Sync from ${label}`}
           </button>
           {!connected && (

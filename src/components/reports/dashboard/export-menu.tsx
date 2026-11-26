@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState } from "react"
 import { exportPdf, exportDocx, exportXlsx } from "@/lib/reports/export"
 import type { ProjectReport } from "@/lib/reports/types"
@@ -44,7 +45,7 @@ export function ExportMenu({
           disabled={!report || !!busy}
           className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
         >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Export
+          {busy ? <BusyDot /> : <Download className="h-4 w-4" />} Export
           <ChevronDown className="h-3 w-3 opacity-80" />
         </button>
       </DropdownMenuTrigger>

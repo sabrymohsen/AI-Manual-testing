@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { useParams, useRouter } from "next/navigation"
@@ -109,10 +111,10 @@ export default function ReportPage() {
         const data = await res.json()
         router.push(`/projects/${params.id}/test-runs/${data.testRun.id}`)
       } else {
-        alert("Failed to start rerun execution")
+        toast.error("Failed to start rerun execution")
       }
     } catch {
-      alert("Network error starting rerun")
+      toast.error("Network error starting rerun")
     } finally {
       setRerunning(false)
     }
@@ -215,7 +217,7 @@ export default function ReportPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={handleSyncResult} disabled={syncing}>
-            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {syncing ? <BusyDot /> : <RefreshCw className="h-3.5 w-3.5" />}
             <span className="ml-1">{opSync.status === "not_synced" ? "Sync" : "Retry"}</span>
           </Button>
         </div>

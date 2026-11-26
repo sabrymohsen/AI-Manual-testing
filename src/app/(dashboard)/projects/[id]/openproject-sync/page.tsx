@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useParams } from "next/navigation"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
@@ -38,14 +39,14 @@ export default function ScopedOpenProjectSyncPage() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        alert(data.error || "Failed to trigger OpenProject sync.")
+        toast.error(data.error || "Failed to trigger OpenProject sync.")
       } else if (data.skipped === "no-integration") {
-        alert("This project is not connected to OpenProject yet.")
+        toast.error("This project is not connected to OpenProject yet.")
       } else if (data.skipped === "no-mappings") {
-        alert("Nothing is mapped to OpenProject yet, so there was nothing to check.")
+        toast.error("Nothing is mapped to OpenProject yet, so there was nothing to check.")
       } else {
         // Say what actually happened rather than that something was triggered.
-        alert(
+        toast.success(
           `Checked ${data.checked} item(s): ${data.applied} updated` +
             (data.failed ? `, ${data.failed} failed (${data.error || "see logs"})` : "") + "."
         )
@@ -53,7 +54,7 @@ export default function ScopedOpenProjectSyncPage() {
       fetchStatus()
     } catch (err) {
       console.error(err)
-      alert("Failed to reach the sync service.")
+      toast.error("Failed to reach the sync service.")
     } finally {
       setSyncing(false)
     }

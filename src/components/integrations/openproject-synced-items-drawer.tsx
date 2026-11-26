@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useEffect } from "react"
 import { X, Loader2, ExternalLink, CheckCircle2, XCircle, CloudUpload, RefreshCw, Clock } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
@@ -91,7 +92,7 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={loadItems} disabled={loading} className="h-8 w-8 p-0">
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+              {loading ? <BusyDot /> : <RefreshCw className="h-3.5 w-3.5" />}
             </Button>
             <button onClick={onClose} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
@@ -119,7 +120,7 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
+              <BusyDot /> Loading...
             </div>
           ) : error ? (
             <div className="p-6 text-center text-red-600 text-sm">{error}</div>

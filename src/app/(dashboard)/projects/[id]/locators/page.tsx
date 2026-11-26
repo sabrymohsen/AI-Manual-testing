@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -138,10 +140,10 @@ export default function ElementLocatorPickerPage() {
         setSelectedLocatorValue(locator.locatorValue)
       } else {
         const data = await res.json()
-        alert(data.error || "Picking session timed out or failed.")
+        toast.error(data.error || "Picking session timed out or failed.")
       }
     } catch {
-      alert("Network error starting element picker.")
+      toast.error("Network error starting element picker.")
     } finally {
       setPicking(false)
     }
@@ -150,7 +152,7 @@ export default function ElementLocatorPickerPage() {
   // Save the selected locator configuration to DB
   async function handleSaveLocator() {
     if (!friendlyName.trim()) {
-      alert("Friendly Name is required")
+      toast.error("Friendly Name is required")
       return
     }
 
@@ -187,10 +189,10 @@ export default function ElementLocatorPickerPage() {
         setCapturedLocator(null)
         fetchProjectAndLocators()
       } else {
-        alert("Failed to save locator.")
+        toast.error("Failed to save locator.")
       }
     } catch {
-      alert("Network error saving locator.")
+      toast.error("Network error saving locator.")
     } finally {
       setIsSaving(false)
     }
@@ -225,10 +227,10 @@ export default function ElementLocatorPickerPage() {
           setSelfValidationResult(data)
         }
       } else {
-        alert("Validation endpoint error.")
+        toast.error("Validation endpoint error.")
       }
     } catch {
-      alert("Network error validating selector.")
+      toast.error("Network error validating selector.")
     } finally {
       setValidatingId(null)
       setIsSelfValidating(false)
@@ -256,7 +258,7 @@ export default function ElementLocatorPickerPage() {
   // Copy locator value helper
   function handleCopy(text: string) {
     navigator.clipboard.writeText(text)
-    alert("Locator copied to clipboard!")
+    toast.success("Locator copied to clipboard!")
   }
 
   if (loading) return <p className="text-muted-foreground p-6">Loading Element Picker...</p>
@@ -353,7 +355,7 @@ export default function ElementLocatorPickerPage() {
                     URL: {capturedLocator.pageUrl}
                   </p>
                 </div>
-                <span className={`text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 ${
+                <span className={`text-xs px-3 py-1 rounded-full font-semibold flex items-center gap-1 ${
                   capturedLocator.reliabilityScore >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                   capturedLocator.reliabilityScore >= 50 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
                   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -365,7 +367,7 @@ export default function ElementLocatorPickerPage() {
               <div className="grid gap-6 md:grid-cols-3">
                 {/* Visual Preview */}
                 <div className="md:col-span-1 space-y-4">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase">Visual Preview</div>
+                  <div className="text-xs font-semibold text-muted-foreground ">Visual Preview</div>
                   {capturedLocator.screenshotPath ? (
                     <div className="border rounded-lg overflow-hidden bg-accent/40 max-h-48 flex items-center justify-center p-2">
                       <img 
@@ -558,7 +560,7 @@ export default function ElementLocatorPickerPage() {
                       disabled={isSelfValidating}
                       className="flex items-center gap-2 h-8 bg-background"
                     >
-                      <RefreshCw className={`h-3.5 w-3.5 ${isSelfValidating ? "animate-spin" : ""}`} />
+                      {isSelfValidating ? <BusyDot /> : <RefreshCw className="h-3.5 w-3.5" />}
                       Validate Selector On Page
                     </Button>
 
@@ -611,13 +613,13 @@ export default function ElementLocatorPickerPage() {
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="bg-accent/40 border-b">
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase">Friendly Name</th>
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase">Page URL</th>
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase">Type</th>
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase">Selector Value</th>
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase">Reliability</th>
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase">Validation Status</th>
-                  <th className="p-3 font-semibold text-xs text-muted-foreground uppercase text-right">Actions</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground ">Friendly Name</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground ">Page URL</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground ">Type</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground ">Selector Value</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground ">Reliability</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground ">Validation Status</th>
+                  <th className="p-3 font-semibold text-xs text-muted-foreground  text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -643,7 +645,7 @@ export default function ElementLocatorPickerPage() {
                       {loc.locatorValue}
                     </td>
                     <td className="p-3">
-                      <span className={`text-xs px-3 py-0.5 rounded-full font-bold ${
+                      <span className={`text-xs px-3 py-0.5 rounded-full font-semibold ${
                         loc.reliabilityScore >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                         loc.reliabilityScore >= 50 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
                         "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"

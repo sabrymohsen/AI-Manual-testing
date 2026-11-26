@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -136,7 +137,7 @@ export default function VisualScreenAnalyzerPage() {
   if (!data) {
     return (
       <div className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <BusyDot /> Loading…
       </div>
     )
   }
@@ -374,10 +375,10 @@ export default function VisualScreenAnalyzerPage() {
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <Button onClick={() => decide("accept")} disabled={!!deciding || screen.status === "Accepted"} className="bg-emerald-600 hover:bg-emerald-700">
-                  {deciding === "accept" ? <Loader2 className="animate-spin" /> : <Check />} Accept
+                  {deciding === "accept" ? <BusyDot /> : <Check />} Accept
                 </Button>
                 <Button onClick={() => decide("reject")} disabled={!!deciding || screen.status === "Rejected"} variant="destructive">
-                  {deciding === "reject" ? <Loader2 className="animate-spin" /> : <X />} Reject
+                  {deciding === "reject" ? <BusyDot /> : <X />} Reject
                 </Button>
               </div>
               <p className="text-center text-xs text-muted-foreground">Keyboard: A accept · R reject · ← → move</p>
@@ -445,7 +446,7 @@ export default function VisualScreenAnalyzerPage() {
                   <input value={regionForm.note} onChange={e => setRegionForm(f => ({ ...f, note: e.target.value }))} placeholder="Why (optional)" className="h-8 w-full rounded-md border px-2 text-xs" />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={saveRegion} disabled={busy}>
-                      {busy ? <Loader2 className="animate-spin" /> : <Check />} Ignore it
+                      {busy ? <BusyDot /> : <Check />} Ignore it
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setDraft(null)}>
                       Redraw
@@ -478,7 +479,7 @@ export default function VisualScreenAnalyzerPage() {
                 <p className="text-xs text-muted-foreground">The approved, new and difference images are attached.</p>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={fileBug} disabled={busy}>
-                    {busy ? <Loader2 className="animate-spin" /> : <Bug />} File bug
+                    {busy ? <BusyDot /> : <Bug />} File bug
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setBugOpen(false)}>
                     Cancel

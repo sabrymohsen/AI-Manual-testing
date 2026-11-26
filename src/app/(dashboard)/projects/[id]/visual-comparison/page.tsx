@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -240,9 +242,9 @@ export default function VisualComparisonPage() {
         const data = await res.json()
         const errMsg = data.error || ""
         if (errMsg.includes("403") || errMsg.includes("404") || errMsg.includes("401") || errMsg.toLowerCase().includes("access") || errMsg.toLowerCase().includes("token") || errMsg.toLowerCase().includes("permission")) {
-          alert("Please make sure your Figma token has access to this file.")
+          toast.error("Please make sure your Figma token has access to this file.")
         } else {
-          alert(errMsg || "Failed to fetch Figma file details")
+          toast.error(errMsg || "Failed to fetch Figma file details")
         }
       }
       setFetchingFrames(false)
@@ -285,9 +287,9 @@ export default function VisualComparisonPage() {
         const data = await res.json()
         const errMsg = data.error || ""
         if (errMsg.includes("403") || errMsg.includes("404") || errMsg.includes("401") || errMsg.toLowerCase().includes("access") || errMsg.toLowerCase().includes("token") || errMsg.toLowerCase().includes("permission")) {
-          alert("Please make sure your Figma token has access to this file.")
+          toast.error("Please make sure your Figma token has access to this file.")
         } else {
-          alert(errMsg || "Failed to sync frames")
+          toast.error(errMsg || "Failed to sync frames")
         }
       }
       setSyncingFrames(false)
@@ -337,7 +339,7 @@ export default function VisualComparisonPage() {
         await fetchProjectData()
       } else {
         const data = await res.json()
-        alert(data.error || "Failed to create mapping")
+        toast.error(data.error || "Failed to create mapping")
       }
     } catch (err) {
       console.error(err)
@@ -364,7 +366,7 @@ export default function VisualComparisonPage() {
     try {
       const activeMappings = mappings.filter(m => m.isActive)
       if (activeMappings.length === 0) {
-        alert("No active visual mappings to run.")
+        toast.error("No active visual mappings to run.")
         return
       }
 
@@ -377,11 +379,11 @@ export default function VisualComparisonPage() {
       })
 
       if (res.ok) {
-        alert(`Queued ${activeMappings.length} visual comparisons! Check runs tab or history for outcomes.`)
+        toast.success(`Queued ${activeMappings.length} visual comparisons! Check runs tab or history for outcomes.`)
         fetchProjectData()
       } else {
         const data = await res.json()
-        alert(data.error || "Failed to trigger bulk visual checks")
+        toast.error(data.error || "Failed to trigger bulk visual checks")
       }
     } catch (err) {
       console.error(err)
@@ -395,11 +397,11 @@ export default function VisualComparisonPage() {
       if (res.ok) {
         const data = await res.json()
         // Wait and poll status or refresh history after trigger
-        alert("Visual comparison queued! Checking runs tab for outcome.")
+        toast.success("Visual comparison queued! Checking runs tab for outcome.")
         fetchProjectData()
       } else {
         const data = await res.json()
-        alert(data.error || "Failed to trigger visual check")
+        toast.error(data.error || "Failed to trigger visual check")
       }
     } catch (err) {
       console.error(err)
@@ -419,7 +421,7 @@ export default function VisualComparisonPage() {
         setSelectedRun(data.run)
         setSelectedRunIssues(data.run.issues || [])
       } else {
-        alert("Failed to load run details")
+        toast.error("Failed to load run details")
         setShowWorkspace(false)
       }
       setWorkspaceLoading(false)
@@ -553,7 +555,7 @@ export default function VisualComparisonPage() {
         setPendingRegion(null)
         setTimeout(() => drawIgnoredRegions(), 100)
       } else {
-        alert("Failed to save ignored region")
+        toast.error("Failed to save ignored region")
       }
     } catch (err) {
       console.error(err)
@@ -633,7 +635,7 @@ export default function VisualComparisonPage() {
         setShowBugModal(false)
         setSelectedIssueForBug(null)
       } else {
-        alert("Failed to submit bug report")
+        toast.error("Failed to submit bug report")
       }
       setCreatingBug(false)
     } catch (err) {
@@ -688,7 +690,7 @@ ${selectedRunIssues.map((issue, idx) => `
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <RefreshCw className="h-10 w-10 text-primary animate-spin" />
+        <BusyDot />
         <p className="text-muted-foreground animate-pulse">Loading visual validation workspace...</p>
       </div>
     )
@@ -745,7 +747,7 @@ ${selectedRunIssues.map((issue, idx) => `
       <div className="flex border-b border-border">
         <button
           onClick={() => setActiveTab("mappings")}
-          className={`py-3 px-6 text-sm font-semibold tracking-wide border-b-2 transition-all ${
+          className={`py-3 px-6 text-sm font-semibold  border-b-2 transition-all ${
             activeTab === "mappings"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -755,7 +757,7 @@ ${selectedRunIssues.map((issue, idx) => `
         </button>
         <button
           onClick={() => setActiveTab("sync")}
-          className={`py-3 px-6 text-sm font-semibold tracking-wide border-b-2 transition-all ${
+          className={`py-3 px-6 text-sm font-semibold  border-b-2 transition-all ${
             activeTab === "sync"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -765,7 +767,7 @@ ${selectedRunIssues.map((issue, idx) => `
         </button>
         <button
           onClick={() => setActiveTab("history")}
-          className={`py-3 px-6 text-sm font-semibold tracking-wide border-b-2 transition-all ${
+          className={`py-3 px-6 text-sm font-semibold  border-b-2 transition-all ${
             activeTab === "history"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
@@ -819,7 +821,7 @@ ${selectedRunIssues.map((issue, idx) => `
                         </div>
                       )}
                       {latestRun && (
-                        <div className={`absolute top-3 right-3 text-xs font-bold px-3 py-1 rounded-full shadow-sm ${
+                        <div className={`absolute top-3 right-3 text-xs font-semibold px-3 py-1 rounded-full shadow-sm ${
                           latestRun.status === "Passed" ? "bg-emerald-500 text-white" :
                           latestRun.status === "Failed" ? "bg-rose-500 text-white" :
                           latestRun.status === "NeedsReview" ? "bg-amber-500 text-foreground" :
@@ -838,19 +840,19 @@ ${selectedRunIssues.map((issue, idx) => `
                       </div>
 
                       <div className="space-y-2 text-xs">
-                        <div className="flex items-center justify-between text-slate-650">
+                        <div className="flex items-center justify-between text-slate-600">
                           <span className="font-medium">Web URL:</span>
                           <span className="font-semibold text-foreground truncate max-w-[200px]" title={mapping.appUrl}>
                             {mapping.appUrl}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-slate-650">
+                        <div className="flex items-center justify-between text-slate-600">
                           <span className="font-medium">Viewport:</span>
                           <span className="font-semibold text-foreground flex items-center gap-1">
                             <Monitor className="h-3.5 w-3.5 text-muted-foreground" /> {mapping.viewportName} ({mapping.viewportWidth}x{mapping.viewportHeight})
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-slate-650">
+                        <div className="flex items-center justify-between text-slate-600">
                           <span className="font-medium">Login Role:</span>
                           <span className="font-semibold text-foreground flex items-center gap-1">
                             <User className="h-3.5 w-3.5 text-muted-foreground" /> {credentials.find(c => c.id === mapping.credentialId)?.roleName || "No Auth"}
@@ -951,7 +953,7 @@ ${selectedRunIssues.map((issue, idx) => `
               >
                 {fetchingFrames ? (
                   <>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Fetching File...
+                    <BusyDot /> Fetching File...
                   </>
                 ) : (
                   "Fetch Frames & Canvas"
@@ -975,7 +977,7 @@ ${selectedRunIssues.map((issue, idx) => `
                 >
                   {syncingFrames ? (
                     <>
-                      <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" /> Downloading...
+                      <BusyDot /> Downloading...
                     </>
                   ) : (
                     `Download & Sync ${selectedFrameNodeIds.length} Frames`
@@ -1004,7 +1006,7 @@ ${selectedRunIssues.map((issue, idx) => `
 
                 <div className="flex-grow overflow-auto max-h-[350px] border rounded-lg">
                   <table className="w-full text-sm text-left">
-                    <thead className="bg-muted/50 text-slate-650 text-xs font-semibold uppercase border-b">
+                    <thead className="bg-muted/50 text-slate-600 text-xs font-semibold  border-b">
                       <tr>
                         <th className="p-3 w-10">Select</th>
                         <th className="p-3">Frame Name</th>
@@ -1055,7 +1057,7 @@ ${selectedRunIssues.map((issue, idx) => `
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
-                <thead className="bg-muted/50 text-muted-foreground text-xs uppercase font-semibold border-b">
+                <thead className="bg-muted/50 text-muted-foreground text-xs  font-semibold border-b">
                   <tr>
                     <th className="p-3">Reference Frame</th>
                     <th className="p-3">Resolution</th>
@@ -1076,7 +1078,7 @@ ${selectedRunIssues.map((issue, idx) => `
                       <td className="p-3 text-xs text-muted-foreground">{run.roleUsed || "Anonymous"}</td>
                       <td className="p-3 font-semibold text-foreground">{run.mismatchPercent.toFixed(2)}%</td>
                       <td className="p-3">
-                        <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
                           run.status === "Passed" ? "bg-emerald-100 text-emerald-800" :
                           run.status === "Failed" ? "bg-rose-100 text-rose-800" :
                           run.status === "NeedsReview" ? "bg-amber-100 text-amber-800" :
@@ -1264,7 +1266,7 @@ ${selectedRunIssues.map((issue, idx) => `
           {/* Header bar */}
           <div className="bg-slate-900 border-b border-slate-800 text-white px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+              <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
                 selectedRun.status === "Passed" ? "bg-emerald-500/20 text-emerald-400" :
                 selectedRun.status === "Failed" ? "bg-rose-500/20 text-rose-400" :
                 "bg-amber-500/20 text-amber-400"
@@ -1334,7 +1336,7 @@ ${selectedRunIssues.map((issue, idx) => `
 
           {workspaceLoading ? (
             <div className="flex-grow flex flex-col items-center justify-center text-white space-y-4">
-              <RefreshCw className="h-10 w-10 text-indigo-400 animate-spin" />
+              <BusyDot />
               <p className="text-slate-350">Loading pixel matrix diff crops...</p>
             </div>
           ) : (
@@ -1531,7 +1533,7 @@ ${selectedRunIssues.map((issue, idx) => `
                               Size: {issue.width}x{issue.height}px at x:{issue.x}, y:{issue.y}
                             </div>
                           </div>
-                          <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
                             issue.status === "Bug" ? "bg-rose-500/20 text-rose-400" :
                             issue.status === "Accepted" ? "bg-emerald-500/20 text-emerald-400" :
                             issue.status === "Ignored" ? "bg-slate-500/20 text-muted-foreground" :
@@ -1623,14 +1625,14 @@ ${selectedRunIssues.map((issue, idx) => `
                         <div className="flex gap-2 pt-1">
                           <button
                             onClick={() => handleUpdateIssue(issue.id, { status: "Accepted" })}
-                            className="flex-1 py-2 border border-slate-850 hover:bg-slate-800 text-xs font-semibold rounded flex items-center justify-center gap-2 text-slate-300 transition-all"
+                            className="flex-1 py-2 border border-slate-800 hover:bg-slate-800 text-xs font-semibold rounded flex items-center justify-center gap-2 text-slate-300 transition-all"
                           >
                             <Check className="h-3.5 w-3.5 text-emerald-500" /> Accept
                           </button>
                           {issue.bugReportId ? (
                             <button
                               disabled
-                              className="flex-1 py-2 bg-rose-950/20 text-rose-450 border border-rose-900/30 text-xs font-semibold rounded flex items-center justify-center gap-2"
+                              className="flex-1 py-2 bg-rose-950/20 text-rose-500 border border-rose-900/30 text-xs font-semibold rounded flex items-center justify-center gap-2"
                             >
                               Filed as Bug
                             </button>

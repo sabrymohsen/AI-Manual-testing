@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -166,10 +168,10 @@ export default function RequirementDetails() {
         setEditing(false)
         fetchRequirementDetails()
       } else {
-        alert("Failed to update requirement details")
+        toast.error("Failed to update requirement details")
       }
     } catch {
-      alert("Error updating requirement")
+      toast.error("Error updating requirement")
     } finally {
       setSaving(false)
     }
@@ -211,7 +213,7 @@ export default function RequirementDetails() {
       setDraftCases(data.testCases || [])
       setSelectedDraftIndices((data.testCases || []).map((_: any, idx: number) => idx))
     } catch (err: any) {
-      alert("AI Generation failed: " + err.message)
+      toast.error("AI Generation failed: " + err.message)
       setShowAiDraftPanel(false)
     } finally {
       setGenerating(false)
@@ -262,11 +264,11 @@ export default function RequirementDetails() {
         }
       }
 
-      alert(`Successfully saved and linked ${createdCount} test cases!`)
+      toast.success(`Successfully saved and linked ${createdCount} test cases!`)
       setShowAiDraftPanel(false)
       fetchRequirementDetails()
     } catch {
-      alert("Failed to save draft cases")
+      toast.error("Failed to save draft cases")
     } finally {
       setSavingDrafts(false)
     }
@@ -276,26 +278,26 @@ export default function RequirementDetails() {
   const getCoverageBadge = (cov: string) => {
     switch (cov) {
       case "Covered":
-        return <span className="text-xs font-semibold bg-green-150 text-green-800 px-3 py-1 rounded-full uppercase">Covered</span>
+        return <span className="text-xs font-semibold bg-green-150 text-green-800 px-3 py-1 rounded-full ">Covered</span>
       case "PartiallyCovered":
-        return <span className="text-xs font-semibold bg-yellow-150 text-yellow-800 px-3 py-1 rounded-full uppercase">Partial Coverage</span>
+        return <span className="text-xs font-semibold bg-yellow-150 text-yellow-800 px-3 py-1 rounded-full ">Partial Coverage</span>
       case "Uncovered":
-        return <span className="text-xs font-semibold bg-muted text-muted-foreground px-3 py-1 rounded-full uppercase">Uncovered</span>
+        return <span className="text-xs font-semibold bg-muted text-muted-foreground px-3 py-1 rounded-full ">Uncovered</span>
       case "Failed":
-        return <span className="text-xs font-semibold bg-red-150 text-red-800 px-3 py-1 rounded-full uppercase animate-pulse">Failed</span>
+        return <span className="text-xs font-semibold bg-red-150 text-red-800 px-3 py-1 rounded-full  animate-pulse">Failed</span>
       case "Blocked":
-        return <span className="text-xs font-semibold bg-orange-150 text-orange-800 px-3 py-1 rounded-full uppercase">Blocked</span>
+        return <span className="text-xs font-semibold bg-orange-150 text-orange-800 px-3 py-1 rounded-full ">Blocked</span>
       case "NotExecuted":
-        return <span className="text-xs font-semibold bg-blue-150 text-blue-800 px-3 py-1 rounded-full uppercase">Not Executed</span>
+        return <span className="text-xs font-semibold bg-blue-150 text-blue-800 px-3 py-1 rounded-full ">Not Executed</span>
       default:
-        return <span className="text-xs font-semibold bg-muted text-muted-foreground px-3 py-1 rounded-full uppercase">{cov}</span>
+        return <span className="text-xs font-semibold bg-muted text-muted-foreground px-3 py-1 rounded-full ">{cov}</span>
     }
   }
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center p-24 bg-muted/50 min-h-screen text-muted-foreground">
-        <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
+        <BusyDot />
         <p className="text-muted-foreground font-medium">Fetching requirement traceability coordinates...</p>
       </div>
     )
@@ -346,7 +348,7 @@ export default function RequirementDetails() {
       setShowLinkBugsModal(false)
       fetchRequirementDetails()
     } catch {
-      alert("Failed to update linked bugs")
+      toast.error("Failed to update linked bugs")
     } finally {
       setBugLinkSaving(false)
     }
@@ -483,7 +485,7 @@ export default function RequirementDetails() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow">
-                  {saving ? <Loader2 className="animate-spin h-3 w-3" /> : null}
+                  {saving ? <BusyDot /> : null}
                   Save Changes
                 </Button>
               </div>
@@ -503,7 +505,7 @@ export default function RequirementDetails() {
               {requirement.description && (
                 <div className="space-y-2">
                   <span className="text-xs font-medium text-muted-foreground block">Description</span>
-                  <p className="text-xs text-slate-650 whitespace-pre-wrap leading-relaxed">{requirement.description}</p>
+                  <p className="text-xs text-slate-600 whitespace-pre-wrap leading-relaxed">{requirement.description}</p>
                 </div>
               )}
 
@@ -605,7 +607,7 @@ export default function RequirementDetails() {
                               variant="ghost" 
                               size="sm" 
                               onClick={() => handleUnlinkTestCase(tc.id)} 
-                              className="h-7 w-7 p-0 hover:bg-muted text-red-650 rounded-lg"
+                              className="h-7 w-7 p-0 hover:bg-muted text-red-600 rounded-lg"
                               title="Unlink test case"
                             >
                               <Trash2 size={14} />
@@ -641,7 +643,7 @@ export default function RequirementDetails() {
             <h3 className="text-xs font-medium text-muted-foreground border-b pb-3">Priority / Status</h3>
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Priority:</span>
-              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                 requirement.priority === "Critical" ? "bg-red-50 text-red-700" :
                 requirement.priority === "High" ? "bg-orange-50 text-orange-700" :
                 "bg-muted/50 text-muted-foreground"
@@ -658,7 +660,7 @@ export default function RequirementDetails() {
               <h3 className="text-xs font-medium text-muted-foreground border-b pb-3">External Integration</h3>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Link target:</span>
-                <span className="font-semibold text-slate-850">{requirement.externalSystem}</span>
+                <span className="font-semibold text-slate-800">{requirement.externalSystem}</span>
               </div>
               <a href={requirement.externalUrl} target="_blank" rel="noreferrer" className="w-full bg-muted/50 border border-border hover:bg-muted text-foreground text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors mt-2">
                 Open in {requirement.externalSystem} <ExternalLink size={12} />
@@ -771,7 +773,7 @@ export default function RequirementDetails() {
           <div className="flex-grow p-6 overflow-y-auto space-y-6">
             {generating ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
+                <BusyDot />
                 <p className="text-sm font-semibold">LLM is generating draft cases...</p>
                 <p className="text-xs text-muted-foreground mt-1">Analyzing criteria variables, constraints, and steps...</p>
               </div>
@@ -842,7 +844,7 @@ export default function RequirementDetails() {
               onClick={handleSaveDraftCases}
               className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold h-9 px-6 rounded-lg flex items-center gap-2 shadow"
             >
-              {savingDrafts ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <Save size={14} />}
+              {savingDrafts ? <BusyDot /> : <Save size={14} />}
               Save & Link Selected Cases
             </Button>
           </div>

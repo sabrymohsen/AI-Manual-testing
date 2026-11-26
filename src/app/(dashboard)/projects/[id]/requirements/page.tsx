@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState, Fragment } from "react"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { useParams, useRouter } from "next/navigation"
@@ -160,10 +162,10 @@ export default function RequirementsDashboard() {
       if (res.ok) {
         fetchRequirementsData()
       } else {
-        alert(data.error || `Story sync to ${trackerName} failed`)
+        toast.error(data.error || `Story sync to ${trackerName} failed`)
       }
     } catch {
-      alert("Network error during story sync")
+      toast.error("Network error during story sync")
     } finally {
       setSyncingReqId(null)
     }
@@ -172,7 +174,7 @@ export default function RequirementsDashboard() {
   const handleImportStories = async () => {
     setImportingStories(true)
     const result = await importStoriesFromOpenProject(projectId)
-    alert(result.message)
+    toast.error(result.message)
     if (result.ok) fetchRequirementsData()
     setImportingStories(false)
   }
@@ -298,10 +300,10 @@ export default function RequirementsDashboard() {
         fetchEpics()
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to create requirement")
+        toast.error(err.error || "Failed to create requirement")
       }
     } catch {
-      alert("Network error creating requirement")
+      toast.error("Network error creating requirement")
     } finally {
       setSubmitting(false)
     }
@@ -352,10 +354,10 @@ export default function RequirementsDashboard() {
         fetchRequirementsData()
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to save epic")
+        toast.error(err.error || "Failed to save epic")
       }
     } catch {
-      alert("Network error saving epic")
+      toast.error("Network error saving epic")
     } finally {
       setSavingEpic(false)
     }
@@ -378,10 +380,10 @@ export default function RequirementsDashboard() {
         fetchStatsData()
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to delete epic")
+        toast.error(err.error || "Failed to delete epic")
       }
     } catch {
-      alert("Network error deleting epic")
+      toast.error("Network error deleting epic")
     } finally {
       setDeletingEpic(false)
     }
@@ -420,13 +422,13 @@ export default function RequirementsDashboard() {
         (r) => r.status === "fulfilled" && r.value.ok
       ).length
       const failed = selectedIds.length - succeeded
-      alert(failed === 0 ? `${succeeded} stor${succeeded === 1 ? "y" : "ies"} ${label}.` : `${succeeded} ${label}, ${failed} failed.`)
+      toast.error(failed === 0 ? `${succeeded} stor${succeeded === 1 ? "y" : "ies"} ${label}.` : `${succeeded} ${label}, ${failed} failed.`)
       if (clearSelection) setSelectedIds([])
       fetchRequirementsData()
       fetchStatsData()
       fetchEpics()
     } catch {
-      alert(`Network error during bulk ${label}`)
+      toast.error(`Network error during bulk ${label}`)
     } finally {
       setBulkWorking(false)
     }
@@ -540,7 +542,7 @@ export default function RequirementsDashboard() {
       fetchRequirementsData()
       fetchStatsData()
     } catch {
-      alert("Failed to update linked test cases")
+      toast.error("Failed to update linked test cases")
     } finally {
       setLinking(false)
     }
@@ -732,7 +734,7 @@ export default function RequirementsDashboard() {
                 }`}
                 title={req.openProjectSyncStatus === "Failed" ? "Sync failed — retry" : `Sync story to ${trackerName}`}
               >
-                {syncingReqId === req.id ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />}
+                {syncingReqId === req.id ? <BusyDot /> : <CloudUpload size={14} />}
               </Button>
             )}
             <Button
@@ -800,7 +802,7 @@ export default function RequirementsDashboard() {
                                   <AlertTriangle size={11} className="text-red-400 shrink-0" />
                                   <span className="font-semibold text-muted-foreground">{bug.bugKey || "BUG"}</span>
                                   <span className="truncate flex-1" title={bug.title}>{bug.title}</span>
-                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
                                     bug.severity === "Critical" ? "bg-red-100 text-red-700" :
                                     bug.severity === "High" ? "bg-orange-100 text-orange-700" :
                                     bug.severity === "Medium" ? "bg-amber-100 text-amber-700" :
@@ -894,7 +896,7 @@ export default function RequirementsDashboard() {
               {epic.epicKey}
               <span className="font-semibold text-violet-800 max-w-md truncate" title={epic.title}>— {epic.title}</span>
             </button>
-            <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
               epic.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
               epic.status === "Completed" ? "bg-blue-50 text-blue-700 border-blue-100" :
               epic.status === "Archived" ? "bg-muted text-muted-foreground border-border" :
@@ -978,7 +980,7 @@ export default function RequirementsDashboard() {
             variant="outline"
             className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs"
           >
-            {importingStories ? <Loader2 size={15} className="animate-spin" /> : <CloudDownload size={15} className="text-teal-500" />}
+            {importingStories ? <BusyDot /> : <CloudDownload size={15} className="text-teal-500" />}
             {trackerName}
           </Button>
           <Link href={`/projects/${projectId}/scrum`}>
@@ -1139,7 +1141,7 @@ export default function RequirementsDashboard() {
       <div className="bg-card border border-border/60 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-20">
-            <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
+            <BusyDot />
             <p className="text-muted-foreground text-sm">Fetching project requirements matrix...</p>
           </div>
         ) : filteredRequirements.length === 0 && (viewMode === "flat" || epics.length === 0) ? (
@@ -1385,7 +1387,7 @@ export default function RequirementsDashboard() {
                 Cancel
               </Button>
               <Button type="submit" disabled={submitting} className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow">
-                {submitting ? <Loader2 className="animate-spin h-3 w-3" /> : null}
+                {submitting ? <BusyDot /> : null}
                 Save Requirement
               </Button>
             </div>
@@ -1534,7 +1536,7 @@ export default function RequirementsDashboard() {
                 disabled={linking}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow"
               >
-                {linking ? <Loader2 className="animate-spin h-3 w-3" /> : null}
+                {linking ? <BusyDot /> : null}
                 Save Links
               </Button>
             </div>
@@ -1646,7 +1648,7 @@ export default function RequirementsDashboard() {
                 Cancel
               </Button>
               <Button type="submit" disabled={savingEpic} className="bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow">
-                {savingEpic ? <Loader2 className="animate-spin h-3 w-3" /> : null}
+                {savingEpic ? <BusyDot /> : null}
                 {editingEpic ? "Save Changes" : "Create Epic"}
               </Button>
             </div>
@@ -1731,7 +1733,7 @@ export default function RequirementsDashboard() {
                   disabled={deletingEpic}
                   className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold h-9 px-4 rounded-lg shadow"
                 >
-                  {deletingEpic ? <Loader2 className="animate-spin h-3 w-3" /> : null}
+                  {deletingEpic ? <BusyDot /> : null}
                   {epicDeleteMode === "delete" && affected.length > 0
                     ? `Delete Epic + ${affected.length} Stor${affected.length === 1 ? "y" : "ies"}`
                     : "Delete Epic"}
@@ -1795,7 +1797,7 @@ export default function RequirementsDashboard() {
             disabled={bulkWorking}
             className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold h-7 px-3 rounded-lg"
           >
-            {bulkWorking ? <Loader2 className="animate-spin h-3 w-3 mr-1" /> : <Trash2 size={12} className="mr-1" />}
+            {bulkWorking ? <BusyDot /> : <Trash2 size={12} className="mr-1" />}
             Delete
           </Button>
 

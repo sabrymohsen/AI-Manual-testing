@@ -313,7 +313,7 @@ export function LiveBrowserView({
       <button
         type="button"
         onClick={toggleFullscreen}
-        className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/70 text-slate-200 opacity-0 backdrop-blur transition-opacity hover:bg-slate-900 group-hover:opacity-100 focus:opacity-100"
+        className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/70 text-slate-200 opacity-0 backdrop-blur transition-opacity hover:bg-slate-900 group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100"
         title={isFullscreen ? "Exit full screen (Esc)" : "Full screen"}
       >
         {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}

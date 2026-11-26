@@ -88,14 +88,15 @@ export default function BrdHubPage() {
       if (statusFilter === "Archived") qs.set("includeArchived", "true")
       if (view === "trash") qs.set("trash", "true")
       const res = await fetch(`/api/projects/${projectId}/brds?${qs}`)
-      if (res.ok) {
-        const d = await res.json()
-        setBrds(d.brds)
-        if (view === "active") {
-          setArchivedCount(d.archivedCount ?? 0)
-          setTrashCount(d.trashCount ?? 0)
-        }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const d = await res.json()
+      setBrds(d.brds)
+      if (view === "active") {
+        setArchivedCount(d.archivedCount ?? 0)
+        setTrashCount(d.trashCount ?? 0)
       }
+    } catch {
+      toast.error("The document list could not be loaded.", { id: "brds-load", action: { label: "Try again", onClick: () => load() } })
     } finally {
       setLoading(false)
     }

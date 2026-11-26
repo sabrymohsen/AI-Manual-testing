@@ -158,7 +158,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
     return (
       <button
         onClick={openChat}
-        className="fixed bottom-6 right-6 z-40 flex items-center justify-center h-14 w-14 rounded-full bg-primary text-white hover:bg-indigo-750 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
+        className="fixed bottom-6 right-6 z-40 flex items-center justify-center h-14 w-14 rounded-full bg-primary text-white hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
         title="Open Team Chat"
       >
         <MessageCircle className="h-6 w-6" />

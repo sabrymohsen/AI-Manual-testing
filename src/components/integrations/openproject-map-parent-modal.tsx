@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState } from "react"
 import { X, Loader2, CheckCircle2, ExternalLink, AlertCircle } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
@@ -147,7 +148,7 @@ export function OpenProjectMapParentModal({
               disabled={saving || !parentId.trim()}
               className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-950/20"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {saving ? <BusyDot /> : null}
               Save Parent Mapping
             </Button>
             {onSavedAndSync && (
@@ -156,7 +157,7 @@ export function OpenProjectMapParentModal({
                 disabled={saving || !parentId.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                {saving ? <BusyDot /> : null}
                 Save & Sync Group
               </Button>
             )}

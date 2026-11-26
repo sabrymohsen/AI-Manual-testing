@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState, useRef, useMemo} from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -1267,7 +1268,7 @@ export default function LiveQASessionPage() {
 
       {loading ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 text-muted-foreground animate-pulse font-semibold">
-          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+          <BusyDot />
           <span>Initializing Live QA Workstation...</span>
         </div>
       ) : !sessionId ? (
@@ -1284,18 +1285,18 @@ export default function LiveQASessionPage() {
               <div className="space-y-3 max-w-2xl">
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-indigo-300 border border-primary/30">
-                    <Sparkles className="h-3 w-3" /> Interactive Manual Workstation
+                    <Sparkles className="h-3 w-3" /> Manual testing
                   </span>
                   <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <CheckCircle2 className="h-3 w-3" /> Zero-Lag 30 FPS Stream
+                    <CheckCircle2 className="h-3 w-3" /> Live browser stream
                   </span>
                 </div>
 
                 <h1 className="text-3xl font-semibold tracking-tight text-white flex items-center gap-3">
-                  <Zap className="h-8 w-8 text-indigo-400 fill-current" /> Live QA Testing Workstation
+                  <Zap className="h-8 w-8 text-indigo-400 fill-current" /> Live QA Session
                 </h1>
                 <p className="text-xs text-slate-300 font-normal leading-relaxed">
-                  Launch an isolated high-definition browser workstation session embedded right inside this workspace. Perform exploratory manual validation, record replay steps, stream live video, inspect locators, and file bugs with 1-click evidence.
+                  Open a real browser inside the app and test by hand. Your steps and a video are recorded, and any moment can become a bug with its screenshot.
                 </p>
 
                 {/* Presets Bar */}
@@ -1331,7 +1332,7 @@ export default function LiveQASessionPage() {
                   onClick={() => router.push(`/projects/${projectId}/live-qa-history`)}
                   className="inline-flex items-center gap-2 h-10 px-4 rounded-xl border border-white/20 bg-white/10 hover:bg-white/20 text-xs font-semibold transition-all text-white backdrop-blur-md shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
                 >
-                  <Activity className="h-4 w-4 text-indigo-300" /> Session History &amp; Artifacts
+                  <Activity className="h-4 w-4 text-indigo-300" /> Session history
                 </button>
               </div>
             </div>
@@ -1346,11 +1347,11 @@ export default function LiveQASessionPage() {
                 {/* Session Identity Card */}
                 <div className="p-6 rounded-xl border bg-card space-y-4 shadow-sm">
                   <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-primary" /> Session Identity &amp; Scope
+                    <FileText className="h-4 w-4 text-primary" /> Session details
                   </h3>
 
                   <div className="space-y-2">
-                    <Label htmlFor="work-title" className="font-semibold text-xs">Session / Test Case Title *</Label>
+                    <Label htmlFor="work-title" className="font-semibold text-xs">Session title *</Label>
                     <Input
                       id="work-title"
                       value={title}
@@ -1362,7 +1363,7 @@ export default function LiveQASessionPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="work-url" className="font-semibold text-xs">Target Startup URL *</Label>
+                    <Label htmlFor="work-url" className="font-semibold text-xs">Start page URL *</Label>
                     <div className="relative">
                       <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -1377,7 +1378,7 @@ export default function LiveQASessionPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="font-semibold text-xs">Default Test Priority</Label>
+                    <Label className="font-semibold text-xs">Default priority</Label>
                     <div className="grid grid-cols-4 gap-2">
                       {["Low", "Medium", "High", "Critical"].map((p) => (
                         <button
@@ -1404,12 +1405,12 @@ export default function LiveQASessionPage() {
                 {/* Browser & Viewport Platform Selection Grid */}
                 <div className="p-6 rounded-xl border bg-card space-y-6 shadow-sm">
                   <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                    <Laptop className="h-4 w-4 text-primary" /> Browser Engine &amp; Device Configuration
+                    <Laptop className="h-4 w-4 text-primary" /> Browser and device
                   </h3>
 
                   {/* Browser Cards */}
                   <div className="space-y-2">
-                    <Label className="font-semibold text-xs">QA Browser Engine</Label>
+                    <Label className="font-semibold text-xs">Browser</Label>
                     <div className="grid grid-cols-3 gap-3">
                       {[
                         { id: "Chromium", label: "Chromium", desc: "Chrome / Edge CDP Engine" },
@@ -1512,7 +1513,7 @@ export default function LiveQASessionPage() {
                 >
                   {startingSession ? (
                     <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <BusyDot />
                       <span>Spinning up Headless Browser Workstation...</span>
                     </>
                   ) : (
@@ -1530,24 +1531,27 @@ export default function LiveQASessionPage() {
               {/* Launch Configuration Summary */}
               <div className="p-6 rounded-xl border bg-card space-y-4 shadow-sm">
                 <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" /> Workstation Status &amp; Specs
+                  <Activity className="h-4 w-4 text-primary" /> Session setup
                 </h3>
 
                 <div className="space-y-3 divide-y divide-border/50 text-xs">
                   <div className="pt-2 flex items-center justify-between">
                     <span className="text-muted-foreground font-semibold">Engine</span>
-                    <span className="font-bold text-foreground bg-indigo-50 dark:bg-indigo-950/50 px-3 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{browserType}</span>
+                    <span className="font-semibold text-foreground bg-indigo-50 dark:bg-indigo-950/50 px-3 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{browserType}</span>
                   </div>
                   <div className="pt-2 flex items-center justify-between">
                     <span className="text-muted-foreground font-semibold">Resolution</span>
                     <span className="font-mono font-semibold text-foreground">{viewport === "Desktop" ? "1280 × 800" : viewport === "Tablet" ? "768 × 1024" : "375 × 667"}</span>
                   </div>
                   <div className="pt-2 flex items-center justify-between">
-                    <span className="text-muted-foreground font-semibold">Quality &amp; Frame Rate</span>
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">95 HD • 30 FPS</span>
+                    <span className="text-muted-foreground font-semibold">Stream quality</span>
+                    {/* The worker reports its profile once a session starts; nothing is claimed before that. */}
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {streamQuality ? streamQuality.charAt(0).toUpperCase() + streamQuality.slice(1) : "Set when the session starts"}
+                    </span>
                   </div>
                   <div className="pt-2 flex items-center justify-between">
-                    <span className="text-muted-foreground font-semibold">Protocol Stream</span>
+                    <span className="text-muted-foreground font-semibold">Stream</span>
                     <span className="font-semibold text-primary dark:text-indigo-400">CDP WebSocket</span>
                   </div>
                 </div>
@@ -1559,12 +1563,12 @@ export default function LiveQASessionPage() {
               <div className="p-6 rounded-xl border border-indigo-200 bg-indigo-50/60 dark:border-indigo-900/60 dark:bg-indigo-950/30 space-y-3">
                 <div className="flex items-center gap-2 font-semibold text-xs text-indigo-950 dark:text-indigo-200">
                   <Info className="h-4 w-4 text-primary shrink-0" />
-                  <span>Workstation Capabilities</span>
+                  <span>What a session records</span>
                 </div>
                 <ul className="space-y-2 text-xs text-primary dark:text-indigo-300 leading-relaxed font-medium list-disc list-inside">
-                  <li><b>Step Recording</b>: Captures clicks and typing directly into TypeScript automation scripts.</li>
-                  <li><b>1-Click Bug Reports</b>: Files issues pre-filled with screenshots, console logs, and step trace.</li>
-                  <li><b>Live Network &amp; Console</b>: Monitor HTTP status codes and JS errors live in real time.</li>
+                  <li><b>Steps</b>: your clicks and typing, which can be replayed as an automated test.</li>
+                  <li><b>Bugs</b>: filed from any moment, with the screenshot, console log and steps attached.</li>
+                  <li><b>Network and console</b>: HTTP status codes and JavaScript errors as they happen.</li>
                 </ul>
               </div>
             </div>
@@ -1616,7 +1620,7 @@ export default function LiveQASessionPage() {
                   className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
                   title="Capture visible viewport & annotate"
                 >
-                  {capturingScreenshot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5 text-primary" />}
+                  {capturingScreenshot ? <BusyDot /> : <Camera className="h-3.5 w-3.5 text-primary" />}
                   <span>Screenshot</span>
                 </Button>
                 <Button
@@ -1692,7 +1696,7 @@ export default function LiveQASessionPage() {
                     className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
                     title="Record live browser view as WebM video clip"
                   >
-                    {uploadingRecording ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5 text-primary" />}
+                    {uploadingRecording ? <BusyDot /> : <Video className="h-3.5 w-3.5 text-primary" />}
                     <span>Record Video</span>
                   </Button>
                 )}
@@ -1983,13 +1987,13 @@ export default function LiveQASessionPage() {
 
                   {!hasFrame && (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-400 bg-slate-950/90 backdrop-blur-xs">
-                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                      <BusyDot />
                       <span className="text-xs font-semibold text-slate-300">Connecting to Remote Browser Engine...</span>
                     </div>
                   )}
 
                   {/* Watermark / Guidance Overlay */}
-                  <div className="absolute bottom-3 left-3 px-3 py-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-xs text-slate-300 font-semibold flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-3 left-3 px-3 py-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-xs text-slate-300 font-semibold flex items-center gap-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity">
                     <MousePointerClick size={12} className="text-indigo-400" />
                     <span>Interact directly in the screen above</span>
                   </div>
@@ -2097,7 +2101,7 @@ export default function LiveQASessionPage() {
                             <div key={step.id || idx} className="p-3 rounded-xl border bg-card hover:bg-muted/40 transition-all space-y-2 group relative">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 text-xs font-bold">
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 text-xs font-semibold">
                                     {step.stepNumber}
                                   </span>
                                   <span className="font-medium text-xs text-foreground">
@@ -2106,7 +2110,7 @@ export default function LiveQASessionPage() {
                                 </div>
                                 <button
                                   onClick={() => handleDeleteStep(step.id)}
-                                  className="text-muted-foreground hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                  className="text-muted-foreground hover:text-rose-600 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity p-1"
                                 >
                                   <Trash2 size={13} />
                                 </button>
@@ -2635,7 +2639,7 @@ export default function LiveQASessionPage() {
                 />
                 {uploadingFile ? (
                   <>
-                    <Loader2 size={24} className="text-primary animate-spin" />
+                    <BusyDot />
                     <span className="text-xs font-medium text-primary">Uploading file...</span>
                   </>
                 ) : (
@@ -2643,7 +2647,7 @@ export default function LiveQASessionPage() {
                     <div className="p-3 rounded-xl bg-card border shadow-xs text-muted-foreground">
                       <Camera size={20} />
                     </div>
-                    <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Select Local File</span>
+                    <span className="text-xs font-semibold text-foreground  ">Select Local File</span>
                     <span className="text-xs font-semibold text-muted-foreground">Drag and drop or click here</span>
                   </>
                 )}

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useRef, useEffect } from "react"
 import {
   CloudUpload, Link2, ChevronDown, Loader2, CheckCircle2, XCircle,
@@ -383,7 +384,7 @@ export function OpenProjectGroupSyncPanel({
                 className="h-7 px-3 text-xs font-semibold shrink-0"
               >
                 {isSyncing
-                  ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                  ? <BusyDot />
                   : <CloudUpload className="h-3 w-3 mr-1" />}
                 {isSyncing ? "Syncing…" : "Sync Now"}
               </Button>
@@ -440,7 +441,7 @@ export function OpenProjectGroupSyncPanel({
                         className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
                       >
                         {isApplyingParent
-                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ? <BusyDot />
                           : <Link2 className="h-3.5 w-3.5 text-muted-foreground" />}
                         Apply Parent to Synced
                       </button>
@@ -454,7 +455,7 @@ export function OpenProjectGroupSyncPanel({
                           className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
                         >
                           {isSyncingBoard
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ? <BusyDot />
                             : <LayoutGrid className="h-3.5 w-3.5 text-muted-foreground" />}
                           Sync Group to Board
                         </button>
@@ -465,7 +466,7 @@ export function OpenProjectGroupSyncPanel({
                           className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
                         >
                           {isCheckingBoard
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ? <BusyDot />
                             : <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground" />}
                           Check Board Visibility
                         </button>

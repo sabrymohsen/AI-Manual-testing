@@ -6,6 +6,7 @@
  * ClickUp / OpenProject); every label is resolved from the chosen provider, so
  * the whole panel reads as "Sync to Jira", "ClickUp List ID", etc.
  */
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -173,7 +174,7 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading integration…
+        <BusyDot /> Loading integration…
       </div>
     )
   }
@@ -236,11 +237,11 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
 
       <div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={test} disabled={testing || !externalProjectKey}>
-          {testing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+          {testing ? <BusyDot /> : <RefreshCw className="h-4 w-4 mr-1" />}
           Test {labels.name} connection
         </Button>
         <Button onClick={save} disabled={saving || !externalProjectKey}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+          {saving ? <BusyDot /> : null}
           Save {labels.name} settings
         </Button>
       </div>
@@ -255,7 +256,7 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
       {/* Mapping — populated by a successful Test */}
       {meta?.success && (
         <div className="space-y-4 rounded-lg border p-4">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
+          <p className="text-xs font-semibold  text-muted-foreground">
             Map to {labels.name}{meta.projectName ? ` · ${meta.projectName}` : ""}
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -300,7 +301,7 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
 
       {/* Automation toggles */}
       <div className="space-y-2 rounded-lg border p-4">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">Automation</p>
+        <p className="text-xs font-semibold  text-muted-foreground">Automation</p>
         {[
           { label: `Sync test results to ${labels.name}`, val: autoSyncResults, set: setAutoSyncResults },
           { label: "Auto-create bug on failure", val: autoCreateBugOnFailure, set: setAutoCreateBugOnFailure },
@@ -317,7 +318,7 @@ export function IntegrationConnectPanel({ projectId }: { projectId: string }) {
       {/* Webhook endpoint for two-way sync */}
       {webhookUrl && (
         <div className="space-y-2 rounded-lg border p-4">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">Webhook endpoint</p>
+          <p className="text-xs font-semibold  text-muted-foreground">Webhook endpoint</p>
           <p className="text-xs text-muted-foreground">
             Register this URL in {labels.name} to push changes back into the app instantly.
           </p>

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -77,13 +78,13 @@ export default function InviteAcceptPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-slate-300" /></div>
+          <div className="flex justify-center py-10"><BusyDot /></div>
         ) : error && !preview ? (
           <p className="text-sm text-red-600">{error}</p>
         ) : done === "accepted" ? (
           <div className="text-center py-6">
             <Check className="h-10 w-10 text-green-500 mx-auto mb-2" />
-            <p className="text-sm font-semibold text-foreground">You've joined {preview?.projectName}!</p>
+            <p className="text-sm font-semibold text-foreground">You&apos;ve joined {preview?.projectName}</p>
             <p className="text-xs text-muted-foreground mt-1">Redirecting…</p>
           </div>
         ) : done === "declined" ? (
@@ -95,7 +96,7 @@ export default function InviteAcceptPage() {
           <p className="text-sm text-muted-foreground">This invitation is no longer valid ({preview.status.toLowerCase()}).</p>
         ) : preview ? (
           <>
-            <h1 className="text-lg font-semibold text-foreground">You're invited</h1>
+            <h1 className="text-lg font-semibold text-foreground">You&apos;re invited</h1>
             <p className="text-sm text-muted-foreground mt-1">
               <span className="font-semibold">{preview.invitedBy}</span> invited you to join{" "}
               <span className="font-semibold">{preview.projectName}</span> as a{" "}
@@ -111,7 +112,7 @@ export default function InviteAcceptPage() {
                   disabled={working}
                   className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {working && <Loader2 className="h-4 w-4 animate-spin" />} Accept & Join
+                  {working && <BusyDot />} Accept & Join
                 </button>
                 <button onClick={decline} disabled={working} className="rounded-lg border px-4 py-2 text-sm font-semibold text-muted-foreground">
                   Decline

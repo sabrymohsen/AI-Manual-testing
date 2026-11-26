@@ -30,7 +30,7 @@ export default async function SharedAnnotationPage({ params }: { params: { token
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <h1 className="text-xl font-semibold text-foreground dark:text-slate-100">{share.title || "Shared Screenshot"}</h1>
           {meta.severity && (
-            <span className="text-xs font-semibold uppercase px-2 py-1 rounded-full text-white" style={{ backgroundColor: severityColor(meta.severity) }}>
+            <span className="text-xs font-semibold  px-2 py-1 rounded-full text-white" style={{ backgroundColor: severityColor(meta.severity) }}>
               {meta.severity}
             </span>
           )}

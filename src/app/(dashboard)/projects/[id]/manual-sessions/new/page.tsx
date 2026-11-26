@@ -332,7 +332,7 @@ export default function NewManualSessionPage() {
 
                 {/* Filter */}
                 <div className="mb-6">
-                  <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1 flex items-center gap-1">
+                  <label className="block text-xs font-semibold  text-muted-foreground mb-1 flex items-center gap-1">
                     <Filter size={12} /> Search test cases
                   </label>
                   <input

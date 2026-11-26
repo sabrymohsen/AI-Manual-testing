@@ -437,7 +437,7 @@ async function runTool(name: string, input: any, actions: AgentAction[]): Promis
     }
 
     case "heal_broken_locators": {
-      const events = await prisma.healingEvent.findMany({ orderBy: { createdAt: "desc" }, take: 15 })
+      const events = await prisma.healingEvent.findMany({ where: ctx.projectId ? { projectId: ctx.projectId } : undefined, orderBy: { createdAt: "desc" }, take: 15 })
       if (events.length === 0) return "No self-healing locator events recorded. All locators currently match the DOM."
       actions.push({ label: "Open Heal Center", kind: "open_tab", payload: { tab: "Heal" } })
       return JSON.stringify(

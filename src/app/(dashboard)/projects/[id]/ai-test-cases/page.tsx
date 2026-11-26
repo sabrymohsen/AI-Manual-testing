@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useEffect, useCallback } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
@@ -342,7 +343,7 @@ export default function AITestCasesPage() {
               <Button disabled={isLoading} className="bg-primary hover:bg-primary/90">
                 {isLoading ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <BusyDot />
                     Extracting...
                   </>
                 ) : (
@@ -425,7 +426,7 @@ export default function AITestCasesPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded">{req.id}</span>
                       <span className="font-semibold text-foreground dark:text-slate-200">{req.title}</span>
-                      <span className={`text-xs px-2 py-0.5 rounded font-bold ml-auto ${
+                      <span className={`text-xs px-2 py-0.5 rounded font-semibold ml-auto ${
                         req.priority === "Critical" ? "bg-red-50 text-red-600" :
                         req.priority === "High" ? "bg-orange-50 text-orange-600" :
                         req.priority === "Low" ? "bg-muted/50 text-muted-foreground" :
@@ -570,7 +571,7 @@ export default function AITestCasesPage() {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <BusyDot />
                   Generating...
                 </>
               ) : (
@@ -646,7 +647,7 @@ export default function AITestCasesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-semibold text-foreground dark:text-slate-100 text-sm">{tc.title}</h4>
-                      <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                      <span className={`text-xs px-2 py-0.5 rounded font-semibold ${
                         tc.priority === "Critical" ? "bg-red-50 text-red-600" :
                         tc.priority === "High" ? "bg-orange-50 text-orange-600" :
                         tc.priority === "Low" ? "bg-muted/50 text-muted-foreground" :
@@ -701,7 +702,7 @@ export default function AITestCasesPage() {
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <BusyDot />
                   Saving...
                 </>
               ) : (

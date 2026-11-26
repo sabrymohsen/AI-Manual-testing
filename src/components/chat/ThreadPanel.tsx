@@ -1,5 +1,6 @@
 "use client";
 
+import { BusyDot } from "@/components/ui/skeleton"
 import React, { useEffect, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { ChatMessage } from "./ChatMessage";
@@ -67,7 +68,7 @@ export function ThreadPanel({
       {/* Body Content */}
       <div className="flex-1 overflow-y-auto flex flex-col min-h-0">
         {/* Parent Pinned Message */}
-        <div className="bg-indigo-50/20 dark:bg-indigo-950/10 border-b border-slate-100 dark:border-slate-850/50 pb-3">
+        <div className="bg-indigo-50/20 dark:bg-indigo-950/10 border-b border-slate-100 dark:border-slate-800/50 pb-3">
           <ChatMessage
             message={activeParentMessage}
             currentUserId={currentUserId}
@@ -81,7 +82,7 @@ export function ThreadPanel({
         <div className="flex-1 py-4 flex flex-col gap-2 min-h-0">
           {isLoading ? (
             <div className="h-32 flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <BusyDot />
             </div>
           ) : replies.length === 0 ? (
             <div className="h-32 flex items-center justify-center text-muted-foreground dark:text-muted-foreground text-xs">

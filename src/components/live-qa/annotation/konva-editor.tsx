@@ -763,7 +763,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                       <button
                         key={label}
                         onClick={() => store.setFontSize(size)}
-                        className={`h-6 w-6 rounded-md border text-xs font-bold ${
+                        className={`h-6 w-6 rounded-md border text-xs font-semibold ${
                           (selected?.type === "text" ? selected.fontSize || fontSize : fontSize) === size
                             ? "bg-primary text-white border-primary"
                             : "bg-background text-muted-foreground"
@@ -902,7 +902,7 @@ export default function KonvaAnnotationEditor({ imageSrc, onSave, onCancel, savi
                 backgroundPosition: `${-(lens.imgX * magnifierPower - 70)}px ${-(lens.imgY * magnifierPower - 70)}px`,
               }}
             >
-              <span className="absolute bottom-1 right-1 text-xs font-bold text-white bg-black/60 rounded px-1">{magnifierPower}×</span>
+              <span className="absolute bottom-1 right-1 text-xs font-semibold text-white bg-black/60 rounded px-1">{magnifierPower}×</span>
             </div>
           )}
 

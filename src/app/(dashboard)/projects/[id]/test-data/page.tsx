@@ -386,7 +386,7 @@ export default function TestDataPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase border-b border-border">
+                    <tr className="bg-muted/50 text-xs font-semibold text-muted-foreground  border-b border-border">
                       <th className="px-6 py-3">Key / Key Variable</th>
                       <th className="px-6 py-3">Value</th>
                       <th className="px-6 py-3">Environment</th>

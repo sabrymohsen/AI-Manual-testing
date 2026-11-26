@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { Users, UserPlus, MoreHorizontal, Copy, Check, Trash2, Shield, Info, X, Loader2 } from "@/components/ui/icons"
@@ -125,7 +126,9 @@ export default function MembersPage() {
       {!manage && (
         <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
           <Info className="h-4 w-4 shrink-0" />
-          You have read-only access. You need admin permission to manage members.
+          {can("canInviteMembers")
+            ? "You can invite people. Changing roles or removing members needs admin permission."
+            : "You can see the members. Inviting or managing them needs admin permission."}
         </div>
       )}
       {error && (
@@ -154,7 +157,7 @@ export default function MembersPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <BusyDot />
         </div>
       ) : tab === "members" ? (
         <div className="overflow-x-auto rounded-lg border">
@@ -328,7 +331,7 @@ function InviteModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-foreground">Invite Member to Project</h2>
+          <h2 className="text-sm font-semibold text-foreground">Invite a member to this project</h2>
           <button onClick={onClose}><X className="h-4 w-4 text-muted-foreground" /></button>
         </div>
 
@@ -379,7 +382,7 @@ function InviteModal({
                 disabled={submitting || !value.trim()}
                 className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
-                {submitting && <Loader2 className="h-3 w-3 animate-spin" />} Send Invitation
+                {submitting && <BusyDot />} Send Invitation
               </button>
             </div>
           </div>

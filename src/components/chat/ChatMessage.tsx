@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ui/alert-provider"
 import React, { useState } from "react";
 import { ChatMessage as MessageType, useChatStore } from "@/stores/chatStore";
 import { MoreHorizontal, MessageSquare, Edit2, Trash2, Link, Reply, Paperclip } from "@/components/ui/icons";
@@ -80,8 +81,9 @@ export function ChatMessage({
     setIsEditing(false);
   };
 
+  const confirm = useConfirm()
   const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
+    if (!(await confirm({ title: "Delete this message?", description: "It is removed for everyone in the conversation.", confirmLabel: "Delete message", variant: "danger" }))) return;
 
     if (socket.current && socket.current.connected) {
       socket.current.emit("delete-message", message.id);
@@ -157,7 +159,7 @@ export function ChatMessage({
           )}
         </Avatar>
       ) : (
-        <div className="w-9 flex-shrink-0 text-center opacity-0 group-hover:opacity-100 text-xs text-muted-foreground select-none pt-0.5">
+        <div className="w-9 flex-shrink-0 text-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-xs text-muted-foreground select-none pt-0.5">
           {timeFormatted.split(" ")[0]}
         </div>
       )}
@@ -327,7 +329,7 @@ export function ChatMessage({
 
       {/* Floating hover Actions Menu */}
       {!isDeleted && (
-        <div className="absolute right-4 top-0 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-0.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md px-1 py-0.5">
+        <div className="absolute right-4 top-0 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity z-10 flex items-center gap-0.5 rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-md px-1 py-0.5">
           {!message.parentId && (
             <button
               onClick={() => setActiveThread(message.id, message)}

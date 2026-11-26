@@ -339,7 +339,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
 
             {/* Line width */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400">Size:</span>
+              <span className="text-xs font-semibold text-slate-400">Size:</span>
               <input
                 type="range"
                 min="2"

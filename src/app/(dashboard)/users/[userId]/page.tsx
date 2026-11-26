@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -62,7 +63,7 @@ export default function PublicProfilePage() {
   if (status === "loading") {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -103,7 +104,7 @@ export default function PublicProfilePage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={user.avatarUrl} alt="" className="h-24 w-24 shrink-0 rounded-full border object-cover" />
           ) : (
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-indigo-400 text-3xl font-semibold uppercase text-white">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-indigo-400 text-3xl font-semibold  text-white">
               {(user.name || user.email)[0]}
             </div>
           )}
@@ -154,7 +155,7 @@ export default function PublicProfilePage() {
                 className="group flex items-center justify-between py-3 transition-colors hover:bg-muted/50"
               >
                 <div className="flex items-center gap-3 px-1">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold uppercase text-primary">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-xs font-semibold  text-primary">
                     {p.name.slice(0, 2)}
                   </span>
                   <div>

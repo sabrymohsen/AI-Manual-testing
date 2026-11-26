@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
 
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth()
+  // ?projectId= shows one project's events (members only); without it, all events.
+  const projectId = new URL(request.url).searchParams.get("projectId")
+  const auth = projectId ? await requireProjectMember(projectId) : await requireAuth()
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
     const events = await prisma.healingEvent.findMany({
+      where: projectId ? { projectId } : undefined,
       orderBy: { createdAt: "desc" }
     })
 
@@ -45,7 +48,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const { originalLocator, recoveredLocator, confidence, pageUrl, testName, status } = body
+    const { originalLocator, recoveredLocator, confidence, pageUrl, testName, status, projectId } = body
+    if (projectId) {
+      const member = await requireProjectMember(String(projectId))
+      if (member.error) return unauthorizedResponse(member.error)
+    }
 
     if (!originalLocator || !recoveredLocator || confidence === undefined || !pageUrl || !testName) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -58,6 +65,7 @@ export async function POST(request: NextRequest) {
         confidence,
         pageUrl,
         testName,
+        projectId: projectId ? String(projectId) : null,
         status: status || "recovered"
       }
     })

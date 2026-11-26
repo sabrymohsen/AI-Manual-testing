@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { Suspense, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -263,7 +264,7 @@ function Wizard() {
 
           <div className="flex items-center gap-3">
             <Button onClick={scan} disabled={scanning}>
-              {scanning ? <Loader2 className="animate-spin" /> : <Search />}
+              {scanning ? <BusyDot /> : <Search />}
               {type === "FullWebsite" ? (scanning ? "Reading the site…" : "Find pages") : "Read the list"}
             </Button>
             {scanning && type === "FullWebsite" && <span className="text-sm text-muted-foreground">This can take up to a minute on a large site.</span>}
@@ -404,10 +405,10 @@ function Wizard() {
           </p>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => save(true)} disabled={!!saving}>
-              {saving === "run" ? <Loader2 className="animate-spin" /> : <Play />} Save and run now
+              {saving === "run" ? <BusyDot /> : <Play />} Save and run now
             </Button>
             <Button variant="outline" onClick={() => save(false)} disabled={!!saving}>
-              {saving === "save" ? <Loader2 className="animate-spin" /> : <Save />} Save without running
+              {saving === "save" ? <BusyDot /> : <Save />} Save without running
             </Button>
           </div>
         </div>

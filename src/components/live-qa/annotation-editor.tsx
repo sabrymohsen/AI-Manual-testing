@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import dynamic from "next/dynamic"
 import { Loader2 } from "@/components/ui/icons"
 
@@ -19,7 +20,7 @@ const KonvaAnnotationEditor = dynamic(() => import("./annotation/konva-editor"),
   loading: () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="flex flex-col items-center gap-2 text-white/80">
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <BusyDot />
         <span className="text-xs font-semibold">Loading editor…</span>
       </div>
     </div>

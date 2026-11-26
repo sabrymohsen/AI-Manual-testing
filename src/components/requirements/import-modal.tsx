@@ -1,4 +1,6 @@
+import { toast } from "sonner"
 import { useState, useRef } from "react"
+import { BusyDot } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Upload, ChevronRight, Check, AlertCircle, FileSpreadsheet, Settings2, Eye, Loader2, ArrowLeft } from "@/components/ui/icons"
@@ -146,11 +148,11 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
 
   async function handleGeneratePreview() {
     if (!mapping.requirementKey) {
-      alert("Mapping for 'Requirement Key' is required.")
+      toast.error("Mapping for 'Requirement Key' is required.")
       return
     }
     if (!mapping.title) {
-      alert("Mapping for 'Title' is required.")
+      toast.error("Mapping for 'Title' is required.")
       return
     }
 
@@ -375,7 +377,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                           </span>
                         )}
                       </div>
-                      <span className={`text-xs font-bold px-3 py-0.5 rounded-full ${
+                      <span className={`text-xs font-semibold px-3 py-0.5 rounded-full ${
                         r.action === "Create" ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"
                       }`}>
                         {r.action}
@@ -415,7 +417,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                 disabled={isImporting}
                 className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 h-9 rounded-lg flex items-center gap-2 shadow"
               >
-                {isImporting ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : null}
+                {isImporting ? <BusyDot /> : null}
                 Generate Import Preview
               </Button>
             )}
@@ -427,7 +429,7 @@ export function ImportRequirementsModal({ projectId, isOpen, onClose, onImportSu
                 disabled={isImporting}
                 className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-6 py-2 h-9 rounded-lg flex items-center gap-2 shadow"
               >
-                {isImporting ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : null}
+                {isImporting ? <BusyDot /> : null}
                 Confirm Import & Save
               </Button>
             )}

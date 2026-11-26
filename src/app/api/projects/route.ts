@@ -34,7 +34,10 @@ export async function GET(request: NextRequest) {
   // Fetch all projects for the user including necessary child counts and details
   const projects = await prisma.project.findMany({
     where: {
-      userId: auth.session!.user.id,
+      // Every project the user can open: ones they created and ones they're a member of
+      // (members read and work in a project; see /api/my-projects).
+      // AND, so the search filter's own OR below can't replace this rule.
+      AND: [{ OR: [{ userId: auth.session!.user.id }, { projectMembers: { some: { userId: auth.session!.user.id } } }] }],
       ...(statusFilter === "All" ? {} : { status: statusFilter as any }),
       ...(search ? {
         OR: [
@@ -166,6 +169,7 @@ export async function GET(request: NextRequest) {
         failedTests: failedRuns,
         openBugs: openBugsCount,
         requirementsCoverage,
+        requirementsTotal: totalReqs,
         healthScore: score,
         healthStatus: derivedHealthStatus,
         setupCompleted,
@@ -246,16 +250,19 @@ export async function GET(request: NextRequest) {
   const activeProjects = processedProjects.filter(p => p.status === "Active").length
   const projectsWithFailures = processedProjects.filter(p => p.metrics.failedTests > 0).length
   const projectsWithOpenBugs = processedProjects.filter(p => p.metrics.openBugs > 0).length
+  const openBugsTotal = processedProjects.reduce((n, p) => n + p.metrics.openBugs, 0)
   
   const activePassRates = processedProjects.filter(p => p.metrics.testRuns > 0).map(p => p.metrics.passRate)
+  // null when nothing has run: there is no pass rate to report, not a 100% one.
   const averagePassRate = activePassRates.length > 0
     ? Math.round(activePassRates.reduce((sum, val) => sum + val, 0) / activePassRates.length)
-    : 100
+    : null
 
-  const activeCoverages = processedProjects.map(p => p.metrics.requirementsCoverage)
+  // Only projects that track requirements have a coverage to average.
+  const activeCoverages = processedProjects.filter(p => p.metrics.requirementsTotal > 0).map(p => p.metrics.requirementsCoverage)
   const averageCoverage = activeCoverages.length > 0
     ? Math.round(activeCoverages.reduce((sum, val) => sum + val, 0) / activeCoverages.length)
-    : 100
+    : null
 
   // Apply Pagination slice
   const startIndex = (page - 1) * pageSize
@@ -269,6 +276,7 @@ export async function GET(request: NextRequest) {
       activeProjects,
       projectsWithFailures,
       projectsWithOpenBugs,
+      openBugsTotal,
       averagePassRate,
       averageCoverage
     },

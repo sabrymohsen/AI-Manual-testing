@@ -1,5 +1,7 @@
 "use client"
 
+import { useConfirm } from "@/components/ui/alert-provider"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState, useMemo, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -288,8 +290,9 @@ function AdminDashboardContent() {
     }
   }
 
+  const confirm = useConfirm()
   const deleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to permanently delete this user? All their projects, test cases, and runs will be cascade deleted!")) return
+    if (!(await confirm({ title: "Delete this user permanently?", description: "All their projects, test cases and runs are deleted with them. This cannot be undone.", confirmLabel: "Delete user", variant: "danger" }))) return
     try {
       const res = await fetch(`/api/admin/users/${userId}`, { method: "DELETE" })
       if (res.ok) {
@@ -418,7 +421,7 @@ function AdminDashboardContent() {
   }
 
   const deletePlan = async (planId: string) => {
-    if (!confirm("Remove this pricing plan?")) return
+    if (!(await confirm({ title: "Remove this pricing plan?", confirmLabel: "Remove plan", variant: "danger" }))) return
     try {
       const res = await fetch(`/api/admin/pricing-plans/${planId}`, { method: "DELETE" })
       if (res.ok) {
@@ -511,7 +514,7 @@ function AdminDashboardContent() {
   if (!isAdmin) {
     return (
       <div className="py-20 flex flex-col items-center justify-center gap-3 bg-slate-950 min-h-screen text-slate-400">
-        <Loader2 size={32} className="animate-spin text-primary" />
+        <BusyDot />
         <p className="text-xs font-medium">Verifying administrator credentials...</p>
       </div>
     )
@@ -524,7 +527,7 @@ function AdminDashboardContent() {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            <Shield className="text-indigo-650 animate-pulse h-6 w-6" /> System Administration
+            <Shield className="text-indigo-600 animate-pulse h-6 w-6" /> System Administration
           </h1>
           <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
             Manage system users, activate/deactivate nodes, edit price lists, and review simulation billing statements.
@@ -545,7 +548,7 @@ function AdminDashboardContent() {
           {/* Total Users */}
           <div className="bg-card border border-slate-150 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-450">Total Users</span>
+              <span className="text-xs font-medium text-slate-500">Total Users</span>
               <h3 className="text-2xl font-semibold text-foreground">{stats.totalUsers}</h3>
               <p className="text-xs text-muted-foreground">{stats.proUsers} Pro · {stats.freeUsers} Free</p>
             </div>
@@ -557,7 +560,7 @@ function AdminDashboardContent() {
           {/* Active Accounts */}
           <div className="bg-card border border-slate-150 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-455">Active vs Blocked</span>
+              <span className="text-xs font-medium text-slate-400">Active vs Blocked</span>
               <h3 className="text-2xl font-semibold text-emerald-600">{stats.activeUsers} <span className="text-xs text-muted-foreground font-semibold">active</span></h3>
               <p className="text-xs text-muted-foreground">{stats.deactivatedUsers} deactivated accounts</p>
             </div>
@@ -569,8 +572,8 @@ function AdminDashboardContent() {
           {/* Total Revenue */}
           <div className="bg-card border border-slate-150 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-455">System Billing</span>
-              <h3 className="text-2xl font-semibold text-indigo-650">${stats.totalRevenue.toFixed(2)}</h3>
+              <span className="text-xs font-medium text-slate-400">System Billing</span>
+              <h3 className="text-2xl font-semibold text-indigo-600">${stats.totalRevenue.toFixed(2)}</h3>
               <p className="text-xs text-muted-foreground">{transactions.length} processed invoices</p>
             </div>
             <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -581,7 +584,7 @@ function AdminDashboardContent() {
           {/* Pricing tiers */}
           <div className="bg-card border border-slate-150 rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-medium text-slate-455">Pricing Plans</span>
+              <span className="text-xs font-medium text-slate-400">Pricing Plans</span>
               <h3 className="text-2xl font-semibold text-foreground">{pricingPlans.length}</h3>
               <p className="text-xs text-muted-foreground">Tiers on pricing list</p>
             </div>
@@ -597,7 +600,7 @@ function AdminDashboardContent() {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setActiveTab("users")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activeTab === "users"
                 ? "bg-card text-primary shadow-xs border"
                 : "text-muted-foreground hover:text-foreground"
@@ -607,7 +610,7 @@ function AdminDashboardContent() {
           </button>
           <button
             onClick={() => setActiveTab("pricing")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activeTab === "pricing"
                 ? "bg-card text-primary shadow-xs border"
                 : "text-muted-foreground hover:text-foreground"
@@ -617,7 +620,7 @@ function AdminDashboardContent() {
           </button>
           <button
             onClick={() => setActiveTab("finance")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activeTab === "finance"
                 ? "bg-card text-primary shadow-xs border"
                 : "text-muted-foreground hover:text-foreground"
@@ -627,7 +630,7 @@ function AdminDashboardContent() {
           </button>
           <button
             onClick={() => setActiveTab("trial")}
-            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activeTab === "trial"
                 ? "bg-card text-primary shadow-xs border"
                 : "text-muted-foreground hover:text-foreground"
@@ -642,7 +645,7 @@ function AdminDashboardContent() {
           {activeTab === "users" && (
             <Button
               onClick={() => setShowAddUserModal(true)}
-              className="h-8.5 text-xs font-semibold bg-indigo-650 hover:bg-primary/90 text-white flex items-center gap-2 rounded-xl shadow-xs"
+              className="h-9 text-xs font-semibold bg-indigo-600 hover:bg-primary/90 text-white flex items-center gap-2 rounded-xl shadow-xs"
             >
               <UserPlus size={13} /> Add User
             </Button>
@@ -650,7 +653,7 @@ function AdminDashboardContent() {
           {activeTab === "pricing" && (
             <Button
               onClick={() => setShowAddPlanModal(true)}
-              className="h-8.5 text-xs font-semibold bg-indigo-650 hover:bg-primary/90 text-white flex items-center gap-2 rounded-xl shadow-xs"
+              className="h-9 text-xs font-semibold bg-indigo-600 hover:bg-primary/90 text-white flex items-center gap-2 rounded-xl shadow-xs"
             >
               <ListPlus size={13} /> Add Price Tier
             </Button>
@@ -658,7 +661,7 @@ function AdminDashboardContent() {
           {activeTab === "finance" && (
             <Button
               onClick={() => setShowSimulateTxModal(true)}
-              className="h-8.5 text-xs font-semibold bg-indigo-650 hover:bg-primary/90 text-white flex items-center gap-2 rounded-xl shadow-xs"
+              className="h-9 text-xs font-semibold bg-indigo-600 hover:bg-primary/90 text-white flex items-center gap-2 rounded-xl shadow-xs"
             >
               <CreditCard size={13} /> Simulate Payment
             </Button>
@@ -682,7 +685,7 @@ function AdminDashboardContent() {
       {/* Main Panel Content Area */}
       {loading ? (
         <div className="py-20 flex flex-col items-center justify-center gap-3 border bg-card rounded-xl">
-          <Loader2 size={32} className="animate-spin text-primary" />
+          <BusyDot />
           <p className="text-xs text-muted-foreground font-medium">Loading dashboard datasets...</p>
         </div>
       ) : errorMsg ? (
@@ -715,7 +718,7 @@ function AdminDashboardContent() {
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y text-slate-650">
+                  <tbody className="divide-y text-slate-600">
                     {filteredUsers.map((user, idx) => (
                       <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                         <td className="p-4 text-center text-slate-350 font-semibold">{idx + 1}</td>
@@ -732,8 +735,8 @@ function AdminDashboardContent() {
                           </select>
                         </td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold border ${
-                            user.role === "Admin" ? "bg-red-50 text-red-700 border-red-100" : "bg-muted/50 text-slate-650 border-border"
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
+                            user.role === "Admin" ? "bg-red-50 text-red-700 border-red-100" : "bg-muted/50 text-slate-600 border-border"
                           }`}>
                             {user.role}
                           </span>
@@ -763,7 +766,7 @@ function AdminDashboardContent() {
                           <Button
                             variant="ghost"
                             onClick={() => deleteUser(user.id)}
-                            className="h-7 w-7 p-0 hover:bg-rose-50 text-red-650 rounded-lg"
+                            className="h-7 w-7 p-0 hover:bg-rose-50 text-red-600 rounded-lg"
                             title="Delete user data"
                           >
                             <Trash2 size={13} />
@@ -784,13 +787,13 @@ function AdminDashboardContent() {
                 <div key={plan.id} className="bg-card border rounded-xl p-6 shadow-sm space-y-4 relative overflow-hidden flex flex-col justify-between hover:shadow-md transition-all">
                   <button 
                     onClick={() => deletePlan(plan.id)}
-                    className="absolute top-4 right-4 text-slate-350 hover:text-red-650 transition-colors p-1 hover:bg-muted/50 rounded"
+                    className="absolute top-4 right-4 text-slate-350 hover:text-red-600 transition-colors p-1 hover:bg-muted/50 rounded"
                   >
                     <Trash2 size={14} />
                   </button>
 
                   <div className="space-y-2">
-                    <span className="text-xs font-medium text-indigo-650 bg-primary/10 border border-primary/25 px-2 py-0.5 rounded">
+                    <span className="text-xs font-medium text-indigo-600 bg-primary/10 border border-primary/25 px-2 py-0.5 rounded">
                       {plan.billingPeriod} price list
                     </span>
                     <h3 className="text-base font-semibold text-foreground">{plan.name}</h3>
@@ -826,7 +829,7 @@ function AdminDashboardContent() {
                   <CreditCard size={32} className="mx-auto text-slate-350" />
                   <p className="text-sm font-semibold text-muted-foreground mt-3">No pricing plans created yet.</p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                    Click "Add Price Tier" to populate pricing list options.
+                    Click &ldquo;Add price tier&rdquo; to add pricing options.
                   </p>
                 </div>
               )}
@@ -849,7 +852,7 @@ function AdminDashboardContent() {
                       <th className="p-4">Processed Date</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y text-slate-650">
+                  <tbody className="divide-y text-slate-600">
                     {filteredTransactions.map((tx, idx) => (
                       <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
                         <td className="p-4 text-center text-slate-350 font-semibold">{idx + 1}</td>
@@ -862,13 +865,13 @@ function AdminDashboardContent() {
                         </td>
                         <td className="p-4 font-semibold text-foreground">${tx.amount.toFixed(2)}</td>
                         <td className="p-4">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold border ${
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold border ${
                             tx.status === "Success" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-705 border-red-100"
                           }`}>
                             {tx.status}
                           </span>
                         </td>
-                        <td className="p-4 font-semibold text-slate-450">{new Date(tx.createdAt).toLocaleString()}</td>
+                        <td className="p-4 font-semibold text-slate-500">{new Date(tx.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
                     {filteredTransactions.length === 0 && (
@@ -931,7 +934,7 @@ function AdminDashboardContent() {
                         <th className="p-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y text-slate-650">
+                    <tbody className="divide-y text-slate-600">
                       {trialUsers.map((user, idx) => {
                           const regDate = new Date(user.createdAt)
                           const endsAt = user.trialEndsAt ? new Date(user.trialEndsAt) : null
@@ -947,7 +950,7 @@ function AdminDashboardContent() {
                             <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                               <td className="p-4 text-center text-slate-350 font-semibold">{idx + 1}</td>
                               <td className="p-4 font-semibold text-foreground select-all">{user.email}</td>
-                              <td className="p-4 font-semibold text-slate-450">{regDate.toLocaleDateString()}</td>
+                              <td className="p-4 font-semibold text-slate-500">{regDate.toLocaleDateString()}</td>
                               <td className="p-4 font-semibold text-muted-foreground">{lengthDays ? `${lengthDays} Days` : "—"}</td>
                               <td className="p-4 text-center font-semibold text-foreground">
                                 {isExpired ? (
@@ -1016,7 +1019,7 @@ function AdminDashboardContent() {
             <h3 className="text-base font-semibold text-foreground">Create New System User</h3>
             <form onSubmit={handleCreateUser} className="space-y-4 text-xs font-semibold">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-450">Email Address</label>
+                <label className="text-xs font-medium text-slate-500">Email Address</label>
                 <input
                   type="email"
                   required
@@ -1027,7 +1030,7 @@ function AdminDashboardContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-455">Password</label>
+                <label className="text-xs font-medium text-slate-400">Password</label>
                 <input
                   type="password"
                   required
@@ -1038,7 +1041,7 @@ function AdminDashboardContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-455">Display Name</label>
+                <label className="text-xs font-medium text-slate-400">Display Name</label>
                 <input
                   type="text"
                   value={newUserName}
@@ -1049,7 +1052,7 @@ function AdminDashboardContent() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-455">System Role</label>
+                  <label className="text-xs font-medium text-slate-400">System Role</label>
                   <select
                     value={newUserRole}
                     onChange={(e) => setNewUserRole(e.target.value as "User" | "Admin")}
@@ -1060,7 +1063,7 @@ function AdminDashboardContent() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-455">User Plan</label>
+                  <label className="text-xs font-medium text-slate-400">User Plan</label>
                   <select
                     value={newUserPlan}
                     onChange={(e) => setNewUserPlan(e.target.value as "Free" | "Pro")}
@@ -1074,8 +1077,8 @@ function AdminDashboardContent() {
 
               <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="ghost" onClick={() => setShowAddUserModal(false)}>Cancel</Button>
-                <Button type="submit" disabled={creatingUser} className="bg-indigo-650 text-white hover:bg-primary/90">
-                  {creatingUser ? <Loader2 size={13} className="animate-spin" /> : "Create User"}
+                <Button type="submit" disabled={creatingUser} className="bg-indigo-600 text-white hover:bg-primary/90">
+                  {creatingUser ? <BusyDot /> : "Create User"}
                 </Button>
               </div>
             </form>
@@ -1090,7 +1093,7 @@ function AdminDashboardContent() {
             <h3 className="text-base font-semibold text-foreground">Edit User Info</h3>
             <form onSubmit={handleEditUser} className="space-y-4 text-xs font-semibold">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-450">Email Address</label>
+                <label className="text-xs font-medium text-slate-500">Email Address</label>
                 <input
                   type="email"
                   required
@@ -1101,7 +1104,7 @@ function AdminDashboardContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-455">Display Name</label>
+                <label className="text-xs font-medium text-slate-400">Display Name</label>
                 <input
                   type="text"
                   value={editUserName}
@@ -1111,7 +1114,7 @@ function AdminDashboardContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-455">System Role</label>
+                <label className="text-xs font-medium text-slate-400">System Role</label>
                 <select
                   value={editUserRole}
                   onChange={(e) => setEditUserRole(e.target.value as "User" | "Admin")}
@@ -1123,7 +1126,7 @@ function AdminDashboardContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-455">New Password (leave blank to keep current)</label>
+                <label className="text-xs font-medium text-slate-400">New Password (leave blank to keep current)</label>
                 <input
                   type="password"
                   minLength={6}
@@ -1136,8 +1139,8 @@ function AdminDashboardContent() {
 
               <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="ghost" onClick={() => setEditingUser(null)}>Cancel</Button>
-                <Button type="submit" disabled={savingUser} className="bg-indigo-650 text-white hover:bg-primary/90">
-                  {savingUser ? <Loader2 size={13} className="animate-spin" /> : "Save Changes"}
+                <Button type="submit" disabled={savingUser} className="bg-indigo-600 text-white hover:bg-primary/90">
+                  {savingUser ? <BusyDot /> : "Save Changes"}
                 </Button>
               </div>
             </form>
@@ -1152,7 +1155,7 @@ function AdminDashboardContent() {
             <h3 className="text-base font-semibold text-foreground">Add New Pricing Plan Tier</h3>
             <form onSubmit={handleCreatePlan} className="space-y-4 text-xs font-semibold">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-450">Tier Name</label>
+                <label className="text-xs font-medium text-slate-500">Tier Name</label>
                 <input
                   type="text"
                   required
@@ -1165,7 +1168,7 @@ function AdminDashboardContent() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-455">Price ($)</label>
+                  <label className="text-xs font-medium text-slate-400">Price ($)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1177,7 +1180,7 @@ function AdminDashboardContent() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-455">Billing Period</label>
+                  <label className="text-xs font-medium text-slate-400">Billing Period</label>
                   <select
                     value={newPlanPeriod}
                     onChange={(e) => setNewPlanPeriod(e.target.value)}
@@ -1190,7 +1193,7 @@ function AdminDashboardContent() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-455">Bullet Features (One per line)</label>
+                <label className="text-xs font-medium text-slate-400">Bullet Features (One per line)</label>
                 <textarea
                   placeholder="Unlimited active projects&#10;Smart locator auto-healing&#10;BullMQ worker integration"
                   rows={4}
@@ -1202,8 +1205,8 @@ function AdminDashboardContent() {
 
               <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="ghost" onClick={() => setShowAddPlanModal(false)}>Cancel</Button>
-                <Button type="submit" disabled={creatingPlan} className="bg-indigo-650 text-white hover:bg-primary/90">
-                  {creatingPlan ? <Loader2 size={13} className="animate-spin" /> : "Save Pricing Tier"}
+                <Button type="submit" disabled={creatingPlan} className="bg-indigo-600 text-white hover:bg-primary/90">
+                  {creatingPlan ? <BusyDot /> : "Save Pricing Tier"}
                 </Button>
               </div>
             </form>
@@ -1218,7 +1221,7 @@ function AdminDashboardContent() {
             <h3 className="text-base font-semibold text-foreground">Simulate Payment & Plan Upgrade</h3>
             <form onSubmit={handleSimulateTx} className="space-y-4 text-xs font-semibold">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-slate-450">Select Target User</label>
+                <label className="text-xs font-medium text-slate-500">Select Target User</label>
                 <select
                   required
                   value={simTxUserId}
@@ -1234,7 +1237,7 @@ function AdminDashboardContent() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-455">Paid Amount ($)</label>
+                  <label className="text-xs font-medium text-slate-400">Paid Amount ($)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1246,7 +1249,7 @@ function AdminDashboardContent() {
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-slate-455">Upgrade Plan To</label>
+                  <label className="text-xs font-medium text-slate-400">Upgrade Plan To</label>
                   <select
                     value={simTxPlan}
                     onChange={(e) => setSimTxPlan(e.target.value as "Free" | "Pro")}
@@ -1260,8 +1263,8 @@ function AdminDashboardContent() {
 
               <div className="flex gap-2 justify-end pt-2">
                 <Button type="button" variant="ghost" onClick={() => setShowSimulateTxModal(false)}>Cancel</Button>
-                <Button type="submit" disabled={simulatingTx} className="bg-indigo-650 text-white hover:bg-primary/90">
-                  {simulatingTx ? <Loader2 size={13} className="animate-spin" /> : "Process simulated payment"}
+                <Button type="submit" disabled={simulatingTx} className="bg-indigo-600 text-white hover:bg-primary/90">
+                  {simulatingTx ? <BusyDot /> : "Process simulated payment"}
                 </Button>
               </div>
             </form>
@@ -1272,7 +1275,7 @@ function AdminDashboardContent() {
       {/* Toast Popup */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl text-xs font-bold text-white border animate-fade-in-up flex items-center gap-2 ${
+          className={`fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl text-xs font-semibold text-white border animate-fade-in-up flex items-center gap-2 ${
             toast.error ? "bg-rose-600 border-rose-500" : "bg-slate-900 border-slate-800"
           }`}
         >

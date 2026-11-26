@@ -34,14 +34,14 @@ async function resolveTypeHref(opHost: string, opKey: string, auth: string): Pro
 }
 
 function buildTestCaseDescription(tc: any): string {
-  const module = tc.moduleRelation?.name || tc.module || "General"
+  const moduleName = tc.moduleRelation?.name || tc.module || "General"
   const feature = tc.feature?.name
   const component = tc.component?.name
 
   let md = `## Test Case\n\n`
   md += `**Title:** ${tc.title}\n`
   md += `**Priority:** ${tc.priority}\n`
-  md += `**Module:** ${module}\n`
+  md += `**Module:** ${moduleName}\n`
   if (feature) md += `**Feature:** ${feature}\n`
   if (component) md += `**Component:** ${component}\n`
   md += `**Source:** ${tc.source}\n\n`

@@ -122,7 +122,7 @@ export function StepResultItem({
                 </div>
                 <div>
                   <span className="text-muted-foreground font-medium">Confidence Score: </span>
-                  <span className={`font-bold ${
+                  <span className={`font-semibold ${
                     actionMetadata.confidence >= 90 ? "text-green-600" :
                     actionMetadata.confidence >= 70 ? "text-yellow-600" : "text-orange-600"
                   }`}>

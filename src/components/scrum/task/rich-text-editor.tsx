@@ -1,9 +1,10 @@
 "use client"
 
+import { PromptDialog } from "@/components/ui/prompt-dialog"
 import { useEditor, EditorContent, type Editor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import { TextStyle, FontSize } from "@tiptap/extension-text-style"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
   Bold,
   Italic,
@@ -85,10 +86,10 @@ export function RichTextEditor({
 function Toolbar({ editor }: { editor: Editor }) {
   const currentSize = editor.getAttributes("textStyle").fontSize || ""
 
-  const setLink = () => {
-    const prev = editor.getAttributes("link").href as string | undefined
-    const url = window.prompt("Enter URL (leave empty to remove):", prev || "https://")
-    if (url === null) return
+  const [linkOpen, setLinkOpen] = useState(false)
+  const setLink = () => setLinkOpen(true)
+  const applyLink = (url: string) => {
+    setLinkOpen(false)
     if (url.trim() === "") {
       editor.chain().focus().extendMarkRange("link").unsetLink().run()
       return
@@ -97,6 +98,18 @@ function Toolbar({ editor }: { editor: Editor }) {
   }
 
   return (
+    <>
+    <PromptDialog
+      open={linkOpen}
+      title="Link"
+      label="Link address (leave empty to remove the link)"
+      placeholder="https://"
+      initialValue={(editor.getAttributes("link").href as string | undefined) || "https://"}
+      confirmLabel="Apply"
+      allowEmpty
+      onCancel={() => setLinkOpen(false)}
+      onSubmit={applyLink}
+    />
     <div className="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/30 px-2 py-1">
       {/* Font size */}
       <div className="mr-1 flex items-center gap-1" title="Font size">
@@ -170,6 +183,7 @@ function Toolbar({ editor }: { editor: Editor }) {
         <Eraser className="h-3.5 w-3.5" />
       </Btn>
     </div>
+    </>
   )
 }
 

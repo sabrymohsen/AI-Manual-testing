@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -252,7 +253,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -302,7 +303,7 @@ export default function ProfilePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.avatarUrl} alt="" className="h-28 w-28 rounded-full border object-cover" />
                 ) : (
-                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-indigo-400 text-3xl font-semibold uppercase text-white">
+                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-indigo-400 text-3xl font-semibold  text-white">
                     {(profile.name || profile.email)[0]}
                   </div>
                 )}
@@ -312,7 +313,7 @@ export default function ProfilePage() {
                   className="absolute bottom-0 right-0 flex h-9 w-9 items-center justify-center rounded-full border-2 border-background bg-primary text-white shadow-md transition-colors hover:bg-primary/90 disabled:opacity-60"
                   title="Change photo"
                 >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {uploading ? <BusyDot /> : <Camera className="h-4 w-4" />}
                 </button>
                 <input
                   ref={fileInputRef}
@@ -383,15 +384,19 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-semibold">Language</Label>
+                {/* Saved, but the interface is English only for now; disabled so it doesn't look like it works. */}
                 <select
                   value={form.language}
+                  disabled
+                  aria-describedby="language-note"
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  className="h-9 w-full cursor-not-allowed rounded-lg border bg-muted/50 px-3 text-sm text-muted-foreground outline-none"
                 >
                   {LANGUAGES.map((l) => (
                     <option key={l.value} value={l.value}>{l.label}</option>
                   ))}
                 </select>
+                <p id="language-note" className="text-xs text-muted-foreground">Not available yet: the app is in English. Arabic documents and AI answers still work.</p>
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label className="text-xs font-semibold">Theme</Label>
@@ -400,8 +405,10 @@ export default function ProfilePage() {
                     <button
                       key={t}
                       type="button"
+                      disabled
+                      aria-describedby="theme-note"
                       onClick={() => setForm({ ...form, theme: t })}
-                      className={`rounded-lg border px-3 py-2 text-xs font-semibold capitalize transition-colors ${
+                      className={`cursor-not-allowed rounded-lg border px-3 py-2 text-xs font-semibold capitalize opacity-60 transition-colors ${
                         form.theme === t ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
                       }`}
                     >
@@ -409,12 +416,13 @@ export default function ProfilePage() {
                     </button>
                   ))}
                 </div>
+                <p id="theme-note" className="text-xs text-muted-foreground">Not available yet: the app uses the light theme.</p>
               </div>
             </div>
             <div className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <Label className="text-xs font-semibold">Bio</Label>
-                <span className={`text-xs ${form.bio.length > 500 ? "font-bold text-red-500" : "text-muted-foreground"}`}>
+                <span className={`text-xs ${form.bio.length > 500 ? "font-semibold text-red-500" : "text-muted-foreground"}`}>
                   {form.bio.length}/500
                 </span>
               </div>
@@ -429,7 +437,7 @@ export default function ProfilePage() {
               <Button type="submit" disabled={saving} className="bg-primary text-white hover:bg-primary/90">
                 {saving ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
+                    <BusyDot /> Saving…
                   </>
                 ) : (
                   "Save changes"
@@ -530,7 +538,7 @@ export default function ProfilePage() {
             >
               {pwSaving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating…
+                  <BusyDot /> Updating…
                 </>
               ) : (
                 "Update password"

@@ -1,5 +1,7 @@
 "use client"
 
+import { toast } from "sonner"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -17,7 +19,6 @@ import {
   X,
   FileText,
   AlertTriangle,
-  ChevronLeft,
   ChevronRight,
   ChevronDown,
   Zap,
@@ -467,7 +468,7 @@ export default function RecorderWorkspacePage() {
         setSessionStatus("Paused")
       }
     } catch {
-      alert("Error pausing session.")
+      toast.error("Error pausing session.")
     }
   }
 
@@ -480,7 +481,7 @@ export default function RecorderWorkspacePage() {
         setSessionStatus("Active")
       }
     } catch {
-      alert("Error resuming session.")
+      toast.error("Error resuming session.")
     }
   }
 
@@ -513,7 +514,7 @@ export default function RecorderWorkspacePage() {
       })
 
       if (res.ok) {
-        alert(`Successfully saved "${currentTestCase.title}" to project!`)
+        toast.success(`Successfully saved "${currentTestCase.title}" to project!`)
         // Update list of saved cases
         setSavedCasesList(prev => 
           prev.map(c => c.id === currentTestCase.id ? { ...c, status: "SavedAsTestCase" } : c)
@@ -521,10 +522,10 @@ export default function RecorderWorkspacePage() {
         // Set state to start a new case modal
         setIsNewCaseModalOpen(true)
       } else {
-        alert("Failed to save test case.")
+        toast.error("Failed to save test case.")
       }
     } catch {
-      alert("Network error saving test case.")
+      toast.error("Network error saving test case.")
     } finally {
       setIsSavingCase(false)
     }
@@ -533,7 +534,7 @@ export default function RecorderWorkspacePage() {
   // 5. Start new test case draft inside current session
   async function handleCreateNewTestCase() {
     if (!newCaseTitle.trim()) {
-      alert("Title is required for the new test case.")
+      toast.error("Title is required for the new test case.")
       return
     }
 
@@ -564,10 +565,10 @@ export default function RecorderWorkspacePage() {
 
         fetchSessionSteps()
       } else {
-        alert("Failed to start new test case draft.")
+        toast.error("Failed to start new test case draft.")
       }
     } catch {
-      alert("Network error starting new test case.")
+      toast.error("Network error starting new test case.")
     }
   }
 
@@ -598,7 +599,7 @@ export default function RecorderWorkspacePage() {
           body: JSON.stringify({ testCaseId: currentTestCase.id }),
         })
         if (!saveRes.ok) {
-          alert("Failed to save current test case draft before exit.")
+          toast.error("Failed to save current test case draft before exit.")
           setIsFinishing(false)
           return
         }
@@ -610,10 +611,10 @@ export default function RecorderWorkspacePage() {
         router.push(`/projects/${params.id}/test-cases`)
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to finish recording session.")
+        toast.error(err.error || "Failed to finish recording session.")
       }
     } catch {
-      alert("Network error finishing recording.")
+      toast.error("Network error finishing recording.")
     } finally {
       setIsFinishing(false)
     }
@@ -680,7 +681,7 @@ export default function RecorderWorkspacePage() {
             setRecordedSteps((prev) => prev.filter((s) => s.id !== stepId))
           }
         } catch {
-          alert("Error deleting step.")
+          toast.error("Error deleting step.")
         }
       }
     })
@@ -778,17 +779,17 @@ export default function RecorderWorkspacePage() {
       if (res.ok) {
         const data = await res.json()
         if (data.success) {
-          alert(`Flow validation: ${data.overallStatus || (data.success ? "Passed" : "Failed")}`)
+          toast.error(`Flow validation: ${data.overallStatus || (data.success ? "Passed" : "Failed")}`)
         } else {
-          alert(`Flow validation completed with errors (${data.overallStatus || "Failed"}). Review failed steps below.`)
+          toast.error(`Flow validation completed with errors (${data.overallStatus || "Failed"}). Review failed steps below.`)
         }
         fetchSessionSteps()
       } else {
-        alert("Failed to run flow validation.")
+        toast.error("Failed to run flow validation.")
       }
     } catch (err) {
       console.error("Flow validation failed:", err)
-      alert("Error calling validation endpoint.")
+      toast.error("Error calling validation endpoint.")
     } finally {
       setIsValidatingFlow(false)
     }
@@ -860,14 +861,14 @@ export default function RecorderWorkspacePage() {
 
       if (res.ok) {
         const data = await res.json()
-        alert(`Bug report successfully created! ID: ${data.bug.bugKey}`)
+        toast.success(`Bug report successfully created! ID: ${data.bug.bugKey}`)
         setBugModalStep(null)
         fetchSessionSteps()
       } else {
-        alert("Failed to submit bug report.")
+        toast.error("Failed to submit bug report.")
       }
     } catch {
-      alert("Error reporting bug.")
+      toast.error("Error reporting bug.")
     } finally {
       setBugReporting(false)
     }
@@ -1015,12 +1016,12 @@ export default function RecorderWorkspacePage() {
         if (uploadRes.ok) {
           const filePath = `screenshots/annotated-${annotationStep.id}.png`
           await handleUpdateStepField(annotationStep.id, "screenshotAfter", filePath)
-          alert("Annotation saved successfully!")
+          toast.success("Annotation saved successfully!")
           setAnnotationStep(null)
           fetchSessionSteps()
         }
       } catch {
-        alert("Error saving canvas drawing")
+        toast.error("Error saving canvas drawing")
       }
     }, "image/png")
   }
@@ -1102,7 +1103,7 @@ export default function RecorderWorkspacePage() {
   if (loadingProject) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <Loader2 className="h-6 w-6 animate-spin" />
+        <BusyDot />
         <p className="text-sm">Loading workspace...</p>
       </div>
     </div>
@@ -1117,12 +1118,7 @@ export default function RecorderWorkspacePage() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
           {/* Back + title */}
           <div className="flex items-center gap-2 min-w-0">
-            <Link href={`/projects/${project.id}/test-cases`}>
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <h1 className="font-semibold text-base tracking-tight truncate">Test Case Recorder</h1>
+            <h1 className="font-semibold text-base tracking-tight truncate">Recorder Studio</h1>
           </div>
 
           {/* Phase stepper */}
@@ -1138,7 +1134,7 @@ export default function RecorderWorkspacePage() {
                   currentPhase === ph.n ? "text-primary" :
                   currentPhase > ph.n ? "text-muted-foreground" : "text-muted-foreground/40"
                 }`}>
-                  <span className={`w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold transition-colors ${
+                  <span className={`w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold transition-colors ${
                     currentPhase > ph.n ? "bg-emerald-500 text-white" :
                     currentPhase === ph.n ? "bg-primary text-primary-foreground" :
                     "bg-muted text-muted-foreground/50"
@@ -1311,7 +1307,7 @@ export default function RecorderWorkspacePage() {
                 disabled={isCheckingStatus}
                 className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
               >
-                <RefreshCw className={`h-3 w-3 ${isCheckingStatus ? "animate-spin" : ""}`} /> Re-check
+                {isCheckingStatus ? <BusyDot /> : <RefreshCw className="h-3 w-3" />} Re-check
               </button>
             </div>
             <div className="px-6 py-4 space-y-2 text-xs">
@@ -1392,7 +1388,7 @@ export default function RecorderWorkspacePage() {
                 disabled={isStartingSession}
               >
                 {isStartingSession ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" /> Launching browser...</>
+                  <><BusyDot /> Launching browser...</>
                 ) : (
                   <><Play className="h-4 w-4 fill-current" /> Launch recording session</>
                 )}
@@ -1412,7 +1408,7 @@ export default function RecorderWorkspacePage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-semibold text-foreground truncate max-w-xs">{currentTestCase?.title || "Recording…"}</span>
-                  <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+                  <span className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full   ${
                     currentTestCase?.priority === "Critical" ? "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400" :
                     currentTestCase?.priority === "High" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400" :
                     currentTestCase?.priority === "Medium" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400" :
@@ -1449,7 +1445,7 @@ export default function RecorderWorkspacePage() {
                   </Button>
                 )}
                 <Button size="sm" onClick={handleFinishAll} disabled={isFinishing} className="h-8 text-xs gap-2 bg-red-600 hover:bg-red-700 text-white">
-                  {isFinishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />} Finish
+                  {isFinishing ? <BusyDot /> : <Check className="h-3.5 w-3.5" />} Finish
                 </Button>
               </div>
             </div>
@@ -1573,7 +1569,7 @@ export default function RecorderWorkspacePage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-primary/30 text-primary dark:text-indigo-400 font-semibold" onClick={handleValidateRecordedFlow} disabled={isValidatingFlow}>
-                    {isValidatingFlow ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />} Validate
+                    {isValidatingFlow ? <BusyDot /> : <Zap className="h-3 w-3" />} Validate
                   </Button>
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-purple-600/30 text-purple-600 dark:text-purple-400 font-semibold" onClick={() => setShowExportModal(true)} disabled={recordedSteps.length === 0}>
                     <Code2 className="h-3 w-3" /> Export code
@@ -1646,7 +1642,7 @@ export default function RecorderWorkspacePage() {
                               </div>
                             )}
                             {step.reliabilityScore > 0 && (
-                              <span className={`shrink-0 text-xs font-bold ${
+                              <span className={`shrink-0 text-xs font-semibold ${
                                 step.reliabilityScore >= 80 ? "text-emerald-600 dark:text-emerald-400" :
                                 step.reliabilityScore >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"
                               }`}>{step.reliabilityScore}%</span>
@@ -1766,7 +1762,7 @@ export default function RecorderWorkspacePage() {
                                       <div className="flex items-center justify-between gap-2">
                                         <div className="truncate"><span className="font-semibold">Selector: </span><span className="font-mono text-foreground">{step.recommendedSelector}</span></div>
                                         <button onClick={() => handleValidateStepLocator(step.id)} disabled={isValidating} className="shrink-0 text-xs text-primary dark:text-indigo-400 hover:underline flex items-center gap-1 font-semibold">
-                                          {isValidating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Compass className="h-3 w-3" />} Validate
+                                          {isValidating ? <BusyDot /> : <Compass className="h-3 w-3" />} Validate
                                         </button>
                                       </div>
                                     )}

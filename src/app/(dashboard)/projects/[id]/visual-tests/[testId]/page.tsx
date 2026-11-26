@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -42,7 +43,7 @@ export default function VisualTestDetailPage() {
   if (!data) {
     return (
       <div className="flex items-center gap-2 p-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <BusyDot /> Loading…
       </div>
     )
   }
@@ -90,11 +91,11 @@ export default function VisualTestDetailPage() {
           {test.type !== "Flow" &&
             (running ? (
               <Button onClick={() => router.push(`/projects/${projectId}/visual-tests/runs/${running.id}`)}>
-                <Loader2 className="animate-spin" /> View the run in progress
+                <BusyDot /> View the run in progress
               </Button>
             ) : (
               <Button onClick={run} disabled={starting}>
-                {starting ? <Loader2 className="animate-spin" /> : <Play />} Run now
+                {starting ? <BusyDot /> : <Play />} Run now
               </Button>
             ))}
         </div>
@@ -453,7 +454,7 @@ function SettingsTab({ projectId, test, onSaved }: { projectId: string; test: an
       )}
       <CompareSettings projectId={projectId} value={settings} onChange={setSettings} />
       <Button onClick={save} disabled={saving || (test.type !== "Flow" && !settings.environments.length)}>
-        {saving ? <Loader2 className="animate-spin" /> : <Save />} Save settings
+        {saving ? <BusyDot /> : <Save />} Save settings
       </Button>
     </div>
   )

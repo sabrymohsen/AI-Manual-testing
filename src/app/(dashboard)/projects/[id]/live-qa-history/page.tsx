@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { AppPageHeader } from "@/components/ui/app-page-header"
@@ -209,7 +210,7 @@ export default function LiveQAHistoryPage() {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {detailLoading || !detail ? (
-                <div className="flex items-center justify-center py-16 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                <div className="flex items-center justify-center py-16 text-muted-foreground"><BusyDot /></div>
               ) : (
                 <>
                   {detail.startUrl && (
@@ -231,7 +232,7 @@ export default function LiveQAHistoryPage() {
                             onClick={() => router.push(`/projects/${projectId}/bug-reports?bug=${b.id}`)}
                             className="w-full text-left p-3 border rounded-lg bg-background hover:border-primary/25 hover:bg-primary/10 dark:hover:bg-indigo-500/[0.06] transition-colors flex items-center gap-2"
                           >
-                            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-bold shrink-0">{b.bugKey || "BUG"}</span>
+                            <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-semibold shrink-0">{b.bugKey || "BUG"}</span>
                             <span className="flex-1 truncate text-foreground dark:text-slate-100 font-semibold" title={b.title}>{b.title}</span>
                             <span className={`px-2 py-0.5 rounded font-medium text-xs shrink-0 ${SEVERITY_STYLES[b.severity] || "bg-muted text-muted-foreground"}`}>{b.severity}</span>
                             <span className="text-xs text-muted-foreground shrink-0">{b.status}</span>

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -136,7 +137,7 @@ export function LocalAiPanel() {
         {/* Step 1 — Ollama */}
         {local === null ? (
           <p className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Looking for Ollama…
+            <BusyDot /> Looking for Ollama…
           </p>
         ) : !local.running ? (
           <div className="space-y-2 rounded-lg border border-dashed p-3">
@@ -194,7 +195,7 @@ export function LocalAiPanel() {
                       <span className="text-xs font-medium text-emerald-600">Installed</span>
                     ) : (
                       <Button size="sm" variant="outline" disabled={!!pulling} onClick={() => download(m.name)}>
-                        {active ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Download"}
+                        {active ? <BusyDot /> : "Download"}
                       </Button>
                     )}
                   </div>

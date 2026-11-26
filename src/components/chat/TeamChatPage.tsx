@@ -913,7 +913,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                       </div>
 
                       {/* Hover actions */}
-                      <div className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-start gap-0.5 mt-1">
+                      <div className="shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity flex items-start gap-0.5 mt-1">
                         <button
                           onClick={() => setActiveThread(msg.id)}
                           className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-muted-foreground"
@@ -1061,7 +1061,7 @@ export function TeamChatPage({ projectId, token, currentUserId }: TeamChatPagePr
                               className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-foreground hover:bg-muted"
                             >
                               <span
-                                className={`shrink-0 rounded border px-1 py-0.5 text-xs font-bold ${
+                                className={`shrink-0 rounded border px-1 py-0.5 text-xs font-semibold ${
                                   ENTITY_CHIP[e.type] || "border-border bg-muted text-muted-foreground"
                                 }`}
                               >

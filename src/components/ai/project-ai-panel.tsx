@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -203,7 +204,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
   if (loading) {
     return (
       <div className="p-6 border border-border shadow-sm rounded-xl bg-card flex items-center gap-2 text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading AI provider…
+        <BusyDot /> Loading AI provider…
       </div>
     )
   }

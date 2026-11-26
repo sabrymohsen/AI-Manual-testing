@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { CheckCircle2, CircleDashed, AlertTriangle, XCircle, Clock, Loader2, MinusCircle, Sparkles, Ban } from "@/components/ui/icons"
 import type { VisualEnvironment } from "@/lib/visual-tests/environments"
 
@@ -63,7 +64,7 @@ export function RunStatusBadge({
   if (status === "Running")
     return (
       <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-        <Loader2 className="h-3 w-3 animate-spin" /> Capturing
+        <BusyDot /> Capturing
       </span>
     )
   if (status === "Cancelled")

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -498,7 +499,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8 space-x-2 text-sm text-muted-foreground">
-        <RefreshCw className="h-4 w-4 animate-spin text-primary" />
+        <BusyDot />
         <span>Loading integrations...</span>
       </div>
     )
@@ -578,7 +579,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button type="button" variant="outline" onClick={handleTestConnection}
                     disabled={testing || !op.baseUrl || !op.openProjectProjectIdentifier}>
-                    {testing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testing...</> : "Test Connection"}
+                    {testing ? <><BusyDot />Testing...</> : "Test Connection"}
                   </Button>
                   {op.lastConnectionStatus && (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -686,7 +687,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                           onChange={(e) => setOp((p) => ({ ...p, defaultParentWorkPackageId: e.target.value }))}
                           placeholder="e.g. 123" className="flex-1" />
                         <Button type="button" variant="outline" size="sm" onClick={handleValidateParent} disabled={validatingParent}>
-                          {validatingParent ? <Loader2 className="h-4 w-4 animate-spin" /> : "Validate"}
+                          {validatingParent ? <BusyDot /> : "Validate"}
                         </Button>
                       </div>
                     </div>
@@ -779,7 +780,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                     <Label>Target Column <span className="text-muted-foreground font-normal">(which column to place items in)</span></Label>
                     {loadingColumns ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground border rounded-md px-3 py-2 bg-muted/30">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading columns…
+                        <BusyDot /> Loading columns…
                       </div>
                     ) : opBoardColumns.length > 0 ? (
                       <select
@@ -891,17 +892,17 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 <div className="flex gap-2 flex-wrap">
                   <Button type="button" onClick={handleSyncTestCases} disabled={syncing || !op.hasToken}
                     className="bg-blue-600 hover:bg-blue-700 text-white">
-                    {syncing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-2" />Sync Test Cases</>}
+                    {syncing ? <><BusyDot />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-2" />Sync Test Cases</>}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleApplyParent}
                     disabled={applyingParent || !op.hasToken || op.parentStrategy === "None"}>
-                    {applyingParent ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Applying...</> : <><Link2 className="h-4 w-4 mr-2" />Apply Parent</>}
+                    {applyingParent ? <><BusyDot />Applying...</> : <><Link2 className="h-4 w-4 mr-2" />Apply Parent</>}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleSyncToBoard} disabled={syncingBoard || !op.hasToken}>
-                    {syncingBoard ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-2" />Sync to Board</>}
+                    {syncingBoard ? <><BusyDot />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-2" />Sync to Board</>}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleCheckBoard} disabled={checkingBoard || !op.hasToken}>
-                    {checkingBoard ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</> : <><Eye className="h-4 w-4 mr-2" />Check Board Visibility</>}
+                    {checkingBoard ? <><BusyDot />Checking...</> : <><Eye className="h-4 w-4 mr-2" />Check Board Visibility</>}
                   </Button>
                 </div>
                 <ResultBanner result={syncResult} />
@@ -952,7 +953,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
           {success && <p className="text-sm text-emerald-600">{success}</p>}
           <div className="pt-2 border-t">
             <Button onClick={handleSaveOpenProject} disabled={saving}>
-              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : "Save OpenProject Settings"}
+              {saving ? <><BusyDot />Saving...</> : "Save OpenProject Settings"}
             </Button>
           </div>
         </div>

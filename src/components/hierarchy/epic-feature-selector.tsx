@@ -1,5 +1,6 @@
 "use client"
 
+import { toast } from "sonner"
 import { useEffect, useState } from "react"
 
 interface Epic {
@@ -100,10 +101,10 @@ export function EpicFeatureSelector({
         handleFeatureChange(data.feature.id)
       } else {
         const err = await res.json()
-        alert(err.error || "Failed to create feature")
+        toast.error(err.error || "Failed to create feature")
       }
     } catch {
-      alert("Network error creating feature")
+      toast.error("Network error creating feature")
     } finally {
       setSaving(false)
     }

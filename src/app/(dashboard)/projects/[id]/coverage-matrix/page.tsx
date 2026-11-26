@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
@@ -141,11 +142,11 @@ export default function CoverageMatrixPage() {
   const getRiskBadge = (risk: string) => {
     switch (risk) {
       case "High":
-        return <span className="text-xs font-semibold bg-red-100 text-red-750 px-2 py-0.5 rounded border border-red-200">High Risk</span>
+        return <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200">High Risk</span>
       case "Medium":
-        return <span className="text-xs font-semibold bg-amber-100 text-amber-750 px-2 py-0.5 rounded border border-amber-255">Medium Risk</span>
+        return <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded border border-amber-255">Medium Risk</span>
       default:
-        return <span className="text-xs font-semibold bg-green-100 text-green-750 px-2 py-0.5 rounded border border-green-200">Low Risk</span>
+        return <span className="text-xs font-semibold bg-green-100 text-green-700 px-2 py-0.5 rounded border border-green-200">Low Risk</span>
     }
   }
 
@@ -154,7 +155,7 @@ export default function CoverageMatrixPage() {
       case "Covered":
         return <span className="text-xs font-medium bg-green-95 text-green-700 px-2 py-0.5 rounded-full">Covered</span>
       case "PartiallyCovered":
-        return <span className="text-xs font-medium bg-yellow-95 text-yellow-750 px-2 py-0.5 rounded-full">Partial</span>
+        return <span className="text-xs font-medium bg-yellow-95 text-yellow-700 px-2 py-0.5 rounded-full">Partial</span>
       case "Uncovered":
         return <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Uncovered</span>
       case "Failed":
@@ -250,7 +251,7 @@ export default function CoverageMatrixPage() {
       <div className="bg-card border border-border/60 rounded-xl shadow-sm overflow-hidden">
         {loading ? (
           <div className="flex flex-col items-center justify-center p-20">
-            <Loader2 className="animate-spin text-blue-600 h-10 w-10 mb-4" />
+            <BusyDot />
             <p className="text-muted-foreground text-sm">Compiling project traceability records...</p>
           </div>
         ) : filteredMatrix.length === 0 ? (
@@ -329,7 +330,7 @@ export default function CoverageMatrixPage() {
                     {/* Linked Cases Checklist */}
                     <td className="p-4 space-y-2">
                       {row.linkedTestCases.length === 0 ? (
-                        <span className="text-slate-450 text-xs">No test cases linked</span>
+                        <span className="text-slate-500 text-xs">No test cases linked</span>
                       ) : (
                         row.linkedTestCases.map((tc) => (
                           <div key={tc.id} className="bg-muted/50 border border-border p-2 rounded-lg flex items-center justify-between gap-2">

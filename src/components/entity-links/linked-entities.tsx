@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -283,7 +284,7 @@ export function LinkedEntities({
           <div className="max-h-64 overflow-y-auto">
             {searching && (
               <div className="flex items-center gap-2 px-2 py-3 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Searching…
+                <BusyDot /> Searching…
               </div>
             )}
             {!searching && results.length === 0 && (
@@ -307,7 +308,7 @@ export function LinkedEntities({
                       {r.key}
                     </span>
                     <span className="truncate">{r.label}</span>
-                    {pendingId === r.id && <Loader2 className="ml-auto h-3 w-3 animate-spin" />}
+                    {pendingId === r.id && <BusyDot />}
                   </button>
                 )
               })}
@@ -375,7 +376,7 @@ export function LinkedEntities({
                       {!readOnly && (
                         <button
                           onClick={() => removeLink(row.linkId)}
-                          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
                           aria-label="Remove link"
                         >
                           <X className="h-3.5 w-3.5" />

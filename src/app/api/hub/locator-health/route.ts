@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
-import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
+import { requireAuth, requireProjectMember, unauthorizedResponse } from "@/lib/api-guards"
 import { requireHubAdmin } from "@/lib/hub-access"
 
 export const dynamic = "force-dynamic"
@@ -70,13 +70,19 @@ function band(score: number): "green" | "yellow" | "orange" | "red" {
   return score >= 90 ? "green" : score >= 70 ? "yellow" : score >= 50 ? "orange" : "red"
 }
 
-export async function GET() {
-  // Workspace-wide data with no project attached: admins only.
-  const auth = await requireHubAdmin()
-  if (!auth.ok) return auth.response
+export async function GET(request: Request) {
+  // ?projectId= gives one project's report to its members; workspace-wide stays admin-only.
+  const projectId = new URL(request.url).searchParams.get("projectId")
+  if (projectId) {
+    const member = await requireProjectMember(projectId)
+    if (member.error) return unauthorizedResponse(member.error)
+  } else {
+    const auth = await requireHubAdmin()
+    if (!auth.ok) return auth.response
+  }
 
   try {
-    const events = await prisma.healingEvent.findMany({ orderBy: { createdAt: "desc" } })
+    const events = await prisma.healingEvent.findMany({ where: projectId ? { projectId } : undefined, orderBy: { createdAt: "desc" } })
 
     const groups = new Map<string, typeof events>()
     for (const e of events) {

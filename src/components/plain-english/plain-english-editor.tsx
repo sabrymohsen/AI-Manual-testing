@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, ClipboardPaste, Database, Loader2, Plus, Sparkles, Trash2, Wand2 } from "@/components/ui/icons"
 import { toast } from "sonner"
@@ -285,7 +286,7 @@ export function PlainEnglishEditor({
           <input value={aiUrl} onChange={e => setAiUrl(e.target.value)} className="h-8 w-full rounded-md border bg-card px-2 text-xs" placeholder="Page the steps are for (optional, lets the AI use the real labels)" />
           <div className="flex items-center gap-2">
             <Button type="button" size="sm" onClick={runAi} disabled={aiBusy || aiInstruction.trim().length < 3}>
-              {aiBusy ? <Loader2 className="animate-spin" /> : <Wand2 />} {aiBusy ? "Writing steps…" : "Write steps"}
+              {aiBusy ? <BusyDot /> : <Wand2 />} {aiBusy ? "Writing steps…" : "Write steps"}
             </Button>
             {aiBusy && <span className="text-xs text-muted-foreground">This can take a minute or two with a reasoning model.</span>}
           </div>
@@ -324,7 +325,7 @@ export function PlainEnglishEditor({
           <input value={dataDescription} onChange={e => setDataDescription(e.target.value)} className="h-8 w-full rounded-md border bg-card px-2 text-sm" placeholder="A French fashion designer applying for a business account" />
           <input value={dataNames} onChange={e => setDataNames(e.target.value)} className="h-8 w-full rounded-md border bg-card px-2 text-xs" placeholder="Names to fill (optional): firstName, lastName, email, phone" />
           <Button type="button" size="sm" onClick={runData} disabled={dataBusy || dataDescription.trim().length < 3}>
-            {dataBusy ? <Loader2 className="animate-spin" /> : <Wand2 />} {dataBusy ? "Making data…" : "Make data"}
+            {dataBusy ? <BusyDot /> : <Wand2 />} {dataBusy ? "Making data…" : "Make data"}
           </Button>
           {dataValues && (
             <div className="space-y-1 rounded-md border bg-card p-2 font-mono text-xs">

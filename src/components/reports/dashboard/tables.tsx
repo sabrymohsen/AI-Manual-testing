@@ -305,7 +305,7 @@ function DataTable<T extends { id?: string }>({
                     </td>
                   ))}
                   <td className="px-3 py-3">
-                    <button className="text-slate-300 opacity-0 transition-opacity hover:text-primary group-hover:opacity-100" title="View">
+                    <button className="text-slate-300 opacity-0 transition-opacity hover:text-primary group-hover:opacity-100 focus-visible:opacity-100" title="View">
                       <Eye className="h-3.5 w-3.5" />
                     </button>
                   </td>

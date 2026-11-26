@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState, useRef, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -282,7 +283,7 @@ export default function GenerateFromFilePage() {
               onChange={e => e.target.files?.[0] && handleFileUpload(e.target.files[0])}
             />
             <div className="mx-auto w-16 h-16 rounded-xl bg-violet-100 dark:bg-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform">
-              {isLoading ? <Loader2 className="h-8 w-8 text-violet-500 animate-spin" /> : <Upload className="h-8 w-8 text-violet-500" />}
+              {isLoading ? <BusyDot /> : <Upload className="h-8 w-8 text-violet-500" />}
             </div>
             <div>
               <h3 className="text-lg font-semibold">
@@ -408,7 +409,7 @@ export default function GenerateFromFilePage() {
                         )}
                         <span className="font-semibold text-sm" dir={isAr ? "rtl" : "ltr"}>{item.title}</span>
                         {item.language && (
-                          <span className={`text-xs px-2 py-0.5 rounded font-bold border ${
+                          <span className={`text-xs px-2 py-0.5 rounded font-semibold border ${
                             item.language === "Arabic" ? "bg-green-50 text-green-700 border-green-200" :
                             item.language === "Mixed" ? "bg-amber-50 text-amber-700 border-amber-200" :
                             "bg-muted/50 text-muted-foreground border-border"
@@ -544,7 +545,7 @@ export default function GenerateFromFilePage() {
               <ChevronLeft className="h-4 w-4 mr-2" /> Back
             </Button>
             <Button onClick={handleGenerate} disabled={isLoading} className="bg-violet-600 hover:bg-violet-700 text-white">
-              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Wand2 className="h-4 w-4 mr-2" />}
+              {isLoading ? <BusyDot /> : <Wand2 className="h-4 w-4 mr-2" />}
               Generate Test Cases
             </Button>
           </div>
@@ -695,7 +696,7 @@ export default function GenerateFromFilePage() {
               disabled={isLoading || selectedCount === 0}
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
             >
-              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              {isLoading ? <BusyDot /> : <Save className="h-4 w-4 mr-2" />}
               Save {selectedCount} Test Case{selectedCount !== 1 ? "s" : ""}
             </Button>
           </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { toast as notify } from "sonner"
 import { CountUp } from "@/components/ui/count-up"
 import { BusyDot } from "@/components/ui/skeleton"
 import React, { useCallback, useEffect, useRef, useState } from "react"
@@ -730,12 +731,13 @@ export default function ProjectBugReportsPage() {
 
       const queryStr = qParams.length > 0 ? `?${qParams.join("&")}` : ""
       const res = await fetch(`/api/projects/${projectId}/bug-reports${queryStr}`)
-      if (res.ok) {
-        const data = await res.json()
-        setBugs(data.bugReports || [])
-      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setBugs(data.bugReports || [])
     } catch (err) {
       console.error(err)
+      // Without this the list just looked empty, as if there were no bugs.
+      notify.error("The bug list could not be loaded.", { id: "bugs-load", action: { label: "Try again", onClick: () => loadBugsList() } })
     } finally {
       setLoading(false)
     }
@@ -2182,12 +2184,12 @@ export default function ProjectBugReportsPage() {
                             </span>
                           </td>
                           <td className="p-3">
-                            <span className="text-slate-650 font-semibold">{b.priority}</span>
+                            <span className="text-slate-600 font-semibold">{b.priority}</span>
                           </td>
                           <td className="p-3">
                             <span className={`px-2 py-0.5 rounded font-semibold   text-xs ${
                               b.status === "Open" ? "bg-amber-100 text-amber-700" :
-                              b.status === "InProgress" ? "bg-blue-100 text-blue-750" :
+                              b.status === "InProgress" ? "bg-blue-100 text-blue-700" :
                               b.status === "Resolved" || b.status === "Closed" ? "bg-emerald-100 text-emerald-700" :
                               "bg-muted text-muted-foreground"
                             }`}>
@@ -2821,7 +2823,7 @@ export default function ProjectBugReportsPage() {
 
                     <span className="text-xs text-muted-foreground block mt-2">Network errors</span>
                     {selectedBug.networkErrors ? (
-                      <pre className="p-3 rounded-xl bg-slate-900 text-rose-450 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
+                      <pre className="p-3 rounded-xl bg-slate-900 text-rose-500 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
                         {selectedBug.networkErrors}
                       </pre>
                     ) : (
@@ -2890,11 +2892,11 @@ export default function ProjectBugReportsPage() {
 
                       {selectedBug.testRun && (
                         <div className="border-t pt-3 space-y-2">
-                          <div className="flex justify-between items-center text-xs text-slate-650 font-semibold">
+                          <div className="flex justify-between items-center text-xs text-slate-600 font-semibold">
                             <span>Test run</span>
                             <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground">RUN-{selectedBug.testRun.id.slice(0, 8)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs text-slate-650 font-semibold">
+                          <div className="flex justify-between items-center text-xs text-slate-600 font-semibold">
                             <span>Status</span>
                             <span className={`px-2 py-0.5 rounded text-xs font-semibold  ${
                               selectedBug.testRun.status === "Passed" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"

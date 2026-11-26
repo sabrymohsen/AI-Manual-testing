@@ -147,6 +147,8 @@ export default function AutomationHubPage() {
     else if (t === "recorder") setActiveTab("Recorder")
     else if (t === "agent") setActiveTab("BrowserAgent")
     else if (t === "tests") setActiveTab("Tests")
+    // Tools behind "More tools…", so old pages can link straight to them.
+    else if (t && ["Trace", "Evidence", "Video", "Diagnosis", "Heal", "Flakes", "Matrix", "Visual", "Agent", "DataConfig"].includes(t)) setActiveTab(t as any)
     setInitialRunId(sp.get("run"))
     // ?test=<name> — e.g. a test just made from a test case.
     const test = sp.get("test")
@@ -238,7 +240,7 @@ export default function AutomationHubPage() {
         mcpRes
       ] = await Promise.all([
         fetch(`/api/projects/${projectId}/test-runs`),
-        fetch("/api/autotest/healing"),
+        fetch(`/api/autotest/healing?projectId=${encodeURIComponent(projectId)}`),
         fetch("/api/autotest/flakes"),
         fetch("/api/autotest/diagnosis"),
         fetch("/api/autotest/crossbrowser"),
@@ -602,7 +604,7 @@ export default function AutomationHubPage() {
               </div>
 
               {healView === "locators" ? (
-                <LocatorHealthPanel />
+                <LocatorHealthPanel projectId={projectId} />
               ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
@@ -665,11 +667,11 @@ export default function AutomationHubPage() {
               {/* Sidebar threshold configurators */}
               <div className="lg:col-span-4 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4 text-left">
-                  <span className="text-xs font-medium text-slate-500 block border-b pb-2">Heal settings</span>
+                  <span className="text-xs font-medium text-slate-500 block border-b pb-2">Display</span>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-muted-foreground">Auto-Apply Confidence Threshold</span>
+                      <span className="text-muted-foreground">Confidence shown in green from</span>
                       <span className="text-indigo-600 font-semibold">{healingThreshold}%</span>
                     </div>
                     <input
@@ -681,7 +683,7 @@ export default function AutomationHubPage() {
                       className="w-full h-1 bg-muted rounded-lg cursor-pointer accent-indigo-650"
                     />
                     <span className="text-xs text-muted-foreground leading-relaxed block font-medium">
-                      Recoveries with scores below this limit will wait in the manual review queue before modifying Page Objects.
+                      Only changes how events are highlighted on this page. It does not change what your test runs do.
                     </span>
                   </div>
                 </div>
