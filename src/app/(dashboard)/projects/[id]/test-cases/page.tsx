@@ -283,11 +283,11 @@ export default function TestLibraryPage() {
       <header className="shrink-0 space-y-3 border-b bg-card px-6 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-0.5">
-            <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+            <h1 className="heading-6 flex items-center gap-2">
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <FlaskConical className="h-4 w-4" />
               </span>
-              Test library
+              Test Cases
             </h1>
             <p className="text-xs text-muted-foreground">
               Author, organise and execute this project&apos;s manual and automated tests.

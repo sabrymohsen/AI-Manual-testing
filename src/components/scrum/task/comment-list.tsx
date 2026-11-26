@@ -197,7 +197,7 @@ export function CommentList({
                   <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                   </span>
-                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100">
                     <button
                       onClick={() => {
                         const plain = mentionsToPlain(c.content)

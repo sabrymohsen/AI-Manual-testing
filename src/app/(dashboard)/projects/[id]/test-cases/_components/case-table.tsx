@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import { useRouter } from "next/navigation"
@@ -406,7 +407,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
             disabled={selectingAll}
             className="inline-flex items-center gap-1 font-medium text-primary hover:underline disabled:opacity-60"
           >
-            {selectingAll && <Loader2 className="h-3 w-3 animate-spin" />}
+            {selectingAll && <BusyDot />}
             Select all {total} matching cases
           </button>
         </div>
@@ -628,9 +629,7 @@ function Row({
             {row.title}
           </span>
 
-          {/* Badges and tags give way before the title does. */}
-          <span className="flex min-w-0 shrink-[3] items-center gap-2 overflow-hidden">
-
+          {/* The review badge always shows in full; tags give way before the title does. */}
           {row.reviewState !== "Ready" && (
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -646,6 +645,8 @@ function Row({
               <ReviewMenu current={row.reviewState} onPick={(r) => onPatch({ reviewState: r })} />
             </DropdownMenu>
           )}
+
+          <span className="flex min-w-0 shrink-[3] items-center gap-2 overflow-hidden">
 
           {row.tags.slice(0, 2).map((t) => (
             <span
@@ -806,7 +807,7 @@ function Row({
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label={`Actions for ${row.title}`}
-              className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+              className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-background hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100"
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
             </DropdownMenuTrigger>

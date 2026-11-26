@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -85,7 +86,7 @@ export function PromptDialog({
             Cancel
           </Button>
           <Button size="sm" onClick={submit} disabled={!value.trim() || pending} className="gap-2">
-            {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {pending && <BusyDot />}
             {confirmLabel}
           </Button>
         </DialogFooter>

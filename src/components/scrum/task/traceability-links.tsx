@@ -143,7 +143,7 @@ export function TraceabilityLinks({
                 </span>
                 <button
                   onClick={() => setTestCases.mutate(testCases.filter((t) => t.id !== tc.id).map((t) => t.id))}
-                  className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                  className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -178,7 +178,7 @@ export function TraceabilityLinks({
                 <span className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{b.status}</span>
                 <button
                   onClick={() => setBugs.mutate(bugs.filter((x) => x.id !== b.id).map((x) => x.id))}
-                  className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                  className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>

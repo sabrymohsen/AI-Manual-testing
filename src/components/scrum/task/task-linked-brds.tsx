@@ -131,7 +131,7 @@ export function TaskLinkedBrds({ projectId, taskId }: { projectId: string; taskI
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>
               {canManage && (
-                <button onClick={() => unlink(b.linkId, b.id)} className="rounded p-1 text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100" title="Unlink">
+                <button onClick={() => unlink(b.linkId, b.id)} className="rounded p-1 text-slate-400 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100" title="Unlink">
                   <X className="h-3.5 w-3.5" />
                 </button>
               )}

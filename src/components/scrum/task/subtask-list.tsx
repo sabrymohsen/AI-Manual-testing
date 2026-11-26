@@ -107,7 +107,7 @@ export function SubtaskList({
 
                 <button
                   onClick={() => remove.mutate(s.id)}
-                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                  className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
                   aria-label={`Delete subtask "${s.title}"`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />

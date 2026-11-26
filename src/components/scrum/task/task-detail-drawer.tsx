@@ -263,7 +263,7 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
                 className="heading-5 group flex cursor-pointer items-start justify-between rounded-lg p-1 text-foreground transition-colors hover:bg-muted/50"
               >
                 <span>{task.title}</span>
-                <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground shrink-0 ml-2 mt-1" />
+                <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-muted-foreground shrink-0 ml-2 mt-1" />
               </h2>
             )}
 
@@ -523,7 +523,7 @@ function DescriptionBlock({
           className="w-full rounded-2xl border border-dashed border-input p-4 text-left text-xs text-muted-foreground hover:bg-muted/50 transition-all font-medium flex items-center justify-between group"
         >
           <span>Add a detailed issue description, acceptance criteria, or context...</span>
-          <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500" />
+          <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity text-indigo-500" />
         </button>
       )}
     </div>

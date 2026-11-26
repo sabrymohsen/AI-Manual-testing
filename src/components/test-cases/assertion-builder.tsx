@@ -47,7 +47,7 @@ export function AssertionBuilder({ assertions, onChange }: AssertionBuilderProps
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium">Assertions</Label>
         <Button type="button" variant="ghost" size="sm" onClick={addAssertion}>
-          <Plus className="h-3 w-3 mr-1" /> Add Assertion
+          <Plus className="h-3 w-3 mr-1" /> Add assertion
         </Button>
       </div>
 

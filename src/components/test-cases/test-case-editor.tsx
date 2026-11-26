@@ -7,6 +7,7 @@
  * properties on the right, Save with ⌘/Ctrl+Enter.
  */
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { StepBuilder } from "@/components/test-cases/step-builder"
@@ -18,10 +19,10 @@ import { cn } from "@/lib/utils"
 import { AlertCircle, ChevronRight, FlaskConical, Hand, Loader2, X, Zap } from "@/components/ui/icons"
 
 const REVIEW_STATES: { value: TestCaseDraft["reviewState"]; hint: string }[] = [
-  { value: "Draft", hint: "Still being written" },
-  { value: "Ready", hint: "Written and runnable" },
-  { value: "Approved", hint: "Reviewed and approved" },
-  { value: "Deprecated", hint: "Retired — skipped when a plan runs" },
+  { value: "Draft", hint: "still being written" },
+  { value: "Ready", hint: "written and runnable" },
+  { value: "Approved", hint: "reviewed and approved" },
+  { value: "Deprecated", hint: "retired, skipped when a plan runs" },
 ]
 
 export type EditorStep = {
@@ -135,7 +136,7 @@ export function TestCaseEditor({
       <div className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card/95 px-4 backdrop-blur md:px-6">
         <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           <Link href={`/projects/${projectId}/test-cases`} className="flex items-center gap-2 hover:text-foreground">
-            <FlaskConical className="h-3.5 w-3.5" /> Test library
+            <FlaskConical className="h-3.5 w-3.5" /> Test Cases
           </Link>
           <ChevronRight className="h-3.5 w-3.5 opacity-50" />
           <span aria-current="page" className="truncate font-medium text-foreground">{heading}</span>
@@ -153,7 +154,7 @@ export function TestCaseEditor({
             disabled={saving}
             className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60"
           >
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {saving && <BusyDot />}
             {submitLabel}
             <kbd className="hidden rounded bg-primary-foreground/20 px-1 font-sans text-xs sm:inline">⌘↵</kbd>
           </button>

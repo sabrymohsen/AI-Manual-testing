@@ -85,7 +85,7 @@ export function TaskLinkedIssues({
                         </span>
                         <button
                           onClick={() => deleteLink.mutate(l.id)}
-                          className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                          className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
                           title="Remove link"
                         >
                           <X className="h-3.5 w-3.5" />

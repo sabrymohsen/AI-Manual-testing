@@ -1,5 +1,6 @@
 "use client"
 
+import { SkeletonLines } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Loader2 } from "@/components/ui/icons"
@@ -83,9 +84,9 @@ export default function EditTestCasePage() {
   if (loadError) return <p className="text-sm text-destructive">{loadError}</p>
   if (!initial)
     return (
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading test case…
-      </p>
+      <div className="p-6">
+        <SkeletonLines lines={4} className="w-full max-w-xl" />
+      </div>
     )
 
   return (

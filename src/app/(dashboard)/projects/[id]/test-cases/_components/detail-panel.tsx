@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useState } from "react"
 import Link from "next/link"
 import { useQueryClient } from "@tanstack/react-query"
@@ -288,7 +289,7 @@ export function DetailPanel({
             title="Turn this case into an automated (no-code) test in the Automation Hub"
             className="ml-auto h-7 gap-1 rounded-lg px-3 text-xs font-semibold"
           >
-            {automating ? <Spinner className="h-3 w-3 animate-spin" /> : <Bot className="h-3 w-3" />} Automate
+            {automating ? <BusyDot /> : <Bot className="h-3 w-3" />} Automate
           </Button>
           <Button
             size="sm"
@@ -325,10 +326,12 @@ export function DetailPanel({
           <button
             key={t.id}
             role="tab"
+            id={`tc-tab-${t.id}`}
             aria-selected={tab === t.id}
+            aria-controls="tc-tabpanel"
             onClick={() => setTab(t.id)}
             className={cn(
-              "-mb-px flex-1 border-b-2 py-3 text-center transition-colors",
+              "-mb-px flex-1 border-b-2 py-3 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
               tab === t.id ? "border-primary text-primary" : "border-transparent hover:text-foreground"
             )}
           >
@@ -338,7 +341,7 @@ export function DetailPanel({
         ))}
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto p-4">
+      <div id="tc-tabpanel" role="tabpanel" aria-labelledby={`tc-tab-${tab}`} className="flex-1 space-y-6 overflow-y-auto p-4">
         {tab === "details" && (
           <>
             {tc.preconditions && (
@@ -667,7 +670,7 @@ function SyncTab({
   const syncNow = useSyncCase(projectId, testCaseId)
 
   return (
-    <Section title={trackerName}>
+    <Section title={trackerName === "tracker" ? "Tracker" : trackerName}>
       <div className="space-y-2 rounded-lg border p-3 text-xs">
         {sync ? (
           <>
@@ -691,7 +694,7 @@ function SyncTab({
             )}
           </>
         ) : (
-          <p className="text-muted-foreground">Not synced to {trackerName} yet.</p>
+          <p className="text-muted-foreground">Not synced to {trackerName === "tracker" ? "a tracker" : trackerName} yet.</p>
         )}
 
         {canSyncHere ? (
@@ -702,7 +705,7 @@ function SyncTab({
             disabled={syncNow.isPending}
             onClick={() => syncNow.mutate()}
           >
-            {syncNow.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <CloudUpload className="h-3 w-3" />}
+            {syncNow.isPending ? <BusyDot /> : <CloudUpload className="h-3 w-3" />}
             {sync ? "Sync again" : "Sync now"}
           </Button>
         ) : (

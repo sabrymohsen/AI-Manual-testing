@@ -288,17 +288,18 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
 
   // Step 2: Handle Mapped Headers and Parse test cases + steps
   function handleGeneratePreview() {
+    setErrorMsg(null)
     // Validate required fields
     if (!mapping.title) {
-      alert("Mapping for 'Test Case Title' is required.")
+      setErrorMsg("Choose which column holds the test case title.")
       return
     }
     if (!mapping.actionDescription) {
-      alert("Mapping for 'Step Action Description' is required.")
+      setErrorMsg("Choose which column holds the step action.")
       return
     }
     if (!mapping.expectedResult) {
-      alert("Mapping for 'Step Expected Result' is required.")
+      setErrorMsg("Choose which column holds the expected result.")
       return
     }
 
@@ -439,8 +440,9 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
 
   // Step 3: Send bulk request to database
   async function handleConfirmImport() {
+    setErrorMsg(null)
     if (parsedTestCases.length === 0) {
-      alert("No valid test cases parsed to import.")
+      setErrorMsg("No test cases were found in the file. Check the column mapping and try again.")
       return
     }
 
@@ -460,10 +462,10 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
         onClose()
       } else {
         const errorData = await res.json()
-        alert(errorData.error || "Failed to import test cases.")
+        setErrorMsg(errorData.error || "The import failed. Try again.")
       }
     } catch {
-      alert("Network error trying to import test cases.")
+      setErrorMsg("The import failed because the server could not be reached. Check your connection and try again.")
     } finally {
       setIsImporting(false)
     }
@@ -477,7 +479,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
         <div className="px-6 py-4 border-b flex items-center justify-between bg-accent/20">
           <div>
             <h3 className="text-xl font-semibold flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5 text-green-500" /> Excel Test Case Importer
+              <FileSpreadsheet className="h-5 w-5 text-green-500" /> Import test cases from Excel
             </h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Easily import your manual test cases into the workspace
@@ -488,7 +490,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
           <div className="flex items-center gap-2 text-xs font-semibold">
             <span className={`px-3 py-1 rounded-full ${step === 1 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>1. Upload</span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className={`px-3 py-1 rounded-full ${step === 2 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>2. Map Columns</span>
+            <span className={`px-3 py-1 rounded-full ${step === 2 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>2. Map columns</span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             <span className={`px-3 py-1 rounded-full ${step === 3 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>3. Preview</span>
           </div>
@@ -521,12 +523,12 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                   Support formats: .xlsx or .xls files. Make sure the first row contains column headings.
                 </p>
                 <Button variant="outline" size="sm" className="mt-6 bg-background">
-                  Browse Files
+                  Browse files
                 </Button>
               </div>
 
               {errorMsg && (
-                <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-center gap-3 animate-shake">
+                <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-center gap-3 ">
                   <AlertCircle className="h-5 w-5 shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
@@ -552,7 +554,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 >
                   <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
                     <Download className="h-4 w-4" />
-                    Download Template
+                    Download template
                   </Button>
                 </a>
               </div>
@@ -560,6 +562,12 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
           )}
 
           {/* STEP 2: DYNAMIC HEADER MAPPING */}
+          {step !== 1 && errorMsg && (
+            <div role="alert" className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400">
+              <AlertCircle className="h-5 w-5 shrink-0" aria-hidden />
+              <span>{errorMsg}</span>
+            </div>
+          )}
           {step === 2 && (
             <div className="space-y-6">
               <div className="p-4 bg-accent/15 rounded-xl border flex items-center gap-3">
@@ -625,7 +633,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                           </span> · Steps Count: <span className="font-medium text-foreground">{tc.steps.length}</span>
                         </p>
                       </div>
-                      <span className={`text-xs px-3 py-0.5 rounded font-bold uppercase shrink-0 ml-2 ${
+                      <span className={`text-xs px-3 py-0.5 rounded font-semibold  shrink-0 ml-2 ${
                         tc.priority === "Critical" ? "bg-red-100 text-red-700" :
                         tc.priority === "High" ? "bg-orange-100 text-orange-700" :
                         tc.priority === "Medium" ? "bg-blue-100 text-blue-700" :
@@ -642,7 +650,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                     )}
 
                     <div className="space-y-3">
-                      <div className="text-xs font-medium text-muted-foreground">Steps Checklist</div>
+                      <div className="text-xs font-medium text-muted-foreground">Steps checklist</div>
                       <ol className="list-decimal list-inside divide-y border rounded-lg bg-background/50 overflow-hidden">
                         {tc.steps.map((step: any, stepIdx: number) => (
                           <li key={stepIdx} className="p-3 text-xs flex flex-col md:flex-row gap-2 items-start justify-between hover:bg-accent/10 transition-colors">
@@ -695,7 +703,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 onClick={handleGeneratePreview}
                 className="bg-primary hover:bg-primary/95 flex items-center gap-2"
               >
-                Preview & Verify <ChevronRight className="h-4 w-4" />
+                Preview <ChevronRight className="h-4 w-4" />
               </Button>
             )}
 
@@ -706,12 +714,10 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
               >
                 {isImporting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" /> Importing...
-                  </>
+                  "Importing…"
                 ) : (
                   <>
-                    <Check className="h-4 w-4" /> Import {parsedTestCases.length} Test Cases
+                    <Check className="h-4 w-4" /> Import {parsedTestCases.length} test case{parsedTestCases.length === 1 ? "" : "s"}
                   </>
                 )}
               </Button>

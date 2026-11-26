@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -129,7 +130,10 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
     }
 
     if (!pageUrl) {
-      alert("No valid page URL found to validate this selector.")
+      setValidationResults((prev) => ({
+        ...prev,
+        [index]: { valid: false, message: "No page to check against. Add the website URL in the project settings, or save this locator with a page URL." },
+      }))
       setValidatingIdx(null)
       return
     }
@@ -145,15 +149,18 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
         }),
       })
 
-      if (res.ok) {
-        const data = await res.json()
-        setValidationResults((prev) => ({
-          ...prev,
-          [index]: { valid: data.valid, message: data.message },
-        }))
-      }
+      const data = await res.json().catch(() => ({}))
+      setValidationResults((prev) => ({
+        ...prev,
+        [index]: res.ok
+          ? { valid: data.valid, message: data.message }
+          : { valid: false, message: data.error || "The selector could not be checked. Try again." },
+      }))
     } catch {
-      alert("Network error validating selector.")
+      setValidationResults((prev) => ({
+        ...prev,
+        [index]: { valid: false, message: "The selector could not be checked because the server could not be reached." },
+      }))
     } finally {
       setValidatingIdx(null)
     }
@@ -208,13 +215,13 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
         <div className="flex items-center gap-2">
           {modeToggle}
           <Button type="button" variant="outline" size="sm" onClick={addStep}>
-            <Plus className="h-4 w-4 mr-1" /> Add Step
+            <Plus className="h-4 w-4 mr-1" /> Add step
           </Button>
         </div>
       </div>
 
       {steps.length === 0 && (
-        <p className="text-sm text-muted-foreground">No steps yet. Click &ldquo;Add Step&rdquo; to begin.</p>
+        <p className="text-sm text-muted-foreground">No steps yet. Click &ldquo;Add step&rdquo; to begin.</p>
       )}
 
       <div className="space-y-4">
@@ -261,7 +268,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
             {projectId && locators.length > 0 && (
               <div className="bg-accent/10 p-3 rounded-lg border border-border space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium text-muted-foreground">Use Saved Locator</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Use saved locator</Label>
                   {step.targetValue && (
                     <Button
                       type="button"
@@ -271,8 +278,8 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
                       disabled={validatingIdx === index}
                       className="text-xs h-6 px-2 hover:bg-background flex items-center gap-1"
                     >
-                      <RefreshCw className={`h-3 w-3 ${validatingIdx === index ? "animate-spin" : ""}`} />
-                      Validate Selector
+                      {validatingIdx === index ? <BusyDot /> : <RefreshCw className="h-3 w-3" />}
+                      Validate selector
                     </Button>
                   )}
                 </div>
@@ -327,7 +334,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Action Type</Label>
+                <Label className="text-xs">Action type</Label>
                 <select
                   value={step.actionType}
                   onChange={(e) => updateStep(index, "actionType", e.target.value)}
@@ -339,7 +346,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
                 </select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Target Type</Label>
+                <Label className="text-xs">Target type</Label>
                 <select
                   value={step.targetType}
                   onChange={(e) => updateStep(index, "targetType", e.target.value)}
@@ -364,7 +371,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <Label className="text-xs">Target Value</Label>
+                <Label className="text-xs">Target value</Label>
                 <Input
                   value={step.targetValue}
                   onChange={(e) => updateStep(index, "targetValue", e.target.value)}
@@ -372,7 +379,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Input Value</Label>
+                <Label className="text-xs">Input value</Label>
                 <Input
                   value={step.inputValue}
                   onChange={(e) => updateStep(index, "inputValue", e.target.value)}
@@ -415,7 +422,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
               onClick={addStep}
               className="w-full max-w-[200px] border-dashed hover:border-solid hover:bg-accent/40"
             >
-              <Plus className="h-4 w-4 mr-1" /> Add Step
+              <Plus className="h-4 w-4 mr-1" /> Add step
             </Button>
           </div>
         )}

@@ -664,7 +664,7 @@ function AttachmentsPanel({ projectId, task }: { projectId: string; task: ScrumT
                   if (await confirm({ title: `Delete ${a.name}?`, description: "The file is removed from this issue.", confirmLabel: "Delete file", variant: "danger" }))
                     deleteAttachment.mutate(a.id)
                 }}
-                className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
+                className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100 focus-visible:opacity-100"
                 title="Delete"
               >
                 <Trash2 className="h-3.5 w-3.5" />

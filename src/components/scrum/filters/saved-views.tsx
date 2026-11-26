@@ -97,7 +97,7 @@ export function SavedViews({ projectId, currentQuery, onApply }: { projectId: st
             e.stopPropagation()
             remove.mutate(v.id)
           }}
-          className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100"
+          className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-destructive group-hover:opacity-100 focus-visible:opacity-100"
           aria-label={`Delete view ${v.name}`}
         >
           <Trash2 className="h-3.5 w-3.5" />

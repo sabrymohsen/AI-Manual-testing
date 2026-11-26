@@ -112,6 +112,15 @@ export function SuiteTree({
       <div key={suite.id}>
         <div
           onClick={() => onSelectSuite(suite.id)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              onSelectSuite(suite.id)
+            }
+          }}
+          aria-pressed={isSelected}
           onDragOver={(e) => {
             if (draggingCaseIds.length === 0) return
             e.preventDefault()
@@ -124,7 +133,7 @@ export function SuiteTree({
           }}
           style={{ paddingLeft: 8 + depth * 14 }}
           className={cn(
-            "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 text-sm transition-colors",
+            "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             isSelected
               ? "bg-primary/10 font-medium text-primary"
               : "text-foreground hover:bg-accent/60",
@@ -136,7 +145,7 @@ export function SuiteTree({
               e.stopPropagation()
               toggle(suite.id)
             }}
-            className={cn("rounded p-0.5 text-muted-foreground", kids.length === 0 && "invisible")}
+            className={cn("flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground", kids.length === 0 && "invisible")}
             aria-label={isOpen ? "Collapse" : "Expand"}
           >
             {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -164,7 +173,7 @@ export function SuiteTree({
               className="h-6 flex-1 px-2 py-0 text-xs"
             />
           ) : (
-            <span className="flex-1 truncate text-xs" title={suite.name}>
+            <span className="flex-1 truncate" title={suite.name}>
               {suite.name}
             </span>
           )}
@@ -183,7 +192,7 @@ export function SuiteTree({
           <DropdownMenu>
             <DropdownMenuTrigger
               onClick={(e) => e.stopPropagation()}
-              className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-background group-hover:opacity-100"
+              className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-background focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
               aria-label={`${suite.name} options`}
             >
               <MoreHorizontal className="h-3.5 w-3.5" />
@@ -276,13 +285,23 @@ export function SuiteTree({
         {/* All */}
         <div
           onClick={() => onSelectSuite(undefined)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              onSelectSuite(undefined)
+            }
+          }}
+          aria-pressed={selectedSuite === undefined}
           className={cn(
-            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             selectedSuite === undefined
               ? "bg-primary/10 font-medium text-primary"
               : "hover:bg-accent/60"
           )}
         >
+          <span className="w-4 shrink-0" aria-hidden />
           <Layers className="h-4 w-4 shrink-0 text-primary/70" />
           <span className="flex-1">All test cases</span>
         </div>
@@ -290,6 +309,15 @@ export function SuiteTree({
         {/* Unfiled — the bucket the old tree had no way to represent. */}
         <div
           onClick={() => onSelectSuite("unfiled")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              onSelectSuite("unfiled")
+            }
+          }}
+          aria-pressed={selectedSuite === "unfiled"}
           onDragOver={(e) => {
             if (draggingCaseIds.length === 0) return
             e.preventDefault()
@@ -301,7 +329,7 @@ export function SuiteTree({
             handleDrop(null)
           }}
           className={cn(
-            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
+            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             selectedSuite === "unfiled"
               ? "bg-primary/10 font-medium text-primary"
               : "hover:bg-accent/60",
@@ -310,6 +338,7 @@ export function SuiteTree({
               "ring-2 ring-primary ring-offset-1 ring-offset-background"
           )}
         >
+          <span className="w-4 shrink-0" aria-hidden />
           <Inbox className="h-4 w-4 shrink-0 text-muted-foreground" />
           <span className="flex-1">Unfiled</span>
           <span

@@ -144,7 +144,7 @@ export function PlanList({
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100 focus:opacity-100"
+                    className="rounded p-0.5 text-muted-foreground opacity-0 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100"
                     aria-label={`Actions for ${p.name}`}
                   >
                     <MoreHorizontal className="h-3.5 w-3.5" />

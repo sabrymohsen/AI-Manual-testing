@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { BusyDot } from "@/components/ui/skeleton"
+import { useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -54,6 +55,8 @@ export function RunDialog({
     if (open) setOpts(load())
   }, [open])
 
+  const startRef = useRef<HTMLButtonElement>(null)
+
   function confirm() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(opts))
@@ -65,26 +68,44 @@ export function RunDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent className="max-w-md">
+      <DialogContent
+        className="max-w-md"
+        onOpenAutoFocus={(e) => {
+          // Start on the main action, not on the first option (which looked selected).
+          e.preventDefault()
+          startRef.current?.focus()
+        }}
+      >
         <DialogHeader>
-          <DialogTitle className="text-base">{title}</DialogTitle>
-          {description && <DialogDescription className="text-xs">{description}</DialogDescription>}
+          <DialogTitle className="heading-6">{title}</DialogTitle>
+          {description && <DialogDescription className="body-6">{description}</DialogDescription>}
         </DialogHeader>
 
         <div className="space-y-4 py-1">
           {GROUPS.map((g) => (
             <div key={g.key}>
-              <p className="mb-2 text-xs font-medium text-muted-foreground">{g.label}</p>
+              <p className="caption-1 mb-2 text-muted-foreground">{g.label}</p>
               <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={g.label}>
-                {g.options.map((o) => (
+                {g.options.map((o, i) => (
                   <button
                     key={o}
                     type="button"
                     role="radio"
                     aria-checked={opts[g.key] === o}
+                    tabIndex={opts[g.key] === o ? 0 : -1}
                     onClick={() => setOpts((p) => ({ ...p, [g.key]: o }))}
+                    onKeyDown={(e) => {
+                      // Arrow keys move the choice within the group, like a radio group.
+                      const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0
+                      if (!step) return
+                      e.preventDefault()
+                      const next = g.options[(i + step + g.options.length) % g.options.length]
+                      setOpts((p) => ({ ...p, [g.key]: next }))
+                      const sib = (e.currentTarget.parentElement?.children[(i + step + g.options.length) % g.options.length] as HTMLElement | undefined)
+                      sib?.focus()
+                    }}
                     className={cn(
-                      "h-8 rounded-md border px-3 text-xs transition-colors",
+                      "h-8 rounded-md border px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       opts[g.key] === o
                         ? "border-primary/50 bg-primary/10 font-medium text-primary"
                         : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -102,8 +123,8 @@ export function RunDialog({
           <Button variant="ghost" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button size="sm" onClick={confirm} disabled={pending} className="gap-2">
-            {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5 fill-current" />}
+          <Button ref={startRef} size="sm" onClick={confirm} disabled={pending} className="gap-2">
+            {pending ? <BusyDot /> : <Play className="h-3.5 w-3.5 fill-current" />}
             Start run
           </Button>
         </DialogFooter>
