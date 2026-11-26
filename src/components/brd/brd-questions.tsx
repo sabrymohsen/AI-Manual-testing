@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -122,7 +123,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
   if (loading || !gate) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -140,20 +141,21 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
       <div
         className={cn(
           "rounded-lg border p-4",
-          gate.state === "ready" && "border-emerald-500/30 bg-emerald-500/5",
+          gate.state === "ready" && gate.total > 0 && "border-emerald-500/30 bg-emerald-500/5",
           gate.state === "blocked" && "border-red-500/30 bg-red-500/5",
           gate.state === "override" && "border-amber-500/30 bg-amber-500/5"
         )}
       >
         <div className="flex flex-wrap items-start gap-3">
           {gate.state === "ready" ? (
-            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+            <ShieldCheck className={cn("mt-0.5 h-5 w-5 shrink-0", gate.total > 0 ? "text-emerald-600" : "text-muted-foreground")} />
           ) : (
             <ShieldAlert className={cn("mt-0.5 h-5 w-5 shrink-0", gate.state === "blocked" ? "text-red-600" : "text-amber-600")} />
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">
-              {gate.state === "ready" && "Ready for test design"}
+              {/* With no questions at all the BRD simply hasn't been checked yet; don't call it ready. */}
+              {gate.state === "ready" && (gate.total > 0 ? "Ready for test design" : "Not checked yet")}
               {gate.state === "blocked" && `Not ready: ${gate.blocking} blocking question${gate.blocking === 1 ? "" : "s"}`}
               {gate.state === "override" && "Tester override: test design is going ahead with open questions"}
             </p>

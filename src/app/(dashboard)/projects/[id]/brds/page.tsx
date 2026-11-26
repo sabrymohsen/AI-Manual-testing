@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "sonner"
@@ -177,7 +178,7 @@ export default function BrdHubPage() {
               disabled={uploading}
               className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60"
             >
-              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading ? <BusyDot /> : <Upload className="h-4 w-4" />}
               Upload BRD
             </button>
             <input
@@ -264,7 +265,7 @@ export default function BrdHubPage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <BusyDot />
           </div>
         ) : brds.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
@@ -281,17 +282,27 @@ export default function BrdHubPage() {
             <div
               key={b.id}
               onClick={() => view === "active" && router.push(`/projects/${projectId}/brds/${b.id}`)}
-              className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-muted/50"
+              {...(view === "active"
+                ? {
+                    role: "link",
+                    tabIndex: 0,
+                    "aria-label": `Open ${b.name}`,
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter" && e.target === e.currentTarget) router.push(`/projects/${projectId}/brds/${b.id}`)
+                    },
+                  }
+                : {})}
+              className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <FileTypeIcon type={b.fileType} className="h-5 w-5 shrink-0" />
                 <div className="min-w-0">
-                  <p className="truncate font-semibold text-foreground">{b.name}</p>
+                  <p className="truncate font-semibold text-foreground" dir="auto">{b.name}</p>
                   <p className="truncate text-xs text-muted-foreground">
                     {b.uploaderName}
                     {b.linkCount > 0 && (
-                      <span className="ml-2 inline-flex items-center gap-0.5">
-                        <Link2 className="h-3 w-3" /> {b.linkCount}
+                      <span className="ml-2 inline-flex items-center gap-0.5" title="Linked stories, test cases and bugs">
+                        <Link2 className="h-3 w-3" aria-hidden /> {b.linkCount}
                       </span>
                     )}
                     {!!b.requirementCount && (
@@ -312,7 +323,7 @@ export default function BrdHubPage() {
                   )}
                 </div>
               </div>
-              <span className="text-xs font-semibold uppercase text-muted-foreground">{b.fileType}</span>
+              <span className="text-xs font-semibold  text-muted-foreground">{b.fileType}</span>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {new Date(b.updatedAt).toLocaleDateString()}

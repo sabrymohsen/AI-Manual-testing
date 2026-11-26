@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -146,7 +147,7 @@ export function BrdToBoard({
               disabled={busy || picked.size === 0}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
             >
-              {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KanbanSquare className="h-3.5 w-3.5" />}
+              {busy ? <BusyDot /> : <KanbanSquare className="h-3.5 w-3.5" />}
               Create {picked.size} on board
             </button>
           </div>

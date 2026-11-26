@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -216,7 +217,7 @@ export function BrdAnalysis({
           {running && (
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <BusyDot />
                 {analysis.totalChunks > 1
                   ? `Reading part ${Math.min(analysis.progress + 1, analysis.totalChunks)} of ${analysis.totalChunks}…`
                   : "Reading the document…"}
@@ -352,7 +353,7 @@ export function BrdAnalysis({
                             disabled={applying || selected.size === 0}
                             className="ml-auto inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                           >
-                            {applying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                            {applying ? <BusyDot /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                             Add {selected.size} to requirements
                           </button>
                         </div>
@@ -401,7 +402,7 @@ function StartButtons({ starting, onStart, again }: { starting: boolean; onStart
         className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
       >
         {starting ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          <BusyDot />
         ) : again ? (
           <RefreshCw className="h-3.5 w-3.5" />
         ) : (

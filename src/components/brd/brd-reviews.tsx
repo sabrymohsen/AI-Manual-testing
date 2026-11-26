@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { CheckCircle2, Clock, Loader2, MessageSquareWarning, Send, UserCheck } from "@/components/ui/icons"
@@ -96,7 +97,7 @@ export function BrdReviews({
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -166,7 +167,7 @@ export function BrdReviews({
             disabled={!picked.length || sending}
             className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-md bg-primary text-xs font-medium text-primary-foreground disabled:opacity-60"
           >
-            {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            {sending ? <BusyDot /> : <Send className="h-3.5 w-3.5" />}
             Ask {picked.length || ""} to review
           </button>
         </aside>

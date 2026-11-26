@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Check, KeyRound, Loader2, Pencil, Plus, Trash2, UserPlus, Users, X } from "@/components/ui/icons"
@@ -112,7 +113,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
   if (users === null) {
     return (
       <p className="flex items-center gap-2 p-6 text-xs font-normal text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <BusyDot /> Loading…
       </p>
     )
   }
@@ -154,7 +155,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
       </div>
       <div className="flex gap-2">
         <Button size="sm" onClick={save} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save
+          {saving ? <BusyDot /> : <Check className="h-4 w-4" />} Save
         </Button>
         <Button size="sm" variant="ghost" onClick={() => (setEditing(null), setDraft(EMPTY))} disabled={saving}>
           <X className="h-4 w-4" /> Cancel

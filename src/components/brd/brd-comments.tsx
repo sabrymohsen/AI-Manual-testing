@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { MessageSquarePlus, AtSign, Check, CheckCircle2, Trash2, CornerDownRight, Loader2, Quote, X, FileText } from "@/components/ui/icons"
@@ -234,7 +235,7 @@ export function BrdCommentsPanel({
             <div className="ml-auto flex gap-2">
               <button onClick={() => { setComposerOpen(false); setText(""); setQuote("") }} className="rounded-md border px-3 py-1 text-xs font-semibold">Cancel</button>
               <button onClick={() => submit(null, text, quote)} disabled={submitting || !text.trim()} className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
-                {submitting && <Loader2 className="h-3 w-3 animate-spin" />} Comment
+                {submitting && <BusyDot />} Comment
               </button>
             </div>
           </div>
@@ -243,7 +244,7 @@ export function BrdCommentsPanel({
 
       <div className="flex-1 overflow-y-auto p-3">
         {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-primary" /></div>
+          <div className="flex justify-center py-8"><BusyDot /></div>
         ) : roots.length === 0 ? (
           <div className="py-8 text-center text-xs text-muted-foreground">
             No comments yet.<br />Select any section and add one.

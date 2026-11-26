@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -254,7 +255,7 @@ export function BrdRequirements({
   if (loading) {
     return (
       <div className="flex justify-center py-16">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -304,7 +305,7 @@ export function BrdRequirements({
         <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
           <p className="text-xs font-medium">
             {overrideFor.r.key}: {gate.blocking} blocking question{gate.blocking === 1 ? " is" : "s are"} open ({gate.blockingKeys.join(", ")}). A professional
-            tester doesn't guess expected results. Answer them first, or record why you're proceeding anyway (saved with your name; the tests are tagged
+            tester doesn&apos;t guess expected results. Answer them first, or record why you&apos;re proceeding anyway (saved with your name; the tests are tagged
             “tester-override” and any case resting on an open question is marked blocked).
           </p>
           <textarea
@@ -924,7 +925,7 @@ function GenerateButton({ generating, onGenerate }: { generating: boolean; onGen
         className="inline-flex h-7 items-center gap-1 px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
         title="Draft test cases for this requirement with the project's AI provider"
       >
-        {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-violet-500" />}
+        {generating ? <BusyDot /> : <Sparkles className="h-3.5 w-3.5 text-violet-500" />}
         {generating ? "Generating…" : "Generate tests"}
       </button>
       <select

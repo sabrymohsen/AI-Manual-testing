@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { CheckCircle2, FileText, HelpCircle, Loader2, Pencil, Plus, Sparkles, Wand2, X } from "@/components/ui/icons"
@@ -164,7 +165,7 @@ export function BrdIssues({
                 disabled={!!busy}
                 className="inline-flex h-7 items-center gap-2 rounded-md border bg-background px-3 font-medium hover:bg-accent disabled:opacity-60"
               >
-                {busy === "draft" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
+                {busy === "draft" ? <BusyDot /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
                 {busy === "draft" ? (progress ? `Drafting ${Math.min(progress.done + DRAFT_GROUP, progress.total)} of ${progress.total}…` : "Drafting…") : `Draft criteria for ${undrafted.length}`}
               </button>
             )}
@@ -175,7 +176,7 @@ export function BrdIssues({
                 className="inline-flex h-7 items-center gap-2 rounded-md border bg-background px-3 font-medium hover:bg-accent disabled:opacity-60"
                 title="Accept every drafted issue as it is"
               >
-                {busy === "acceptAll" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                {busy === "acceptAll" ? <BusyDot /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
                 Accept all {drafted.length} drafts
               </button>
             )}
@@ -186,7 +187,7 @@ export function BrdIssues({
                 className="inline-flex h-7 items-center gap-2 rounded-md bg-primary px-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 title={isWord ? "Write the saved criteria into the Word document as a new version" : "Only Word BRDs can be updated"}
               >
-                {busy === "write" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                {busy === "write" ? <BusyDot /> : <FileText className="h-3.5 w-3.5" />}
                 Update the BRD ({pending.length})
               </button>
             )}
@@ -364,7 +365,7 @@ function IssueCard({
                   disabled={!!busy}
                   className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 >
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                  {saving ? <BusyDot /> : <CheckCircle2 className="h-3 w-3" />}
                   Accept
                 </button>
               )}
@@ -382,7 +383,7 @@ function IssueCard({
                   className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
                   title="Ask the AI for a new draft"
                 >
-                  {drafting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
+                  {drafting ? <BusyDot /> : <Wand2 className="h-3 w-3" />}
                   Redraft
                 </button>
               )}
@@ -397,7 +398,7 @@ function IssueCard({
               disabled={!!busy}
               className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
             >
-              {drafting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-primary" />}
+              {drafting ? <BusyDot /> : <Sparkles className="h-3 w-3 text-primary" />}
               Draft acceptance criteria
             </button>
             <button
@@ -482,7 +483,7 @@ function CriteriaEditor({
           disabled={saving || !title.trim() || !filled.length}
           className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
         >
-          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+          {saving ? <BusyDot /> : <CheckCircle2 className="h-3 w-3" />}
           Save as user story
         </button>
       </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { Loader2 } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
@@ -89,7 +90,7 @@ export function BrdCompare({
         <p className="text-sm text-muted-foreground">Pick two different versions.</p>
       ) : loading ? (
         <div className="flex justify-center py-10">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <BusyDot />
         </div>
       ) : error ? (
         <p className="text-sm text-destructive">{error}</p>

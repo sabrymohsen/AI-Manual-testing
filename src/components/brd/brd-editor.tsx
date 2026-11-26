@@ -1,5 +1,9 @@
 "use client"
 
+import { Modal } from "@/components/ui/modal"
+import { useConfirm } from "@/components/ui/alert-provider"
+import { PromptDialog } from "@/components/ui/prompt-dialog"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -39,14 +43,39 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
   const [uploading, setUploading] = useState(false)
   const imgInputRef = useRef<HTMLInputElement>(null)
   const draftKey = `brd-draft-${brdId}`
+  const confirm = useConfirm()
+  // Table / link dialogs take focus away from the editor, so remember where the
+  // cursor was and put it back before inserting.
+  const savedRange = useRef<Range | null>(null)
+  const [ask, setAsk] = useState<null | "table" | "link">(null)
+  const saveSelection = () => {
+    const sel = window.getSelection()
+    savedRange.current = sel && sel.rangeCount && ref.current?.contains(sel.anchorNode) ? sel.getRangeAt(0).cloneRange() : null
+  }
+  const restoreSelection = () => {
+    ref.current?.focus()
+    const sel = window.getSelection()
+    if (sel && savedRange.current) {
+      sel.removeAllRanges()
+      sel.addRange(savedRange.current)
+    }
+  }
 
   useEffect(() => {
     document.execCommand("styleWithCSS", false, "true")
     fetch(`/api/brds/${brdId}/preview`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
+      .then(async (d) => {
         const draft = localStorage.getItem(draftKey)
-        const html = draft && confirm("Restore your unsaved draft for this document?") ? draft : d?.html || "<p></p>"
+        const restore =
+          !!draft &&
+          (await confirm({
+            title: "Restore your unsaved draft?",
+            description: "Changes to this document were saved on this computer but not as a version.",
+            confirmLabel: "Restore draft",
+            cancelLabel: "Open saved version",
+          }))
+        const html = restore ? draft! : d?.html || "<p></p>"
         if (ref.current) ref.current.innerHTML = html
         setLoaded(true)
       })
@@ -137,9 +166,15 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
   }
 
   const insertTable = () => {
-    const rows = parseInt(prompt("Rows?", "2") || "0")
-    const cols = parseInt(prompt("Columns?", "2") || "0")
+    saveSelection()
+    setAsk("table")
+  }
+  const doInsertTable = (value: string) => {
+    const m = /(\d+)\s*[x×*,]\s*(\d+)/i.exec(value)
+    const rows = m ? Math.min(50, parseInt(m[1])) : 0
+    const cols = m ? Math.min(20, parseInt(m[2])) : 0
     if (!rows || !cols) return
+    restoreSelection()
     let html = "<table><tbody>"
     for (let r = 0; r < rows; r++) {
       html += "<tr>"
@@ -150,7 +185,14 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
     cmd("insertHTML", html)
   }
 
-  const insertLink = () => { const url = prompt("Link URL:", "https://"); if (url) cmd("createLink", url) }
+  const insertLink = () => {
+    saveSelection()
+    setAsk("link")
+  }
+  const doInsertLink = (url: string) => {
+    restoreSelection()
+    cmd("createLink", url)
+  }
   const insertChecklist = () => cmd("insertHTML", `<ul class="brd-checklist"><li>☐ &nbsp;To do item</li></ul><p></p>`)
   const insertPageBreak = () => cmd("insertHTML", `<div class="brd-pagebreak" data-pagebreak="1"></div><p></p>`)
   const insertSymbol = (s: string) => cmd("insertText", s)
@@ -263,7 +305,7 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
         <Btn onClick={insertLink} title="Insert link"><Link2 className="h-4 w-4" /></Btn>
         <Btn onClick={insertTable} title="Insert table"><TableIcon className="h-4 w-4" /></Btn>
         <Btn onClick={() => imgInputRef.current?.click()} title="Insert picture">
-          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+          {uploading ? <BusyDot /> : <ImageIcon className="h-4 w-4" />}
         </Btn>
         <input ref={imgInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageFile} />
         <SymbolPicker onPick={insertSymbol} />
@@ -283,14 +325,13 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
 
       {showFind && <FindReplace getRoot={() => ref.current} />}
 
-      {!loaded && <div className="flex items-center justify-center border py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>}
+      {!loaded && <div className="flex items-center justify-center border py-16"><BusyDot /></div>}
       <div ref={ref} contentEditable={loaded} suppressContentEditableWarning
         className="brd-doc min-h-[62vh] max-w-none rounded-b-lg border bg-card p-8 outline-none focus:ring-2 focus:ring-primary/30"
         style={{ display: loaded ? "block" : "none" }} />
 
       {showSaveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowSaveModal(false)}>
-          <div className="w-full max-w-md rounded-xl border bg-background p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setShowSaveModal(false)} label="Save as a new version" className="w-[calc(100vw-2rem)] max-w-md rounded-xl border bg-background p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
             <h3 className="text-sm font-semibold">Describe your changes</h3>
             <p className="mt-1 text-xs text-muted-foreground">Stored in the version history (required).</p>
             <textarea value={summary} onChange={(e) => setSummary(e.target.value)} rows={3} autoFocus
@@ -299,12 +340,38 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
             <div className="mt-4 flex justify-end gap-2">
               <button onClick={() => setShowSaveModal(false)} className="rounded-lg border px-3 py-2 text-sm font-semibold">Cancel</button>
               <button onClick={doSave} disabled={saving || !summary.trim()} className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-60">
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />} Save new version
+                {saving && <BusyDot />} Save new version
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
+
+      <PromptDialog
+        open={ask === "table"}
+        title="Insert a table"
+        label="Rows and columns"
+        placeholder="e.g. 3 x 4"
+        initialValue="3 x 3"
+        confirmLabel="Insert table"
+        onCancel={() => setAsk(null)}
+        onSubmit={(v) => {
+          setAsk(null)
+          doInsertTable(v)
+        }}
+      />
+      <PromptDialog
+        open={ask === "link"}
+        title="Insert a link"
+        label="Link address"
+        placeholder="https://"
+        initialValue="https://"
+        confirmLabel="Insert link"
+        onCancel={() => setAsk(null)}
+        onSubmit={(v) => {
+          setAsk(null)
+          doInsertLink(v)
+        }}
+      />
     </div>
   )
 }

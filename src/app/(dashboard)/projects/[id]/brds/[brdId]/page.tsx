@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -133,7 +134,7 @@ export default function BrdDetailPage() {
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -152,7 +153,7 @@ export default function BrdDetailPage() {
     { id: "versions", label: `Versions (${brd.versionCount})`, icon: History, show: true },
     { id: "reviews", label: "Reviews", icon: UserCheck, show: true },
     { id: "links", label: `Links (${brd.linkCount})`, icon: Link2, show: true },
-    { id: "audit", label: "Audit Log", icon: ScrollText, show: true },
+    { id: "audit", label: "Audit log", icon: ScrollText, show: true },
   ]
   const currentVersion = brd.versions.find((v: any) => v.id === brd.currentVersionId) ?? brd.versions[0]
 
@@ -209,7 +210,7 @@ export default function BrdDetailPage() {
               aria-label="Delete BRD"
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-red-200 bg-card px-3 text-sm font-semibold text-red-600 hover:bg-red-50"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4" aria-hidden />
             </button>
           )}
         </div>
@@ -227,14 +228,16 @@ export default function BrdDetailPage() {
       )}
 
       {/* Tabs */}
-      <div className="mt-4 flex gap-1 border-b">
+      <div role="tablist" aria-label="BRD sections" className="mt-4 flex gap-1 overflow-x-auto border-b [scrollbar-width:thin]">
         {tabs.filter((t) => t.show).map((t) => {
           const Icon = t.icon
           return (
             <button
               key={t.id}
+              role="tab"
+              aria-selected={tab === t.id}
               onClick={() => setTab(t.id)}
-              className={`-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${
+              className={`-mb-px inline-flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
                 tab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -396,7 +399,7 @@ function UploadVersionDialog({
             disabled={!file || !summary.trim() || busy}
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Upload
+            {busy ? <BusyDot /> : <Upload className="h-4 w-4" />} Upload
           </button>
         </div>
       </div>
@@ -527,7 +530,7 @@ function PreviewTab({ brd, projectId, currentUserId, onEdit }: { brd: any; proje
             className="h-[72vh] w-full rounded-lg border"
           />
         ) : loadingHtml ? (
-          <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          <div className="flex items-center justify-center py-16"><BusyDot /></div>
         ) : (
           <div ref={docRef} className="brd-doc max-w-none rounded-lg border bg-card p-8" dangerouslySetInnerHTML={{ __html: wordHtml || "" }} />
         )}
@@ -596,7 +599,7 @@ function VersionsTab({ brd, canManage, onChanged }: { brd: any; canManage: boole
                 </a>
                 {canManage && !isCurrent && (
                   <button onClick={() => setPendingRestore(v)} disabled={busy === v.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-60">
-                    {busy === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Restore
+                    {busy === v.id ? <BusyDot /> : <RotateCcw className="h-3 w-3" />} Restore
                   </button>
                 )}
               </div>
