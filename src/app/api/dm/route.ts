@@ -48,6 +48,7 @@ export async function GET(request: Request) {
             createdAt: { gt: lastRead },
             senderId: { not: userId },
             isDeleted: false,
+            parentId: null,
           },
         });
 

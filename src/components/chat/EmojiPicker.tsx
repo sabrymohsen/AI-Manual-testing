@@ -13,10 +13,11 @@ export function EmojiPicker({ onEmojiSelect }: { onEmojiSelect: (emoji: string) 
       <PopoverTrigger asChild>
         <button 
           type="button"
-          className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
-          title="Add Emoji"
+          className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title="Add an emoji"
+          aria-label="Add an emoji"
         >
-          <Smile className="h-5 w-5" />
+          <Smile className="h-4 w-4" />
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 border-none bg-transparent shadow-none" align="end">
@@ -24,6 +25,7 @@ export function EmojiPicker({ onEmojiSelect }: { onEmojiSelect: (emoji: string) 
           onEmojiClick={(emojiData) => onEmojiSelect(emojiData.emoji)}
           lazyLoadEmojis={true}
           skinTonesDisabled={true}
+          theme={"auto" as any}
         />
       </PopoverContent>
     </Popover>

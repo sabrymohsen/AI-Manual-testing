@@ -1,3 +1,4 @@
+import { notifyTestCaseAssigned } from "@/lib/work-notifications"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import {
@@ -113,6 +114,16 @@ export async function PUT(
     where: { id: params.tcId },
     include: { steps: { orderBy: { stepNumber: "asc" } } },
   })
+  if (testCase?.assignee && changed.includes("assignee")) {
+    const me = auth.session!.user
+    notifyTestCaseAssigned({
+      projectId: params.projectId,
+      testCase: { id: testCase.id, title: testCase.title },
+      assignee: testCase.assignee,
+      actorId: me.id,
+      actorName: me.name || me.email,
+    }).catch(() => {})
+  }
   return NextResponse.json({ testCase, changed })
 }
 

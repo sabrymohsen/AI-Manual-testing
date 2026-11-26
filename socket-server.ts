@@ -6,6 +6,8 @@ import { extractMentionedUserIds, messagePreview } from "./src/lib/mentions";
 import { PRESENCE_TTL_MS } from "./src/lib/presence";
 import {
   buildChannelMessageNotifications,
+  channelAudienceIds,
+  chatUrl,
   checkSocketBridgeConfig,
   type EntityMention,
 } from "./src/lib/notifications";
@@ -14,6 +16,21 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET || "your-secret-key";
 
 let io: SocketIOServer | null = null;
+
+/**
+ * Tell everyone who can see a conversation that it has a new message, so
+ * conversations they don't have open get an unread badge. Public channels go
+ * to the project room; private channels and DMs only to their members.
+ */
+async function emitChannelActivity(channel: { id: string; type: string; projectId: string }, message: any) {
+  const payload = { channelId: channel.id, senderId: message.senderId, messageId: message.id, parentId: message.parentId ?? null };
+  if (channel.type === "PUBLIC") {
+    io?.to(`project:${channel.projectId}`).emit("channel-activity", payload);
+    return;
+  }
+  const members = await prisma.channelMember.findMany({ where: { channelId: channel.id }, select: { userId: true } });
+  for (const m of members) io?.to(`user:${m.userId}`).emit("channel-activity", payload);
+}
 
 function startSocketServer() {
   // The HTTP handler doubles as an internal bridge: Next.js API routes run in
@@ -32,6 +49,30 @@ function startSocketServer() {
           const { notifications } = JSON.parse(raw || "{}");
           for (const n of notifications || []) {
             if (n?.userId) io?.to(`user:${n.userId}`).emit("notification", n);
+          }
+          res.writeHead(200, { "Content-Type": "application/json" }).end('{"ok":true}');
+        } catch {
+          res.writeHead(400).end();
+        }
+      });
+      return;
+    }
+
+    // A message saved by the HTTP API (the sender's socket was down): broadcast
+    // it like one sent over the socket.
+    if (req.method === "POST" && req.url === "/internal/chat-message") {
+      if (req.headers["x-internal-token"] !== JWT_SECRET) {
+        res.writeHead(401).end();
+        return;
+      }
+      let raw = "";
+      req.on("data", (chunk) => { raw += chunk; });
+      req.on("end", async () => {
+        try {
+          const { message, channel } = JSON.parse(raw || "{}");
+          if (message?.id && channel?.id) {
+            io?.to(`channel:${channel.id}`).emit("new-message", message);
+            await emitChannelActivity(channel, message);
           }
           res.writeHead(200, { "Content-Type": "application/json" }).end('{"ok":true}');
         } catch {
@@ -296,7 +337,7 @@ function startSocketServer() {
             },
           },
           include: {
-            sender: { select: { id: true, name: true, email: true } },
+            sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
             reactions: { include: { user: { select: { id: true, name: true } } } },
             attachments: true,
             _count: { select: { replies: true } },
@@ -309,6 +350,7 @@ function startSocketServer() {
         });
 
         io?.to(`channel:${channelId}`).emit("new-message", message);
+        emitChannelActivity(channel, message).catch(() => {});
 
         // Persist a notification per mentioned user and push it live.
         const senderName = user.name || user.email;
@@ -327,7 +369,7 @@ function startSocketServer() {
                 title: `${senderName} mentioned you`,
                 body: messagePreview(content || ""),
                 projectId: channel.projectId,
-                actionUrl: `/projects/${channel.projectId}/team-chat`,
+                actionUrl: chatUrl(channel.projectId, channelId, message.id),
               },
               include: { project: { select: { id: true, name: true } } },
             });
@@ -341,10 +383,7 @@ function startSocketServer() {
         // Previously only @mentions notified anyone, so ordinary messages were
         // invisible to members who didn't have the channel open.
         try {
-          const members = await prisma.channelMember.findMany({
-            where: { channelId },
-            select: { userId: true },
-          });
+          const audience = await channelAudienceIds(channel);
           // Skip anyone already sitting in the channel room — they can see it.
           const inRoom = io?.sockets.adapter.rooms.get(`channel:${channelId}`);
           const activeUserIds = new Set<string>();
@@ -355,11 +394,11 @@ function startSocketServer() {
             }
           }
           const skip = new Set<string>([...mentionIds, userId, ...activeUserIds]);
-          const recipients = members.map((m) => m.userId).filter((id) => !skip.has(id));
+          const recipients = audience.filter((id) => !skip.has(id));
 
           if (recipients.length > 0) {
             const payloads = buildChannelMessageNotifications({
-              channel: { id: channel.id, name: channel.name, projectId: channel.projectId },
+              channel: { id: channel.id, name: channel.name, projectId: channel.projectId, type: channel.type },
               senderName,
               content: content || "",
               recipientIds: recipients,
@@ -412,7 +451,7 @@ function startSocketServer() {
             editedAt: new Date(),
           },
           include: {
-            sender: { select: { id: true, name: true, email: true } },
+            sender: { select: { id: true, name: true, email: true, avatarUrl: true } },
             reactions: { include: { user: { select: { id: true, name: true } } } },
             attachments: true,
             _count: { select: { replies: true } },

@@ -7,6 +7,9 @@ export type NotificationType =
   | "SPRINT_STARTED"
   | "COMMENT"
   | "CHAT_MESSAGE"
+  | "BUG_ASSIGNED"
+  | "BUG_STATUS"
+  | "TEST_CASE_ASSIGNED"
   | "SYSTEM"
 
 export interface NotificationInput {
@@ -74,6 +77,29 @@ async function pushToSocket(notifications: unknown[]) {
   }
 }
 
+/**
+ * Hand a chat message saved over HTTP to the socket server, which broadcasts it
+ * to the open conversation and bumps unread badges everywhere else. Without
+ * this, messages sent while the sender's socket was down stayed invisible to
+ * others until they reloaded.
+ */
+export async function pushChatMessage(payload: {
+  message: unknown
+  channel: { id: string; type: string; projectId: string }
+  senderId: string
+}) {
+  try {
+    await fetch(`${SOCKET_INTERNAL_URL}/internal/chat-message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-internal-token": INTERNAL_TOKEN },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(3000),
+    })
+  } catch {
+    // Socket server down: the message is saved and shows on the next load.
+  }
+}
+
 /** An entity referenced from a chat message via `#`. */
 export interface EntityMention {
   type: string
@@ -91,7 +117,7 @@ export interface EntityMention {
  * can see who is currently sitting in the channel room.
  */
 export function buildChannelMessageNotifications(opts: {
-  channel: { id: string; name: string | null; projectId: string | null }
+  channel: { id: string; name: string | null; projectId: string | null; type?: string | null }
   senderName: string
   content: string
   recipientIds: string[]
@@ -99,23 +125,50 @@ export function buildChannelMessageNotifications(opts: {
 }): NotificationInput[] {
   const { channel, senderName, content, recipientIds } = opts
   const preview = content.replace(/\s+/g, " ").trim().slice(0, 140)
+  const isDM = channel.type === "DIRECT"
 
   // Referenced entities make a message worth opening, so name them up front.
   const refs = (opts.entityMentions ?? [])
     .map((m) => m.key || m.label)
     .filter(Boolean)
     .slice(0, 3)
-  const refHint = refs.length ? ` · Referenced ${refs.join(", ")}` : ""
+  const refHint = refs.length ? `. Mentions ${refs.join(", ")}` : ""
 
   return recipientIds.map((userId) => ({
     userId,
     type: "CHAT_MESSAGE" as const,
-    title: `New message in #${channel.name || "channel"}`,
-    body: `${senderName}: ${preview}${refHint}`,
+    title: isDM ? `${senderName} sent you a message` : `New message in #${channel.name || "channel"}`,
+    body: isDM ? `${preview}${refHint}` : `${senderName}: ${preview}${refHint}`,
     projectId: channel.projectId ?? null,
-    actionUrl: channel.projectId ? `/projects/${channel.projectId}/team-chat` : "/dashboard",
+    actionUrl: chatUrl(channel.projectId, channel.id),
     data: { channelId: channel.id },
   }))
+}
+
+/** Link that opens Team Chat on one conversation. */
+export function chatUrl(projectId: string | null | undefined, channelId: string, messageId?: string) {
+  if (!projectId) return "/dashboard"
+  return `/projects/${projectId}/team-chat?channel=${channelId}${messageId ? `&message=${messageId}` : ""}`
+}
+
+/**
+ * Who should hear about a new message. A public channel belongs to the whole
+ * project, so it is everyone on the project, not only the people who happen to
+ * have a ChannelMember row (until now that was just the channel's creator, so
+ * public-channel messages notified almost nobody). Private channels and DMs
+ * stay limited to their members.
+ */
+export async function channelAudienceIds(channel: { id: string; type: string; projectId: string }): Promise<string[]> {
+  if (channel.type === "PUBLIC") {
+    const project = await prisma.project.findUnique({
+      where: { id: channel.projectId },
+      select: { userId: true, projectMembers: { select: { userId: true } } },
+    })
+    if (!project) return []
+    return Array.from(new Set([project.userId, ...project.projectMembers.map((m) => m.userId)].filter(Boolean) as string[]))
+  }
+  const members = await prisma.channelMember.findMany({ where: { channelId: channel.id }, select: { userId: true } })
+  return members.map((m) => m.userId)
 }
 
 /**

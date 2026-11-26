@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { addTestRunJob } from "@/lib/queue"
 import { notFoundResponse, unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
+import { notifyBugStatus, notifyBugsBulk } from "@/lib/work-notifications"
 
 export async function POST(
   request: Request,
@@ -98,6 +99,10 @@ export async function POST(
         }
       })
     ])
+
+    if (bug.status !== "ReadyForRetest") {
+      notifyBugsBulk({ bugIds: [params.bugId], kind: "status", status: "ReadyForRetest", actorId: auth.session!.user.id, actorName: auth.session!.user.name || auth.session!.user.email }).catch(() => {})
+    }
 
     return NextResponse.json({ testRunId: testRun.id, message: "Retest job successfully queued" })
   } catch (error: any) {

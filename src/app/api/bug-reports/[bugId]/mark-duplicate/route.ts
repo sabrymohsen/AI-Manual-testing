@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { notFoundResponse, unauthorizedResponse, badRequestResponse, requireProjectMember } from "@/lib/api-guards"
+import { notifyBugStatus, notifyBugsBulk } from "@/lib/work-notifications"
 
 export async function POST(
   request: Request,
@@ -77,6 +78,7 @@ export async function POST(
       return bug
     })
 
+    notifyBugsBulk({ bugIds: [params.bugId], kind: "status", status: "Duplicate", actorId: auth.session!.user.id, actorName: auth.session!.user.name || auth.session!.user.email }).catch(() => {})
     return NextResponse.json({ bug: updatedBug })
   } catch (error: any) {
     console.error("POST /api/bug-reports/[bugId]/mark-duplicate error:", error)

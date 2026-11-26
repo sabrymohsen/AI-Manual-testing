@@ -31,19 +31,12 @@ export function useSocket(token: string, projectId: string | null, currentUserId
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("Socket connected successfully");
-      
-      // Join project room and broadcast presence
+      // Join the project room (presence, public channel activity) and the open
+      // conversation. Read the store here, not the value from when this effect
+      // ran, or a reconnect rejoins whichever channel was open at page load.
       socket.emit("join-project", projectId);
-
-      // Join active channel if one is selected
-      if (activeChannelId) {
-        socket.emit("join-channel", activeChannelId);
-      }
-    });
-
-    socket.on("disconnect", () => {
-      console.log("Socket disconnected");
+      const active = useChatStore.getState().activeChannelId;
+      if (active) socket.emit("join-channel", active);
     });
 
     // Find which channel a message lives in from the local cache
@@ -74,12 +67,28 @@ export function useSocket(token: string, projectId: string | null, currentUserId
           .catch(() => {});
       }
 
-      // Manage unread state & notification
-      const isActive = state.activeChannelId === message.channelId;
-      const isMine = currentUserId ? message.senderId === currentUserId : false;
-      if (!isActive && !isMine) {
-        incrementUnread(message.channelId);
-        triggerNotification(message);
+      // Unread badges come from "channel-activity"; alerts come from the bell.
+    });
+
+    // A conversation we don't have open got a message: bump its badge. The
+    // server sends this to everyone who can see the conversation, including
+    // people who never opened it, so badges no longer depend on having joined
+    // the channel's room.
+    socket.on("channel-activity", (payload: { channelId: string; senderId: string; parentId?: string | null }) => {
+      const state = useChatStore.getState();
+      if (payload.senderId === currentUserId) return;
+      if (payload.parentId) return; // thread replies don't count as unread in the list
+      if (state.activeChannelId === payload.channelId && document.visibilityState === "visible") return;
+      incrementUnread(payload.channelId);
+      const known =
+        state.channels.some((c) => c.id === payload.channelId) || state.dms.some((d) => d.id === payload.channelId);
+      if (!known && projectId) {
+        fetch(`/api/dm?projectId=${projectId}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (data?.dms) useChatStore.getState().setDMs(data.dms);
+          })
+          .catch(() => {});
       }
     });
 
@@ -154,25 +163,4 @@ export function useSocket(token: string, projectId: string | null, currentUserId
   }, [activeChannelId]);
 
   return socketRef;
-}
-
-// Push notification logic helper
-function triggerNotification(message: ChatMessage) {
-  if (typeof window === "undefined" || !("Notification" in window)) return;
-
-  if (Notification.permission === "granted") {
-    const senderName = message.sender.name || message.sender.email;
-    const bodyText = message.content.length > 80 ? `${message.content.slice(0, 80)}...` : message.content;
-
-    const notification = new Notification(`${senderName}`, {
-      body: bodyText,
-      tag: message.channelId,
-    });
-
-    notification.onclick = () => {
-      window.focus();
-      useChatStore.getState().setActiveChannel(message.channelId);
-      useChatStore.getState().openChat();
-    };
-  }
 }

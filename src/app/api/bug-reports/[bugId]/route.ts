@@ -5,6 +5,7 @@ import { checkTransition } from "@/lib/bug-reports/workflow"
 import { resolveBugSuiteId } from "@/lib/bug-reports/module"
 import { resolveOpenProject } from "@/lib/integrations/openproject/resolve"
 import { healBugProject } from "@/lib/bug-reports/keys"
+import { notifyBugAssigned, notifyBugStatus } from "@/lib/work-notifications"
 
 /**
  * Bugs saved without a project (older manual-run bugs) could never be opened,
@@ -248,6 +249,22 @@ export async function PUT(
 
       return bug
     })
+
+    // Tell people about it after the write, without holding up the response.
+    const me = auth.session!.user
+    const actor = { actorId: me.id, actorName: me.name || me.email }
+    const bugInfo = { id: updatedBug.id, title: updatedBug.title, key: updatedBug.bugKey }
+    if (assignedTo !== undefined && assignedTo && assignedTo !== existingBug.assignedTo) {
+      notifyBugAssigned({ projectId: existingBug.projectId, bug: { ...bugInfo, severity: updatedBug.severity }, assignedTo, ...actor }).catch(() => {})
+    }
+    if (status !== undefined && status !== existingBug.status) {
+      notifyBugStatus({
+        projectId: existingBug.projectId,
+        bug: { ...bugInfo, reporterId: updatedBug.reporterId, assignedTo: updatedBug.assignedTo },
+        to: status,
+        ...actor,
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ bug: updatedBug })
   } catch (error: any) {

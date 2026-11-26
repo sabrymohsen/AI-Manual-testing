@@ -13,8 +13,9 @@
  * Classes that already have a dark: variant keep working: dark shades stay
  * dark as backgrounds and light shades stay light as text.
  */
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const colors = require("tailwindcss/colors")
+import defaultColors from "tailwindcss/colors"
+
+const colors = defaultColors as unknown as Record<string, Record<string, string>>
 
 const NEUTRALS = ["slate", "gray", "zinc", "neutral", "stone"]
 const CHROMATIC = [

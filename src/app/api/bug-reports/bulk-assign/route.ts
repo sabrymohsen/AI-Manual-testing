@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api-guards"
 import { z } from "zod"
 import { authorizeBugsWrite } from "@/lib/bug-reports/guards"
+import { notifyBugStatus, notifyBugsBulk } from "@/lib/work-notifications"
 
 const bulkAssignSchema = z.object({
   bugIds: z.array(z.string()).min(1),
@@ -50,6 +51,10 @@ export async function POST(request: Request) {
         })
       }
     })
+
+    if (assignedTo) {
+      notifyBugsBulk({ bugIds, kind: "assigned", actorId: session.user.id, actorName: session.user.name || session.user.email }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true, count: bugIds.length })
   } catch (error: any) {

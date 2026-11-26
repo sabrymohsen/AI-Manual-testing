@@ -1,3 +1,4 @@
+import { notifyTestCaseAssigned } from "@/lib/work-notifications"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import {
@@ -179,6 +180,16 @@ export async function POST(
     },
   })
 
+  if (testCase.assignee) {
+    const me = auth.session!.user
+    notifyTestCaseAssigned({
+      projectId: params.projectId,
+      testCase: { id: testCase.id, title: testCase.title },
+      assignee: testCase.assignee,
+      actorId: me.id,
+      actorName: me.name || me.email,
+    }).catch(() => {})
+  }
   return NextResponse.json({ testCase }, { status: 201 })
 }
 

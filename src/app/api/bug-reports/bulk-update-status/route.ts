@@ -4,6 +4,7 @@ import { requireAuth, unauthorizedResponse, badRequestResponse } from "@/lib/api
 import { recalcOpenBugCount } from "@/lib/test-cases/rollup"
 import { z } from "zod"
 import { authorizeBugsWrite } from "@/lib/bug-reports/guards"
+import { notifyBugStatus, notifyBugsBulk } from "@/lib/work-notifications"
 
 const bulkUpdateStatusSchema = z.object({
   bugIds: z.array(z.string()).min(1),
@@ -61,6 +62,8 @@ export async function POST(request: Request) {
     await Promise.all(
       Array.from(new Set(affected.map((b) => b.testCaseId!))).map(recalcOpenBugCount)
     )
+
+    notifyBugsBulk({ bugIds, kind: "status", status, actorId: session.user.id, actorName: session.user.name || session.user.email }).catch(() => {})
 
     return NextResponse.json({ success: true, count: bugIds.length })
   } catch (error: any) {

@@ -37,24 +37,24 @@ export default function TeamChat() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex h-full" aria-busy="true" aria-label="Loading Team chat">
+        <div className="w-64 shrink-0 space-y-2 border-r bg-card p-4">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-8 animate-pulse rounded-md bg-muted" />)}
+        </div>
+        <div className="flex-1" />
       </div>
     )
   }
 
   if (!token || !currentUserId) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        Unable to load chat. Please sign in again.
+      <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+        Team chat couldn&apos;t confirm who you are. Sign out and sign in again.
       </div>
     )
   }
 
   return (
-    <>
-      <h1 className="sr-only">Team Chat</h1>
-      <TeamChatPage projectId={projectId} token={token} currentUserId={currentUserId} />
-    </>
+    <TeamChatPage projectId={projectId} token={token} currentUserId={currentUserId} />
   )
 }

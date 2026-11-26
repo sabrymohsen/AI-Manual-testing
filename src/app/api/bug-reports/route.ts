@@ -4,6 +4,7 @@ import { createBugReportSchema } from "@/schemas"
 import { requireAuth, unauthorizedResponse, badRequestResponse, memberProjectWhere, requireProjectMember } from "@/lib/api-guards"
 import { withBugModule } from "@/lib/bug-reports/module"
 import { nextBugKey } from "@/lib/bug-reports/keys"
+import { notifyBugAssigned } from "@/lib/work-notifications"
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -279,6 +280,17 @@ export async function POST(request: Request) {
 
       return bug
     })
+
+    if (bugReport.assignedTo) {
+      const me = auth.session!.user
+      notifyBugAssigned({
+        projectId,
+        bug: { id: bugReport.id, title: bugReport.title, key: bugReport.bugKey, severity: bugReport.severity },
+        assignedTo: bugReport.assignedTo,
+        actorId: me.id,
+        actorName: me.name || me.email,
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ bugReport }, { status: 201 })
   } catch (error: any) {

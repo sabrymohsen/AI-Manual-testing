@@ -1,7 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 import { io, Socket } from "socket.io-client"
 import { toast } from "sonner"
 import {
@@ -16,6 +16,9 @@ import {
   Rocket,
   MessageCircle,
   Inbox,
+  Bug,
+  FlaskConical,
+  Monitor,
 } from "@/components/ui/icons"
 import { useNotificationStore, AppNotification } from "@/stores/notificationStore"
 
@@ -26,7 +29,19 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string
   SPRINT_STARTED: { icon: Rocket, accent: "text-orange-600", iconBg: "bg-orange-50" },
   COMMENT: { icon: MessageCircle, accent: "text-muted-foreground", iconBg: "bg-muted" },
   CHAT_MESSAGE: { icon: MessageSquare, accent: "text-primary", iconBg: "bg-primary/10" },
+  BUG_ASSIGNED: { icon: Bug, accent: "text-rose-600", iconBg: "bg-rose-50" },
+  BUG_STATUS: { icon: Bug, accent: "text-amber-600", iconBg: "bg-amber-50" },
+  TEST_CASE_ASSIGNED: { icon: FlaskConical, accent: "text-violet-600", iconBg: "bg-violet-50" },
   SYSTEM: { icon: Bell, accent: "text-muted-foreground", iconBg: "bg-muted" },
+}
+
+const ALERTS_KEY = "qa-desktop-alerts"
+function desktopAlertsOn() {
+  try {
+    return typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted" && localStorage.getItem(ALERTS_KEY) === "on"
+  } catch {
+    return false
+  }
 }
 
 function timeAgo(date: string | Date): string {
@@ -73,13 +88,86 @@ export function NotificationBell({ token }: { token: string }) {
     })
     socketRef.current = socket
 
+    // Anything that arrived while we were disconnected is in the database, so
+    // re-read the count whenever the socket (re)connects.
+    socket.on("connect", () => {
+      fetch("/api/notifications?unread=true")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (d) setUnreadCount(d.unreadCount) })
+        .catch(() => {})
+    })
+
     socket.on("notification", (n: AppNotification) => {
       addNotification(n)
-      toast(n.title, { description: n.body.length > 80 ? `${n.body.slice(0, 80)}…` : n.body })
+      const description = n.body.length > 90 ? `${n.body.slice(0, 90)}…` : n.body
+      toast(n.title, {
+        description,
+        duration: 8000,
+        action: n.actionUrl
+          ? {
+              label: "Open",
+              onClick: () => {
+                useNotificationStore.getState().markRead(n.id)
+                fetch(`/api/notifications/${n.id}/read`, { method: "PATCH" }).catch(() => {})
+                router.push(n.actionUrl!)
+              },
+            }
+          : undefined,
+      })
+      // A system notification only when the tab is in the background and the
+      // user turned desktop alerts on.
+      if (desktopAlertsOn() && document.visibilityState === "hidden") {
+        try {
+          const sys = new Notification(n.title, { body: description, tag: n.id, icon: "/icon.svg" })
+          sys.onclick = () => {
+            window.focus()
+            if (n.actionUrl) router.push(n.actionUrl)
+            sys.close()
+          }
+        } catch {
+          // Some browsers only allow notifications from a service worker.
+        }
+      }
     })
 
     return () => { socket.disconnect() }
-  }, [token, addNotification])
+  }, [token, addNotification, setUnreadCount, router])
+
+  // Unread count in the browser tab title, e.g. "(3) QA Engine". Next.js
+  // resets the title on navigation, so re-apply it whenever the page changes
+  // and whenever the title is rewritten.
+  const pathname = usePathname()
+  useEffect(() => {
+    const apply = () => {
+      const base = document.title.replace(/^\(\d+\+?\) /, "")
+      const next = unreadCount > 0 ? `(${unreadCount > 99 ? "99+" : unreadCount}) ${base}` : base
+      if (document.title !== next) document.title = next
+    }
+    apply()
+    const titleEl = document.querySelector("title")
+    if (!titleEl) return
+    const mo = new MutationObserver(apply)
+    mo.observe(titleEl, { childList: true, characterData: true, subtree: true })
+    return () => mo.disconnect()
+  }, [unreadCount, pathname])
+
+  // Desktop alerts: opt-in, remembered per browser.
+  const [alerts, setAlerts] = useState<"on" | "off" | "blocked" | "unsupported">("off")
+  useEffect(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return setAlerts("unsupported")
+    if (Notification.permission === "denied") return setAlerts("blocked")
+    setAlerts(desktopAlertsOn() ? "on" : "off")
+  }, [])
+  async function toggleAlerts() {
+    if (alerts === "on") {
+      try { localStorage.setItem(ALERTS_KEY, "off") } catch {}
+      return setAlerts("off")
+    }
+    const permission = Notification.permission === "granted" ? "granted" : await Notification.requestPermission()
+    if (permission !== "granted") return setAlerts(permission === "denied" ? "blocked" : "off")
+    try { localStorage.setItem(ALERTS_KEY, "on") } catch {}
+    setAlerts("on")
+  }
 
   const loadPage = useCallback(
     async (pageToLoad: number, replace: boolean, filterValue: "all" | "unread") => {
@@ -186,6 +274,29 @@ export function NotificationBell({ token }: { token: string }) {
               </button>
             </div>
           </div>
+
+          {alerts !== "unsupported" && (
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-2 text-xs">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Monitor className="h-3.5 w-3.5" aria-hidden />
+                {alerts === "blocked"
+                  ? "Desktop alerts are blocked in this browser's site settings"
+                  : "Desktop alerts when this tab is in the background"}
+              </span>
+              {alerts !== "blocked" && (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={alerts === "on"}
+                  aria-label="Desktop alerts"
+                  onClick={toggleAlerts}
+                  className={`relative inline-block h-5 w-9 shrink-0 rounded-full transition-colors ${alerts === "on" ? "bg-primary" : "bg-muted-foreground/30"}`}
+                >
+                  <span className={`absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${alerts === "on" ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Tabs */}
           <div className="flex gap-1 border-b px-3 pt-2">

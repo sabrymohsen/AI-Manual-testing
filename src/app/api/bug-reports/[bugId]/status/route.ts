@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { notFoundResponse, unauthorizedResponse, requireProjectMember } from "@/lib/api-guards"
+import { notifyBugStatus, notifyBugsBulk } from "@/lib/work-notifications"
 
 export async function POST(
   request: Request,
@@ -44,6 +45,17 @@ export async function POST(
 
       return updated
     })
+
+    if (status !== bug.status) {
+      const me = auth.session!.user
+      notifyBugStatus({
+        projectId: bug.projectId!,
+        bug: { id: updatedBug.id, title: updatedBug.title, key: updatedBug.bugKey, reporterId: updatedBug.reporterId, assignedTo: updatedBug.assignedTo },
+        to: status,
+        actorId: me.id,
+        actorName: me.name || me.email,
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ bug: updatedBug })
   } catch (error: any) {

@@ -4,6 +4,9 @@ import { requireAuth } from "@/lib/api-guards";
 import {
   notify,
   buildChannelMessageNotifications,
+  channelAudienceIds,
+  chatUrl,
+  pushChatMessage,
   type NotificationInput,
   type EntityMention,
 } from "@/lib/notifications";
@@ -53,6 +56,15 @@ export async function GET(
       if (!isChannelMember) {
         return NextResponse.json({ error: "Access denied to private channel" }, { status: 403 });
       }
+    }
+
+    // Opening a public channel joins it, so its unread count can be tracked.
+    if (channel.type === "PUBLIC") {
+      await prisma.channelMember.upsert({
+        where: { channelId_userId: { channelId: params.id, userId } },
+        update: {},
+        create: { channelId: params.id, userId },
+      });
     }
 
     // Update lastReadAt for the current user in this channel
@@ -221,23 +233,12 @@ export async function POST(
       data: { updatedAt: new Date() },
     });
 
-    // Broadcast in real-time if Socket.io is running
-    try {
-      const { getIO } = require("@/lib/socket-server");
-      const io = getIO();
-      io.to(`channel:${params.id}`).emit("new-message", message);
-
-      mentionIds.forEach((mentionedUserId: string) => {
-        io.to(`user:${mentionedUserId}`).emit("mentioned", {
-          messageId: message.id,
-          channelId: params.id,
-          senderName: auth.session!.user.name || auth.session!.user.email,
-          preview: content.slice(0, 100),
-        });
-      });
-    } catch {
-      // socket.io not running or initialized yet, ignore
-    }
+    // Broadcast in real time through the socket server (a separate process).
+    pushChatMessage({
+      message,
+      channel: { id: channel.id, type: channel.type, projectId: channel.projectId },
+      senderId: userId,
+    }).catch(() => {});
 
     // Notifications: an @mention is personal and outranks the generic
     // "new message" one, so mentioned users get only the mention.
@@ -248,23 +249,20 @@ export async function POST(
       title: `${senderName} mentioned you`,
       body: messagePreview(content || ""),
       projectId: channel.projectId,
-      actionUrl: `/projects/${channel.projectId}/team-chat`,
+      actionUrl: chatUrl(channel.projectId, channel.id, message.id),
     }));
 
     // Everyone else in the channel gets told there's a new message. Previously
     // only @mentions notified anyone, so ordinary messages were invisible to
     // anybody who didn't happen to have the channel open.
-    const members = await prisma.channelMember.findMany({
-      where: { channelId: params.id },
-      select: { userId: true },
-    });
+    const audience = await channelAudienceIds({ id: channel.id, type: channel.type, projectId: channel.projectId });
     const alreadyNotified = new Set<string>([...mentionIds, auth.session!.user.id]);
-    const others = members.map((m) => m.userId).filter((id) => !alreadyNotified.has(id));
+    const others = audience.filter((id) => !alreadyNotified.has(id));
 
     if (others.length > 0) {
       payloads.push(
         ...buildChannelMessageNotifications({
-          channel: { id: channel.id, name: channel.name, projectId: channel.projectId },
+          channel: { id: channel.id, name: channel.name, projectId: channel.projectId, type: channel.type },
           senderName,
           content: content || "",
           recipientIds: others,

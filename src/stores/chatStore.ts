@@ -112,6 +112,8 @@ interface ChatStore {
   deleteMessage: (channelId: string, messageId: string) => void;
   setTyping: (channelId: string, users: { userId: string; name: string }[]) => void;
   setUnread: (channelId: string, count: number) => void;
+  /** Replace every unread count at once, e.g. from the server on load. */
+  setUnreadCounts: (counts: Record<string, number>) => void;
   incrementUnread: (channelId: string) => void;
   clearUnread: (channelId: string) => void;
   setOnlineUsers: (userIds: string[]) => void;
@@ -309,6 +311,8 @@ export const useChatStore = create<ChatStore>((set) => ({
       [channelId]: users
     }
   })),
+
+  setUnreadCounts: (counts) => set({ unreadCounts: counts }),
 
   setUnread: (channelId, count) => set((state) => ({
     unreadCounts: {

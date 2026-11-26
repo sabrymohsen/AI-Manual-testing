@@ -1,3 +1,4 @@
+import { notifyTestCasesAssignedBulk } from "@/lib/work-notifications"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
@@ -71,6 +72,17 @@ export async function POST(request: Request, { params }: { params: { projectId: 
         WHERE "id" IN (${Prisma.join(ids)})`
     }
   })
+
+  if (b.assignee) {
+    const me = auth.session!.user
+    notifyTestCasesAssignedBulk({
+      projectId: params.projectId,
+      testCaseIds: ids,
+      assignee: b.assignee,
+      actorId: me.id,
+      actorName: me.name || me.email,
+    }).catch(() => {})
+  }
 
   return NextResponse.json({ count: ids.length })
 }

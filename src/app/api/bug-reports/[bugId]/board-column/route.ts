@@ -18,6 +18,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireProjectMember, unauthorizedResponse, badRequestResponse, notFoundResponse } from "@/lib/api-guards"
+import { notifyBugStatus, notifyBugsBulk } from "@/lib/work-notifications"
 import { loadIntegration } from "@/lib/integrations/core/load-integration"
 import {
   appStatusForTrackerStatus,
@@ -136,7 +137,17 @@ export async function POST(
 
   // ── 3. Bring the local status along, when it has a meaning here ─────────────
   if (localUpdate) {
-    await prisma.bugReport.update({ where: { id: bug.id }, data: localUpdate })
+    const moved = await prisma.bugReport.update({ where: { id: bug.id }, data: localUpdate })
+    if (localUpdate.status && localUpdate.status !== bug.status) {
+      const me = auth.session!.user
+      notifyBugStatus({
+        projectId,
+        bug: { id: moved.id, title: moved.title, key: moved.bugKey, reporterId: moved.reporterId, assignedTo: moved.assignedTo },
+        to: String(localUpdate.status),
+        actorId: me.id,
+        actorName: me.name || me.email,
+      }).catch(() => {})
+    }
   }
 
   return NextResponse.json({
