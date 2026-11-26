@@ -27,7 +27,7 @@ interface ProjectItem {
   id: string
   name: string
   environment: string
-  baseUrl: string
+  baseUrl?: string | null
 }
 
 export default function DashboardPage() {
@@ -57,8 +57,8 @@ export default function DashboardPage() {
       })
       .catch(() => {})
 
-    // Load all projects for the workspace gate
-    fetch("/api/projects")
+    // Every project the user can open (owned and member-of), like the sidebar switcher.
+    fetch("/api/my-projects")
       .then(res => res.json())
       .then(data => setProjectsList(data.projects || []))
       .catch(() => {})

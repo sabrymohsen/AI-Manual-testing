@@ -6,6 +6,22 @@ import { ArrowUp, ArrowDown, Minus, type LucideIcon } from "@/components/ui/icon
 import { KPI_ACCENTS } from "@/lib/reports/colors"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { CountUp } from "@/components/ui/count-up"
+
+/** Count up the leading number of a value like "13 pts" or "42%"; leave "14 / 14" as is. */
+function AnimatedValue({ value }: { value: string }) {
+  const m = /^(\d+)([^\d/]*)$/.exec(value.replace(/,/g, ""))
+  if (!m) return <>{value}</>
+  return (
+    <>
+      <CountUp value={Number(m[1])} />
+      {m[2]}
+    </>
+  )
+}
+
+/** A change of zero ("+0", "+0%", "0/0") says nothing, so no badge is shown. */
+const isNoChange = (c: string) => /^[+-]?0%?$/.test(c.trim()) || /^0\s*\/\s*0$/.test(c.trim())
 
 export interface KPICardData {
   key: string
@@ -50,20 +66,24 @@ const KPICard = memo(function KPICard({ data }: { data: KPICardData }) {
     <button
       onClick={() => scrollToTarget(data.targetId)}
       aria-label={`${data.label}: ${data.value}, ${data.change}`}
-      className="group flex flex-col rounded-xl border border-border bg-card p-6 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="hover-lift group flex flex-col rounded-2xl border border-border bg-card p-6 text-left shadow-sm hover:border-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.98]"
     >
       <div className="flex items-start justify-between">
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", accent.iconBg)}>
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-transform duration-300 ease-out-soft group-hover:scale-110", accent.iconBg)}>
           <Icon className={cn("h-5 w-5", accent.iconText)} />
         </div>
-        <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold", badgeCls)}>
-          <TrendIcon className="h-3 w-3" />
-          {data.change}
-        </span>
+        {!isNoChange(data.change) && (
+          <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold", badgeCls)}>
+            {data.trend !== "neutral" && <TrendIcon className="h-3 w-3" aria-hidden />}
+            {data.change}
+          </span>
+        )}
       </div>
 
-      <div className="mt-3 text-2xl font-semibold text-foreground">{data.value}</div>
-      <div className="text-xs font-medium text-muted-foreground">{data.label}</div>
+      <div className="mt-4 text-3xl font-semibold tracking-tight text-foreground">
+        <AnimatedValue value={data.value} />
+      </div>
+      <div className="caption-4 mt-1 text-muted-foreground">{data.label}</div>
 
       <div className="mt-2 h-6">
         {data.progress != null ? (
@@ -100,13 +120,13 @@ export function KPICards({ cards, loading }: { cards: KPICardData[]; loading: bo
     return (
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-[132px] rounded-xl" />
+          <Skeleton key={i} className="h-36 rounded-2xl" />
         ))}
       </div>
     )
   }
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+    <div className="stagger grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
       {cards.map((c) => (
         <KPICard key={c.key} data={c} />
       ))}

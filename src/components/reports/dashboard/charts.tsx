@@ -63,11 +63,14 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div id={id} className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow" role="figure" aria-label={ariaLabel || title}>
-      <div className="mb-3 flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+    <div id={id} className="hover-lift flex flex-col rounded-2xl border border-border bg-card p-6 shadow-sm" role="figure" aria-label={ariaLabel || title}>
+      <div className="mb-4 flex items-start justify-between gap-2">
+        <div className="space-y-1">
+          <h3 className="title-3 flex items-center gap-2 text-foreground">
+            <span aria-hidden className="h-2 w-2 rounded-full bg-brand" />
+            {title}
+          </h3>
+          {subtitle && <p className="caption-5 text-muted-foreground">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -75,9 +78,11 @@ function ChartCard({
         {loading ? (
           <Skeleton className="h-full w-full rounded-xl" />
         ) : empty ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-300">
-            <Inbox className="h-8 w-8" />
-            <span className="text-xs text-muted-foreground">{emptyText || "No data available"}</span>
+          <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-muted/30 p-6 text-center">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <Inbox className="h-5 w-5" aria-hidden />
+            </span>
+            <span className="body-6 max-w-xs text-muted-foreground">{emptyText || "No data for this period yet."}</span>
           </div>
         ) : (
           children
@@ -145,7 +150,7 @@ export const VelocityChart = memo(function VelocityChart({ data, loading }: { da
           <Legend wrapperStyle={{ fontSize: 11 }} />
           <Bar name="Committed" dataKey="committed" fill="#cbd5e1" radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} />
           <Bar name="Completed" dataKey="completed" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} />
-          <Line name="Capacity" type="monotone" dataKey="capacity" stroke={CHART_COLORS.warning} strokeDasharray="4 4" strokeWidth={2} dot={false} isAnimationActive={false} />
+          {/* No capacity line: the API sets capacity to the committed points, so it only repeated the grey bar. */}
           {data && data.averageVelocity > 0 && (
             <ReferenceLine y={data.averageVelocity} stroke={CHART_COLORS.success} strokeDasharray="6 3" label={{ value: "avg", fontSize: 10, fill: CHART_COLORS.success, position: "right" }} />
           )}
@@ -300,7 +305,8 @@ export const TeamPerformanceChart = memo(function TeamPerformanceChart({ data, l
 // ── F. Execution Funnel (CSS) ──
 
 export const ExecutionFunnelChart = memo(function ExecutionFunnelChart({ data, loading }: { data?: ExecutionFunnelResult; loading: boolean }) {
-  const empty = !data || data.total === 0
+  // Nothing ran: four "0 / 0%" bars say nothing, so explain instead.
+  const empty = !data || data.total === 0 || data.executed === 0
   const stages = useMemo(() => {
     if (!data) return []
     const t = data.total || 1
@@ -326,7 +332,7 @@ export const ExecutionFunnelChart = memo(function ExecutionFunnelChart({ data, l
       subtitle="Total → executed → outcomes"
       loading={loading}
       empty={empty}
-      emptyText="No test cases"
+      emptyText={data && data.total > 0 ? `None of the ${data.total} test cases ran in this period. Run them from Test Cases or the Automation Hub.` : "No test cases in this project yet."}
       ariaLabel="Test execution funnel from total cases through to passed, failed, and blocked"
     >
       <div className="flex h-full flex-col justify-center gap-2">
@@ -353,7 +359,8 @@ export const ExecutionFunnelChart = memo(function ExecutionFunnelChart({ data, l
 
 export const CreatedResolvedChart = memo(function CreatedResolvedChart({ data, loading }: { data?: TaskCreatedResolvedPoint[]; loading: boolean }) {
   const rows = useMemo(() => (data || []).map((d) => ({ ...d, label: format(new Date(d.date), "MMM d") })), [data])
-  const empty = rows.length === 0 || rows.every((r) => r.created + r.resolved + r.cumulativeOpen === 0)
+  // A flat "still open" band with nothing created or resolved is not a trend.
+  const empty = rows.length === 0 || rows.every((r) => r.created + r.resolved === 0)
   return (
     <ChartCard
       id="chart-task-created-resolved"
@@ -361,6 +368,7 @@ export const CreatedResolvedChart = memo(function CreatedResolvedChart({ data, l
       subtitle="Tasks created and completed over time"
       loading={loading}
       empty={empty}
+      emptyText="No issues were created or resolved in this period."
       ariaLabel="Task created versus resolved trend chart"
     >
       <ResponsiveContainer width="100%" height="100%">

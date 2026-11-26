@@ -37,6 +37,7 @@ import {
 } from "@/components/reports/dashboard/charts"
 import { TabbedTables } from "@/components/reports/dashboard/tables"
 import { ExportMenu } from "@/components/reports/dashboard/export-menu"
+import { Insights, buildInsights } from "@/components/reports/dashboard/insights"
 
 function isoDaysAgo(days: number): string {
   return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
@@ -174,7 +175,7 @@ export default function ReportsPage() {
     return [
       {
         key: "pass",
-        label: "Pass Rate",
+        label: "Pass rate",
         value: `${r?.summary.passRate ?? 0}%`,
         change: `${passChange >= 0 ? "+" : ""}${passChange}%`,
         trend: passChange > 0 ? "up" : passChange < 0 ? "down" : "neutral",
@@ -186,7 +187,7 @@ export default function ReportsPage() {
       },
       {
         key: "tests",
-        label: "Test Cases",
+        label: "Test cases",
         value: (r?.summary.testCases ?? 0).toLocaleString(),
         change: `${r?.summary.automated ?? 0} auto`,
         trend: "neutral",
@@ -197,7 +198,7 @@ export default function ReportsPage() {
       },
       {
         key: "bugs",
-        label: "Open Bugs",
+        label: "Open bugs",
         value: String(r?.summary.openDefects ?? 0),
         change: `${openChange >= 0 ? "+" : ""}${openChange}`,
         trend: openChange > 0 ? "up" : openChange < 0 ? "down" : "neutral",
@@ -209,7 +210,7 @@ export default function ReportsPage() {
       },
       {
         key: "coverage",
-        label: "Req Coverage",
+        label: "Requirement coverage",
         value: `${coverage}%`,
         change: `${r?.coverage.requirementsCovered ?? 0}/${r?.coverage.requirementsTotal ?? 0}`,
         trend: "neutral",
@@ -232,7 +233,7 @@ export default function ReportsPage() {
       },
       {
         key: "sprint",
-        label: "Sprint Day",
+        label: "Sprint day",
         value: sprintValue,
         change: `${sprintProgress}%`,
         trend: "neutral",
@@ -267,9 +268,13 @@ export default function ReportsPage() {
   }
 
   const visibleCharts = ROLE_CHARTS[role]
+  const insights = useMemo(
+    () => buildInsights({ report: report.data, defect: defect.data, burndown: burndown.data, funnel: funnel.data }),
+    [report.data, defect.data, burndown.data, funnel.data]
+  )
 
   return (
-    <div className="min-h-full bg-muted/50">
+    <div className="min-h-full">
       <DashboardHeader
         projects={projects}
         projectId={projectId}
@@ -303,6 +308,8 @@ export default function ReportsPage() {
       ) : (
         <div ref={canvasRef} className="space-y-6 p-6" style={{ colorScheme: "light" }}>
           <KPICards cards={cards} loading={report.isLoading && !report.data} />
+
+          <Insights items={insights} />
 
           <div className="grid gap-6 lg:grid-cols-2">{visibleCharts.map((k) => chartFor(k))}</div>
 

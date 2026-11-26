@@ -57,7 +57,7 @@ export interface ProjectOption { id: string; name: string }
 export function useProjects() {
   return useQuery({
     queryKey: ["reports", "projects"],
-    queryFn: () => getJSON<{ projects: any[] }>("/api/projects").then((d) => (d.projects || []).map((p) => ({ id: p.id, name: p.name })) as ProjectOption[]),
+    queryFn: () => getJSON<{ projects: any[] }>("/api/my-projects").then((d) => (d.projects || []).map((p) => ({ id: p.id, name: p.name })) as ProjectOption[]),
     staleTime: 5 * 60_000,
   })
 }

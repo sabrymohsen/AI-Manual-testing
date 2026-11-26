@@ -1,6 +1,7 @@
 "use client"
 
-import { BarChart3, RefreshCw, Settings } from "@/components/ui/icons"
+import { BusyDot } from "@/components/ui/skeleton"
+import { BarChart3, RefreshCw } from "@/components/ui/icons"
 import { formatDistanceToNow } from "date-fns"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
@@ -67,7 +68,7 @@ export function DashboardHeader(props: {
             onChange={(e) => props.onSprint(e.target.value === "all" ? undefined : e.target.value)}
             aria-label="Sprint"
           >
-            <option value="all">All Sprints</option>
+            <option value="all">All sprints</option>
             {props.sprints.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}
@@ -82,6 +83,7 @@ export function DashboardHeader(props: {
               <button
                 key={p}
                 onClick={() => props.onPreset(p)}
+                aria-pressed={props.preset === p}
                 className={cn(
                   "px-3 py-2 text-xs font-semibold transition-colors",
                   props.preset === p ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted/50"
@@ -99,13 +101,16 @@ export function DashboardHeader(props: {
             </div>
           )}
 
-          <select className={selectCls} value={props.role} onChange={(e) => props.onRole(e.target.value as DashboardRole)} aria-label="Role view">
-            {DASHBOARD_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground" title="Shows the charts that matter most for this role">
+            Charts for
+            <select className={selectCls} value={props.role} onChange={(e) => props.onRole(e.target.value as DashboardRole)}>
+              {DASHBOARD_ROLES.map((r) => (
+                <option key={r} value={r}>
+                  {r === "PM" ? "Project manager" : r}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
@@ -116,18 +121,24 @@ export function DashboardHeader(props: {
           </div>
 
           <button
+            type="button"
+            role="switch"
+            aria-checked={props.autoRefresh}
             onClick={props.onToggleAutoRefresh}
-            title={props.autoRefresh ? "Auto-refresh on (60s)" : "Auto-refresh off"}
-            className={cn("rounded-lg border border-border p-2 hover:bg-muted/50", props.autoRefresh ? "text-primary" : "text-muted-foreground")}
+            title="Refresh the data every minute"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Settings className="h-4 w-4" />
+            <span className={cn("relative inline-block h-4 w-7 shrink-0 rounded-full transition-colors duration-300", props.autoRefresh ? "bg-primary" : "bg-muted-foreground/30")}>
+              <span className={cn("absolute left-0 top-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform duration-300 ease-out-soft", props.autoRefresh ? "translate-x-3.5" : "translate-x-0.5")} />
+            </span>
+            Auto refresh
           </button>
 
           <button
             onClick={props.onRefresh}
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-semibold text-muted-foreground hover:bg-muted/50"
           >
-            <RefreshCw className={cn("h-4 w-4", props.isFetching && "animate-spin")} /> Refresh
+            {props.isFetching ? <BusyDot /> : <RefreshCw className="h-4 w-4" />} Refresh
           </button>
 
           {props.exportSlot}
@@ -136,7 +147,7 @@ export function DashboardHeader(props: {
 
       {stale && !props.isFetching && (
         <div className="border-t border-amber-100 bg-amber-50 px-6 py-2 text-xs font-medium text-amber-700">
-          Data may be stale — last updated {formatDistanceToNow(props.lastUpdated!, { addSuffix: true })}. Click Refresh to update.
+          Data may be out of date. Last updated {formatDistanceToNow(props.lastUpdated!, { addSuffix: true })}. Click Refresh to update.
         </div>
       )}
     </header>

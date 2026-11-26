@@ -7,7 +7,7 @@ interface Project {
   id: string
   name: string
   environment: string
-  baseUrl: string
+  baseUrl?: string | null
 }
 
 interface ProjectSelectionGatewayProps {
@@ -28,7 +28,8 @@ export function ProjectSelectionGateway({
   useEffect(() => {
     async function loadProjects() {
       try {
-        const res = await fetch("/api/projects")
+        // Every project the user can open (owned and member-of), like the sidebar switcher.
+        const res = await fetch("/api/my-projects")
         if (res.ok) {
           const data = await res.json()
           setProjects(data.projects || [])
@@ -96,7 +97,7 @@ export function ProjectSelectionGateway({
                         {proj.name}
                       </span>
                       <span className="text-xs text-muted-foreground truncate block">
-                        {proj.baseUrl.replace(/^https?:\/\//, "") || "No target URL"}
+                        {(proj.baseUrl ?? "").replace(/^https?:\/\//, "") || "No target URL"}
                       </span>
                     </div>
                   </div>

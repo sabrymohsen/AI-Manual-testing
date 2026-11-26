@@ -393,38 +393,46 @@ export async function listTests(p: ListParams): Promise<Paginated<any>> {
       orderBy: { [sortField]: p.order ?? "desc" },
       skip: (p.page - 1) * p.limit,
       take: p.limit,
-      select: { id: true, title: true, priority: true, source: true, executionType: true, assignee: true, tags: true, updatedAt: true },
+      select: {
+        id: true, title: true, priority: true, source: true, executionType: true, assignee: true, tags: true, updatedAt: true,
+        lastStatus: true, lastRunAt: true, lastRunId: true,
+      },
     }),
   ])
 
-  // Latest terminal run per test case (page-scoped for performance).
-  const ids = testCases.map((t) => t.id)
-  const runs = ids.length
-    ? await prisma.testRun.findMany({
-        where: { testCaseId: { in: ids }, status: { in: TERMINAL as any } },
-        select: { testCaseId: true, status: true, durationMs: true, createdAt: true },
-        orderBy: { createdAt: "desc" },
-      })
+  // Status comes from the test case rollup (manual sessions and automated runs
+  // alike), the same source the Test Cases page uses. Reading only TestRun
+  // missed manual results and showed failed cases as "Pending".
+  const runIds = testCases.map((t) => t.lastRunId).filter((x): x is string => !!x)
+  const runs = runIds.length
+    ? await prisma.testRun.findMany({ where: { id: { in: runIds } }, select: { id: true, durationMs: true } })
     : []
-  const latest = new Map<string, { status: string; durationMs: number; at: Date }>()
-  for (const r of runs) {
-    if (r.testCaseId && !latest.has(r.testCaseId)) latest.set(r.testCaseId, { status: r.status, durationMs: r.durationMs, at: r.createdAt })
-  }
+  const durationById = new Map(runs.map((r) => [r.id, r.durationMs]))
 
-  const rows = testCases.map((t) => {
-    const run = latest.get(t.id)
-    return {
-      id: t.id,
-      title: t.title,
-      status: run?.status ?? "Pending",
-      assignee: t.assignee ?? null,
-      priority: String(t.priority),
-      executionType: String(t.executionType),
-      lastRun: run?.at.toISOString() ?? null,
-      durationMs: run?.durationMs ?? 0,
-      tags: t.tags,
-    }
-  })
+  // The assignee field holds a user id, a team-member id or a free-text name.
+  const assigneeIds = Array.from(new Set(testCases.map((t) => t.assignee).filter((x): x is string => !!x)))
+  const [teamMembers, users] = assigneeIds.length
+    ? await Promise.all([
+        prisma.projectTeamMember.findMany({ where: { id: { in: assigneeIds } }, select: { id: true, name: true } }),
+        prisma.user.findMany({ where: { id: { in: assigneeIds } }, select: { id: true, name: true, email: true } }),
+      ])
+    : [[], []]
+  const nameById = new Map<string, string>()
+  for (const m of teamMembers) nameById.set(m.id, m.name)
+  for (const u of users) nameById.set(u.id, u.name || u.email)
+
+  const STATUS_LABEL: Record<string, string> = { NotExecuted: "Not run" }
+  const rows = testCases.map((t) => ({
+    id: t.id,
+    title: t.title,
+    status: STATUS_LABEL[String(t.lastStatus)] ?? String(t.lastStatus),
+    assignee: t.assignee ? nameById.get(t.assignee) ?? t.assignee : null,
+    priority: String(t.priority),
+    executionType: String(t.executionType),
+    lastRun: t.lastRunAt?.toISOString() ?? null,
+    durationMs: (t.lastRunId && durationById.get(t.lastRunId)) || 0,
+    tags: t.tags,
+  }))
 
   return { rows, totalCount: total, page: p.page, limit: p.limit }
 }
