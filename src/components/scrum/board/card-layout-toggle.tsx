@@ -7,12 +7,12 @@ export type CardLayout = "compact" | "detailed"
 
 export function CardLayoutToggle({ value, onChange }: { value: CardLayout; onChange: (v: CardLayout) => void }) {
   return (
-    <div className="inline-flex items-center rounded-lg border border-[#DFE1E6] bg-white p-0.5">
+    <div className="inline-flex items-center rounded-lg border border-border bg-white p-0.5">
       <button
         onClick={() => onChange("compact")}
         className={cn(
           "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors",
-          value === "compact" ? "bg-[#0052CC] text-white" : "text-[#6B778C] hover:text-[#172B4D]"
+          value === "compact" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
         )}
         title="Compact cards"
       >
@@ -23,7 +23,7 @@ export function CardLayoutToggle({ value, onChange }: { value: CardLayout; onCha
         onClick={() => onChange("detailed")}
         className={cn(
           "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors",
-          value === "detailed" ? "bg-[#0052CC] text-white" : "text-[#6B778C] hover:text-[#172B4D]"
+          value === "detailed" ? "bg-primary text-white" : "text-muted-foreground hover:text-foreground"
         )}
         title="Detailed cards"
       >

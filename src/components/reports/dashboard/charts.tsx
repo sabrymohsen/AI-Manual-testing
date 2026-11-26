@@ -93,7 +93,7 @@ function ChartCard({
 }
 
 const tooltipStyle = {
-  contentStyle: { borderRadius: 12, border: `1px solid ${CHART_COLORS.border}`, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" },
+  contentStyle: { background: "hsl(var(--popover))", color: "hsl(var(--popover-foreground))", borderRadius: 12, border: `1px solid ${CHART_COLORS.border}`, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" },
   labelStyle: { fontWeight: 600, color: "#0f172a" },
 }
 const axis = { tick: { fontSize: 11, fill: CHART_COLORS.neutral }, stroke: CHART_COLORS.border }
@@ -148,7 +148,7 @@ export const VelocityChart = memo(function VelocityChart({ data, loading }: { da
           <YAxis {...axis} allowDecimals={false} />
           <Tooltip {...tooltipStyle} />
           <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar name="Committed" dataKey="committed" fill="#cbd5e1" radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} />
+          <Bar name="Committed" dataKey="committed" fill="hsl(var(--muted-foreground) / 0.35)" radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} />
           <Bar name="Completed" dataKey="completed" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} maxBarSize={28} animationDuration={800} />
           {/* No capacity line: the API sets capacity to the committed points, so it only repeated the grey bar. */}
           {data && data.averageVelocity > 0 && (
@@ -184,7 +184,7 @@ export const CumulativeFlowChart = memo(function CumulativeFlowChart({ data, loa
           <Area name="Done" stackId="1" dataKey="done" stroke={CHART_COLORS.success} fill={CHART_COLORS.success} fillOpacity={0.75} isAnimationActive={false} />
           <Area name="In Progress" stackId="1" dataKey="inProgress" stroke={CHART_COLORS.primary} fill={CHART_COLORS.primary} fillOpacity={0.6} isAnimationActive={false} />
           <Area name="To Do" stackId="1" dataKey="todo" stroke={CHART_COLORS.neutral} fill={CHART_COLORS.neutral} fillOpacity={0.5} isAnimationActive={false} />
-          <Area name="Backlog" stackId="1" dataKey="backlog" stroke="#cbd5e1" fill="#cbd5e1" fillOpacity={0.5} isAnimationActive={false} />
+          <Area name="Backlog" stackId="1" dataKey="backlog" stroke="hsl(var(--muted-foreground) / 0.35)" fill="hsl(var(--muted-foreground) / 0.35)" fillOpacity={0.5} isAnimationActive={false} />
         </AreaChart>
       </ResponsiveContainer>
     </ChartCard>
@@ -429,7 +429,7 @@ export const ControlChart = memo(function ControlChart({ data, loading }: { data
           />
           <Tooltip
             cursor={{ strokeDasharray: "3 3" }}
-            contentStyle={{ borderRadius: 12, border: `1px solid ${CHART_COLORS.border}`, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+            contentStyle={{ background: "hsl(var(--popover))", color: "hsl(var(--popover-foreground))", borderRadius: 12, border: `1px solid ${CHART_COLORS.border}`, fontSize: 12, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
             labelStyle={{ fontWeight: 600, color: "#0f172a" }}
             formatter={(value: any, name: string, props: any) => {
               if (name === "Story Points") return [value ?? "—", "Story Points"]

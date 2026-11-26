@@ -72,7 +72,7 @@ export function BugsBySeverityPie({ projectId }: { projectId: string }) {
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ borderRadius: 10, border: `1px solid ${CHART_COLORS.border}`, fontSize: 11 }}
+                contentStyle={{ background: "hsl(var(--popover))", color: "hsl(var(--popover-foreground))", borderRadius: 10, border: `1px solid ${CHART_COLORS.border}`, fontSize: 11 }}
                 formatter={(value: number, name: string) => [`${value} bugs`, name]}
               />
               <Legend wrapperStyle={{ fontSize: 10 }} />

@@ -263,7 +263,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
             <div className="bg-muted/50 border rounded-xl p-4 flex flex-col items-center justify-center text-center">
               <div className="relative h-20 w-20">
                 <svg viewBox="0 0 36 36" className="h-20 w-20 -rotate-90">
-                  <circle cx="18" cy="18" r="15" fill="none" stroke="#e2e8f0" strokeWidth="3.5" />
+                  <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--border))" strokeWidth="3.5" />
                   <circle
                     cx="18"
                     cy="18"

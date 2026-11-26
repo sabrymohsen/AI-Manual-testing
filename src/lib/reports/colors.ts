@@ -7,9 +7,11 @@ export const CHART_COLORS = {
   warning: "#d97706", // amber-600
   info: "#0891b2", // cyan-600
   neutral: "#64748b", // slate-500
-  background: "#f8fafc",
-  card: "#ffffff",
-  border: "#e2e8f0",
+  // CSS variables so charts follow the light/dark theme.
+  background: "hsl(var(--muted))",
+  card: "hsl(var(--card))",
+  border: "hsl(var(--border))",
+  muted: "hsl(var(--muted-foreground) / 0.35)",
 } as const
 
 export const SEVERITY_COLORS: Record<string, string> = {

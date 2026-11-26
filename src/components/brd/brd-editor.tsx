@@ -327,7 +327,7 @@ export function BrdEditor({ brdId, onSaved }: { brdId: string; onSaved: () => vo
 
       {!loaded && <div className="flex items-center justify-center border py-16"><BusyDot /></div>}
       <div ref={ref} contentEditable={loaded} suppressContentEditableWarning
-        className="brd-doc min-h-[62vh] max-w-none rounded-b-lg border bg-card p-8 outline-none focus:ring-2 focus:ring-primary/30"
+        className="brd-doc paper bg-white text-foreground min-h-[62vh] max-w-none rounded-b-lg border bg-card p-8 outline-none focus:ring-2 focus:ring-primary/30"
         style={{ display: loaded ? "block" : "none" }} />
 
       {showSaveModal && (

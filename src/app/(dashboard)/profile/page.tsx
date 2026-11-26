@@ -3,6 +3,7 @@
 import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
+import { useTheme } from "next-themes"
 import {
   Camera,
   User as UserIcon,
@@ -102,6 +103,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   // General form state
+  const { theme: currentTheme, setTheme } = useTheme()
   const [form, setForm] = useState({
     name: "",
     jobTitle: "",
@@ -136,7 +138,7 @@ export default function ProfilePage() {
             phone: data.user.phone || "",
             timezone: data.user.timezone || "UTC",
             language: data.user.language || "en",
-            theme: data.user.theme || "system",
+            theme: currentTheme || data.user.theme || "system",
             bio: data.user.bio || "",
           })
         }
@@ -405,10 +407,12 @@ export default function ProfilePage() {
                     <button
                       key={t}
                       type="button"
-                      disabled
-                      aria-describedby="theme-note"
-                      onClick={() => setForm({ ...form, theme: t })}
-                      className={`cursor-not-allowed rounded-lg border px-3 py-2 text-xs font-semibold capitalize opacity-60 transition-colors ${
+                      aria-pressed={form.theme === t}
+                      onClick={() => {
+                        setForm({ ...form, theme: t })
+                        setTheme(t)
+                      }}
+                      className={`rounded-lg border px-3 py-2 text-xs font-semibold capitalize transition-colors ${
                         form.theme === t ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
                       }`}
                     >
@@ -416,7 +420,7 @@ export default function ProfilePage() {
                     </button>
                   ))}
                 </div>
-                <p id="theme-note" className="text-xs text-muted-foreground">Not available yet: the app uses the light theme.</p>
+                <p className="text-xs text-muted-foreground">Changes right away. System follows your computer&apos;s setting. Save to keep it on other devices.</p>
               </div>
             </div>
             <div className="space-y-2">

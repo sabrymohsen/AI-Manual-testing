@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss"
+import plugin from "tailwindcss/plugin"
+import { themeColorConfig, themeColorVars } from "./src/lib/theme-palette"
 
 const config: Config = {
   darkMode: ["class"],
@@ -28,6 +30,9 @@ const config: Config = {
         sans: ["var(--font-geist-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
+      // Palette shades read CSS variables, so dark mode can retune every
+      // hard-coded slate/emerald/... class at once (see src/lib/theme-palette.ts).
+      ...themeColorConfig,
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -85,6 +90,6 @@ const config: Config = {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [require("tailwindcss-animate"), plugin(({ addBase }) => addBase(themeColorVars))],
 }
 export default config

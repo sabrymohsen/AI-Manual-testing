@@ -114,7 +114,7 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
                       <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="committed" name="Committed" fill="#cbd5e1" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="committed" name="Committed" fill="hsl(var(--muted-foreground) / 0.35)" radius={[3, 3, 0, 0]} />
                       <Bar dataKey="completed" name="Completed" fill="#6366f1" radius={[3, 3, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>

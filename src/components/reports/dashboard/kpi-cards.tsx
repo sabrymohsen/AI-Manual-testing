@@ -107,7 +107,7 @@ function ProgressRing({ value, color }: { value: number; color: string }) {
   return (
     <div className="flex items-center gap-2">
       <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
-        <circle cx="12" cy="12" r={r} fill="none" stroke="#e2e8f0" strokeWidth="3" />
+        <circle cx="12" cy="12" r={r} fill="none" stroke="hsl(var(--border))" strokeWidth="3" />
         <circle cx="12" cy="12" r={r} fill="none" stroke={color} strokeWidth="3" strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" />
       </svg>
       <span className="text-xs font-semibold text-muted-foreground">{Math.round(value)}%</span>

@@ -38,6 +38,7 @@ import {
   PanelLeftOpen
 } from "@/components/ui/icons"
 import { BackButton } from "@/components/ui/back-button"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { PermissionGate, GlobalAdminGate } from "@/components/permissions/PermissionGate"
 import { ProjectSwitcher } from "@/components/layout/ProjectSwitcher"
@@ -100,7 +101,7 @@ export default function DashboardLayout({
   const [canCreateProject, setCanCreateProject] = useState(false)
   const [activeProjectId, setActiveProjectId] = useState<string>("")
   const [activeProjectStats, setActiveProjectStats] = useState<ProjectStats | null>(null)
-  const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string; avatarUrl?: string | null } | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string; name: string | null; role: string; avatarUrl?: string | null; theme?: string | null } | null>(null)
   const [token, setToken] = useState<string>("")
   // token is stored for the chat page to read via window.__CHAT_TOKEN__
   useEffect(() => { (window as any).__CHAT_TOKEN__ = token }, [token])
@@ -168,7 +169,6 @@ export default function DashboardLayout({
         const res = await fetch("/api/me")
         if (res.ok) {
           const data = await res.json()
-          console.log("LAYOUT LOADED USER:", data.user)
           setUser(data.user)
           setToken(data.token)
         } else {
@@ -491,6 +491,7 @@ export default function DashboardLayout({
         {/* Top header: notifications + user menu */}
         <header className="flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border bg-card px-3">
           <BackButton />
+          <ThemeToggle savedTheme={user?.theme} />
           <NotificationBell token={token} />
           <DesktopAiBridge token={token} />
           <UpdateNotice />

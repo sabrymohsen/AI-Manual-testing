@@ -4,7 +4,8 @@
 
 @layer base {
   /* Linear-style theme: neutral greys, one indigo accent, thin borders. */
-  :root {
+  :root,
+  .dark .paper {
     /* Vivid indigo → violet theme on a light lavender page. */
     --background: 250 60% 99%;
     --foreground: 245 30% 12%;
@@ -56,6 +57,8 @@
     --input: 0 0% 19%;             /* #313131 */
     --ring: 235 65% 68%;
     --sidebar: 0 0% 0%;            /* #000000 */
+    --brand-from: 239 84% 70%;
+    --brand-to: 271 81% 68%;
   }
 }
 

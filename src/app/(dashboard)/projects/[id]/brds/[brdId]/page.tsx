@@ -532,7 +532,7 @@ function PreviewTab({ brd, projectId, currentUserId, onEdit }: { brd: any; proje
         ) : loadingHtml ? (
           <div className="flex items-center justify-center py-16"><BusyDot /></div>
         ) : (
-          <div ref={docRef} className="brd-doc max-w-none rounded-lg border bg-card p-8" dangerouslySetInnerHTML={{ __html: wordHtml || "" }} />
+          <div ref={docRef} className="brd-doc paper bg-white text-foreground max-w-none rounded-lg border bg-card p-8" dangerouslySetInnerHTML={{ __html: wordHtml || "" }} />
         )}
       </div>
       <div className="lg:sticky lg:top-4 lg:h-[calc(100vh-9rem)]">

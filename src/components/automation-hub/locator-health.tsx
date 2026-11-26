@@ -136,7 +136,7 @@ export default function LocatorHealthPanel({ projectId }: { projectId?: string }
           <div className="bg-card border rounded-xl p-3 shadow-sm col-span-2 md:col-span-2 flex items-center gap-3">
             <div className="relative h-12 w-12 shrink-0">
               <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
-                <circle cx="18" cy="18" r="15" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                <circle cx="18" cy="18" r="15" fill="none" stroke="hsl(var(--border))" strokeWidth="4" />
                 <circle
                   cx="18"
                   cy="18"

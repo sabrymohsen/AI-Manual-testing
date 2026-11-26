@@ -50,10 +50,10 @@ export function TrendLine({ data }: { data: TrendPoint[] }) {
     <div style={{ width: "100%", height: 220 }}>
       <ResponsiveContainer>
         <LineChart data={data} margin={{ top: 5, right: 12, bottom: 5, left: -10 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
           <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(d) => String(d).slice(5)} />
           <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} unit="%" />
-          <Tooltip contentStyle={{ fontSize: 11 }} />
+          <Tooltip contentStyle={{ fontSize: 11, background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", color: "hsl(var(--popover-foreground))" }} />
           <Line type="monotone" dataKey="passRate" name="Pass rate" stroke="#4f46e5" strokeWidth={2} dot={{ r: 2 }} />
         </LineChart>
       </ResponsiveContainer>
@@ -67,10 +67,10 @@ export function BucketBar({ data, colorBy }: { data: CountBucket[]; colorBy?: "s
     <div style={{ width: "100%", height: Math.max(180, data.length * 34) }}>
       <ResponsiveContainer>
         <BarChart data={data} layout="vertical" margin={{ top: 5, right: 16, bottom: 5, left: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" horizontal={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
           <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
           <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} width={90} />
-          <Tooltip contentStyle={{ fontSize: 11 }} />
+          <Tooltip contentStyle={{ fontSize: 11, background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", color: "hsl(var(--popover-foreground))" }} />
           <Bar dataKey="value" radius={[0, 4, 4, 0]}>
             {data.map((d, i) => (
               <Cell key={i} fill={
@@ -102,7 +102,7 @@ export function StatusPie({ data, colorBy }: { data: CountBucket[]; colorBy?: "s
             ))}
           </Pie>
           <Legend wrapperStyle={{ fontSize: 10 }} />
-          <Tooltip contentStyle={{ fontSize: 11 }} />
+          <Tooltip contentStyle={{ fontSize: 11, background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", color: "hsl(var(--popover-foreground))" }} />
         </PieChart>
       </ResponsiveContainer>
     </div>
@@ -119,10 +119,10 @@ export function CoverageDonut({ covered, uncovered }: { covered: number; uncover
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" innerRadius={54} outerRadius={80}>
             <Cell fill="#059669" />
-            <Cell fill="#e2e8f0" />
+            <Cell fill="hsl(var(--border))" />
           </Pie>
           <Legend wrapperStyle={{ fontSize: 10 }} />
-          <Tooltip contentStyle={{ fontSize: 11 }} />
+          <Tooltip contentStyle={{ fontSize: 11, background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", color: "hsl(var(--popover-foreground))" }} />
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ height: 220 }}>

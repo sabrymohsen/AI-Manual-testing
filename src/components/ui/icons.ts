@@ -306,3 +306,5 @@ export { MagnifyingGlassMinus as ZoomOut } from "@phosphor-icons/react/dist/ssr/
 /** Any icon component from this module. */
 export type LucideIcon = ComponentType<IconProps & SVGProps<SVGSVGElement>>
 export type { IconProps }
+export { Sun as Sun } from "@phosphor-icons/react/dist/ssr/Sun"
+export { Moon as Moon } from "@phosphor-icons/react/dist/ssr/Moon"
