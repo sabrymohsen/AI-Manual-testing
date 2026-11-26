@@ -280,7 +280,7 @@ export default function HubRunsSection({
       <div key={r.id} className={nested ? "border-t" : ""}>
         <div
           className={cn(
-            "flex w-full flex-wrap items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50",
+            "flex w-full flex-wrap items-center gap-3 px-4 py-2.5 text-sm hover:bg-accent/50 md:flex-nowrap",
             nested && "pl-10",
             open && "bg-primary/10"
           )}
@@ -304,24 +304,29 @@ export default function HubRunsSection({
           {r.status === "Queued" && r.queuePosition != null && (
             <span className="text-xs text-amber-700">{r.queuePosition ? `${r.queuePosition} ahead` : "next"}</span>
           )}
-          {results.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {results.length - failed}/{results.length} checks passed
-            </span>
-          )}
-          {r.triggerSource && r.triggerSource !== "manual" && (
-            <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={r.triggeredByName ?? undefined}>
-              {SOURCE_LABEL[r.triggerSource] ?? r.triggerSource}
-            </span>
-          )}
+          <span
+            className="hidden w-24 shrink-0 whitespace-nowrap text-right text-xs tabular-nums text-muted-foreground md:inline"
+            title={results.length > 0 ? `${results.length - failed} of ${results.length} checks passed` : undefined}
+          >
+            {results.length > 0 ? `${results.length - failed}/${results.length} passed` : ""}
+          </span>
+          <span className="hidden w-28 shrink-0 md:inline">
+            {r.triggerSource && r.triggerSource !== "manual" && (
+              <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={r.triggeredByName ?? undefined}>
+                {SOURCE_LABEL[r.triggerSource] ?? r.triggerSource}
+              </span>
+            )}
+          </span>
           {r.environment && (
             <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary" title="Environment">
               {r.environment}
             </span>
           )}
-          <span className="w-16 text-right text-xs text-muted-foreground">{formatDuration(r.duration)}</span>
-          <span className="w-36 text-right text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleString()}</span>
-          <span className="flex items-center gap-1">
+          <span className="w-14 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{formatDuration(r.duration)}</span>
+          <span className="w-36 shrink-0 text-right text-xs tabular-nums text-muted-foreground" title={new Date(r.createdAt).toLocaleString()}>
+            {new Date(r.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+          </span>
+          <span className="flex w-52 shrink-0 items-center justify-end gap-1 whitespace-nowrap">
             {isActive(r.status) ? (
               <button
                 onClick={() => setPendingCancel({ ids: [r.id], label: r.script?.name ?? "this run" })}
@@ -366,13 +371,13 @@ export default function HubRunsSection({
             value={filters.q}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             placeholder="Search test or folder…"
-            className="h-9 w-56 rounded-lg border bg-card pl-8 pr-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            className="h-8 w-56 rounded-md border bg-background pl-8 pr-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value as Filters["status"] })}
-          className="h-9 rounded-lg border bg-card px-2 text-sm"
+          className="h-8 rounded-md border bg-background px-2 text-xs"
           aria-label="Status"
         >
           <option value="">All results</option>
@@ -383,7 +388,7 @@ export default function HubRunsSection({
         <select
           value={filters.source}
           onChange={(e) => setFilters({ ...filters, source: e.target.value as Filters["source"] })}
-          className="h-9 rounded-lg border bg-card px-2 text-sm"
+          className="h-8 rounded-md border bg-background px-2 text-xs"
           aria-label="Started by"
         >
           <option value="">Any trigger</option>
@@ -394,11 +399,11 @@ export default function HubRunsSection({
         </select>
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
           From
-          <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="h-9 rounded-lg border bg-card px-2 text-sm text-foreground" />
+          <input type="date" value={filters.from} onChange={(e) => setFilters({ ...filters, from: e.target.value })} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground" />
         </label>
         <label className="flex items-center gap-1 text-xs text-muted-foreground">
           to
-          <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="h-9 rounded-lg border bg-card px-2 text-sm text-foreground" />
+          <input type="date" value={filters.to} onChange={(e) => setFilters({ ...filters, to: e.target.value })} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground" />
         </label>
         {filtered && (
           <button onClick={() => setFilters({ q: "", status: "", source: "", from: "", to: "" })} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -414,14 +419,15 @@ export default function HubRunsSection({
               setPicked([])
             }}
             title="Pick two runs to see what newly broke and what got fixed"
+            className="h-8 gap-2 text-xs"
           >
-            <GitCompareArrows className="mr-2 h-4 w-4" /> {compareMode ? "Done comparing" : "Compare"}
+            <GitCompareArrows className="h-4 w-4" /> {compareMode ? "Done comparing" : "Compare"}
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setTriggersOpen(!triggersOpen)}>
-            <CalendarClock className="mr-2 h-4 w-4" /> Schedules & CI
+          <Button variant="outline" size="sm" onClick={() => setTriggersOpen(!triggersOpen)} className="h-8 gap-2 text-xs">
+            <CalendarClock className="h-4 w-4" /> Schedules & CI
           </Button>
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+          <Button variant="ghost" size="sm" onClick={load} className="h-8 w-8 p-0" aria-label="Refresh runs" title="Refresh runs">
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
       </div>

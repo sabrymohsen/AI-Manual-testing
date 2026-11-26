@@ -36,9 +36,19 @@ import {
   Link2,
   X,
   AlertTriangle,
+  MoreHorizontal,
+  Download,
+  Upload,
 } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import HubRunResults, { isActive, type HubExecutionView } from "@/components/automation-hub/hub-run-results"
 import ExecutionTargetsModal from "@/components/automation-hub/execution-targets-modal"
@@ -139,6 +149,7 @@ export default function HubTestsSection({
   const [exploring, setExploring] = useState(false)
   const [localProject, setLocalProject] = useState<LocalProject | null>(null)
   const [importing, setImporting] = useState(false)
+  const importRef = useRef<HTMLInputElement>(null)
   const [environment, setEnvironment] = useState("")
   const [data, setData] = useState<{ columns: string[]; rows: string[][] } | null>(null)
   const editorRef = useRef<any>(null)
@@ -564,33 +575,50 @@ export default function HubTestsSection({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <div className="grid gap-4 lg:h-full lg:grid-cols-[280px_minmax(0,1fr)]">
       {/* ── library ── */}
-      <aside className="flex min-h-[560px] flex-col rounded-xl border bg-card">
+      <aside className="flex min-h-[560px] flex-col overflow-hidden rounded-xl border bg-card lg:min-h-0">
         <div className="space-y-2 border-b p-3">
           <div className="flex gap-2">
-            <Button size="sm" className="flex-1" onClick={() => setCreating(true)}>
+            <Button size="sm" className="h-8 flex-1 text-xs" onClick={() => setCreating(true)}>
               <FilePlus2 className="h-4 w-4" /> New test
             </Button>
-            <Button size="sm" variant="outline" onClick={() => run({ kind: "all" })} disabled={starting || !tests.length} title="Run every test in this project">
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => run({ kind: "all" })} disabled={starting || !tests.length} title="Run every test in this project">
               <PlayCircle className="h-4 w-4" /> Run all
             </Button>
-          </div>
-          <Button size="sm" variant="outline" className="w-full" onClick={() => setExploring(true)} title="Give a user story, the start page and test data — AI explores the app and writes the test">
-            <Wand2 className="h-4 w-4 text-violet-500" /> AI explorer: test a user story
-          </Button>
-          <div className="flex items-center justify-between gap-2 px-1 text-xs">
-            <a href={`/api/hub/export?projectId=${projectId}`} className="text-primary hover:underline" title="Download every test as a standalone Playwright project">
-              Export as Playwright project
-            </a>
-            <label className="cursor-pointer text-primary hover:underline" title="Copy the JavaScript specs of a Playwright project (.zip) into the hub">
-              {importing ? "Importing…" : "Import .zip"}
-              <input
-                type="file"
-                accept=".zip,application/zip"
-                className="hidden"
-                disabled={importing}
-                onChange={async (e) => {
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label="More ways to add or move tests"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {importing ? <BusyDot /> : <MoreHorizontal className="h-4 w-4" />}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuItem onSelect={() => setExploring(true)} className="items-start gap-2 text-xs">
+                  <Wand2 className="mt-0.5 h-4 w-4 text-violet-500" />
+                  <span>
+                    <span className="block font-medium text-foreground">AI explorer</span>
+                    <span className="block text-muted-foreground">Give a user story; AI explores the app and writes the test</span>
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild className="gap-2 text-xs">
+                  <a href={`/api/hub/export?projectId=${projectId}`}>
+                    <Download className="h-4 w-4" /> Export as a Playwright project
+                  </a>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => importRef.current?.click()} disabled={importing} className="gap-2 text-xs">
+                  <Upload className="h-4 w-4" /> Import a Playwright project (.zip)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <input
+              ref={importRef}
+              type="file"
+              accept=".zip,application/zip"
+              className="hidden"
+              disabled={importing}
+              onChange={async (e) => {
                   const f = e.target.files?.[0]
                   e.target.value = ""
                   if (!f) return
@@ -615,28 +643,27 @@ export default function HubTestsSection({
                     setImporting(false)
                   }
                 }}
-              />
-            </label>
+            />
           </div>
           <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tests, folders, tags"
-              className="h-9 w-full rounded-md border bg-muted/50 pl-8 pr-2 text-sm outline-none focus:border-primary focus:bg-card"
+              className="h-8 w-full rounded-md border bg-background pl-8 pr-2 text-xs outline-none focus:border-primary"
             />
           </div>
           {allTags.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1">
-              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="-mx-3 flex items-center gap-1 overflow-x-auto px-3 pb-0.5 [scrollbar-width:thin]" aria-label="Filter by tag">
+              <Tag className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               {allTags.map((g) => (
                 <button
                   key={g}
                   type="button"
                   onClick={() => setTagFilter(tagFilter === g ? null : g)}
                   aria-pressed={tagFilter === g}
-                  className={`rounded-full border px-2 py-0.5 text-xs ${tagFilter === g ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-xs ${tagFilter === g ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   {g}
                 </button>
@@ -644,7 +671,7 @@ export default function HubTestsSection({
             </div>
           )}
           {tagFilter && (
-            <Button size="sm" variant="outline" className="w-full" onClick={() => run({ kind: "tag", tag: tagFilter })} disabled={starting}>
+            <Button size="sm" variant="outline" className="h-8 w-full text-xs" onClick={() => run({ kind: "tag", tag: tagFilter })} disabled={starting}>
               <PlayCircle className="h-4 w-4" /> Run tests tagged “{tagFilter}”
             </Button>
           )}
@@ -684,8 +711,8 @@ export default function HubTestsSection({
                         key={t.id}
                         type="button"
                         onClick={() => t.id !== selectedId && select(t)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2 py-2 pl-8 text-left text-sm ${
-                          t.id === selectedId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/50"
+                        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-7 text-left text-xs ${
+                          t.id === selectedId ? "bg-primary/10 font-medium text-primary" : "text-foreground hover:bg-accent"
                         }`}
                       >
                         {!last ? (
@@ -731,7 +758,7 @@ export default function HubTestsSection({
       </aside>
 
       {/* ── editor + results ── */}
-      <section className="min-w-0 space-y-4">
+      <section className="min-w-0 space-y-4 lg:overflow-y-auto">
         {localProject ? (
           <>
             <LocalProjectPanel
@@ -790,9 +817,9 @@ export default function HubTestsSection({
                     setDirty(true)
                   }}
                   aria-label="Test name"
-                  className="h-9 min-w-[180px] flex-1 rounded-md border border-transparent px-2 text-base font-semibold text-foreground outline-none hover:border-border focus:border-primary"
+                  className="h-8 min-w-[180px] flex-1 rounded-md border border-transparent px-2 text-sm font-semibold text-foreground outline-none hover:border-border focus:border-primary"
                 />
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Folder className="h-4 w-4" />
                   <input
                     list="hub-folders"
@@ -803,7 +830,7 @@ export default function HubTestsSection({
                     }}
                     placeholder="No folder"
                     aria-label="Folder"
-                    className="h-9 w-36 rounded-md border px-2 text-sm outline-none focus:border-primary"
+                    className="h-8 w-36 rounded-md border bg-background px-2 text-xs outline-none focus:border-primary"
                   />
                   <datalist id="hub-folders">
                     {folderNames.map((f) => (
@@ -849,19 +876,19 @@ export default function HubTestsSection({
               </div>
 
               {/* run bar */}
-              <div className="flex flex-wrap items-center gap-2 border-b bg-muted/70 px-3 py-2">
-                <Button id="hub-run" size="sm" onClick={() => run({ kind: "test" })} disabled={starting || running} title="Run (Ctrl/⌘ + Enter)">
+              <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+                <Button id="hub-run" size="sm" className="h-8 text-xs" onClick={() => run({ kind: "test" })} disabled={starting || running} title="Run (Ctrl/⌘ + Enter)">
                   {starting || running ? <BusyDot /> : <Play className="h-4 w-4" />}
                   {running ? (execution?.status === "Queued" ? "Queued…" : "Running…") : "Run test"}
                 </Button>
-                <select value={browser} onChange={(e) => setBrowser(e.target.value)} aria-label="Browser" className="h-8 rounded-md border bg-card px-2 text-sm">
+                <select value={browser} onChange={(e) => setBrowser(e.target.value)} aria-label="Browser" className="h-8 rounded-md border bg-background px-2 text-xs">
                   {BROWSERS.map((b) => (
                     <option key={b.value} value={b.value}>
                       {b.label}
                     </option>
                   ))}
                 </select>
-                <select value={targetId} onChange={(e) => setTargetId(e.target.value)} aria-label="Where to run" className="h-8 rounded-md border bg-card px-2 text-sm">
+                <select value={targetId} onChange={(e) => setTargetId(e.target.value)} aria-label="Where to run" className="h-8 rounded-md border bg-background px-2 text-xs">
                   <option value="local">This machine</option>
                   {targets.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -879,7 +906,7 @@ export default function HubTestsSection({
                   }}
                   aria-label="Environment"
                   title="Test data (and baseUrl) from Test Data Manager for this environment"
-                  className="h-8 rounded-md border bg-card px-2 text-sm"
+                  className="h-8 rounded-md border bg-background px-2 text-xs"
                 >
                   <option value="">No environment</option>
                   {ENVIRONMENTS.map((env) => (
@@ -980,7 +1007,7 @@ export default function HubTestsSection({
                       Convert to code
                     </Button>
                   </div>
-                  <div className="h-[420px] overflow-hidden">
+                  <div className="h-[max(420px,calc(100vh-20rem))] overflow-hidden">
                     <Editor
                       key={`${selected.id}-generated`}
                       language="javascript"
@@ -991,7 +1018,7 @@ export default function HubTestsSection({
                   </div>
                 </div>
               ) : (
-              <div className="h-[420px]">
+              <div className="h-[max(420px,calc(100vh-20rem))]">
                 <Editor
                   key={selected.id}
                   language="javascript"

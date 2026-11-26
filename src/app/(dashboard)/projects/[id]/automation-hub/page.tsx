@@ -61,6 +61,7 @@ import VideoLabSection from "@/components/automation-hub/video-lab"
 import AiDiagnosisSection from "@/components/automation-hub/ai-diagnosis"
 import AiAgentSection from "@/components/automation-hub/ai-agent"
 import DataConfigSection from "@/components/automation-hub/data-config"
+import { HubToolsMenu } from "@/components/automation-hub/hub-tools-menu"
 
 // Types
 interface TestExecutionItem {
@@ -451,66 +452,45 @@ export default function AutomationHubPage() {
   }
 
   return (
-    <div className="flex-1 space-y-6 text-xs font-semibold text-foreground">
-      
-      {/* HUB HEADER */}
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight text-foreground">
-            <Layers className="h-6 w-6 text-primary" /> Automation Hub
-          </h1>
-          <p className="mt-1 text-sm font-normal text-muted-foreground">
-            Build tests in plain English — no code needed — or in Playwright JavaScript, run them, and see exactly what failed.
-          </p>
-        </div>
-      </div>
+    <div className="flex h-full min-h-0 flex-col bg-background text-xs text-foreground">
+      {/* One bar: name, the everyday tabs, and every other tool in one menu. */}
+      <header className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b bg-card px-6 py-2">
+        <h1 className="heading-6 flex items-center gap-2 text-foreground">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white">
+            <Layers className="h-4 w-4" aria-hidden />
+          </span>
+          Automation Hub
+        </h1>
 
-      {/* TABS: the three everyday tabs, then the analysis tools in one menu */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-xl border bg-muted p-1">
+        <nav aria-label="Automation Hub" className="flex flex-wrap items-center gap-1">
           {[
             { id: "Tests", label: "Tests", icon: Code },
             { id: "Runs", label: "Runs", icon: ListRestart },
             { id: "Recorder", label: "Recorder", icon: Camera },
             { id: "BrowserAgent", label: "Browser Agent", icon: Bot },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-all ${
-                activeTab === tab.id ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <tab.icon size={15} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <SlidersHorizontal size={15} className="text-muted-foreground" />
-          <select
-            value={["Tests", "Runs", "Recorder", "BrowserAgent"].includes(activeTab) ? "" : activeTab}
-            onChange={(e) => e.target.value && setActiveTab(e.target.value as any)}
-            className={`h-10 rounded-xl border px-3 text-sm font-semibold ${
-              ["Tests", "Runs", "Recorder", "BrowserAgent"].includes(activeTab) ? "bg-card text-muted-foreground" : "border-primary/25 bg-primary/10 text-primary"
-            }`}
-            aria-label="More tools"
-          >
-            <option value="">More tools…</option>
-            <option value="Trace">Trace Viewer</option>
-            <option value="Evidence">Evidence (screenshots, videos, logs)</option>
-            <option value="Video">Video Lab</option>
-            <option value="Diagnosis">Failure diagnosis (AI)</option>
-            <option value="Heal">Self-healing & locator health</option>
-            <option value="Flakes">Flaky tests</option>
-            <option value="Matrix">Browser matrix</option>
-            <option value="Visual">Visual diff</option>
-            <option value="Agent">AI Agent</option>
-            <option value="DataConfig">Data & settings</option>
-          </select>
-        </label>
-      </div>
+          ].map((tab) => {
+            const on = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                aria-current={on ? "page" : undefined}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+                  on ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                <tab.icon className="h-4 w-4" aria-hidden />
+                {tab.label}
+              </button>
+            )
+          })}
+          <span className="mx-1 h-5 w-px bg-border" aria-hidden />
+          <HubToolsMenu active={activeTab} onPick={(t) => setActiveTab(t)} />
+        </nav>
+      </header>
 
+      <div className={`min-h-0 flex-1 overflow-y-auto ${activeTab === "Tests" ? "p-4" : "space-y-6 px-6 py-6"}`}>
       {/* PRIMARY TABS: independent of the analysis tools' data below */}
       {activeTab === "Tests" && (
         <HubTestsSection projectId={projectId} onOpenTrace={openTrace} focusTestName={focusTestName} />
@@ -943,6 +923,7 @@ export default function AutomationHubPage() {
 
         </div>
       )}
+      </div>
 
       {/* ---- DIAGNOSTIC CELL MODAL POPUP ---- */}
       {selectedMatrixCell && (
@@ -975,8 +956,7 @@ export default function AutomationHubPage() {
               )}
             </div>
             <div className="flex gap-2 pt-2">
-              <Button variant="outline" onClick={() => setSelectedMatrixCell(null)} className="flex-1 rounded-xl bg-card border-border text-muted-foreground">Close</Button>
-              <Button onClick={() => setSelectedMatrixCell(null)} className="bg-indigo-600 text-white hover:bg-primary/90 flex-1 rounded-xl font-semibold">Re-run Cell Combination</Button>
+              <Button variant="outline" onClick={() => setSelectedMatrixCell(null)} className="flex-1">Close</Button>
             </div>
           </div>
         </div>
