@@ -3,7 +3,7 @@
 import { CountUp } from "@/components/ui/count-up"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useActiveProject, useProjectSummary, useTestCaseMetrics, useBugMetrics, useRunMetrics, useScrumMetrics } from "@/hooks/use-metrics"
+import { useActiveProject, useDashboardMetrics, useScrumMetrics } from "@/hooks/use-metrics"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { Button } from "@/components/ui/button"
@@ -33,11 +33,11 @@ interface ProjectItem {
 export default function DashboardPage() {
   const router = useRouter()
   const { activeProjectId } = useActiveProject()
-  const { summary } = useProjectSummary(activeProjectId)
-
-  const caseMetrics = useTestCaseMetrics(activeProjectId)
-  const bugMetrics = useBugMetrics(activeProjectId)
-  const runMetrics = useRunMetrics(activeProjectId)
+  const { metrics: dm } = useDashboardMetrics(activeProjectId)
+  const passRate = dm?.testCases.passRate ?? null
+  const caseMetrics = dm?.testCases ?? { total: 0, manual: 0, automated: 0, executed: 0 }
+  const bugMetrics = dm?.bugs ?? { open: 0, resolved: 0, closed: 0 }
+  const runMetrics = dm?.runs ?? { total: 0, passed: 0, failed: 0 }
   const scrum = useScrumMetrics(activeProjectId)
 
   const [projectsList, setProjectsList] = useState<ProjectItem[]>([])
@@ -149,15 +149,21 @@ export default function DashboardPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10"><TrendingUp className="h-4 w-4 text-emerald-600" /></span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-semibold text-foreground"><CountUp value={summary?.passRate ?? 0} />%</span>
+            <span className="text-2xl font-semibold text-foreground">{!dm ? "…" : passRate === null ? "—" : <><CountUp value={passRate} />%</>}</span>
             <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 transition-[width] duration-700 ease-out-soft" 
-                style={{ width: `${summary?.passRate ?? 0}%` }}
+                style={{ width: `${passRate ?? 0}%` }}
               />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground font-medium">Based on latest test execution outputs.</p>
+          <p className="text-xs text-muted-foreground font-medium">
+            {!dm
+              ? "Loading results…"
+              : passRate === null
+              ? "No test case has a result yet."
+              : `Latest result of ${caseMetrics.executed} of ${caseMetrics.total} test cases.`}
+          </p>
         </div>
 
         {/* User stories by board column. The dashboard previously reported test
@@ -240,7 +246,7 @@ export default function DashboardPage() {
               <span className="text-emerald-600 font-semibold">{caseMetrics.automated} auto</span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground font-medium">Suites configured in Cockpit.</p>
+          <p className="text-xs text-muted-foreground font-medium">{caseMetrics.total - caseMetrics.executed} not run yet.</p>
         </div>
 
         {/* Open Bugs card */}
@@ -252,12 +258,12 @@ export default function DashboardPage() {
           <div className="space-y-1">
             <span className="text-2xl font-semibold text-rose-600"><CountUp value={bugMetrics.open} /> bugs</span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
-              <span className="text-amber-600 font-semibold">{bugMetrics.fixed} fixed</span>
+              <span className="text-amber-600 font-semibold">{bugMetrics.resolved} resolved</span>
               <span>•</span>
               <span className="text-muted-foreground font-semibold">{bugMetrics.closed} closed</span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground font-medium">Defects awaiting sync maps.</p>
+          <p className="text-xs text-muted-foreground font-medium">Open, in progress, ready for retest or reopened.</p>
         </div>
 
         {/* Test Runs status */}
@@ -274,7 +280,7 @@ export default function DashboardPage() {
               <span className="text-rose-600 font-semibold">{runMetrics.failed} failed</span>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground font-medium">Playwright + manual test runs.</p>
+          <p className="text-xs text-muted-foreground font-medium">Manual, automated and Automation Hub runs.</p>
         </div>
       </div>
 
@@ -287,7 +293,7 @@ export default function DashboardPage() {
       {/* NEW: Pie Chart Gadgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <BugsBySeverityPie projectId={activeProjectId} />
-        <TestsByStatusPie projectId={activeProjectId} />
+        <TestsByStatusPie byStatus={dm?.testCases.byStatus ?? null} />
       </div>
 
       {/* NEW: Assigned to Me + Activity Stream */}

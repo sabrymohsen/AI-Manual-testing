@@ -249,3 +249,61 @@ export function useOpenProjectSyncStatus(projectId: string | null) {
 
   return syncStatus
 }
+
+export interface DashboardMetrics {
+  testCases: {
+    total: number
+    manual: number
+    automated: number
+    /** Count per TestCase.lastStatus (NotExecuted, Passed, Failed, ...). */
+    byStatus: Record<string, number>
+    executed: number
+    /** Passed / cases with a verdict, or null when nothing has run yet. */
+    passRate: number | null
+  }
+  runs: { total: number; passed: number; failed: number }
+  bugs: { total: number; open: number; resolved: number; closed: number }
+}
+
+/**
+ * Dashboard numbers from one SQL-backed endpoint. Refetches when the tab
+ * regains focus and every 30 seconds, so finishing a test run in another tab
+ * or page shows up without a reload.
+ */
+export function useDashboardMetrics(projectId: string | null) {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    if (!projectId) {
+      setMetrics(null)
+      return
+    }
+    let cancelled = false
+    const load = () =>
+      fetch(`/api/projects/${projectId}/dashboard/metrics`, { cache: "no-store" })
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+        .then((data) => {
+          if (!cancelled) {
+            setMetrics(data)
+            setError(false)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setError(true)
+        })
+    load()
+    const onFocus = () => document.visibilityState === "visible" && load()
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onFocus)
+    const timer = window.setInterval(load, 30_000)
+    return () => {
+      cancelled = true
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onFocus)
+      window.clearInterval(timer)
+    }
+  }, [projectId])
+
+  return { metrics, error }
+}

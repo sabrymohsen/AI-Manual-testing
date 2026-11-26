@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FileCheck } from "@/components/ui/icons"
@@ -13,50 +12,22 @@ const STATUS_COLORS: Record<string, string> = {
   Warning: "#d97706",
   Queued: "#94a3b8",
   Running: "#0891b2",
-  Cancelled: "#64748b",
+  Skipped: "#64748b",
+  "Not run": "#94a3b8",
 }
 
-export function TestsByStatusPie({ projectId }: { projectId: string }) {
-  const [data, setData] = useState<{ name: string; value: number }[]>([])
-  const [loading, setLoading] = useState(true)
+const LABEL: Record<string, string> = { NotExecuted: "Not run" }
 
-  useEffect(() => {
-    if (!projectId) return
-    setLoading(true)
-
-    Promise.all([
-      fetch(`/api/projects/${projectId}/test-cases`).then((r) => (r.ok ? r.json() : { testCases: [] })),
-      fetch(`/api/projects/${projectId}/test-runs?limit=500`).then((r) => (r.ok ? r.json() : { testRuns: [] })),
-    ])
-      .then(([casesData, runsData]) => {
-        const cases = casesData.testCases || []
-        const runs = runsData.testRuns || []
-
-        // Latest terminal run per test case
-        const latest = new Map<string, string>()
-        const terminal = ["Passed", "Failed", "Blocked", "Warning", "Cancelled"]
-        for (const r of runs) {
-          if (r.testCaseId && !latest.has(r.testCaseId) && terminal.includes(r.status)) {
-            latest.set(r.testCaseId, r.status)
-          }
-        }
-
-        const counts: Record<string, number> = {}
-        for (const c of cases) {
-          const status = latest.get(c.id) || "Not Run"
-          counts[status] = (counts[status] || 0) + 1
-        }
-
-        setData(
-          Object.entries(counts).map(([name, value]) => ({
-            name,
-            value,
-          }))
-        )
-      })
-      .catch(() => setData([]))
-      .finally(() => setLoading(false))
-  }, [projectId])
+/**
+ * Latest result of each test case (TestCase.lastStatus), which counts manual
+ * runs from Test Cases, automated runs and Automation Hub runs alike.
+ * `byStatus` is null while the dashboard metrics are loading.
+ */
+export function TestsByStatusPie({ byStatus }: { byStatus: Record<string, number> | null }) {
+  const loading = byStatus === null
+  const data = Object.entries(byStatus ?? {})
+    .filter(([, value]) => value > 0)
+    .map(([key, value]) => ({ name: LABEL[key] ?? key, value }))
 
   const total = data.reduce((a, d) => a + d.value, 0)
 

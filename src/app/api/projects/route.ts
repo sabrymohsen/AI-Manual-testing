@@ -58,10 +58,13 @@ export async function GET(request: NextRequest) {
           testCases: { select: { id: true } }
         }
       },
+      // lastStatus is the latest result from any run path (manual, automated,
+      // Automation Hub), kept by lib/test-cases/rollup.ts.
       testCases: {
         select: {
           id: true,
-          testRuns: { select: { id: true } }
+          lastStatus: true,
+          lastRunAt: true
         }
       },
       testRuns: {
@@ -85,11 +88,17 @@ export async function GET(request: NextRequest) {
   // Process project details in memory to compute health metrics & setup progress
   const processedProjects = await Promise.all(projects.map(async (project) => {
     const totalCases = project.testCases.length
-    const totalRuns = project.testRuns.length
+    // Every run path, same as the Dashboard: automated, manual, Automation Hub.
+    const [manualRuns, hubRuns] = await Promise.all([
+      prisma.manualSessionCase.count({ where: { session: { projectId: project.id }, completedAt: { not: null }, status: { notIn: ["Pending", "Running"] } } }),
+      prisma.testExecution.count({ where: { projectId: project.id, status: { in: ["Passed", "Failed"] } } }),
+    ])
+    const totalRuns = project.testRuns.length + manualRuns + hubRuns
     
-    const passedRuns = project.testRuns.filter(r => r.status === "Passed").length
-    const failedRuns = project.testRuns.filter(r => r.status === "Failed").length
-    const blockedRuns = project.testRuns.filter(r => r.status === "Blocked").length
+    // Test health from each case's latest result, so manual runs count too.
+    const passedCases = project.testCases.filter(c => c.lastStatus === "Passed").length
+    const failedRuns = project.testCases.filter(c => c.lastStatus === "Failed").length
+    const judgedCases = project.testCases.filter(c => c.lastStatus !== "NotExecuted" && c.lastStatus !== "Skipped").length
     
     const openBugs = project.bugReports.filter(b => 
       ["Open", "InProgress", "ReadyForRetest", "Reopened"].includes(b.status)
@@ -97,7 +106,7 @@ export async function GET(request: NextRequest) {
     const openBugsCount = openBugs.length
     const criticalBugsCount = openBugs.filter(b => b.severity === "Critical").length
 
-    const passRate = totalRuns > 0 ? Math.round((passedRuns / totalRuns) * 100) : 0
+    const passRate = judgedCases > 0 ? Math.round((passedCases / judgedCases) * 100) : null
 
     // Requirements coverage
     const totalReqs = project.requirements.length
@@ -107,13 +116,14 @@ export async function GET(request: NextRequest) {
       : 100
 
     // Test cases never executed
-    const neverRunCasesCount = project.testCases.filter(c => c.testRuns.length === 0).length
+    const neverRunCasesCount = project.testCases.filter(c => c.lastStatus === "NotExecuted").length
+    const executedCases = totalCases - neverRunCasesCount
 
     // Compute Health Score
     let score = 100
     let derivedHealthStatus = "Not Started"
 
-    if (totalCases === 0 || totalRuns === 0) {
+    if (totalCases === 0 || executedCases === 0) {
       derivedHealthStatus = "Not Started"
       score = 100
     } else {
@@ -142,12 +152,15 @@ export async function GET(request: NextRequest) {
     if (project.epics.length > 0) setupCompleted++
     if (totalCases > 0) setupCompleted++
     if (totalReqs > 0) setupCompleted++
-    if (totalRuns > 0) setupCompleted++
+    if (totalRuns > 0 || executedCases > 0) setupCompleted++
 
     const setupTotal = 6
 
     // Last activity dates
-    const runDates = project.testRuns.map(r => new Date(r.createdAt).getTime())
+    const runDates = [
+      ...project.testRuns.map(r => new Date(r.createdAt).getTime()),
+      ...project.testCases.flatMap(c => (c.lastRunAt ? [new Date(c.lastRunAt).getTime()] : [])),
+    ]
     const bugDates = project.bugReports.map(b => new Date(b.createdAt).getTime())
     
     const lastTestRunAt = runDates.length > 0 ? new Date(Math.max(...runDates)) : null
@@ -252,7 +265,7 @@ export async function GET(request: NextRequest) {
   const projectsWithOpenBugs = processedProjects.filter(p => p.metrics.openBugs > 0).length
   const openBugsTotal = processedProjects.reduce((n, p) => n + p.metrics.openBugs, 0)
   
-  const activePassRates = processedProjects.filter(p => p.metrics.testRuns > 0).map(p => p.metrics.passRate)
+  const activePassRates = processedProjects.flatMap(p => (p.metrics.passRate === null ? [] : [p.metrics.passRate]))
   // null when nothing has run: there is no pass rate to report, not a 100% one.
   const averagePassRate = activePassRates.length > 0
     ? Math.round(activePassRates.reduce((sum, val) => sum + val, 0) / activePassRates.length)

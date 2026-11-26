@@ -43,7 +43,7 @@ import {
 interface ProjectMetrics {
   testCases: number
   testRuns: number
-  passRate: number
+  passRate: number | null
   failedTests: number
   openBugs: number
   requirementsCoverage: number
@@ -712,7 +712,7 @@ export default function ProjectsPage() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-medium text-muted-foreground">Pass%</span>
-                  <span className="font-semibold text-emerald-500 text-xs mt-0.5">{project.metrics.passRate}%</span>
+                  <span className="font-semibold text-emerald-500 text-xs mt-0.5">{project.metrics.passRate === null ? "—" : `${project.metrics.passRate}%`}</span>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-medium text-muted-foreground">Bugs</span>
@@ -852,7 +852,7 @@ export default function ProjectsPage() {
                   <td className="py-3 font-semibold">{project.metrics.testCases}</td>
                   <td className="py-3 font-semibold">{project.metrics.testRuns}</td>
                   <td className="py-3">
-                    <span className={`font-semibold ${project.metrics.passRate >= 75 ? "text-emerald-500" : "text-amber-500"}`}>{project.metrics.passRate}%</span>
+                    <span className={`font-semibold ${project.metrics.passRate === null ? "text-muted-foreground" : project.metrics.passRate >= 75 ? "text-emerald-500" : "text-amber-500"}`}>{project.metrics.passRate === null ? "—" : `${project.metrics.passRate}%`}</span>
                   </td>
                   <td className="py-3 font-semibold text-rose-500">{project.metrics.openBugs}</td>
                   <td className="py-3 font-semibold">{project.metrics.requirementsCoverage}%</td>
