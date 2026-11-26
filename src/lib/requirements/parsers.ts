@@ -101,7 +101,7 @@ export async function parseExcelOrCsv(fileBuffer: Buffer, fileName: string): Pro
       ? rawAc.split(/\n+/).map((line) => line.replace(/^[\s*\-•]+/g, "").trim()).filter(Boolean)
       : [];
 
-    const module = moduleCol !== -1 ? String(row[moduleCol] || "").trim() : undefined;
+    const moduleName = moduleCol !== -1 ? String(row[moduleCol] || "").trim() : undefined;
     const feature = featureCol !== -1 ? String(row[featureCol] || "").trim() : undefined;
     const component = componentCol !== -1 ? String(row[componentCol] || "").trim() : undefined;
     const priority = priorityCol !== -1 ? String(row[priorityCol] || "").trim() : undefined;
@@ -122,7 +122,7 @@ export async function parseExcelOrCsv(fileBuffer: Buffer, fileName: string): Pro
       title,
       description: description || undefined,
       acceptanceCriteria,
-      module: module || undefined,
+      module: moduleName || undefined,
       feature: feature || undefined,
       component: component || undefined,
       priority: priority || undefined,

@@ -22,7 +22,6 @@ import { findTraceForTest, resolveTraceZip, zipEntries, unzipEntry } from "@/lib
 
 function detectPlaywrightVersion(): string | null {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     return require("@playwright/test/package.json").version || null
   } catch {
     return null

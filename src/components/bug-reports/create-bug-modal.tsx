@@ -88,7 +88,7 @@ export function CreateBugModal({
 }: CreateBugModalProps) {
   // Label with whichever tracker this project is connected to (Jira / Azure /
   // OpenProject / …) rather than hardcoding one vendor.
-  const { name: trackerName } = useProjectIntegration(projectId)
+  const { name: trackerName, connected: trackerConnected } = useProjectIntegration(projectId)
   const [title, setTitle] = useState("")
   const [desc, setDesc] = useState("")
   const [severity, setSeverity] = useState("Medium")
@@ -424,12 +424,18 @@ export function CreateBugModal({
     setError("")
 
     // Format steps builder as stepsToReproduce string
-    let stepsStr = desc + "\n\nSteps:\n"
-    steps.forEach((s, idx) => {
-      stepsStr += `${idx + 1}. ${s.actionDescription}`
-      if (s.expectedResult) stepsStr += ` — Expected: ${s.expectedResult}`
-      stepsStr += "\n"
-    })
+    // Blank step rows are skipped, and the "Steps:" heading only appears when
+    // there are steps (it used to be added to every bug, empty or not).
+    const filledSteps = steps.filter((s) => s.actionDescription.trim())
+    let stepsStr = desc.trim()
+    if (filledSteps.length) {
+      stepsStr += (stepsStr ? "\n\n" : "") + "Steps:\n"
+      filledSteps.forEach((s, idx) => {
+        stepsStr += `${idx + 1}. ${s.actionDescription.trim()}`
+        if (s.expectedResult) stepsStr += ` — Expected: ${s.expectedResult}`
+        stepsStr += "\n"
+      })
+    }
 
     const body: any = {
       title,
@@ -550,17 +556,8 @@ export function CreateBugModal({
       crumbs={[
         <span key="b" className="inline-flex items-center gap-2 font-medium">
           <Bug className="h-3.5 w-3.5 text-red-500" />
-          New bug
+          Report a bug
         </span>,
-        <button
-          key="ai"
-          type="button"
-          onClick={() => setAiOpen((v) => !v)}
-          aria-expanded={aiOpen}
-          className={`inline-flex h-6 items-center gap-1 rounded-md px-2 font-medium transition-colors ${aiOpen ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
-        >
-          <Sparkles className="h-3.5 w-3.5" /> Write with AI
-        </button>,
       ]}
       onSubmit={() => handleSubmit({ preventDefault() {} } as React.FormEvent)}
       canSubmit={!!title.trim()}
@@ -568,6 +565,7 @@ export function CreateBugModal({
       submitLabel={saving ? "Saving…" : "Save bug"}
       error={error}
       footerLeft={
+        trackerConnected && (
         <label className="inline-flex cursor-pointer select-none items-center gap-2">
           <input
             type="checkbox"
@@ -578,8 +576,20 @@ export function CreateBugModal({
           />
           Sync to {trackerName} after saving
         </label>
+        )
       }
     >
+      {!aiOpen && (
+        <button
+          type="button"
+          onClick={() => setAiOpen(true)}
+          className="mb-3 flex w-full items-center gap-2 rounded-lg border border-dashed border-primary/30 bg-primary/[0.03] px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-primary/[0.06]"
+        >
+          <Sparkles className="h-4 w-4 shrink-0 text-primary" />
+          <span className="flex-1">Describe the problem in your own words, and AI fills in the form for you.</span>
+          <span className="font-medium text-primary">Write with AI</span>
+        </button>
+      )}
       {/* AI assist — describe the defect in plain words, optionally attach a
           screenshot, and let the model fill the whole form. */}
       {aiOpen && (
@@ -634,7 +644,7 @@ export function CreateBugModal({
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         dir="auto"
-        placeholder="Summarise the defect in one line"
+        placeholder="What's wrong? One line, e.g. Checkout button does nothing on mobile"
         autoFocus={!aiOpen}
         required
       />
@@ -666,7 +676,7 @@ export function CreateBugModal({
         </div>
       )}
 
-      <ComposerText value={desc} onChange={setDesc} placeholder="Add description…" minRows={2} />
+      <ComposerText value={desc} onChange={setDesc} placeholder="More detail (optional)" minRows={2} />
 
       <ChipRow>
         <span
@@ -743,6 +753,7 @@ export function CreateBugModal({
             />
           </span>
         )}
+        {trackerConnected && (
         <span className={`inline-flex h-7 items-center gap-2 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${parent ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
           <GitBranch className="h-3.5 w-3.5 shrink-0" />
           <input
@@ -750,7 +761,7 @@ export function CreateBugModal({
             value={parent}
             onChange={(e) => setParent(e.target.value)}
             list="create-bug-parent-options"
-            placeholder="Parent task"
+            placeholder={`Parent in ${trackerName}`}
             className="w-24 bg-transparent outline-none placeholder:text-muted-foreground focus:w-48"
           />
           {parentLoading && <span className="text-xs text-muted-foreground">…</span>}
@@ -763,6 +774,7 @@ export function CreateBugModal({
             ))}
           </datalist>
         </span>
+        )}
       </ChipRow>
 
 
@@ -785,22 +797,27 @@ export function CreateBugModal({
           </button>
         )}
         {steps.length === 0 ? (
-          <button type="button" onClick={addStep} className="w-full rounded-md px-2 py-2 text-left text-xs text-muted-foreground/70 hover:bg-accent/50">
-            1. Go to…
+          <button
+            type="button"
+            onClick={addStep}
+            className="flex h-9 w-full items-center gap-2 rounded-md border border-dashed px-3 text-left text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+          >
+            <Plus className="h-3.5 w-3.5" /> Write the first step, e.g. Open the checkout page
           </button>
         ) : (
-          <ol className="max-h-[180px] space-y-px overflow-y-auto">
+          <ol className="max-h-[200px] space-y-1.5 overflow-y-auto pr-1">
             {steps.map((step, idx) => (
-              <li key={idx} className="group/step flex items-center gap-2 rounded-md px-2 hover:bg-accent/50">
-                <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{idx + 1}.</span>
+              <li key={idx} className="group/step flex items-center gap-2">
+                <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{idx + 1}.</span>
                 <input
                   value={step.actionDescription}
                   onChange={(e) => updateStepText(idx, e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addStep() } }}
                   dir="auto"
                   aria-label={`Step ${idx + 1}`}
-                  placeholder="Describe the step…"
-                  className="h-8 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
+                  autoFocus={idx === steps.length - 1 && !step.actionDescription}
+                  placeholder={idx === 0 ? "e.g. Open the checkout page" : "Next step (Enter adds another)"}
+                  className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-xs outline-none placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
                 />
                 <button
                   type="button"
@@ -816,30 +833,38 @@ export function CreateBugModal({
         )}
       </ComposerSection>
 
-      <div className="grid gap-x-4 sm:grid-cols-2">
-        <ComposerSection title="Expected result">
-          <input
+      <div className="mt-4 grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
+        <label className="space-y-1.5">
+          <span className="flex items-center gap-2 text-xs font-medium text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden /> Expected
+          </span>
+          <textarea
             value={expected}
             onChange={(e) => setExpected(e.target.value)}
             dir="auto"
+            rows={3}
             aria-label="Expected result"
             placeholder="What should happen"
-            className="h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
+            className="w-full resize-y rounded-md border bg-background px-3 py-2 text-xs leading-relaxed outline-none placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-ring"
           />
-        </ComposerSection>
-        <ComposerSection title="Actual result">
-          <input
+        </label>
+        <label className="space-y-1.5">
+          <span className="flex items-center gap-2 text-xs font-medium text-rose-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden /> Actual
+          </span>
+          <textarea
             value={actual}
             onChange={(e) => setActual(e.target.value)}
             dir="auto"
+            rows={3}
             aria-label="Actual result"
             placeholder="What happened instead"
-            className="h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
+            className="w-full resize-y rounded-md border border-rose-200 bg-rose-50/40 px-3 py-2 text-xs leading-relaxed outline-none placeholder:text-muted-foreground/60 focus:ring-2 focus:ring-rose-300"
           />
-        </ComposerSection>
+        </label>
       </div>
 
-      <ComposerSection title="Evidence">
+      <ComposerSection title="Screenshot or video">
         {attachmentChoices && attachmentChoices.length > 0 ? (
           <div className="mb-2">
             <p className="mb-1 text-xs text-muted-foreground">
@@ -901,7 +926,7 @@ export function CreateBugModal({
         <div className="flex flex-wrap items-center gap-2">
           <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-2 rounded-md border px-2 text-xs ${screenshotFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
             <ImageIcon className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{screenshotFile ? screenshotFile.name : "Screenshot"}</span>
+            <span className="truncate">{screenshotFile ? screenshotFile.name : "Add screenshot"}</span>
             <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="hidden" onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)} />
           </label>
           {screenshotFile && (
@@ -911,7 +936,7 @@ export function CreateBugModal({
           )}
           <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-2 rounded-md border px-2 text-xs ${videoFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
             <Video className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{videoFile ? videoFile.name : "Video file"}</span>
+            <span className="truncate">{videoFile ? videoFile.name : "Add video"}</span>
             <input type="file" accept="video/webm,video/mp4,video/quicktime,video/ogg" className="hidden" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
           </label>
           {videoFile && (
@@ -925,7 +950,7 @@ export function CreateBugModal({
               aria-label="Video URL"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="Video URL (used if no file is chosen)"
+              placeholder="Or paste a video link"
               disabled={!!videoFile}
               className="min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
             />

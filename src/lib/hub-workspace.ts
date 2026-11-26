@@ -116,7 +116,6 @@ export function writeConfig(opts: RunConfigOptions, dir: string = WORKSPACE_ROOT
   // module for WORKSPACE_ROOT and a static cycle would be needless.
   let saved: Record<string, string> = {}
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     saved = require("@/lib/hub-properties").readProps() as Record<string, string>
   } catch {
     // No settings yet, or unreadable — the defaults below still give a valid run.

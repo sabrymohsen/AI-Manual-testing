@@ -440,25 +440,25 @@ const BUG_STATUS_ORDER = [
 
 /** Compact select used throughout the metadata sidebar. */
 const SIDE_SELECT =
-  "h-8 w-full cursor-pointer rounded-md border bg-background px-2 text-xs font-semibold outline-none transition-colors focus:ring-2 focus:ring-primary/30"
+  "h-8 w-full cursor-pointer rounded-md border border-transparent bg-transparent px-2 text-xs font-medium text-foreground outline-none transition-colors hover:border-border hover:bg-background focus:border-border focus:bg-background focus:ring-2 focus:ring-primary/30"
 
 /** One card in the right-hand metadata column. */
 function SideCard({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-card/80 p-6 shadow-xs">
-      <h4 className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <Icon className="h-4 w-4 text-primary" /> {title}
+    <section className="border-b pb-4 last:border-0">
+      <h4 className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" /> {title}
       </h4>
       <div>{children}</div>
-    </div>
+    </section>
   )
 }
 
 /** A label/value line inside a SideCard. */
 function SideRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[86px_1fr] items-center gap-2 border-b border-border/40 py-2 last:border-0">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
+    <div className="grid grid-cols-[88px_1fr] items-center gap-2 py-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   )
@@ -2585,7 +2585,7 @@ export default function ProjectBugReportsPage() {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleDeleteBug(selectedBug.id)} className="text-red-600 focus:text-red-600">
-                      <Trash2 className="mr-2 h-4 w-4" /> Delete defect
+                      <Trash2 className="mr-2 h-4 w-4" /> Delete bug
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -2660,17 +2660,17 @@ export default function ProjectBugReportsPage() {
             {/* Tab switch row */}
             <div className="flex border-b px-6 gap-6 overflow-x-auto">
               {[
-                { id: "overview", label: "Overview" },
-                { id: "evidence", label: "Evidence" },
-                { id: "steps", label: "Steps" },
-                { id: "test", label: "Linked Run" },
-                { id: "activity", label: "Activity Logs" },
-                { id: "openproject", label: trackerName === "tracker" ? "Tracker" : trackerName }
+                { id: "overview", label: "Details" },
+                { id: "test", label: "Test case" },
+                { id: "activity", label: `Activity${selectedBug.activities?.length ? ` ${selectedBug.activities.length}` : ""}` },
+                ...(trackerConnected ? [{ id: "openproject", label: trackerName === "tracker" ? "Tracker" : trackerName }] : []),
               ].map((tab) => {
                 const isActive = activeDetailTab === tab.id
                 return (
                   <button
                     key={tab.id}
+                    role="tab"
+                    aria-selected={isActive}
                     onClick={() => setActiveDetailTab(tab.id as TabType)}
                     className={`pb-3 pt-3 px-1 border-b-2 text-xs font-semibold transition-all ${
                       isActive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
@@ -2689,7 +2689,7 @@ export default function ProjectBugReportsPage() {
               {activeDetailTab === "overview" && (
                 <div className="space-y-6">
 
-                  <DrawerSection icon={FileText} title="Description and steps">
+                  <DrawerSection icon={FileText} title="Steps to reproduce">
                     {isEditingDesc ? (
                       <div className="space-y-2">
                         <textarea
@@ -2717,13 +2717,122 @@ export default function ProjectBugReportsPage() {
                       <p
                         onClick={() => setIsEditingDesc(true)}
                         title="Click to edit"
-                        className={`cursor-text whitespace-pre-wrap rounded-xl border bg-muted/60 p-3 text-sm leading-relaxed hover:border-primary/25 hover:bg-primary/10 ${selectedBug.stepsToReproduce ? "text-foreground" : " text-muted-foreground"}`}
+                        className={`cursor-text whitespace-pre-wrap rounded-lg border border-transparent p-3 -mx-3 text-sm leading-relaxed transition-colors hover:border-border hover:bg-muted/40 ${selectedBug.stepsToReproduce ? "text-foreground" : "text-muted-foreground"}`}
                         dir="auto"
                       >
-                        {selectedBug.stepsToReproduce || "No description provided. Click to add details."}
+                        {selectedBug.stepsToReproduce || "No steps yet. Click to write how to make the bug happen."}
                       </p>
                     )}
                   </DrawerSection>
+
+                  <div className="grid gap-4 border-t border-border/60 pt-6 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <span className="flex items-center gap-2 text-xs font-medium text-emerald-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden /> Expected
+                      </span>
+                      <textarea
+                        value={editExpectedValue}
+                        onChange={(e) => setEditExpectedValue(e.target.value)}
+                        onBlur={() => {
+                          if (editExpectedValue !== (selectedBug.expectedResult || "")) {
+                            handleInlineUpdate({ expectedResult: editExpectedValue })
+                          }
+                        }}
+                        rows={4}
+                        placeholder="What should happen"
+                        dir="auto"
+                        aria-label="Expected result"
+                        className="w-full resize-y rounded-lg border bg-background p-3 text-sm leading-relaxed text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="flex items-center gap-2 text-xs font-medium text-rose-700">
+                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden /> Actual
+                      </span>
+                      <textarea
+                        value={editActualValue}
+                        onChange={(e) => setEditActualValue(e.target.value)}
+                        onBlur={() => {
+                          if (editActualValue !== (selectedBug.actualResult || "")) {
+                            handleInlineUpdate({ actualResult: editActualValue })
+                          }
+                        }}
+                        rows={4}
+                        placeholder="What happened instead"
+                        dir="auto"
+                        aria-label="Actual result"
+                        className="w-full resize-y rounded-lg border border-rose-200 bg-rose-50/40 p-3 text-sm leading-relaxed text-foreground outline-none focus:ring-2 focus:ring-rose-300"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 border-t border-border/60 pt-6">
+                  {/* Screenshots preview */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground"><Paperclip className="h-3.5 w-3.5" /> Screenshot</span>
+                      <label className={`inline-flex items-center gap-2 h-7 px-3 rounded-lg border bg-primary/10 text-primary font-semibold text-xs cursor-pointer hover:bg-primary/15 transition-colors ${uploadingPhoto ? "opacity-60 pointer-events-none" : ""}`}>
+                        <Paperclip className="h-3.5 w-3.5" />
+                        {uploadingPhoto ? "Uploading…" : selectedBug.screenshotPath ? "Replace" : "Add screenshot"}
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/gif,image/webp"
+                          className="hidden"
+                          disabled={uploadingPhoto}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleUploadPhoto(file)
+                            e.target.value = ""
+                          }}
+                        />
+                      </label>
+                    </div>
+                    {selectedBug.screenshotPath ? (
+                      <div className="border rounded-xl overflow-hidden shadow-sm">
+                        <img
+                          src={assetUrl(selectedBug.screenshotPath)!}
+                          alt="Bug Screenshot Evidence"
+                          className="max-h-[300px] w-full object-contain bg-muted hover:scale-[1.02] transition-transform cursor-pointer"
+                          onClick={() => window.open(assetUrl(selectedBug.screenshotPath)!, "_blank")}
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
+                        No screenshot yet. Add one so developers can see the problem.
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedBug.videoUrl && (
+                  <div className="space-y-1 border-t pt-3">
+                    <span className="text-xs font-medium text-muted-foreground">Video</span>
+                    <div className="overflow-hidden rounded-xl border bg-black shadow-sm">
+                      <video src={assetUrl(selectedBug.videoUrl)!} controls className="max-h-[300px] w-full" />
+                    </div>
+                  </div>
+                  )}
+                  {(selectedBug.consoleLogs || selectedBug.networkErrors) && (
+                    <details className="group rounded-xl border">
+                      <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground">
+                        <span>
+                          Browser logs
+                          {selectedBug.networkErrors ? " · network errors" : ""}
+                          {selectedBug.consoleLogs ? " · console" : ""}
+                        </span>
+                        <span className="group-open:hidden">Show</span>
+                        <span className="hidden group-open:inline">Hide</span>
+                      </summary>
+                      <div className="space-y-2 border-t p-3">
+                        {selectedBug.networkErrors && (
+                          <pre className="max-h-[160px] select-all overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 font-mono text-xs text-rose-300">{selectedBug.networkErrors}</pre>
+                        )}
+                        {selectedBug.consoleLogs && (
+                          <pre className="max-h-[160px] select-all overflow-auto whitespace-pre-wrap rounded-lg bg-slate-900 p-3 font-mono text-xs text-emerald-300">{selectedBug.consoleLogs}</pre>
+                        )}
+                      </div>
+                    </details>
+                  )}
+                  </div>
 
                   {/* LinkedEntities renders its own "Linked items" heading —
                       wrapping it in a DrawerSection would show it twice. */}
@@ -2753,124 +2862,6 @@ export default function ProjectBugReportsPage() {
                 </div>
               )}
 
-              {/* Tab 2: EVIDENCE */}
-              {activeDetailTab === "evidence" && (
-                <div className="space-y-4">
-                  {/* Screenshots preview */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-muted-foreground text-xs">Screenshot attachment</Label>
-                      <label className={`inline-flex items-center gap-2 h-7 px-3 rounded-lg border bg-primary/10 text-primary font-semibold text-xs cursor-pointer hover:bg-primary/15 transition-colors ${uploadingPhoto ? "opacity-60 pointer-events-none" : ""}`}>
-                        <Paperclip className="h-3.5 w-3.5" />
-                        {uploadingPhoto ? "Uploading..." : "Upload Photo"}
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/gif,image/webp"
-                          className="hidden"
-                          disabled={uploadingPhoto}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0]
-                            if (file) handleUploadPhoto(file)
-                            e.target.value = ""
-                          }}
-                        />
-                      </label>
-                    </div>
-                    {selectedBug.screenshotPath ? (
-                      <div className="border rounded-xl overflow-hidden shadow-sm">
-                        <img
-                          src={assetUrl(selectedBug.screenshotPath)!}
-                          alt="Bug Screenshot Evidence"
-                          className="max-h-[300px] w-full object-contain bg-muted hover:scale-[1.02] transition-transform cursor-pointer"
-                          onClick={() => window.open(assetUrl(selectedBug.screenshotPath)!, "_blank")}
-                        />
-                      </div>
-                    ) : (
-                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
-                        No screenshots attached to this defect.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Video player for screen records */}
-                  <div className="space-y-1 border-t pt-3">
-                    <Label className="text-muted-foreground text-xs">Web Video Recording (Session play)</Label>
-                    {selectedBug.videoUrl ? (
-                      <div className="border rounded-xl overflow-hidden shadow-sm bg-black">
-                        <video
-                          src={assetUrl(selectedBug.videoUrl)!}
-                          controls
-                          className="w-full max-h-[300px]"
-                        />
-                      </div>
-                    ) : (
-                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
-                        No video logs linked to this defect.
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Logs tabs */}
-                  <div className="space-y-2 border-t pt-3">
-                    <span className="text-xs text-muted-foreground block">Console logs output</span>
-                    {selectedBug.consoleLogs ? (
-                      <pre className="p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
-                        {selectedBug.consoleLogs}
-                      </pre>
-                    ) : (
-                      <p className="text-xs text-muted-foreground pl-1">No console logs output recorded.</p>
-                    )}
-
-                    <span className="text-xs text-muted-foreground block mt-2">Network errors</span>
-                    {selectedBug.networkErrors ? (
-                      <pre className="p-3 rounded-xl bg-slate-900 text-rose-500 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
-                        {selectedBug.networkErrors}
-                      </pre>
-                    ) : (
-                      <p className="text-xs text-muted-foreground pl-1">No network errors logs recorded.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Tab 3: REPRODUCTION STEPS */}
-              {activeDetailTab === "steps" && (
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block">Expected result</span>
-                    <textarea
-                      value={editExpectedValue}
-                      onChange={(e) => setEditExpectedValue(e.target.value)}
-                      onBlur={() => {
-                        if (editExpectedValue !== (selectedBug.expectedResult || "")) {
-                          handleInlineUpdate({ expectedResult: editExpectedValue })
-                        }
-                      }}
-                      rows={3}
-                      placeholder="What should happen..."
-                      dir="auto"
-                      className="w-full p-3 rounded-lg border bg-muted/50 leading-relaxed text-foreground outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div className="space-y-1 border-t pt-3">
-                    <span className="text-xs text-muted-foreground block">Actual result</span>
-                    <textarea
-                      value={editActualValue}
-                      onChange={(e) => setEditActualValue(e.target.value)}
-                      onBlur={() => {
-                        if (editActualValue !== (selectedBug.actualResult || "")) {
-                          handleInlineUpdate({ actualResult: editActualValue })
-                        }
-                      }}
-                      rows={3}
-                      placeholder="What happened instead..."
-                      dir="auto"
-                      className="w-full p-3 rounded-lg border border-rose-100 bg-rose-50/50 leading-relaxed text-rose-700 outline-none focus:ring-1 focus:ring-rose-400"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Tab 4: LINKED TEST / RUN */}
               {activeDetailTab === "test" && (
                 <div className="space-y-4">
@@ -2883,7 +2874,7 @@ export default function ProjectBugReportsPage() {
                         </div>
                         <Button 
                           size="sm" 
-                          onClick={() => router.push(`/projects/${projectId}/test-cases`)}
+                          onClick={() => router.push(`/projects/${projectId}/test-cases?case=${selectedBug.testCase!.id}`)}
                           className="h-7 bg-primary text-white font-semibold"
                         >
                           Open case
@@ -3134,7 +3125,7 @@ export default function ProjectBugReportsPage() {
             </div>{/* end left column */}
 
             {/* ── Right metadata sidebar ── */}
-            <div className="min-w-0 space-y-6 overflow-y-auto bg-muted/15 p-6">
+            <div className="min-w-0 space-y-4 overflow-y-auto bg-muted/30 p-5">
 
               <SideCard icon={Tag} title="Details">
                 <SideRow label="Type">
@@ -3313,16 +3304,17 @@ export default function ProjectBugReportsPage() {
 
               <SideCard icon={Globe} title="Environment">
                 <SideRow label="Env">
-                  <span className="truncate text-xs font-semibold text-foreground">{selectedBug.environment || "Staging"}</span>
+                  <span className={`truncate text-xs ${selectedBug.environment ? "font-medium text-foreground" : "text-muted-foreground"}`}>{selectedBug.environment || "Not recorded"}</span>
                 </SideRow>
                 <SideRow label="Browser">
-                  <span className="truncate text-xs font-semibold text-foreground">{selectedBug.browser || "Chromium"}</span>
+                  <span className={`truncate text-xs ${selectedBug.browser ? "font-medium text-foreground" : "text-muted-foreground"}`}>{selectedBug.browser || "Not recorded"}</span>
                 </SideRow>
                 <SideRow label="Viewport">
-                  <span className="truncate text-xs font-semibold text-foreground">{selectedBug.viewport || "Desktop (1280x800)"}</span>
+                  <span className={`truncate text-xs ${selectedBug.viewport ? "font-medium text-foreground" : "text-muted-foreground"}`}>{selectedBug.viewport || "Not recorded"}</span>
                 </SideRow>
               </SideCard>
 
+              {trackerConnected && (
               <SideCard icon={Kanban} title={`${trackerName || "Tracker"} placement`}>
                 <SideRow label="Parent">
                   <Input
@@ -3381,33 +3373,17 @@ export default function ProjectBugReportsPage() {
                   </SideRow>
                 )}
               </SideCard>
-
-              <SideCard icon={Clock} title="Dates">
-                <SideRow label="Created">
-                  <span className="text-xs font-semibold text-foreground">{new Date(selectedBug.createdAt).toLocaleDateString()}</span>
-                </SideRow>
-                <SideRow label="Updated">
-                  <span className="text-xs font-semibold text-foreground">{new Date(selectedBug.updatedAt).toLocaleDateString()}</span>
-                </SideRow>
-              </SideCard>
+              )}
 
             </div>
             </div>{/* end split view */}
 
-            {/* Footer deletion */}
-            <div className="flex items-center justify-between border-t bg-muted/60 px-6 py-3">
-              <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                Updated {new Date(selectedBug.updatedAt).toLocaleDateString()}
-                <button onClick={() => setShowShortcuts(true)} className="ml-3 hidden rounded border px-2 py-0.5 font-mono text-xs hover:bg-muted sm:inline" title="Keyboard shortcuts">
-                  J/K · E · D · T · ?
-                </button>
-              </span>
+            <div className="flex shrink-0 items-center justify-end border-t px-6 py-2">
               <button
-                onClick={() => handleDeleteBug(selectedBug.id)}
-                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-card px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                onClick={() => setShowShortcuts(true)}
+                className="hidden text-xs text-muted-foreground hover:text-foreground sm:inline"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete bug
+                Keyboard shortcuts
               </button>
             </div>
           </div>

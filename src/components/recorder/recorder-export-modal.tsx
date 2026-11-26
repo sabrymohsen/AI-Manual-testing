@@ -119,7 +119,7 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
         {/* Zero-step warning */}
         {includedCount === 0 && (
           <div className="px-6 py-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-b">
-            No steps are marked "Include in Test Case". Toggle at least one step to generate code.
+            No steps are included yet. Tick Include on at least one step to generate code.
           </div>
         )}
 

@@ -86,7 +86,7 @@ function generateEnglish(
   const title = req.title.trim()
   const description = req.description || title
   const priority = normalizePriority(req.priority)
-  const module = req.module || "General"
+  const moduleName = req.module || "General"
   const feature = req.feature
   const component = req.component
   const reqKey = req.requirementKey
@@ -110,7 +110,7 @@ function generateEnglish(
   cases.push({
     title: `Verify ${title} with valid inputs`,
     description: `Ensure the system handles "${description.substring(0, 200)}" correctly under normal conditions.`,
-    module, feature, component, priority,
+    module: moduleName, feature, component, priority,
     preconditions: "User is authenticated. System is in a stable state. Required data is available.",
     steps: positiveSteps,
     source: "RequirementFile",
@@ -125,7 +125,7 @@ function generateEnglish(
   cases.push({
     title: `Verify ${title} fails gracefully with invalid inputs`,
     description: `Ensure the system shows appropriate error messages when invalid data is provided for: ${title}`,
-    module, feature, component, priority,
+    module: moduleName, feature, component, priority,
     preconditions: "User is authenticated. System is in a stable state.",
     steps: [
       step(1, `Navigate to the page where "${title}" is available`, "The page loads successfully"),
@@ -143,7 +143,7 @@ function generateEnglish(
   cases.push({
     title: `Verify field validations for ${title}`,
     description: `Validate all required field constraints and business rules for: ${title}`,
-    module, feature, component, priority: "Medium",
+    module: moduleName, feature, component, priority: "Medium",
     preconditions: "User is on the relevant form or page.",
     steps: [
       step(1, "Identify all required fields on the form/page", "All required fields are clearly marked"),
@@ -164,7 +164,7 @@ function generateEnglish(
   cases.push({
     title: `Verify boundary conditions for ${title}`,
     description: `Test edge values and boundary conditions related to: ${title}`,
-    module, feature, component, priority: "Medium",
+    module: moduleName, feature, component, priority: "Medium",
     preconditions: "User is authenticated. System is accessible.",
     steps: [
       step(1, "Test with the minimum allowed value or the first valid option", "System accepts minimum boundary and processes correctly"),
@@ -183,7 +183,7 @@ function generateEnglish(
   cases.push({
     title: `Verify error handling for ${title}`,
     description: `Ensure the system handles errors gracefully and provides actionable feedback for: ${title}`,
-    module, feature, component, priority: "High",
+    module: moduleName, feature, component, priority: "High",
     preconditions: "System is accessible. Network or server errors can be simulated.",
     steps: [
       step(1, "Simulate a server/network timeout or error during the action", "System displays a user-friendly error message"),
@@ -209,7 +209,7 @@ function generateArabic(
   const title = req.title.trim()
   const description = req.description || title
   const priority = normalizePriority(req.priority)
-  const module = req.module || "عام"
+  const moduleName = req.module || "عام"
   const feature = req.feature
   const component = req.component
   const reqKey = req.requirementKey
@@ -233,7 +233,7 @@ function generateArabic(
   cases.push({
     title: `التحقق من ${title} بمدخلات صحيحة`,
     description: `التأكد من أن النظام يعالج "${description.substring(0, 200)}" بشكل صحيح في الظروف العادية.`,
-    module, feature, component, priority,
+    module: moduleName, feature, component, priority,
     preconditions: "المستخدم مسجّل الدخول. النظام في حالة مستقرة. البيانات المطلوبة متاحة.",
     steps: positiveSteps,
     source: "RequirementFile",
@@ -248,7 +248,7 @@ function generateArabic(
   cases.push({
     title: `التحقق من فشل ${title} بمدخلات غير صحيحة`,
     description: `التأكد من أن النظام يعرض رسائل خطأ مناسبة عند إدخال بيانات غير صحيحة لـ: ${title}`,
-    module, feature, component, priority,
+    module: moduleName, feature, component, priority,
     preconditions: "المستخدم مسجّل الدخول. النظام في حالة مستقرة.",
     steps: [
       step(1, `الانتقال إلى الصفحة التي تتوفر فيها "${title}"`, "تحميل الصفحة بنجاح"),
@@ -266,7 +266,7 @@ function generateArabic(
   cases.push({
     title: `التحقق من قواعد التحقق للحقول في ${title}`,
     description: `التحقق من جميع قيود الحقول الإلزامية وقواعد العمل لـ: ${title}`,
-    module, feature, component, priority: "Medium",
+    module: moduleName, feature, component, priority: "Medium",
     preconditions: "المستخدم موجود في النموذج أو الصفحة ذات الصلة.",
     steps: [
       step(1, "تحديد جميع الحقول الإلزامية في النموذج/الصفحة", "وضوح جميع الحقول الإلزامية"),
@@ -287,7 +287,7 @@ function generateArabic(
   cases.push({
     title: `التحقق من حالات الحدود لـ ${title}`,
     description: `اختبار القيم الحدية وحالات الحافة المتعلقة بـ: ${title}`,
-    module, feature, component, priority: "Medium",
+    module: moduleName, feature, component, priority: "Medium",
     preconditions: "المستخدم مسجّل الدخول. النظام متاح.",
     steps: [
       step(1, "اختبار القيمة المسموح بها كحد أدنى", "يقبل النظام الحد الأدنى ويعالجه بشكل صحيح"),
@@ -304,7 +304,7 @@ function generateArabic(
   cases.push({
     title: `التحقق من معالجة الأخطاء لـ ${title}`,
     description: `التأكد من أن النظام يتعامل مع الأخطاء بشكل صحيح لـ: ${title}`,
-    module, feature, component, priority: "High",
+    module: moduleName, feature, component, priority: "High",
     preconditions: "النظام متاح. يمكن محاكاة أخطاء الشبكة أو الخادم.",
     steps: [
       step(1, "محاكاة مهلة الشبكة أو خطأ الخادم أثناء الإجراء", "يعرض النظام رسالة خطأ واضحة وسهلة الفهم"),
