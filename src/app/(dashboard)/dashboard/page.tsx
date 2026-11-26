@@ -1,5 +1,6 @@
 "use client"
 
+import { CountUp } from "@/components/ui/count-up"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useActiveProject, useProjectSummary, useTestCaseMetrics, useBugMetrics, useRunMetrics, useScrumMetrics } from "@/hooks/use-metrics"
@@ -140,18 +141,18 @@ export default function DashboardPage() {
       <ActiveProjectContextBar projectId={activeProjectId} />
 
       {/* Monitoring Grid — 4 original KPI cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="stagger grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
         {/* Pass rate card */}
-        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
+        <div className="hover-lift space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-muted-foreground/60">Pass Rate</span>
-            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <span className="caption-4 text-muted-foreground">Pass Rate</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10"><TrendingUp className="h-4 w-4 text-emerald-600" /></span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-semibold text-foreground">{summary?.passRate ?? 0}%</span>
+            <span className="text-2xl font-semibold text-foreground"><CountUp value={summary?.passRate ?? 0} />%</span>
             <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden">
               <div 
-                className="bg-emerald-500 h-full transition-all" 
+                className="h-full bg-emerald-500 transition-[width] duration-700 ease-out-soft" 
                 style={{ width: `${summary?.passRate ?? 0}%` }}
               />
             </div>
@@ -162,14 +163,14 @@ export default function DashboardPage() {
         {/* User stories by board column. The dashboard previously reported test
             cases, bugs and runs but said nothing about the work itself — how
             much is still to do, and how much is sitting in Testing. */}
-        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
+        <div className="hover-lift space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-muted-foreground/60">User Stories</span>
-            <Layers className="h-4 w-4 text-violet-500" />
+            <span className="caption-4 text-muted-foreground">User Stories</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10"><Layers className="h-4 w-4 text-violet-600" /></span>
           </div>
           <div className="space-y-1">
             <span className="text-2xl font-semibold text-foreground">
-              {scrum.metrics?.stories.total ?? 0} total
+              <CountUp value={scrum.metrics?.stories.total ?? 0} /> total
             </span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-muted-foreground font-semibold">
@@ -226,13 +227,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Test Case Breakdown */}
-        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
+        <div className="hover-lift space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-muted-foreground/60">Test Cases</span>
-            <FileText className="h-4 w-4 text-primary" />
+            <span className="caption-4 text-muted-foreground">Test Cases</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10"><FileText className="h-4 w-4 text-indigo-600" /></span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-semibold text-foreground">{caseMetrics.total} total</span>
+            <span className="text-2xl font-semibold text-foreground"><CountUp value={caseMetrics.total} /> total</span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-primary font-semibold">{caseMetrics.manual} manual</span>
               <span>•</span>
@@ -243,13 +244,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Open Bugs card */}
-        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
+        <div className="hover-lift space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-muted-foreground/60">Open Defects</span>
-            <Bug className="h-4 w-4 text-rose-500" />
+            <span className="caption-4 text-muted-foreground">Open Defects</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10"><Bug className="h-4 w-4 text-rose-600" /></span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-semibold text-rose-600">{bugMetrics.open} bugs</span>
+            <span className="text-2xl font-semibold text-rose-600"><CountUp value={bugMetrics.open} /> bugs</span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-amber-600 font-semibold">{bugMetrics.fixed} fixed</span>
               <span>•</span>
@@ -260,13 +261,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Test Runs status */}
-        <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
+        <div className="hover-lift space-y-3 rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex justify-between items-center">
-            <span className="text-xs font-medium text-muted-foreground/60">Total runs</span>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <span className="caption-4 text-muted-foreground">Total runs</span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-500/10"><Activity className="h-4 w-4 text-sky-600" /></span>
           </div>
           <div className="space-y-1">
-            <span className="text-2xl font-semibold text-foreground">{runMetrics.total} runs</span>
+            <span className="text-2xl font-semibold text-foreground"><CountUp value={runMetrics.total} /> runs</span>
             <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-emerald-600 font-semibold">{runMetrics.passed} passed</span>
               <span>•</span>

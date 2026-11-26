@@ -1,5 +1,6 @@
 "use client"
 
+import { CountUp } from "@/components/ui/count-up"
 import { BusyDot } from "@/components/ui/skeleton"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -1739,7 +1740,7 @@ export default function ProjectBugReportsPage() {
       <ActiveProjectContextBar projectId={projectId} />
 
       {/* 4. Summary Metrics Row Section */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+      <div className="stagger grid grid-cols-2 md:grid-cols-6 gap-4">
         {[
           { label: "Total", count: bugs.length, color: "text-foreground", filter: "all", field: "status" },
           // Same three statuses the filter below asks the server for.
@@ -1753,7 +1754,7 @@ export default function ProjectBugReportsPage() {
           c.field === "info" ? (
             <div key={idx} className="space-y-1 rounded-xl border border-border bg-card p-4 text-center">
               <span className="caption-4 text-muted-foreground">{c.label}</span>
-              <div className={`text-xl font-semibold ${c.color}`}>{c.count}</div>
+              <div className={`text-2xl font-semibold ${c.color}`}><CountUp value={c.count} /></div>
             </div>
           ) : (
             <button
@@ -1765,10 +1766,10 @@ export default function ProjectBugReportsPage() {
                 setFilterSeverity(c.field === "severity" ? c.filter : "all")
                 setFilterSource(c.field === "source" ? c.filter : "all")
               }}
-              className="space-y-1 rounded-xl border border-border bg-card p-4 text-center shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
+              className="hover-lift space-y-1 rounded-xl border border-border bg-card p-4 text-center shadow-sm hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
             >
               <span className="caption-4 text-muted-foreground">{c.label}</span>
-              <div className={`text-xl font-semibold ${c.color}`}>{c.count}</div>
+              <div className={`text-2xl font-semibold ${c.color}`}><CountUp value={c.count} /></div>
             </button>
           )
         ))}
@@ -2130,7 +2131,7 @@ export default function ProjectBugReportsPage() {
                       <th className="p-3 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y text-foreground">
+                  <tbody className="stagger divide-y text-foreground">
                     {bugs.map((b) => {
                       const isAuto = b.testRunId !== null
                       return (

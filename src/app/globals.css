@@ -5,28 +5,33 @@
 @layer base {
   /* Linear-style theme: neutral greys, one indigo accent, thin borders. */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 10%;
+    /* Vivid indigo → violet theme on a light lavender page. */
+    --background: 250 60% 99%;
+    --foreground: 245 30% 12%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 245 30% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
-    --primary: 235 56% 60%;
+    --popover-foreground: 245 30% 12%;
+    --primary: 252 83% 62%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 96%;
-    --secondary-foreground: 240 10% 10%;
-    --muted: 240 5% 96%;
-    --muted-foreground: 240 4% 44%;
-    --accent: 240 5% 95%;
-    --accent-foreground: 240 10% 10%;
+    --secondary: 250 40% 96%;
+    --secondary-foreground: 245 30% 12%;
+    --muted: 250 35% 96%;
+    --muted-foreground: 245 10% 44%;
+    --accent: 252 90% 96%;
+    --accent-foreground: 252 55% 34%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 91%;
-    --input: 240 6% 88%;
-    --ring: 235 56% 60%;
-    --sidebar: 240 9% 98%;
+    --border: 250 30% 90%;
+    --input: 250 25% 86%;
+    --ring: 252 83% 62%;
+    --sidebar: 252 60% 97%;
     --radius: 0.5rem;
+    /* Brand gradient stops */
+    --brand-from: 239 84% 64%;
+    --brand-to: 271 81% 60%;
   }
+
 
   /* Dark surfaces use only the SKILL.md palette:
      #000000 #181818 #1F1F1F #272727 #313131 #131209 */
@@ -238,6 +243,47 @@
   .hero-gradient-dark { background: linear-gradient(90deg, #ffffff, #9b9b9b); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .hero-gradient-light { background: linear-gradient(90deg, #000000, #666666); -webkit-background-clip: text; background-clip: text; color: transparent; }
 }
+
+/* ─── Brand colour and motion helpers ─────────────────────────────────── */
+@layer utilities {
+  .bg-brand { background-image: linear-gradient(135deg, hsl(var(--brand-from)), hsl(var(--brand-to))); }
+  .text-brand { background-image: linear-gradient(90deg, hsl(var(--brand-from)), hsl(var(--brand-to))); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .shadow-glow { box-shadow: 0 8px 20px -8px hsl(var(--brand-to) / 0.6); }
+  .hover-lift { transition: transform 300ms var(--ease-out-soft), box-shadow 300ms var(--ease-out-soft); }
+  .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -14px hsl(var(--brand-to) / 0.45); }
+  .animate-page { animation: fade-up 500ms var(--ease-out-soft) both; }
+  .animate-pop { animation: pop 400ms var(--ease-out-soft) both; }
+  /* Children appear one after another (cards, rows, columns). */
+  .stagger > * { animation: fade-up 450ms var(--ease-out-soft) both; }
+  .stagger > *:nth-child(2) { animation-delay: 40ms; }
+  .stagger > *:nth-child(3) { animation-delay: 80ms; }
+  .stagger > *:nth-child(4) { animation-delay: 120ms; }
+  .stagger > *:nth-child(5) { animation-delay: 160ms; }
+  .stagger > *:nth-child(6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(7) { animation-delay: 240ms; }
+  .stagger > *:nth-child(8) { animation-delay: 280ms; }
+  .stagger > *:nth-child(9) { animation-delay: 320ms; }
+  .stagger > *:nth-child(n+10) { animation-delay: 360ms; }
+}
+
+/* Hand-written primary buttons and links pick up the brand gradient too. */
+button.bg-primary:not(:disabled), a.bg-primary {
+  background-image: linear-gradient(135deg, hsl(var(--brand-from)), hsl(var(--brand-to)));
+  box-shadow: 0 8px 20px -10px hsl(var(--brand-to) / 0.65);
+  transition: transform 300ms var(--ease-out-soft), filter 300ms var(--ease-out-soft), box-shadow 300ms var(--ease-out-soft);
+}
+button.bg-primary:not(:disabled):hover, a.bg-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+button.bg-primary:not(:disabled):active, a.bg-primary:active { transform: scale(0.98); }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: none; } }
+@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page, .animate-pop, .stagger > * { animation: fade-in 200ms linear both; }
+  .hover-lift:hover { transform: none; }
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Weighted, decelerating motion curve (B7). */
 :root { --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1); }

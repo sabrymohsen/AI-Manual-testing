@@ -70,7 +70,7 @@ export function TaskCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setQuickAction(null) }}
       className={cn(
-        "group relative cursor-pointer select-none rounded-md border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-foreground/20",
+        "group relative cursor-pointer select-none rounded-lg border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-[border-color,box-shadow] duration-300 ease-out-soft hover:border-primary/40 hover:shadow-[0_10px_24px_-14px_hsl(var(--brand-to)/0.5)]",
         layout === "compact" ? "px-3 py-2" : "p-3",
         dragging && "border-primary/40 shadow-lg ring-1 ring-primary/30"
       )}

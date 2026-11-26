@@ -369,7 +369,7 @@ export default function DashboardLayout({
         <div className={`flex h-12 shrink-0 items-center ${navCollapsed ? "justify-center px-2" : "justify-between pl-4 pr-2"}`}>
           {!navCollapsed && (
             <Link href="/dashboard" className="flex items-center gap-2 rounded-md text-xs font-semibold tracking-tight text-foreground">
-              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
+              <span className="flex h-6 w-6 items-center justify-center rounded-md bg-brand text-white shadow-glow">
                 <Zap className="h-3.5 w-3.5 fill-current" />
               </span>
               QA Engine
@@ -441,7 +441,7 @@ export default function DashboardLayout({
 
                 const isActive = isTabActive || (pathname === dest && !hasTab)
                 const link = (
-                  <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} />
+                  <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} tint={NAV_TINT[item.label]} />
                 )
                 return item.permission ? (
                   <PermissionGate key={item.href} permission={item.permission}>
@@ -456,7 +456,7 @@ export default function DashboardLayout({
               {workflowItems.map((item) => {
                 const dest = getHref(item.href)
                 const isActive = pathname === dest || pathname.startsWith(dest + "/")
-                return <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} />
+                return <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} tint={NAV_TINT[item.label]} />
               })}
 
               <NavSection label="Management" collapsed={navCollapsed} />
@@ -465,7 +465,7 @@ export default function DashboardLayout({
                 // Every project page lives under /projects/…; only the list and a
                 // project's own overview count as "Projects".
                 const isActive = pathname === dest || /^\/projects\/[^/]+\/?$/.test(pathname)
-                return <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} />
+                return <NavItem key={item.href} href={dest} label={item.label} icon={item.icon} collapsed={navCollapsed} active={isActive} tint={NAV_TINT[item.label]} />
               })}
             </>
           )}
@@ -540,9 +540,9 @@ export default function DashboardLayout({
             break its internal min-h-0 scroll chain, which is what made the
             columns feel cramped. It manages its own header and scrolling. */}
         {isFullBleed ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+          <div key={pathname} className="animate-page flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
         ) : (
-          <div className="flex-1 overflow-y-auto bg-background px-6 py-6 md:px-8">
+          <div key={pathname} className="animate-page flex-1 overflow-y-auto bg-background px-6 py-6 md:px-8">
             {children}
           </div>
         )}
@@ -606,31 +606,55 @@ function NavSection({ label, collapsed, first }: { label: string; collapsed: boo
   return <span className={`px-3 pb-1 text-xs font-medium text-muted-foreground ${first ? "pt-1" : "pt-4"}`}>{label}</span>
 }
 
+/** Each page keeps its own colour in the sidebar, so the menu reads at a glance. */
+const NAV_TINT: Record<string, string> = {
+  Dashboard: "text-indigo-500",
+  "Scrum Board": "text-sky-500",
+  Reports: "text-emerald-500",
+  Members: "text-amber-500",
+  "Test Cases": "text-violet-500",
+  "BRD Hub": "text-teal-500",
+  "Automation Hub": "text-fuchsia-500",
+  "Team Chat": "text-pink-500",
+  "Live QA Session": "text-orange-500",
+  "Recorder Studio": "text-rose-500",
+  "Visual Tests": "text-cyan-500",
+  "Bug Reports": "text-red-500",
+  Projects: "text-slate-500",
+  Users: "text-indigo-500",
+  Finance: "text-emerald-500",
+  "Subscription Panel": "text-violet-500",
+  "Free Trial": "text-amber-500",
+}
+
 function NavItem({
   href,
   label,
   icon: Icon,
   collapsed,
   active,
+  tint,
 }: {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
   collapsed: boolean
   active: boolean
+  /** Icon colour for this page when it isn't the current one. */
+  tint?: string
 }) {
   return (
     <Link
       href={href}
       title={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
-      className={`flex h-8 items-center rounded-md text-xs font-medium transition-colors ${collapsed ? "justify-center px-0" : "gap-3 px-3"} ${
+      className={`group flex h-9 items-center rounded-lg text-xs font-medium transition-[background-color,color,transform,box-shadow] duration-300 ease-out-soft ${collapsed ? "justify-center px-0" : "gap-3 px-3"} ${
         active
-          ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-border"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          ? "bg-brand text-white shadow-glow"
+          : "text-muted-foreground hover:translate-x-0.5 hover:bg-accent hover:text-accent-foreground"
       }`}
     >
-      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-primary" : ""}`} />
+      <Icon className={`h-4 w-4 shrink-0 transition-transform duration-300 ease-out-soft group-hover:scale-110 ${active ? "text-white" : tint ?? ""}`} />
       {!collapsed && <span className="truncate">{label}</span>}
     </Link>
   )

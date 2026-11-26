@@ -221,7 +221,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                 <th className="px-3 py-3"><Header field="dueDate" label="Due" /></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger">
               {rows.map((t) => {
                 const overdue = overdueDays(t.dueDate, t.status)
                 const isSel = selected.has(t.id)

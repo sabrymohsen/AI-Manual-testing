@@ -38,6 +38,17 @@ import {
 import { Input } from "@/components/ui/input"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
+
+/** A light wash of each status colour, so columns read at a glance. */
+const COLUMN_TINT: Record<string, string> = {
+  TODO: "bg-slate-500/[0.06]",
+  IN_PROGRESS: "bg-amber-500/[0.08]",
+  REVIEW: "bg-violet-500/[0.08]",
+  TESTING: "bg-indigo-500/[0.08]",
+  DEPLOYED: "bg-cyan-500/[0.08]",
+  DONE: "bg-emerald-500/[0.08]",
+}
+
 export function BoardView({ projectId, filters }: { projectId: string; filters: TaskFilters }) {
   const { data: tasks, isLoading, isError, error: tasksError, refetch: refetchTasks } = useScrumTasks(projectId, filters)
   const { data: columns } = useBoardColumns(projectId)
@@ -396,7 +407,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
           return (
             <div
               key={col.id}
-              className="flex max-h-full w-[272px] shrink-0 flex-col rounded-lg bg-muted/60"
+              className={`flex max-h-full w-[272px] shrink-0 flex-col rounded-xl ${COLUMN_TINT[col.status] ?? "bg-muted/60"}`}
             >
               {/* Column header */}
               <div className="group/col flex h-9 items-center justify-between gap-2 pl-3 pr-2">

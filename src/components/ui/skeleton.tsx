@@ -2,7 +2,13 @@ import { cn } from "@/lib/utils"
 
 /** Loading placeholder shaped like the content it stands in for (SKILL.md B9: no spinners). */
 function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("animate-pulse rounded-md bg-muted", className)} aria-hidden {...props} />
+  return (
+    <div
+      className={cn("rounded-md bg-muted bg-[length:200%_100%] [animation:shimmer_1.6s_linear_infinite] [background-image:linear-gradient(90deg,transparent,hsl(var(--brand-to)/0.08),transparent)]", className)}
+      aria-hidden
+      {...props}
+    />
+  )
 }
 
 /** A few text lines of placeholder, for lists and panels that are loading. */

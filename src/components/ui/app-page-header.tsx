@@ -42,9 +42,10 @@ export function AppPageHeader({
       {/* Main Title & Action Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+          <h1 className="heading-5 flex items-center gap-2 text-foreground">
             {title}
           </h1>
+          <span aria-hidden className="block h-1 w-12 rounded-full bg-brand animate-pop" />
           {subtitle && (
             <p className="max-w-2xl text-xs leading-relaxed text-muted-foreground">
               {subtitle}
