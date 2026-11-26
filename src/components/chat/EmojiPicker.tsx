@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Smile } from "lucide-react";
+import { Smile } from "@/components/ui/icons";
 
 // Dynamically import to prevent SSR compilation errors from external dependency
 const Picker = dynamic(() => import("emoji-picker-react"), { ssr: false });

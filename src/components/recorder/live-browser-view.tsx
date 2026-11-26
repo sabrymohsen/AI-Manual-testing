@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Maximize2, Minimize2 } from "lucide-react"
+import { Maximize2, Minimize2 } from "@/components/ui/icons"
 
 /**
  * Embedded live view of a recorder-worker browser session: renders the CDP
@@ -347,7 +347,7 @@ export function LiveBrowserView({
       )}
       {!active && hasFrame && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
-          <span className="rounded-full border bg-card px-3 py-1.5 text-xs font-semibold text-muted-foreground">
+          <span className="rounded-full border bg-card px-3 py-2 text-xs font-semibold text-muted-foreground">
             Session paused
           </span>
         </div>

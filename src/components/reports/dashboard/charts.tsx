@@ -26,7 +26,7 @@ import {
 } from "recharts"
 import { CHART_COLORS, PALETTE } from "@/lib/reports/colors"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LineChart as LineIcon, Radar as RadarIcon, Inbox } from "lucide-react"
+import { LineChart as LineIcon, Radar as RadarIcon, Inbox } from "@/components/ui/icons"
 import { format } from "date-fns"
 import type {
   BurndownResult,
@@ -63,11 +63,11 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <div id={id} className="flex flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow" role="figure" aria-label={ariaLabel || title}>
+    <div id={id} className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow" role="figure" aria-label={ariaLabel || title}>
       <div className="mb-3 flex items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -247,7 +247,7 @@ export const TeamPerformanceChart = memo(function TeamPerformanceChart({ data, l
   }, [members])
 
   const toggle = (
-    <div className="flex overflow-hidden rounded-lg border border-border text-[11px]">
+    <div className="flex overflow-hidden rounded-lg border border-border text-xs">
       <button onClick={() => setMode("radar")} className={`flex items-center gap-1 px-2 py-1 ${mode === "radar" ? "bg-primary text-white" : "text-muted-foreground"}`}>
         <RadarIcon className="h-3 w-3" /> Radar
       </button>
@@ -329,7 +329,7 @@ export const ExecutionFunnelChart = memo(function ExecutionFunnelChart({ data, l
       emptyText="No test cases"
       ariaLabel="Test execution funnel from total cases through to passed, failed, and blocked"
     >
-      <div className="flex h-full flex-col justify-center gap-1.5">
+      <div className="flex h-full flex-col justify-center gap-2">
         {stages.map((s, i) => (
           <div
             key={s.label}

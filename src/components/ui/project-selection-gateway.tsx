@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Zap, LayoutDashboard, ChevronRight, Folder } from "lucide-react"
+import { Zap, LayoutDashboard, ChevronRight, Folder } from "@/components/ui/icons"
 
 interface Project {
   id: string
@@ -67,7 +67,7 @@ export function ProjectSelectionGateway({
         </div>
 
         <div className="space-y-2">
-          <span className="text-[11px] font-medium text-muted-foreground/60">Select Project Workspace</span>
+          <span className="text-xs font-medium text-muted-foreground/60">Select Project Workspace</span>
           
           {loading ? (
             <div className="space-y-2 animate-pulse">
@@ -76,33 +76,33 @@ export function ProjectSelectionGateway({
             </div>
           ) : projects.length === 0 ? (
             <div className="p-8 border border-dashed rounded-xl text-center space-y-3">
-              <p className="text-muted-foreground italic font-medium">No projects created yet.</p>
+              <p className="text-muted-foreground font-medium">No projects created yet.</p>
               <Button size="sm" onClick={() => router.push("/projects/new")}>
                 Create New Project
               </Button>
             </div>
           ) : (
-            <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
               {projects.map((proj) => (
                 <div 
                   key={proj.id}
                   onClick={() => handleSelect(proj.id)}
                   className="p-3 border rounded-xl bg-card hover:bg-muted/50 border-border hover:border-border cursor-pointer flex items-center justify-between transition-all group"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
                     <Folder className="h-4.5 w-4.5 text-indigo-400 fill-indigo-400/5 shrink-0" />
                     <div className="space-y-0.5 min-w-0">
                       <span className="font-semibold text-foreground truncate block group-hover:text-primary transition-colors">
                         {proj.name}
                       </span>
-                      <span className="text-[10px] text-muted-foreground truncate block">
+                      <span className="text-xs text-muted-foreground truncate block">
                         {proj.baseUrl.replace(/^https?:\/\//, "") || "No target URL"}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted text-muted-foreground">
                       {proj.environment}
                     </span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />

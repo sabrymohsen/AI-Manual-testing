@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "@/components/ui/icons"
 
 /** One-field dialog: bulk tag edits and naming a new plan. */
 export function PromptDialog({
@@ -45,8 +45,8 @@ export function PromptDialog({
           <DialogTitle className="text-base">{title}</DialogTitle>
           {description && <DialogDescription className="text-xs">{description}</DialogDescription>}
         </DialogHeader>
-        <label className="space-y-1.5">
-          <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+        <label className="space-y-2">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
           <Input
             autoFocus
             value={value}
@@ -73,7 +73,7 @@ export function PromptDialog({
                     return parts.includes(s) ? v : [...parts, s].join(", ")
                   })
                 }
-                className="rounded border px-1.5 py-0.5 text-[11px] text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="rounded border px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {s}
               </button>
@@ -84,7 +84,7 @@ export function PromptDialog({
           <Button variant="ghost" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button size="sm" onClick={submit} disabled={!value.trim() || pending} className="gap-1.5">
+          <Button size="sm" onClick={submit} disabled={!value.trim() || pending} className="gap-2">
             {pending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {confirmLabel}
           </Button>

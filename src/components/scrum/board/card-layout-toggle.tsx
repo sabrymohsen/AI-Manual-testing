@@ -1,6 +1,6 @@
 "use client"
 
-import { LayoutList, Rows3 } from "lucide-react"
+import { LayoutList, Rows3 } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 export type CardLayout = "compact" | "detailed"
@@ -11,7 +11,7 @@ export function CardLayoutToggle({ value, onChange }: { value: CardLayout; onCha
       <button
         onClick={() => onChange("compact")}
         className={cn(
-          "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors",
+          "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors",
           value === "compact" ? "bg-[#0052CC] text-white" : "text-[#6B778C] hover:text-[#172B4D]"
         )}
         title="Compact cards"
@@ -22,7 +22,7 @@ export function CardLayoutToggle({ value, onChange }: { value: CardLayout; onCha
       <button
         onClick={() => onChange("detailed")}
         className={cn(
-          "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors",
+          "inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors",
           value === "detailed" ? "bg-[#0052CC] text-white" : "text-[#6B778C] hover:text-[#172B4D]"
         )}
         title="Detailed cards"

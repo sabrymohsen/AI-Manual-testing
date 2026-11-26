@@ -35,7 +35,7 @@ import {
 import { PRIORITY_META, REVIEW_META, REVIEW_ORDER, STATUS_META, formatMinutes, relativeTime } from "./config"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
-import { Bot, Loader2 as Spinner } from "lucide-react"
+import { Bot, Loader2 as Spinner } from "@/components/ui/icons"
 import { AI_JOB_STARTED } from "@/components/desktop/ai-jobs-tray"
 import {
   AlertTriangle,
@@ -59,7 +59,7 @@ import {
   UserRound,
   X,
   Zap,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 type Tab = "details" | "runs" | "bugs" | "history" | "sync"
 
@@ -160,13 +160,13 @@ export function DetailPanel({
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div className="shrink-0 space-y-2.5 border-b bg-muted/30 px-4 py-3.5">
+      <div className="shrink-0 space-y-3 border-b bg-muted/30 px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-medium text-primary">Test case</span>
+          <span className="text-xs font-medium text-primary">Test case</span>
           <div className="flex items-center gap-0.5">
             <Link
               href={`/projects/${projectId}/test-cases/${tc.id}/edit`}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title="Edit (E)"
               aria-label="Edit test case"
             >
@@ -175,7 +175,7 @@ export function DetailPanel({
             <button
               onClick={() => duplicate.mutate(tc.id)}
               disabled={duplicate.isPending}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title="Duplicate"
               aria-label="Duplicate test case"
             >
@@ -183,7 +183,7 @@ export function DetailPanel({
             </button>
             <button
               onClick={() => setPendingDelete(true)}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
               title="Delete test case"
               aria-label="Delete test case"
             >
@@ -191,7 +191,7 @@ export function DetailPanel({
             </button>
             <button
               onClick={onClose}
-              className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               aria-label="Close panel"
               title="Close (Esc)"
             >
@@ -204,10 +204,10 @@ export function DetailPanel({
           {tc.title}
         </h3>
 
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+              "rounded-full px-2 py-0.5 text-xs font-semibold",
               PRIORITY_META[tc.priority as keyof typeof PRIORITY_META]?.chip ?? "bg-muted"
             )}
           >
@@ -218,7 +218,7 @@ export function DetailPanel({
             <DropdownMenuTrigger
               title={REVIEW_META[review].hint}
               className={cn(
-                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
                 REVIEW_META[review].chip
               )}
             >
@@ -226,7 +226,7 @@ export function DetailPanel({
               <ChevronDown className="h-2.5 w-2.5 opacity-60" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
-              <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Review state</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Review state</DropdownMenuLabel>
               {REVIEW_ORDER.map((r) => (
                 <DropdownMenuItem
                   key={r}
@@ -234,13 +234,13 @@ export function DetailPanel({
                   className={cn("flex-col items-start gap-0 text-xs", r === review && "font-semibold")}
                 >
                   {REVIEW_META[r].label}
-                  <span className="text-[10px] font-normal text-muted-foreground">{REVIEW_META[r].hint}</span>
+                  <span className="text-xs font-normal text-muted-foreground">{REVIEW_META[r].hint}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
             {tc.executionType === "Automated" ? (
               <Zap className="h-2.5 w-2.5 text-violet-500" />
             ) : (
@@ -251,16 +251,16 @@ export function DetailPanel({
 
           {/* Suite badge doubles as the move control. */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-full border bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+            <DropdownMenuTrigger className="inline-flex max-w-[150px] items-center gap-1 truncate rounded-full border bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
               <Folder className="h-2.5 w-2.5 shrink-0 text-primary/70" />
               <span className="truncate">{tc.suite?.name ?? "Unfiled"}</span>
               <ChevronDown className="h-2.5 w-2.5 shrink-0 opacity-60" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-64 w-56 overflow-y-auto">
-              <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Move to suite</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Move to suite</DropdownMenuLabel>
               <DropdownMenuItem
                 onClick={() => moveCases.mutate({ testCaseIds: [tc.id], suiteId: null })}
-                className="gap-1.5 text-xs font-medium"
+                className="gap-2 text-xs font-medium"
               >
                 <Folder className="h-3.5 w-3.5 text-muted-foreground" /> — Unfiled —
               </DropdownMenuItem>
@@ -269,7 +269,7 @@ export function DetailPanel({
                 <DropdownMenuItem
                   key={m.id}
                   onClick={() => moveCases.mutate({ testCaseIds: [tc.id], suiteId: m.id })}
-                  className="gap-1.5 text-xs"
+                  className="gap-2 text-xs"
                 >
                   <Folder className="h-3.5 w-3.5 shrink-0 text-primary/70" />
                   <span className="truncate" title={m.path}>
@@ -286,7 +286,7 @@ export function DetailPanel({
             onClick={() => automate()}
             disabled={automating}
             title="Turn this case into an automated (no-code) test in the Automation Hub"
-            className="ml-auto h-7 gap-1 rounded-lg px-2.5 text-[11px] font-semibold"
+            className="ml-auto h-7 gap-1 rounded-lg px-3 text-xs font-semibold"
           >
             {automating ? <Spinner className="h-3 w-3 animate-spin" /> : <Bot className="h-3 w-3" />} Automate
           </Button>
@@ -294,13 +294,13 @@ export function DetailPanel({
             size="sm"
             onClick={() => onRun(tc)}
             title="Run (R)"
-            className="h-7 gap-1 rounded-lg px-2.5 text-[11px] font-semibold"
+            className="h-7 gap-1 rounded-lg px-3 text-xs font-semibold"
           >
             <Play className="h-3 w-3 fill-current" /> Run
           </Button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <UserRound className="h-3 w-3" /> {assignee?.name ?? tc.assignee ?? "Unassigned"}
           </span>
@@ -310,7 +310,7 @@ export function DetailPanel({
           {tc.tags?.length > 0 && (
             <span className="flex flex-wrap gap-1">
               {tc.tags.map((t: string) => (
-                <span key={t} className="rounded border bg-background px-1.5 py-px text-[10px]">
+                <span key={t} className="rounded border bg-background px-2 py-px text-xs">
                   {t}
                 </span>
               ))}
@@ -328,7 +328,7 @@ export function DetailPanel({
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
             className={cn(
-              "-mb-px flex-1 border-b-2 py-2.5 text-center transition-colors",
+              "-mb-px flex-1 border-b-2 py-3 text-center transition-colors",
               tab === t.id ? "border-primary text-primary" : "border-transparent hover:text-foreground"
             )}
           >
@@ -338,12 +338,12 @@ export function DetailPanel({
         ))}
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto p-4">
+      <div className="flex-1 space-y-6 overflow-y-auto p-4">
         {tab === "details" && (
           <>
             {tc.preconditions && (
               <Section title="Preconditions">
-                <p className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-2.5 text-xs leading-relaxed">
+                <p className="whitespace-pre-wrap rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed">
                   {tc.preconditions}
                 </p>
               </Section>
@@ -351,9 +351,9 @@ export function DetailPanel({
 
             <Section title="Covers">
               {tc.requirements?.length > 0 ? (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   {tc.requirements.map((l: any) => (
-                    <div key={l.requirementId} className="flex items-center gap-2 rounded-lg border p-2.5 text-xs">
+                    <div key={l.requirementId} className="flex items-center gap-2 rounded-lg border p-3 text-xs">
                       <Link2 className="h-3.5 w-3.5 shrink-0 text-primary" />
                       <span className="shrink-0 font-medium text-primary">{l.requirement?.requirementKey}</span>
                       <span className="truncate" title={l.requirement?.title}>
@@ -375,7 +375,7 @@ export function DetailPanel({
 
             {tc.planLinks?.length > 0 && (
               <Section title="In test plans">
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {tc.planLinks.map((l: { plan: { id: string; name: string } }) => (
                     <Link
                       key={l.plan.id}
@@ -390,23 +390,23 @@ export function DetailPanel({
             )}
 
             <Section title={`Steps (${tc.steps?.length ?? 0})`}>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {(tc.steps ?? []).map((step: any) => (
-                  <div key={step.id ?? step.stepNumber} className="flex gap-2.5 rounded-lg border p-2.5">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold tabular-nums text-primary">
+                  <div key={step.id ?? step.stepNumber} className="flex gap-3 rounded-lg border p-3">
+                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold tabular-nums text-primary">
                       {step.stepNumber}
                     </span>
                     <div className="min-w-0 flex-1 space-y-1">
                       <div className="flex items-start justify-between gap-2">
                         <p className="whitespace-pre-wrap text-xs leading-snug">{step.actionDescription}</p>
                         {tc.executionType === "Automated" && step.actionType && step.actionType !== "custom_instruction" && (
-                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                             {String(step.actionType).replace(/_/g, " ").replace(/^\w/, (c: string) => c.toUpperCase())}
                           </span>
                         )}
                       </div>
                       {step.expectedResult && (
-                        <p className="text-[11px] leading-snug text-emerald-600 dark:text-emerald-400">
+                        <p className="text-xs leading-snug text-emerald-600 dark:text-emerald-400">
                           Expected: {step.expectedResult}
                         </p>
                       )}
@@ -432,19 +432,19 @@ export function DetailPanel({
         {tab === "bugs" && (
           <Section title="Bugs filed against this case">
             {tc.bugReports?.length > 0 ? (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {tc.bugReports.map((b: any) => (
                   <Link
                     key={b.id}
                     href={`/projects/${projectId}/bug-reports?bugId=${b.id}`}
-                    className="flex items-center gap-2 rounded-lg border p-2.5 text-xs hover:bg-accent/40"
+                    className="flex items-center gap-2 rounded-lg border p-3 text-xs hover:bg-accent/40"
                   >
                     <Bug className="h-3.5 w-3.5 shrink-0 text-red-500" />
                     {b.bugKey && <span className="shrink-0 font-medium text-primary">{b.bugKey}</span>}
                     <span className="min-w-0 flex-1 truncate" title={b.title}>
                       {b.title}
                     </span>
-                    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                       {b.status}
                     </span>
                   </Link>
@@ -497,8 +497,8 @@ export function DetailPanel({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <span className="text-[11px] font-medium text-muted-foreground">{title}</span>
+    <div className="space-y-2">
+      <span className="text-xs font-medium text-muted-foreground">{title}</span>
       {children}
     </div>
   )
@@ -532,11 +532,11 @@ function RunsTab({ projectId, testCaseId }: { projectId: string; testCaseId: str
           This case hasn&apos;t been run yet.
         </p>
       )}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {runs.map((r) => (
-          <Link key={`${r.kind}-${r.id}`} href={r.href} className="block rounded-lg border p-2.5 text-xs hover:bg-accent/40">
+          <Link key={`${r.kind}-${r.id}`} href={r.href} className="block rounded-lg border p-3 text-xs hover:bg-accent/40">
             <div className="flex items-center gap-2">
-              <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", RUN_STATUS_CHIP[r.status] ?? "bg-muted text-muted-foreground")}>
+              <span className={cn("rounded px-2 py-0.5 text-xs font-medium", RUN_STATUS_CHIP[r.status] ?? "bg-muted text-muted-foreground")}>
                 {r.status === "SelfHealed" ? "Passed (healed)" : r.status}
               </span>
               <span className="min-w-0 flex-1 truncate font-medium" title={r.name}>
@@ -546,13 +546,13 @@ function RunsTab({ projectId, testCaseId }: { projectId: string; testCaseId: str
                 {relativeTime(r.at)}
               </span>
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               {r.kind === "Automated" ? <Zap className="mr-1 inline h-3 w-3 text-violet-500" /> : <ClipboardList className="mr-1 inline h-3 w-3" />}
               {[r.environment, r.browser, r.viewport, formatDuration(r.durationMs)].filter(Boolean).join(" · ")}
               {r.bugCount ? ` · ${r.bugCount} bug${r.bugCount === 1 ? "" : "s"}` : ""}
             </p>
             {r.failedStep && (
-              <p className="mt-1.5 rounded bg-red-500/5 px-2 py-1 text-[11px] leading-snug text-red-700 dark:text-red-400">
+              <p className="mt-2 rounded bg-red-500/5 px-2 py-1 text-xs leading-snug text-red-700 dark:text-red-400">
                 {r.failedStep.stepNumber > 0 ? `Failed at step ${r.failedStep.stepNumber}: ` : "Failed: "}
                 {r.failedStep.action}
                 {r.failedStep.detail && <span className="block opacity-80">{r.failedStep.detail}</span>}
@@ -580,18 +580,18 @@ function HistoryTab({ projectId, testCaseId }: { projectId: string; testCaseId: 
           No edits yet. Each time this case is saved, the previous version is kept here.
         </p>
       )}
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {versions.map((v) => (
           <div key={v.id} className="rounded-lg border text-xs">
             <button
               onClick={() => setOpen(open === v.id ? null : v.id)}
-              className="flex w-full items-start gap-2 p-2.5 text-left hover:bg-accent/40"
+              className="flex w-full items-start gap-2 p-3 text-left hover:bg-accent/40"
               aria-expanded={open === v.id}
             >
               <History className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1">
                 <span className="font-medium">Version {v.version}</span>
-                <span className="block text-[11px] text-muted-foreground">
+                <span className="block text-xs text-muted-foreground">
                   Replaced by {v.changedByName ?? "someone"} {relativeTime(v.createdAt)}
                   {v.summary ? ` — changed ${v.summary}` : ""}
                 </span>
@@ -599,22 +599,22 @@ function HistoryTab({ projectId, testCaseId }: { projectId: string; testCaseId: 
               <ChevronDown className={cn("mt-0.5 h-3.5 w-3.5 shrink-0 transition-transform", open === v.id && "rotate-180")} />
             </button>
             {open === v.id && (
-              <div className="space-y-2 border-t p-2.5">
+              <div className="space-y-2 border-t p-3">
                 <p className="font-medium">{v.snapshot.title}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {v.snapshot.priority}
                   {v.snapshot.reviewState ? ` · ${v.snapshot.reviewState}` : ""}
                   {v.snapshot.tags?.length ? ` · ${v.snapshot.tags.join(", ")}` : ""}
                 </p>
                 {v.snapshot.preconditions && (
-                  <p className="whitespace-pre-wrap text-[11px] text-muted-foreground">{v.snapshot.preconditions}</p>
+                  <p className="whitespace-pre-wrap text-xs text-muted-foreground">{v.snapshot.preconditions}</p>
                 )}
                 <ol className="list-decimal space-y-1 pl-4">
                   {v.snapshot.steps.map((s, i) => (
                     <li key={i}>
                       {s.actionDescription}
                       {s.expectedResult && (
-                        <span className="block text-[11px] text-emerald-700 dark:text-emerald-400">→ {s.expectedResult}</span>
+                        <span className="block text-xs text-emerald-700 dark:text-emerald-400">→ {s.expectedResult}</span>
                       )}
                     </li>
                   ))}
@@ -622,7 +622,7 @@ function HistoryTab({ projectId, testCaseId }: { projectId: string; testCaseId: 
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 gap-1 text-[11px]"
+                  className="h-7 gap-1 text-xs"
                   onClick={() => setPendingRestore(v)}
                 >
                   <RotateCcw className="h-3 w-3" /> Restore this version
@@ -671,14 +671,14 @@ function SyncTab({
       <div className="space-y-2 rounded-lg border p-3 text-xs">
         {sync ? (
           <>
-            <p className="flex items-center gap-1.5">
+            <p className="flex items-center gap-2">
               <CloudUpload className={cn("h-3.5 w-3.5", sync.lastSyncStatus === "failed" ? "text-red-500" : "text-emerald-500")} />
               <span className="font-medium">
                 {sync.lastSyncStatus === "failed" ? "Last sync failed" : "Synced"} as #{sync.externalId}
               </span>
               {sync.lastSyncedAt && <span className="text-muted-foreground">· {relativeTime(sync.lastSyncedAt)}</span>}
             </p>
-            {sync.lastSyncError && <p className="text-[11px] text-red-600 dark:text-red-400">{sync.lastSyncError}</p>}
+            {sync.lastSyncError && <p className="text-xs text-red-600 dark:text-red-400">{sync.lastSyncError}</p>}
             {sync.externalUrl && (
               <a
                 href={sync.externalUrl}
@@ -698,7 +698,7 @@ function SyncTab({
           <Button
             size="sm"
             variant="outline"
-            className="h-7 gap-1 text-[11px]"
+            className="h-7 gap-1 text-xs"
             disabled={syncNow.isPending}
             onClick={() => syncNow.mutate()}
           >
@@ -706,7 +706,7 @@ function SyncTab({
             {sync ? "Sync again" : "Sync now"}
           </Button>
         ) : (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Syncing a single case is available for OpenProject projects.
           </p>
         )}
@@ -751,11 +751,11 @@ function BrdRequirementLinks({ projectId, testCaseId, links }: { projectId: stri
 
   return (
     <Section title="Verifies BRD requirements">
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {links.map((l) => (
           <div
             key={l.requirement.id}
-            className={cn("rounded-lg border p-2.5 text-xs", l.needsReview && "border-amber-500/40 bg-amber-500/5")}
+            className={cn("rounded-lg border p-3 text-xs", l.needsReview && "border-amber-500/40 bg-amber-500/5")}
           >
             <Link
               href={`/projects/${projectId}/brds/${l.requirement.brd.id}?tab=coverage`}
@@ -767,16 +767,16 @@ function BrdRequirementLinks({ projectId, testCaseId, links }: { projectId: stri
                 {l.requirement.title}
               </span>
             </Link>
-            <p className="mt-0.5 pl-5 text-[11px] text-muted-foreground">{l.requirement.brd.name}</p>
+            <p className="mt-0.5 pl-6 text-xs text-muted-foreground">{l.requirement.brd.name}</p>
             {l.needsReview && (
-              <div className="mt-1.5 flex items-center gap-2 pl-5">
-                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+              <div className="mt-2 flex items-center gap-2 pl-6">
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400">
                   <AlertTriangle className="h-3 w-3" /> {l.reviewReason ?? "Requirement changed"} — re-check this test
                 </span>
                 <button
                   onClick={() => markReviewed(l)}
                   disabled={busy === l.requirement.id}
-                  className="ml-auto rounded border bg-background px-1.5 py-0.5 text-[10px] font-medium hover:bg-accent disabled:opacity-60"
+                  className="ml-auto rounded border bg-background px-2 py-0.5 text-xs font-medium hover:bg-accent disabled:opacity-60"
                 >
                   Reviewed
                 </button>

@@ -3,7 +3,7 @@
 import { useFacets, type CaseStatus, type LibraryFilters } from "../_hooks/use-test-library"
 import { STATUS_META, STATUS_ORDER } from "./config"
 import { cn } from "@/lib/utils"
-import { Layers, ShieldAlert, AlertCircle } from "lucide-react"
+import { Layers, ShieldAlert, AlertCircle } from "@/components/ui/icons"
 
 /**
  * Header counts that are also filters.
@@ -45,11 +45,11 @@ export function FacetBar({
   const statusChips = STATUS_ORDER.filter((s) => (data?.byStatus[s] ?? 0) > 0 || s === "Passed" || s === "Failed")
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
       <button
         onClick={() => onChange({ ...filters, status: undefined, trace: undefined })}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors",
+          "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
           !filters.status?.length && !filters.trace
             ? "border-primary bg-primary/10 text-primary"
             : "bg-background text-foreground hover:bg-accent"
@@ -69,7 +69,7 @@ export function FacetBar({
             onClick={() => toggleStatus(s)}
             aria-pressed={on}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors",
+              "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
               on ? "border-primary bg-primary/10 text-primary" : "bg-background hover:bg-accent",
               !on && count === 0 && "text-muted-foreground"
             )}
@@ -87,7 +87,7 @@ export function FacetBar({
         aria-pressed={filters.trace === "orphans"}
         title="Test cases not linked to any user story"
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors",
+          "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
           filters.trace === "orphans"
             ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
             : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -102,7 +102,7 @@ export function FacetBar({
         aria-pressed={filters.trace === "broken"}
         title="Failed on the last run, and no open bug tracks the failure"
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 transition-colors",
+          "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
           filters.trace === "broken"
             ? "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400"
             : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react"
+import { ArrowRight, Eye, EyeOff, Loader2 } from "@/components/ui/icons"
 
 export default function LoginPage() {
   const [error, setError] = useState("")
@@ -43,23 +43,23 @@ export default function LoginPage() {
   }
 
   const inputClass =
-    "w-full h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 text-sm text-slate-100 font-medium placeholder:text-muted-foreground focus:outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/40 transition-colors"
+    "w-full h-11 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm text-slate-100 font-medium placeholder:text-muted-foreground focus:outline-none focus:border-violet-500/60 focus:ring-1 focus:ring-violet-500/40 transition-colors"
 
   return (
     <>
-      <div className="space-y-1.5">
-        <p className="font-mono text-[11px] font-semibold text-violet-400 uppercase tracking-[0.25em]">// authenticate</p>
+      <div className="space-y-2">
+        <p className="font-mono text-xs font-semibold text-violet-400 uppercase tracking-[0.25em]">// authenticate</p>
         <h1 className="text-2xl font-semibold tracking-tight text-white">Sign in to your engine</h1>
-        <p className="text-[13px] text-muted-foreground">Enter your credentials to open the dashboard.</p>
+        <p className="text-xs text-muted-foreground">Enter your credentials to open the dashboard.</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label htmlFor="email" className="text-xs font-semibold text-slate-300">Email</label>
           <input id="email" name="email" type="email" required placeholder="you@company.com" className={inputClass} />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label htmlFor="password" className="text-xs font-semibold text-slate-300">Password</label>
           <div className="relative">
             <input
@@ -68,7 +68,7 @@ export default function LoginPage() {
               type={showPassword ? "text" : "password"}
               required
               placeholder="••••••••••"
-              className={`${inputClass} pr-11`}
+              className={`${inputClass} pr-12`}
             />
             <button
               type="button"
@@ -83,7 +83,7 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <p className="text-[13px] font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3.5 py-2.5">
+          <p className="text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-3">
             {error}
           </p>
         )}
@@ -105,7 +105,7 @@ export default function LoginPage() {
         </button>
       </form>
 
-      <p className="text-center text-[13px] text-muted-foreground">
+      <p className="text-center text-xs text-muted-foreground">
         Don&apos;t have an account?{" "}
         <Link href="/register" className="font-semibold text-violet-400 hover:text-violet-300 transition-colors">
           Register

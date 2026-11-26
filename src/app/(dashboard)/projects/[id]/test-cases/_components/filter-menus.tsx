@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useProjectTeam } from "@/hooks/use-project-team"
 import { cn } from "@/lib/utils"
-import { ChevronDown } from "lucide-react"
+import { ChevronDown } from "@/components/ui/icons"
 import { useFacets, type CasePriority, type LibraryFilters, type ReviewState } from "../_hooks/use-test-library"
 import { PRIORITY_ORDER, REVIEW_META, REVIEW_ORDER } from "./config"
 
@@ -27,7 +27,7 @@ function Trigger({ label, values }: { label: string; values: string[] }) {
   return (
     <DropdownMenuTrigger
       className={cn(
-        "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors",
+        "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors",
         on ? "border-primary/50 bg-primary/10 text-primary" : "bg-background hover:bg-accent"
       )}
     >
@@ -98,7 +98,7 @@ export function FilterMenus({
             >
               <span className="flex-1">
                 {REVIEW_META[r].label}
-                <span className="block text-[10px] text-muted-foreground">{REVIEW_META[r].hint}</span>
+                <span className="block text-xs text-muted-foreground">{REVIEW_META[r].hint}</span>
               </span>
               <span className="tabular-nums text-muted-foreground">{facets?.byReview?.[r] ?? 0}</span>
             </DropdownMenuCheckboxItem>
@@ -109,7 +109,7 @@ export function FilterMenus({
       <DropdownMenu>
         <Trigger label="Tags" values={filters.tag ?? []} />
         <DropdownMenuContent align="start" className="w-56">
-          <div className="p-1.5">
+          <div className="p-2">
             <Input
               value={tagQuery}
               onChange={(e) => setTagQuery(e.target.value)}
@@ -120,7 +120,7 @@ export function FilterMenus({
           </div>
           <div className="max-h-64 overflow-y-auto">
             {tags.length === 0 && (
-              <p className="px-2 py-2 text-[11px] text-muted-foreground">
+              <p className="px-2 py-2 text-xs text-muted-foreground">
                 {facets?.tags?.length ? "No matching tags." : "No tags yet — add them when editing a case, or in bulk."}
               </p>
             )}
@@ -152,11 +152,11 @@ export function FilterMenus({
               className="text-xs"
             >
               {nameOf(v)}
-              {v === "me" && <span className="ml-1 text-[10px] text-muted-foreground">(matched by email)</span>}
+              {v === "me" && <span className="ml-1 text-xs text-muted-foreground">(matched by email)</span>}
             </DropdownMenuCheckboxItem>
           ))}
           {members.some((m) => m.active) && <DropdownMenuSeparator />}
-          {members.length > 0 && <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Team</DropdownMenuLabel>}
+          {members.length > 0 && <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Team</DropdownMenuLabel>}
           {members
             .filter((m) => m.active || assigneeCounts.has(m.id))
             .map((m) => (

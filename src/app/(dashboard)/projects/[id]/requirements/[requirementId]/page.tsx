@@ -23,7 +23,7 @@ import {
   Save,
   Check,
   ChevronLeft
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface Requirement {
@@ -356,10 +356,10 @@ export default function RequirementDetails() {
     <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-foreground">
       
       {/* Header Path Breadcrumb */}
-      <div className="flex items-center gap-3 border-b pb-5">
+      <div className="flex items-center gap-3 border-b pb-6">
         <BackButton />
         <div>
-          <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground mb-1">
+          <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground mb-1">
             <span>Project</span>
             <ChevronRight size={10} />
             <span>Requirements</span>
@@ -508,7 +508,7 @@ export default function RequirementDetails() {
               )}
 
               {requirement.acceptanceCriteria && (
-                <div className="bg-muted/50 border border-border rounded-xl p-4 space-y-2.5">
+                <div className="bg-muted/50 border border-border rounded-xl p-4 space-y-3">
                   <span className="text-xs font-medium text-muted-foreground block">Acceptance Criteria</span>
                   <p className="text-xs font-mono text-foreground leading-relaxed whitespace-pre-wrap">{requirement.acceptanceCriteria}</p>
                 </div>
@@ -542,17 +542,17 @@ export default function RequirementDetails() {
                 <h3 className="text-base font-semibold text-foreground">Linked Test Cases ({requirement.testCases.length})</h3>
                 <p className="text-xs text-muted-foreground mt-1">Cases validating this requirement</p>
               </div>
-              <Button onClick={handleAiGenerateTestCases} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium flex items-center gap-1.5 h-8 px-3.5 rounded-xl text-xs shadow-md">
+              <Button onClick={handleAiGenerateTestCases} className=" bg-blue-600 text-white font-medium flex items-center gap-2 h-8 px-3 rounded-xl text-xs shadow-md">
                 <Sparkles size={14} /> AI Generate Cases
               </Button>
             </div>
 
             {requirement.testCases.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic text-center py-12">No test cases linked to this requirement yet. Use &quot;AI Generate Cases&quot; to start.</p>
+              <p className="text-xs text-muted-foreground text-center py-12">No test cases linked to this requirement yet. Use &quot;AI Generate Cases&quot; to start.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground">
+                  <thead className="bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
                     <tr>
                       <th className="p-3">Test Case</th>
                       <th className="p-3">Priority</th>
@@ -591,14 +591,14 @@ export default function RequirementDetails() {
                             </Link>
                           </td>
                           <td className="p-3">
-                            <span className="text-[10px] font-semibold">{tc.priority}</span>
+                            <span className="text-xs font-semibold">{tc.priority}</span>
                           </td>
                           <td className="p-3">
-                            {latestStatus === "Passed" ? <span className="text-[11px] font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Passed</span> :
-                             latestStatus === "Failed" ? <span className="text-[11px] font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Failed</span> :
-                             latestStatus === "Blocked" ? <span className="text-[11px] font-medium bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Blocked</span> :
-                             <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Not Executed</span>}
-                            {latestTime && <span className="text-[10px] text-muted-foreground block mt-1">{latestTime}</span>}
+                            {latestStatus === "Passed" ? <span className="text-xs font-medium bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Passed</span> :
+                             latestStatus === "Failed" ? <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Failed</span> :
+                             latestStatus === "Blocked" ? <span className="text-xs font-medium bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">Blocked</span> :
+                             <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Not Executed</span>}
+                            {latestTime && <span className="text-xs text-muted-foreground block mt-1">{latestTime}</span>}
                           </td>
                           <td className="p-3 text-right">
                             <Button 
@@ -624,7 +624,7 @@ export default function RequirementDetails() {
         {/* Right Column: Status metrics & external systems */}
         <div className="space-y-6">
           <div className="bg-card border border-border/80 rounded-xl p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-medium text-muted-foreground border-b pb-2.5">Coverage Status</h3>
+            <h3 className="text-xs font-medium text-muted-foreground border-b pb-3">Coverage Status</h3>
             <div className="flex items-center justify-between">
               <span className="text-sm font-semibold text-foreground">Calculated Metrics:</span>
               {getCoverageBadge(requirement.computedCoverage)}
@@ -638,10 +638,10 @@ export default function RequirementDetails() {
           </div>
 
           <div className="bg-card border border-border/80 rounded-xl p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-medium text-muted-foreground border-b pb-2.5">Priority / Status</h3>
+            <h3 className="text-xs font-medium text-muted-foreground border-b pb-3">Priority / Status</h3>
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Priority:</span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+              <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                 requirement.priority === "Critical" ? "bg-red-50 text-red-700" :
                 requirement.priority === "High" ? "bg-orange-50 text-orange-700" :
                 "bg-muted/50 text-muted-foreground"
@@ -655,12 +655,12 @@ export default function RequirementDetails() {
 
           {requirement.externalUrl && (
             <div className="bg-card border border-border/80 rounded-xl p-6 shadow-sm space-y-3">
-              <h3 className="text-xs font-medium text-muted-foreground border-b pb-2.5">External Integration</h3>
+              <h3 className="text-xs font-medium text-muted-foreground border-b pb-3">External Integration</h3>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Link target:</span>
                 <span className="font-semibold text-slate-850">{requirement.externalSystem}</span>
               </div>
-              <a href={requirement.externalUrl} target="_blank" rel="noreferrer" className="w-full bg-muted/50 border border-border hover:bg-muted text-foreground text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-colors mt-2">
+              <a href={requirement.externalUrl} target="_blank" rel="noreferrer" className="w-full bg-muted/50 border border-border hover:bg-muted text-foreground text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors mt-2">
                 Open in {requirement.externalSystem} <ExternalLink size={12} />
               </a>
             </div>
@@ -668,22 +668,22 @@ export default function RequirementDetails() {
 
           {/* Related Bugs list */}
           <div className="bg-card border border-border/80 rounded-xl p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-medium text-muted-foreground border-b pb-2.5 flex items-center justify-between gap-1">
+            <h3 className="text-xs font-medium text-muted-foreground border-b pb-3 flex items-center justify-between gap-1">
               <span className="flex items-center gap-1"><Bug size={14} className="text-red-500" /> Related Bugs ({requirement.bugReports.length})</span>
-              <button onClick={openLinkBugsModal} className="text-[10px] font-semibold text-blue-600 hover:text-blue-700 normal-case">
+              <button onClick={openLinkBugsModal} className="text-xs font-semibold text-blue-600 hover:text-blue-700 normal-case">
                 Link Bugs
               </button>
             </h3>
 
             {requirement.bugReports.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">No open bugs linked to this requirement.</p>
+              <p className="text-xs text-muted-foreground ">No open bugs linked to this requirement.</p>
             ) : (
               <div className="space-y-2">
                 {requirement.bugReports.map((link) => (
                   <div key={link.id} className="p-3 bg-red-50/15 border border-red-100 rounded-xl flex items-center justify-between text-xs hover:bg-red-50/30 transition-colors">
                     <div className="max-w-[180px]">
                       <span className="font-semibold text-foreground block truncate">{link.bugReport.title}</span>
-                      <span className="text-[10px] text-muted-foreground block mt-0.5">Severity: {link.bugReport.severity}</span>
+                      <span className="text-xs text-muted-foreground block mt-0.5">Severity: {link.bugReport.severity}</span>
                     </div>
                     <Link href={`/projects/${projectId}/bug-reports/${link.bugReport.id}`} className="text-blue-600 hover:underline">
                       View
@@ -728,11 +728,11 @@ export default function RequirementDetails() {
                       <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all shrink-0 ${
                         isChecked ? "border-red-600 bg-red-600 text-white" : "border-border bg-card"
                       }`}>
-                        {isChecked && <span className="text-[9px] font-semibold">✓</span>}
+                        {isChecked && <span className="text-xs font-semibold">✓</span>}
                       </div>
                       <div className="flex-grow min-w-0">
                         <span className="text-xs font-semibold text-foreground block truncate">{bug.bugKey ? `${bug.bugKey} — ` : ""}{bug.title}</span>
-                        <span className="text-[10px] text-muted-foreground block mt-0.5">{bug.severity} · {bug.status}</span>
+                        <span className="text-xs text-muted-foreground block mt-0.5">{bug.severity} · {bug.status}</span>
                       </div>
                     </div>
                   )
@@ -776,7 +776,7 @@ export default function RequirementDetails() {
                 <p className="text-xs text-muted-foreground mt-1">Analyzing criteria variables, constraints, and steps...</p>
               </div>
             ) : draftCases.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground italic">No cases generated. Click retry or check OpenAI credentials.</div>
+              <div className="text-center py-12 text-muted-foreground ">No cases generated. Click retry or check OpenAI credentials.</div>
             ) : (
               <div className="space-y-4">
                 {draftCases.map((dCase, index) => {
@@ -789,7 +789,7 @@ export default function RequirementDetails() {
                       }`}
                     >
                       <div className="flex justify-between items-start gap-2">
-                        <div className="flex items-start gap-2.5">
+                        <div className="flex items-start gap-3">
                           <input
                             type="checkbox"
                             checked={isChecked}
@@ -803,24 +803,24 @@ export default function RequirementDetails() {
                           <div>
                             <span className="font-semibold text-xs text-foreground block">{dCase.title}</span>
                             {dCase.preconditions && (
-                              <span className="text-[10px] text-muted-foreground block mt-1">Preconditions: {dCase.preconditions}</span>
+                              <span className="text-xs text-muted-foreground block mt-1">Preconditions: {dCase.preconditions}</span>
                             )}
                           </div>
                         </div>
-                        <span className="text-[10px] font-semibold bg-muted text-muted-foreground px-2.5 py-0.5 rounded">
+                        <span className="text-xs font-semibold bg-muted text-muted-foreground px-3 py-0.5 rounded">
                           {dCase.priority}
                         </span>
                       </div>
 
                       {/* Steps checklist */}
-                      <div className="border-t border-border pt-2.5 space-y-2">
-                        <span className="text-[11px] font-medium text-muted-foreground block">Generated Steps</span>
+                      <div className="border-t border-border pt-3 space-y-2">
+                        <span className="text-xs font-medium text-muted-foreground block">Generated Steps</span>
                         {dCase.steps.map((st, sIdx) => (
-                          <div key={sIdx} className="text-xs bg-card border border-slate-150 p-2.5 rounded-lg flex items-start gap-2">
-                            <span className="font-semibold text-[10px] bg-muted text-muted-foreground rounded px-1.5 py-0.5">Step {sIdx + 1}</span>
+                          <div key={sIdx} className="text-xs bg-card border border-slate-150 p-3 rounded-lg flex items-start gap-2">
+                            <span className="font-semibold text-xs bg-muted text-muted-foreground rounded px-2 py-0.5">Step {sIdx + 1}</span>
                             <div className="space-y-1">
                               <p className="font-semibold text-foreground">{st.actionDescription}</p>
-                              <p className="text-[10px] text-muted-foreground">Expected: {st.expectedResult}</p>
+                              <p className="text-xs text-muted-foreground">Expected: {st.expectedResult}</p>
                             </div>
                           </div>
                         ))}
@@ -840,7 +840,7 @@ export default function RequirementDetails() {
               type="button"
               disabled={generating || savingDrafts || selectedDraftIndices.length === 0}
               onClick={handleSaveDraftCases}
-              className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold h-9 px-5 rounded-lg flex items-center gap-1.5 shadow"
+              className="bg-green-600 hover:bg-green-700 text-white text-xs font-semibold h-9 px-6 rounded-lg flex items-center gap-2 shadow"
             >
               {savingDrafts ? <Loader2 className="animate-spin h-3.5 w-3.5" /> : <Save size={14} />}
               Save & Link Selected Cases

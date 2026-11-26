@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Eye, EyeOff, Loader2, Play, Plus, Save, Trash2 } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Loader2, Play, Plus, Save, Trash2 } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -61,7 +61,7 @@ export default function VisualTestDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Visual tests
       </Link>
@@ -252,7 +252,7 @@ function PagesTab({ test, pages, onChanged }: { test: any; pages: any[]; onChang
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           {(["included", "excluded", "removed"] as const).map(s => (
@@ -414,7 +414,7 @@ function SettingsTab({ projectId, test, onSaved }: { projectId: string; test: an
   }
 
   return (
-    <div className="space-y-6 rounded-xl border bg-card p-5">
+    <div className="space-y-6 rounded-xl border bg-card p-6">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="space-y-1 text-sm">
           <span className="font-medium text-foreground">Name</span>

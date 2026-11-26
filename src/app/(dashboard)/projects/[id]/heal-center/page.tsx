@@ -23,7 +23,7 @@ import {
   Heart,
   Loader2,
   Calendar
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface HealingEventItem {
   id: string
@@ -162,7 +162,7 @@ export default function HealCenterPage() {
             Real-time monitoring and auto-recovery for fragile/broken browser element locators using Locator healing.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px]">
+        <div className="flex items-center gap-2 text-muted-foreground font-mono text-xs">
           <span>Source: target/shaft-heal/reports/</span>
         </div>
       </div>
@@ -174,7 +174,7 @@ export default function HealCenterPage() {
           <span>Syncing self-healing metrics...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { label: "Total Recoveries", val: kpis.totalRecoveries, desc: "Auto-healed events", icon: ShieldCheck, color: "text-primary bg-primary/10" },
             { label: "Success Rate", val: `${kpis.successRate}%`, desc: "Successful locator updates", icon: TrendingUp, color: "text-emerald-600 bg-emerald-50" },
@@ -183,9 +183,9 @@ export default function HealCenterPage() {
           ].map((kpi, idx) => (
             <div key={idx} className="bg-card border rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">
               <div className="space-y-1">
-                <span className="text-[11px] font-medium text-slate-450">{kpi.label}</span>
+                <span className="text-xs font-medium text-slate-450">{kpi.label}</span>
                 <h3 className="text-2xl font-semibold text-foreground">{kpi.val}</h3>
-                <p className="text-[10px] text-muted-foreground font-medium">{kpi.desc}</p>
+                <p className="text-xs text-muted-foreground font-medium">{kpi.desc}</p>
               </div>
               <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${kpi.color}`}>
                 <kpi.icon size={18} />
@@ -205,19 +205,19 @@ export default function HealCenterPage() {
             {/* Real-time Healing feed stream */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
-                <span className="text-[11px] font-medium text-slate-450">Auto-Healing Activity Feed</span>
+                <span className="text-xs font-medium text-slate-450">Auto-Healing Activity Feed</span>
                 <div className="relative w-48">
                   <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-450" />
                   <input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search logs..."
-                    className="w-full h-7 pl-8 pr-2 rounded-lg border border-border text-[10.5px] focus:outline-none focus:ring-1 focus:ring-primary bg-muted/50"
+                    className="w-full h-7 pl-8 pr-2 rounded-lg border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-muted/50"
                   />
                 </div>
               </div>
 
-              <div className="space-y-3.5 max-h-[440px] overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-[440px] overflow-y-auto pr-1">
                 {filteredEvents.map(event => {
                   const confVal = Math.round(event.confidence * 100)
                   const isHigh = confVal >= 85
@@ -230,33 +230,33 @@ export default function HealCenterPage() {
 
                   return (
                     <div key={event.id} className={`border p-4 rounded-xl shadow-3xs space-y-3 transition-colors ${cardColor}`}>
-                      <div className="flex justify-between items-start gap-2 flex-wrap text-[10.5px]">
+                      <div className="flex justify-between items-start gap-2 flex-wrap text-xs">
                         <div className="space-y-1">
                           <span className="font-semibold text-foreground block">{event.testName}</span>
-                          <span className="text-[10px] text-slate-450 block truncate font-medium max-w-sm">{event.pageUrl}</span>
+                          <span className="text-xs text-slate-450 block truncate font-medium max-w-sm">{event.pageUrl}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded text-[9.5px] font-semibold border uppercase ${
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold border uppercase ${
                             isHigh ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
                             isMedium ? "bg-amber-50 text-amber-700 border-amber-100" : "bg-rose-50 text-rose-700 border-rose-100"
                           }`}>
                             {confVal}% Match
                           </span>
-                          <span className="text-[9.5px] text-muted-foreground font-mono font-medium">
+                          <span className="text-xs text-muted-foreground font-mono font-medium">
                             {new Date(event.createdAt).toLocaleTimeString()}
                           </span>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center bg-card p-2.5 rounded-xl border border-border">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center bg-card p-3 rounded-xl border border-border">
                         <div className="space-y-1">
-                          <span className="text-[8.5px] font-semibold text-rose-500 uppercase tracking-wider block">Broken Locator</span>
-                          <code className="font-mono text-[9px] text-foreground font-semibold select-all block whitespace-pre-wrap break-all">{event.originalLocator}</code>
+                          <span className="text-xs font-semibold text-rose-500 uppercase tracking-wider block">Broken Locator</span>
+                          <code className="font-mono text-xs text-foreground font-semibold select-all block whitespace-pre-wrap break-all">{event.originalLocator}</code>
                         </div>
-                        <div className="space-y-1 border-t md:border-t-0 md:border-l pt-2.5 md:pt-0 md:pl-4 flex items-center justify-between gap-2">
+                        <div className="space-y-1 border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-4 flex items-center justify-between gap-2">
                           <div>
-                            <span className="text-[8.5px] font-semibold text-emerald-500 uppercase tracking-wider block">Healed Locator</span>
-                            <code className="font-mono text-[9px] text-foreground font-semibold select-all block whitespace-pre-wrap break-all">{event.recoveredLocator}</code>
+                            <span className="text-xs font-semibold text-emerald-500 uppercase tracking-wider block">Healed Locator</span>
+                            <code className="font-mono text-xs text-foreground font-semibold select-all block whitespace-pre-wrap break-all">{event.recoveredLocator}</code>
                           </div>
                           <ArrowRight size={14} className="text-slate-350 shrink-0 hidden md:block" />
                         </div>
@@ -265,18 +265,18 @@ export default function HealCenterPage() {
                   )
                 })}
                 {filteredEvents.length === 0 && (
-                  <p className="text-muted-foreground italic text-center py-12">No healing logs match your search.</p>
+                  <p className="text-muted-foreground text-center py-12">No healing logs match your search.</p>
                 )}
               </div>
             </div>
 
             {/* Review Queue for fragile queries */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Manual Review Queue</span>
+              <span className="text-xs font-medium text-slate-450 block border-b pb-2">Manual Review Queue</span>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
-                    <tr className="bg-muted/50 border-b text-[11px] font-medium text-slate-450">
+                    <tr className="bg-muted/50 border-b text-xs font-medium text-slate-450">
                       <th className="p-3">Target Test</th>
                       <th className="p-3">Page Location</th>
                       <th className="p-3">Conf %</th>
@@ -293,8 +293,8 @@ export default function HealCenterPage() {
                           <td className="p-3 font-semibold text-foreground max-w-[140px] truncate">{event.testName}</td>
                           <td className="p-3 font-medium text-muted-foreground max-w-[140px] truncate">{event.pageUrl}</td>
                           <td className="p-3 font-semibold text-amber-600">{Math.round(event.confidence * 100)}%</td>
-                          <td className="p-3 font-mono text-[9.5px] select-all truncate max-w-[140px]">{event.originalLocator}</td>
-                          <td className="p-3 font-mono text-[9.5px] select-all text-emerald-600 truncate max-w-[140px]">{event.recoveredLocator}</td>
+                          <td className="p-3 font-mono text-xs select-all truncate max-w-[140px]">{event.originalLocator}</td>
+                          <td className="p-3 font-mono text-xs select-all text-emerald-600 truncate max-w-[140px]">{event.recoveredLocator}</td>
                           <td className="p-3 text-right space-x-1">
                             <button
                               onClick={() => handleAction(event.id, "approve")}
@@ -325,7 +325,7 @@ export default function HealCenterPage() {
                       ))}
                     {events.filter(e => e.status === "needs_review").length === 0 && (
                       <tr>
-                        <td colSpan={6} className="p-8 text-center text-muted-foreground italic">No low-confidence recoveries currently in the review queue. All is stable!</td>
+                        <td colSpan={6} className="p-8 text-center text-muted-foreground ">No low-confidence recoveries currently in the review queue. All is stable!</td>
                       </tr>
                     )}
                   </tbody>
@@ -340,7 +340,7 @@ export default function HealCenterPage() {
             
             {/* Locator Health Map heatmap */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Locator Health Map</span>
+              <span className="text-xs font-medium text-slate-450 block border-b pb-2">Locator Health Map</span>
               <div className="space-y-3">
                 {healthMap.map(node => {
                   const isExcellent = node.stability >= 90
@@ -354,14 +354,14 @@ export default function HealCenterPage() {
                       <div className="flex justify-between items-start">
                         <div>
                           <span className="font-semibold text-foreground block">{node.page}</span>
-                          <span className="text-[9.5px] text-muted-foreground block font-medium">{node.url}</span>
+                          <span className="text-xs text-muted-foreground block font-medium">{node.url}</span>
                         </div>
-                        <span className={`px-2 py-0.5 rounded text-[8.5px] font-semibold border ${badgeColor}`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold border ${badgeColor}`}>
                           {node.status}
                         </span>
                       </div>
                       <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold font-mono">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground font-semibold font-mono">
                           <span>Stability Score</span>
                           <span>{node.stability}%</span>
                         </div>
@@ -377,11 +377,11 @@ export default function HealCenterPage() {
 
             {/* Self-healing Settings */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-              <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Healing Settings</span>
+              <span className="text-xs font-medium text-slate-450 block border-b pb-2">Healing Settings</span>
               
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center text-[9.5px]">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
                     <label className="font-semibold text-slate-650">Healing Confidence Threshold</label>
                     <span className="font-semibold text-primary font-mono">{threshold}%</span>
                   </div>
@@ -393,11 +393,11 @@ export default function HealCenterPage() {
                     onChange={(e) => setThreshold(parseInt(e.target.value))}
                     className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-indigo-650"
                   />
-                  <p className="text-[9px] text-muted-foreground font-medium">Recoveries with confidence below this threshold enter the manual review queue.</p>
+                  <p className="text-xs text-muted-foreground font-medium">Recoveries with confidence below this threshold enter the manual review queue.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9.5px] font-semibold text-slate-650 block">Healing Match Strategy</label>
+                  <label className="text-xs font-semibold text-slate-650 block">Healing Match Strategy</label>
                   <select
                     value={strategy}
                     onChange={(e) => setStrategy(e.target.value)}
@@ -411,7 +411,7 @@ export default function HealCenterPage() {
 
                 <Button
                   onClick={() => alert("Healing configuration settings updated successfully!")}
-                  className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl w-full h-9 font-semibold text-[10px] shadow-xs flex items-center justify-center gap-1.5"
+                  className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl w-full h-9 font-semibold text-xs shadow-xs flex items-center justify-center gap-2"
                 >
                   <Settings2 size={12} /> Save Configurations
                 </Button>
@@ -440,23 +440,23 @@ export default function HealCenterPage() {
               </button>
             </div>
             
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-semibold text-muted-foreground block mb-1">Target Test & Method</label>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Target Test & Method</label>
                 <div className="bg-muted/50 border p-2 rounded-xl text-foreground font-semibold truncate">{editingEvent.testName}</div>
               </div>
 
               <div>
-                <label className="text-[10px] font-semibold text-muted-foreground block mb-1">Original Broken Locator</label>
-                <div className="bg-rose-50/50 border border-rose-100 p-2.5 rounded-xl font-mono text-[9px] text-rose-700 select-all block break-all font-semibold">{editingEvent.originalLocator}</div>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Original Broken Locator</label>
+                <div className="bg-rose-50/50 border border-rose-100 p-3 rounded-xl font-mono text-xs text-rose-700 select-all block break-all font-semibold">{editingEvent.originalLocator}</div>
               </div>
 
               <div>
-                <label className="text-[10px] font-semibold text-muted-foreground block mb-1">Custom Healed Locator Input</label>
+                <label className="text-xs font-semibold text-muted-foreground block mb-1">Custom Healed Locator Input</label>
                 <textarea
                   value={customLocator}
                   onChange={(e) => setCustomLocator(e.target.value)}
-                  className="w-full min-h-[72px] p-2.5 font-mono text-[9px] text-foreground font-semibold border border-border rounded-xl focus:ring-1 focus:ring-primary bg-card"
+                  className="w-full min-h-[72px] p-3 font-mono text-xs text-foreground font-semibold border border-border rounded-xl focus:ring-1 focus:ring-primary bg-card"
                 />
               </div>
             </div>

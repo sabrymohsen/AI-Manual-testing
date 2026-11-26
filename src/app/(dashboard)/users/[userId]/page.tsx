@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Loader2,
   CalendarDays,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface PublicUser {
   id: string
@@ -103,29 +103,29 @@ export default function PublicProfilePage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={user.avatarUrl} alt="" className="h-24 w-24 shrink-0 rounded-full border object-cover" />
           ) : (
-            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-3xl font-semibold uppercase text-white">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-indigo-400 text-3xl font-semibold uppercase text-white">
               {(user.name || user.email)[0]}
             </div>
           )}
           <div className="min-w-0 flex-1 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               <h1 className="text-xl font-semibold">{user.name || user.email}</h1>
-              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              <span className="rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
                 {user.role}
               </span>
             </div>
             <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-muted-foreground sm:justify-start">
               {user.jobTitle && (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-2">
                   <Briefcase className="h-3.5 w-3.5" /> {user.jobTitle}
                 </span>
               )}
               {user.department && (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-2">
                   <Building2 className="h-3.5 w-3.5" /> {user.department}
                 </span>
               )}
-              <span className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-2">
                 <CalendarDays className="h-3.5 w-3.5" /> Joined {new Date(user.createdAt).toLocaleDateString()}
               </span>
             </div>
@@ -136,10 +136,10 @@ export default function PublicProfilePage() {
 
       {/* Shared projects */}
       <div className="mt-6 rounded-xl border bg-card p-6">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
           <FolderKanban className="h-4 w-4 text-primary" />
           Shared projects
-          <span className="ml-1 rounded-full bg-muted px-2 text-[11px] font-semibold text-muted-foreground">
+          <span className="ml-1 rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">
             {projects.length}
           </span>
         </h2>
@@ -159,7 +159,7 @@ export default function PublicProfilePage() {
                   </span>
                   <div>
                     <p className="text-sm font-semibold text-foreground">{p.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{p.role}</p>
+                    <p className="text-xs text-muted-foreground">{p.role}</p>
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />

@@ -11,7 +11,7 @@ import {
 } from "@/hooks/reports/use-analytics"
 import { SEVERITY_COLORS, STATUS_COLORS } from "@/lib/reports/colors"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowUp, ArrowDown, ArrowUpDown, Search, Download, ChevronLeft, ChevronRight, Eye } from "lucide-react"
+import { ArrowUp, ArrowDown, ArrowUpDown, Search, Download, ChevronLeft, ChevronRight, Eye } from "@/components/ui/icons"
 import { formatDistanceToNow, format } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -65,7 +65,7 @@ export function TabbedTables({ projectId }: { projectId: string }) {
 export function StatusBadge({ value, kind = "status" }: { value: string; kind?: "status" | "severity" }) {
   const color = (kind === "severity" ? SEVERITY_COLORS[value] : STATUS_COLORS[value]) || "#94a3b8"
   return (
-    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: `${color}1a`, color }}>
+    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: `${color}1a`, color }}>
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
       {value}
     </span>
@@ -76,8 +76,8 @@ function Avatar({ name }: { name: string | null }) {
   if (!name) return <span className="text-xs text-slate-300">—</span>
   const initials = name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase()).join("")
   return (
-    <span className="inline-flex items-center gap-1.5" title={name}>
-      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">{initials || "?"}</span>
+    <span className="inline-flex items-center gap-2" title={name}>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{initials || "?"}</span>
       <span className="max-w-[90px] truncate text-xs text-muted-foreground">{name}</span>
     </span>
   )
@@ -116,7 +116,7 @@ function SortableHeader({
 }) {
   const active = sort === col.key
   return (
-    <th scope="col" className={cn("whitespace-nowrap px-3 py-2 text-[11px] font-medium text-muted-foreground", col.align === "right" && "text-right")}>
+    <th scope="col" className={cn("whitespace-nowrap px-3 py-2 text-xs font-medium text-muted-foreground", col.align === "right" && "text-right")}>
       {col.sortable ? (
         <button onClick={() => onSort(col.key)} className={cn("inline-flex items-center gap-1 hover:text-foreground", active && "text-foreground")}>
           {col.label}
@@ -189,7 +189,7 @@ function Pagination({
         <select
           value={limit}
           onChange={(e) => onLimit(Number(e.target.value))}
-          className="rounded-md border border-border bg-card px-1.5 py-1 text-xs"
+          className="rounded-md border border-border bg-card px-2 py-1 text-xs"
         >
           {[10, 25, 50, 100].map((n) => (
             <option key={n} value={n}>
@@ -248,7 +248,7 @@ function DataTable<T extends { id?: string }>({
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 rounded-md border border-border px-2.5">
+        <div className="flex items-center gap-2 rounded-md border border-border px-3">
           <Search className="h-3.5 w-3.5 text-muted-foreground" />
           <input
             value={searchInput}
@@ -261,7 +261,7 @@ function DataTable<T extends { id?: string }>({
         <button
           onClick={() => downloadCSV(csvName, toCSV(columns, rows))}
           disabled={rows.length === 0}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted/50 disabled:opacity-40"
+          className="ml-auto inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted/50 disabled:opacity-40"
         >
           <Download className="h-3.5 w-3.5" /> Export CSV
         </button>
@@ -283,7 +283,7 @@ function DataTable<T extends { id?: string }>({
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-t border-border">
                   {columns.map((c) => (
-                    <td key={c.key} className="px-3 py-2.5">
+                    <td key={c.key} className="px-3 py-3">
                       <Skeleton className="h-4 w-full max-w-[120px]" />
                     </td>
                   ))}
@@ -300,11 +300,11 @@ function DataTable<T extends { id?: string }>({
               rows.map((row, i) => (
                 <tr key={row.id ?? i} className="group border-t border-border hover:bg-muted/60">
                   {columns.map((c) => (
-                    <td key={c.key} className={cn("px-3 py-2.5 text-foreground", c.align === "right" && "text-right")}>
+                    <td key={c.key} className={cn("px-3 py-3 text-foreground", c.align === "right" && "text-right")}>
                       {c.render(row, (query.page - 1) * query.limit + i)}
                     </td>
                   ))}
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-3">
                     <button className="text-slate-300 opacity-0 transition-opacity hover:text-primary group-hover:opacity-100" title="View">
                       <Eye className="h-3.5 w-3.5" />
                     </button>
@@ -458,25 +458,25 @@ function AverageAgeTable({ projectId }: { projectId: string }) {
           <table className="w-full border-collapse text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="px-3 py-2 text-[11px] font-medium text-muted-foreground text-left">Status</th>
-                <th className="px-3 py-2 text-[11px] font-medium text-muted-foreground text-right">Open Tasks</th>
-                <th className="px-3 py-2 text-[11px] font-medium text-muted-foreground text-right">Avg Age (days)</th>
-                <th className="px-3 py-2 text-[11px] font-medium text-muted-foreground text-right">Oldest (days)</th>
-                <th className="px-3 py-2 text-[11px] font-medium text-muted-foreground text-left">Health</th>
+                <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left">Status</th>
+                <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-right">Open Tasks</th>
+                <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-right">Avg Age (days)</th>
+                <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-right">Oldest (days)</th>
+                <th className="px-3 py-2 text-xs font-medium text-muted-foreground text-left">Health</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row, i) => (
                 <tr key={i} className="border-t border-border hover:bg-muted/60">
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-3">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusColor(row.status)}`}>
                       {row.status.replace("_", " ")}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-foreground">{row.count}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-foreground">{row.averageAgeDays}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{row.oldestDays}</td>
-                  <td className="px-3 py-2.5">
+                  <td className="px-3 py-3 text-right tabular-nums text-foreground">{row.count}</td>
+                  <td className="px-3 py-3 text-right tabular-nums font-semibold text-foreground">{row.averageAgeDays}</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{row.oldestDays}</td>
+                  <td className="px-3 py-3">
                     <div className="flex items-center gap-2">
                       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
                         <div
@@ -484,7 +484,7 @@ function AverageAgeTable({ projectId }: { projectId: string }) {
                           style={{ width: `${Math.min(100, (row.averageAgeDays / 21) * 100)}%` }}
                         />
                       </div>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {row.averageAgeDays > 14 ? "High" : row.averageAgeDays > 7 ? "Moderate" : "Good"}
                       </span>
                     </div>

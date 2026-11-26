@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
-import { Users, UserPlus, MoreHorizontal, Copy, Check, Trash2, Shield, Info, X, Loader2 } from "lucide-react"
+import { Users, UserPlus, MoreHorizontal, Copy, Check, Trash2, Shield, Info, X, Loader2 } from "@/components/ui/icons"
 import { usePermission } from "@/hooks/usePermission"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { PROJECT_ROLES, type ProjectRole } from "@/lib/permissions"
@@ -114,7 +114,7 @@ export default function MembersPage() {
         {can("canInviteMembers") && (
           <button
             onClick={() => setShowInvite(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90"
           >
             <UserPlus className="h-3.5 w-3.5" /> Invite
           </button>
@@ -161,17 +161,17 @@ export default function MembersPage() {
           <table className="w-full text-xs">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="text-left font-semibold px-4 py-2.5">Name</th>
-                <th className="text-left font-semibold px-4 py-2.5">Email</th>
-                <th className="text-left font-semibold px-4 py-2.5">Role</th>
-                <th className="text-left font-semibold px-4 py-2.5">Joined</th>
-                {manage && <th className="w-10 px-4 py-2.5"></th>}
+                <th className="text-left font-semibold px-4 py-3">Name</th>
+                <th className="text-left font-semibold px-4 py-3">Email</th>
+                <th className="text-left font-semibold px-4 py-3">Role</th>
+                <th className="text-left font-semibold px-4 py-3">Joined</th>
+                {manage && <th className="w-10 px-4 py-3"></th>}
               </tr>
             </thead>
             <tbody className="divide-y">
               {members.map((m) => (
                 <tr key={m.id} className="hover:bg-muted/50">
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3">
                     <a
                       href={`/users/${m.user.id}`}
                       className="flex items-center gap-2 group/profile"
@@ -181,7 +181,7 @@ export default function MembersPage() {
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.user.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                       ) : (
-                        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[10px] font-semibold">
+                        <div className="h-7 w-7 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-semibold">
                           {initials(m.user.name, m.user.email)}
                         </div>
                       )}
@@ -190,17 +190,17 @@ export default function MembersPage() {
                       </span>
                     </a>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{m.user.email}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${ROLE_BADGE[m.role] || ROLE_BADGE.Member}`}>
+                  <td className="px-4 py-3 text-muted-foreground">{m.user.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${ROLE_BADGE[m.role] || ROLE_BADGE.Member}`}>
                       {m.role}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
+                  <td className="px-4 py-3 text-muted-foreground">
                     {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : "—"}
                   </td>
                   {manage && (
-                    <td className="px-4 py-2.5 relative">
+                    <td className="px-4 py-3 relative">
                       {!m.isCreator && (
                         <button onClick={() => setMenuFor(menuFor === m.id ? null : m.id)} className="p-1 rounded hover:bg-muted">
                           <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
@@ -208,12 +208,12 @@ export default function MembersPage() {
                       )}
                       {menuFor === m.id && (
                         <div className="absolute right-4 top-9 z-10 w-44 rounded-lg border bg-card shadow-[0_4px_12px_rgba(0,0,0,0.06)] py-1">
-                          <div className="px-3 py-1 text-[11px] font-medium text-muted-foreground">Change role</div>
+                          <div className="px-3 py-1 text-xs font-medium text-muted-foreground">Change role</div>
                           {PROJECT_ROLES.map((r) => (
                             <button
                               key={r}
                               onClick={() => changeRole(m.userId, r)}
-                              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/50 ${r === m.role ? "text-primary font-semibold" : "text-foreground"}`}
+                              className={`flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 ${r === m.role ? "text-primary font-semibold" : "text-foreground"}`}
                             >
                               <Shield className="h-3 w-3" /> {r}
                               {r === m.role && <Check className="h-3 w-3 ml-auto" />}
@@ -222,7 +222,7 @@ export default function MembersPage() {
                           <div className="border-t my-1" />
                           <button
                             onClick={() => removeMember(m.userId)}
-                            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-red-600 hover:bg-red-50"
                           >
                             <Trash2 className="h-3 w-3" /> Remove from project
                           </button>
@@ -240,12 +240,12 @@ export default function MembersPage() {
           <table className="w-full text-xs">
             <thead className="bg-muted/50 text-muted-foreground">
               <tr>
-                <th className="text-left font-semibold px-4 py-2.5">Email</th>
-                <th className="text-left font-semibold px-4 py-2.5">Role</th>
-                <th className="text-left font-semibold px-4 py-2.5">Status</th>
-                <th className="text-left font-semibold px-4 py-2.5">Invited by</th>
-                <th className="text-left font-semibold px-4 py-2.5">Date</th>
-                <th className="w-10 px-4 py-2.5"></th>
+                <th className="text-left font-semibold px-4 py-3">Email</th>
+                <th className="text-left font-semibold px-4 py-3">Role</th>
+                <th className="text-left font-semibold px-4 py-3">Status</th>
+                <th className="text-left font-semibold px-4 py-3">Invited by</th>
+                <th className="text-left font-semibold px-4 py-3">Date</th>
+                <th className="w-10 px-4 py-3"></th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -254,16 +254,16 @@ export default function MembersPage() {
               )}
               {invitations.map((inv) => (
                 <tr key={inv.id} className="hover:bg-muted/50">
-                  <td className="px-4 py-2.5 font-medium text-foreground">{inv.email}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${ROLE_BADGE[inv.role] || ROLE_BADGE.Member}`}>{inv.role}</span>
+                  <td className="px-4 py-3 font-medium text-foreground">{inv.email}</td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-semibold ${ROLE_BADGE[inv.role] || ROLE_BADGE.Member}`}>{inv.role}</span>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[inv.status] || STATUS_BADGE.PENDING}`}>{inv.status}</span>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_BADGE[inv.status] || STATUS_BADGE.PENDING}`}>{inv.status}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{inv.invitedBy?.name || inv.invitedBy?.email || "—"}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3 text-muted-foreground">{inv.invitedBy?.name || inv.invitedBy?.email || "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{new Date(inv.createdAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
                     {inv.status === "PENDING" && (
                       <button onClick={() => cancelInvite(inv.id)} className="p-1 rounded hover:bg-red-50 text-red-600" title="Cancel invitation">
                         <Trash2 className="h-4 w-4" />
@@ -326,7 +326,7 @@ function InviteModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl bg-card p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-foreground">Invite Member to Project</h2>
           <button onClick={onClose}><X className="h-4 w-4 text-muted-foreground" /></button>
@@ -336,10 +336,10 @@ function InviteModal({
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">No account found for that email. Share this invite link (valid 7 days):</p>
             <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-2">
-              <input readOnly value={inviteUrl} className="flex-1 bg-transparent text-[11px] text-foreground outline-none" />
+              <input readOnly value={inviteUrl} className="flex-1 bg-transparent text-xs text-foreground outline-none" />
               <button
                 onClick={() => { navigator.clipboard.writeText(inviteUrl); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
-                className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-[10px] font-semibold text-white"
+                className="inline-flex items-center gap-1 rounded bg-primary px-2 py-1 text-xs font-semibold text-white"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />} {copied ? "Copied" : "Copy"}
               </button>
@@ -349,7 +349,7 @@ function InviteModal({
         ) : (
           <div className="space-y-3">
             <div>
-              <label className="text-[11px] font-semibold text-muted-foreground">Email or Username</label>
+              <label className="text-xs font-semibold text-muted-foreground">Email or Username</label>
               <input
                 autoFocus
                 value={value}
@@ -359,7 +359,7 @@ function InviteModal({
               />
             </div>
             <div>
-              <label className="text-[11px] font-semibold text-muted-foreground">Role</label>
+              <label className="text-xs font-semibold text-muted-foreground">Role</label>
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as ProjectRole)}
@@ -371,13 +371,13 @@ function InviteModal({
                 <option value="Owner">Owner — full control</option>
               </select>
             </div>
-            {err && <p className="text-[11px] text-red-600">{err}</p>}
+            {err && <p className="text-xs text-red-600">{err}</p>}
             <div className="flex justify-end gap-2 pt-1">
-              <button onClick={onClose} className="rounded-lg border px-3 py-1.5 text-xs font-semibold text-muted-foreground">Cancel</button>
+              <button onClick={onClose} className="rounded-lg border px-3 py-2 text-xs font-semibold text-muted-foreground">Cancel</button>
               <button
                 onClick={submit}
                 disabled={submitting || !value.trim()}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {submitting && <Loader2 className="h-3 w-3 animate-spin" />} Send Invitation
               </button>

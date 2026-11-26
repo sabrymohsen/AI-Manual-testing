@@ -8,7 +8,7 @@ import { StepResultItem } from "@/components/test-runs/step-result"
 import { ConsoleLogsPanel } from "@/components/test-runs/console-logs-panel"
 import { NetworkLogsPanel } from "@/components/test-runs/network-logs-panel"
 import { BugReportForm } from "@/components/bug-reports/bug-report-form"
-import { Bug, Play, Edit, CloudUpload, CheckCircle2, XCircle, RefreshCw, ExternalLink, Loader2 } from "lucide-react"
+import { Bug, Play, Edit, CloudUpload, CheckCircle2, XCircle, RefreshCw, ExternalLink, Loader2 } from "@/components/ui/icons"
 
 export default function ReportPage() {
   const params = useParams()

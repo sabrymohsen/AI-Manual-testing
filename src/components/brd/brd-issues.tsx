@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, FileText, HelpCircle, Loader2, Pencil, Plus, Sparkles, Wand2, X } from "lucide-react"
+import { CheckCircle2, FileText, HelpCircle, Loader2, Pencil, Plus, Sparkles, Wand2, X } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import { ISSUE_LABEL, type AnalysisIssue, type AnalysisView } from "@/lib/brd/analysis-types"
 
@@ -154,7 +154,7 @@ export function BrdIssues({
         </div>
         {canEdit && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-1.5 text-muted-foreground">
+            <label className="flex items-center gap-2 text-muted-foreground">
               <input type="checkbox" checked={toBoard} onChange={(e) => setToBoard(e.target.checked)} />
               Create stories on the Scrum board
             </label>
@@ -162,7 +162,7 @@ export function BrdIssues({
               <button
                 onClick={() => draft()}
                 disabled={!!busy}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2.5 font-medium hover:bg-accent disabled:opacity-60"
+                className="inline-flex h-7 items-center gap-2 rounded-md border bg-background px-3 font-medium hover:bg-accent disabled:opacity-60"
               >
                 {busy === "draft" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
                 {busy === "draft" ? (progress ? `Drafting ${Math.min(progress.done + DRAFT_GROUP, progress.total)} of ${progress.total}…` : "Drafting…") : `Draft criteria for ${undrafted.length}`}
@@ -172,7 +172,7 @@ export function BrdIssues({
               <button
                 onClick={acceptAll}
                 disabled={!!busy}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md border bg-background px-2.5 font-medium hover:bg-accent disabled:opacity-60"
+                className="inline-flex h-7 items-center gap-2 rounded-md border bg-background px-3 font-medium hover:bg-accent disabled:opacity-60"
                 title="Accept every drafted issue as it is"
               >
                 {busy === "acceptAll" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
@@ -183,7 +183,7 @@ export function BrdIssues({
               <button
                 onClick={writeToBrd}
                 disabled={!!busy || !isWord}
-                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                className="inline-flex h-7 items-center gap-2 rounded-md bg-primary px-3 font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 title={isWord ? "Write the saved criteria into the Word document as a new version" : "Only Word BRDs can be updated"}
               >
                 {busy === "write" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
@@ -194,12 +194,12 @@ export function BrdIssues({
         )}
       </div>
       {pending.length > 0 && !isWord && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           This BRD is a PDF, so it can&apos;t be edited. The criteria are saved on the user stories; upload a Word version to write them in.
         </p>
       )}
 
-      <div className="flex gap-1.5 text-[11px]">
+      <div className="flex gap-2 text-xs">
         {(
           [
             ["open", `Open (${open.length})`],
@@ -218,7 +218,7 @@ export function BrdIssues({
         ))}
       </div>
 
-      <div className="max-h-[640px] space-y-1.5 overflow-y-auto pr-1">
+      <div className="max-h-[640px] space-y-2 overflow-y-auto pr-1">
         {shown.length === 0 && (
           <p className="py-6 text-center text-sm text-muted-foreground">
             {filter === "open" ? "Every issue is resolved." : "Nothing here yet."}
@@ -274,13 +274,13 @@ function IssueCard({
   const drafting = busy === `draft:${i.id}` || busy === "draft"
 
   return (
-    <div className={cn("space-y-1.5 rounded-md border p-2.5 text-xs", r && "border-emerald-500/30")}>
-      <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-        <span className={cn("rounded px-1.5 py-0.5 font-medium", SEVERITY[i.severity])}>
+    <div className={cn("space-y-2 rounded-md border p-3 text-xs", r && "border-emerald-500/30")}>
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className={cn("rounded px-2 py-0.5 font-medium", SEVERITY[i.severity])}>
           {ISSUE_LABEL[i.kind].en} · {i.severity}
         </span>
         {i.relatedKeys.map((k) => (
-          <span key={k} className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+          <span key={k} className="rounded bg-primary/10 px-2 py-0.5 text-primary">
             {k}
           </span>
         ))}
@@ -290,7 +290,7 @@ function IssueCard({
           </span>
         )}
         {r && (
-          <span className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+          <span className="ml-auto inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
             <CheckCircle2 className="h-3 w-3" /> {r.status === "edited" ? "Edited & accepted" : "Accepted"}
           </span>
         )}
@@ -299,12 +299,12 @@ function IssueCard({
         {i.text}
       </p>
       {i.quote && (
-        <blockquote dir="auto" className="border-s-2 border-amber-500/40 ps-2 italic text-muted-foreground">
+        <blockquote dir="auto" className="border-s-2 border-amber-500/40 ps-2 text-muted-foreground">
           {i.quote}
         </blockquote>
       )}
       {i.suggestion && !current && (
-        <p dir="auto" className="flex gap-1.5 text-muted-foreground">
+        <p dir="auto" className="flex gap-2 text-muted-foreground">
           <HelpCircle className="mt-0.5 h-3 w-3 shrink-0" /> {i.suggestion}
         </p>
       )}
@@ -321,8 +321,8 @@ function IssueCard({
           }}
         />
       ) : current ? (
-        <div className={cn("space-y-1.5 rounded-md p-2", r ? "bg-emerald-500/5" : "bg-primary/5")}>
-          <p className="text-[11px] font-medium text-muted-foreground">
+        <div className={cn("space-y-2 rounded-md p-2", r ? "bg-emerald-500/5" : "bg-primary/5")}>
+          <p className="text-xs font-medium text-muted-foreground">
             {r
               ? "Acceptance criteria"
               : i.draft?.by === "ai"
@@ -332,14 +332,14 @@ function IssueCard({
           <p dir="auto" className="font-medium">
             {current.title}
           </p>
-          <ul dir="auto" className="list-disc space-y-0.5 ps-5">
+          <ul dir="auto" className="list-disc space-y-0.5 ps-6">
             {current.criteria.map((c, n) => (
               <li key={n}>{c}</li>
             ))}
           </ul>
           {r && (
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5 text-[11px] text-muted-foreground">
-              {r.requirementKey && <span className="rounded bg-primary/10 px-1.5 py-0.5 font-medium text-primary">{r.requirementKey}</span>}
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 pt-0.5 text-xs text-muted-foreground">
+              {r.requirementKey && <span className="rounded bg-primary/10 px-2 py-0.5 font-medium text-primary">{r.requirementKey}</span>}
               {r.storyKey && r.taskId && (
                 <a className="text-primary hover:underline" href={`/projects/${projectId}/scrum?task=${r.taskId}`}>
                   Story {r.storyKey}
@@ -357,12 +357,12 @@ function IssueCard({
             </p>
           )}
           {canEdit && !r?.brdVersion && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-2 pt-1">
               {!r && (
                 <button
                   onClick={() => onSave(current, false)}
                   disabled={!!busy}
-                  className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                  className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
                 >
                   {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                   Accept
@@ -371,7 +371,7 @@ function IssueCard({
               <button
                 onClick={() => setEditing(true)}
                 disabled={!!busy}
-                className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2.5 text-[11px] font-medium hover:bg-accent disabled:opacity-60"
+                className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
               >
                 <Pencil className="h-3 w-3" /> Edit
               </button>
@@ -379,7 +379,7 @@ function IssueCard({
                 <button
                   onClick={onDraft}
                   disabled={!!busy}
-                  className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2.5 text-[11px] font-medium hover:bg-accent disabled:opacity-60"
+                  className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
                   title="Ask the AI for a new draft"
                 >
                   {drafting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wand2 className="h-3 w-3" />}
@@ -391,11 +391,11 @@ function IssueCard({
         </div>
       ) : (
         canEdit && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1">
             <button
               onClick={onDraft}
               disabled={!!busy}
-              className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2.5 text-[11px] font-medium hover:bg-accent disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
             >
               {drafting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3 text-primary" />}
               Draft acceptance criteria
@@ -403,7 +403,7 @@ function IssueCard({
             <button
               onClick={() => setEditing(true)}
               disabled={!!busy}
-              className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-2.5 text-[11px] font-medium hover:bg-accent disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 rounded-md border bg-background px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
             >
               <Pencil className="h-3 w-3" /> Write my own
             </button>
@@ -432,7 +432,7 @@ function CriteriaEditor({
 
   return (
     <div className="space-y-2 rounded-md border bg-background p-2">
-      <label className="block text-[11px] font-medium text-muted-foreground">User story</label>
+      <label className="block text-xs font-medium text-muted-foreground">User story</label>
       <input
         dir="auto"
         value={title}
@@ -441,18 +441,18 @@ function CriteriaEditor({
         placeholder="As a … I want … / بصفتي … أرغب في …"
         className="h-8 w-full rounded-md border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
       />
-      <label className="block text-[11px] font-medium text-muted-foreground">Acceptance criteria (one testable condition each)</label>
+      <label className="block text-xs font-medium text-muted-foreground">Acceptance criteria (one testable condition each)</label>
       <div className="space-y-1">
         {criteria.map((c, n) => (
           <div key={n} className="flex items-start gap-1">
-            <span className="mt-2 w-4 shrink-0 text-center text-[10px] text-muted-foreground">{n + 1}</span>
+            <span className="mt-2 w-4 shrink-0 text-center text-xs text-muted-foreground">{n + 1}</span>
             <textarea
               dir="auto"
               value={c}
               onChange={(e) => set(n, e.target.value)}
               rows={Math.min(4, Math.max(1, Math.ceil(c.length / 90)))}
               maxLength={600}
-              className="min-h-8 flex-1 resize-y rounded-md border bg-background px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-primary/30"
+              className="min-h-8 flex-1 resize-y rounded-md border bg-background px-2 py-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
             />
             <button
               onClick={() => setCriteria((list) => (list.length > 1 ? list.filter((_, k) => k !== n) : [""]))}
@@ -464,23 +464,23 @@ function CriteriaEditor({
           </div>
         ))}
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
         {criteria.length < 8 && (
           <button
             onClick={() => setCriteria((list) => [...list, ""])}
-            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] font-medium text-primary hover:bg-primary/10"
+            className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-primary hover:bg-primary/10"
           >
             <Plus className="h-3 w-3" /> Add criterion
           </button>
         )}
         <span className="ml-auto" />
-        <button onClick={onCancel} className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent">
+        <button onClick={onCancel} className="inline-flex h-7 items-center rounded-md border px-3 text-xs font-medium hover:bg-accent">
           Cancel
         </button>
         <button
           onClick={() => onSave({ title: title.trim(), criteria: filled })}
           disabled={saving || !title.trim() || !filled.length}
-          className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+          className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
         >
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
           Save as user story

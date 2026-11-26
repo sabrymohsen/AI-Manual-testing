@@ -5,7 +5,7 @@
  *   - CI tokens — a pipeline starts a run and polls its status
  */
 import { useCallback, useEffect, useState } from "react"
-import { CalendarClock, Check, Copy, KeyRound, Loader2, Play, Plus, Trash2 } from "lucide-react"
+import { CalendarClock, Check, Copy, KeyRound, Loader2, Play, Plus, Trash2 } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
@@ -166,7 +166,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="Name, e.g. Nightly regression"
-              className="h-8 w-full rounded-md border bg-card px-2.5 text-sm"
+              className="h-8 w-full rounded-md border bg-card px-3 text-sm"
             />
             <div className="flex flex-wrap items-center gap-2">
               <select
@@ -264,7 +264,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
         ) : schedules.length === 0 ? (
           <p className="text-xs text-muted-foreground">No schedules yet — add a nightly regression run.</p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {schedules.map((s) => (
               <li key={s.id} className={cn("rounded-lg border px-3 py-2 text-xs", !s.enabled && "opacity-60")}>
                 <div className="flex items-center gap-2">
@@ -272,7 +272,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
                   {s.lastStatus && (
                     <span
                       className={cn(
-                        "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                        "rounded px-2 py-0.5 text-xs font-medium",
                         s.lastStatus === "Passed" && "bg-emerald-50 text-emerald-700",
                         s.lastStatus === "Failed" && "bg-rose-50 text-rose-700",
                         (s.lastStatus === "Running" || s.lastStatus === "Cancelled") && "bg-muted text-muted-foreground"
@@ -290,7 +290,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
                     >
                       <Play className="h-3.5 w-3.5" />
                     </button>
-                    <label className="flex cursor-pointer items-center gap-1 text-[11px] text-muted-foreground" title={s.enabled ? "Pause" : "Resume"}>
+                    <label className="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground" title={s.enabled ? "Pause" : "Resume"}>
                       <input
                         type="checkbox"
                         checked={s.enabled}
@@ -334,7 +334,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
               value={newTokenName}
               onChange={(e) => setNewTokenName(e.target.value)}
               placeholder="Token name, e.g. GitHub Actions"
-              className="h-8 flex-1 rounded-md border bg-card px-2.5 text-sm"
+              className="h-8 flex-1 rounded-md border bg-card px-3 text-sm"
             />
             <button
               onClick={createToken}
@@ -349,9 +349,9 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
         )}
 
         {shownToken && (
-          <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-2.5 text-xs">
+          <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
             <p className="font-medium text-amber-800 dark:text-amber-300">Copy this token now — it won&apos;t be shown again.</p>
-            <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-2 flex items-center gap-2">
               <code className="min-w-0 flex-1 truncate rounded bg-card px-2 py-1 font-mono">{shownToken}</code>
               <button
                 onClick={() => {
@@ -368,7 +368,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
         {tokens.length > 0 && (
           <ul className="mb-3 space-y-1">
             {tokens.map((t) => (
-              <li key={t.id} className={cn("flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs", t.revokedAt && "opacity-50")}>
+              <li key={t.id} className={cn("flex items-center gap-2 rounded-md border px-3 py-2 text-xs", t.revokedAt && "opacity-50")}>
                 <code className="font-mono">{t.prefix}…</code>
                 <span className="font-medium">{t.name}</span>
                 <span className="text-muted-foreground">
@@ -386,7 +386,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
 
         <details className="text-xs">
           <summary className="cursor-pointer font-medium text-foreground">How to call it</summary>
-          <pre className="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">{`# Start a run (body optional: {"folder":"Checkout"} or {"tag":"smoke"})
+          <pre className="mt-2 overflow-x-auto rounded-md bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-100">{`# Start a run (body optional: {"folder":"Checkout"} or {"tag":"smoke"})
 REF=$(curl -s -X POST ${origin}/api/hub/ci/run \\
   -H "Authorization: Bearer $QA_ENGINE_TOKEN" \\
   -H "Content-Type: application/json" -d '{"tag":"smoke"}' | jq -r .ref)

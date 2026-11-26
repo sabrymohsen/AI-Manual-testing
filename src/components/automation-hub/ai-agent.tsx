@@ -20,7 +20,7 @@ import {
   MessageSquare,
   Terminal,
   BarChart3
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ProvidersPanel, CommandsPanel, UsagePrivacyPanel, SkillsPanel } from "@/components/automation-hub/ai-provider-management"
 
 // ---------- Types ----------
@@ -87,7 +87,7 @@ function renderInline(text: string, keyPrefix: string) {
     }
     if (part.startsWith("`") && part.endsWith("`")) {
       return (
-        <code key={`${keyPrefix}-${i}`} className="font-mono text-[10px] bg-slate-900/5 border border-slate-900/10 rounded px-1 py-px">
+        <code key={`${keyPrefix}-${i}`} className="font-mono text-xs bg-slate-900/5 border border-slate-900/10 rounded px-1 py-px">
           {part.slice(1, -1)}
         </code>
       )
@@ -103,7 +103,7 @@ function Markdown({ text }: { text: string }) {
   for (let i = 0; i < blocks.length; i++) {
     if (i % 3 === 2) {
       nodes.push(
-        <pre key={`code-${i}`} className="font-mono text-[9.5px] leading-relaxed bg-slate-950 text-slate-100 rounded-xl p-3 overflow-x-auto my-1.5 whitespace-pre">
+        <pre key={`code-${i}`} className="font-mono text-xs leading-relaxed bg-slate-950 text-slate-100 rounded-xl p-3 overflow-x-auto my-2 whitespace-pre">
           {blocks[i].replace(/\n$/, "")}
         </pre>
       )
@@ -115,7 +115,7 @@ function Markdown({ text }: { text: string }) {
         const items = [...list]
         list = []
         nodes.push(
-          <ul key={key} className="list-disc pl-5 space-y-0.5 my-1">
+          <ul key={key} className="list-disc pl-6 space-y-0.5 my-1">
             {items.map((item, j) => (
               <li key={j}>{renderInline(item, `${key}-${j}`)}</li>
             ))}
@@ -131,13 +131,13 @@ function Markdown({ text }: { text: string }) {
         flushList(`ul-${key}`)
         if (line.startsWith("> ")) {
           nodes.push(
-            <p key={key} className="border-l-2 border-primary/25 pl-2 text-muted-foreground italic my-1">
+            <p key={key} className="border-l-2 border-primary/25 pl-2 text-muted-foreground my-1">
               {renderInline(line.slice(2), key)}
             </p>
           )
         } else if (/^#{1,4}\s/.test(line)) {
           nodes.push(
-            <p key={key} className="font-semibold text-foreground mt-1.5">
+            <p key={key} className="font-semibold text-foreground mt-2">
               {renderInline(line.replace(/^#{1,4}\s/, ""), key)}
             </p>
           )
@@ -373,7 +373,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
     return (
       <div className="py-24 text-center text-muted-foreground flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
         <Loader2 className="animate-spin text-primary" size={28} />
-        <span className="font-medium text-[11px]">Loading QA Assistant Console...</span>
+        <span className="font-medium text-xs">Loading QA Assistant Console...</span>
       </div>
     )
   }
@@ -389,12 +389,12 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
   return (
     <div className="space-y-4">
       {/* SECTION 11 SUB-TABS */}
-      <div className="flex items-center gap-1.5 overflow-x-auto bg-muted p-1 border rounded-xl select-none scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto bg-muted p-1 border rounded-xl select-none scrollbar-none">
         {SUB_TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setView(t.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-tight shrink-0 transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold tracking-tight shrink-0 transition-all ${
               view === t.id ? "bg-card text-primary shadow-sm border border-primary/25" : "text-muted-foreground hover:text-foreground hover:bg-white/50"
             }`}
           >
@@ -418,19 +418,19 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
           <div className="flex items-center justify-between border-b pb-2 select-none">
             <div className="flex items-center gap-2">
               <Bot size={16} className="text-primary" />
-              <span className="text-[11px] font-medium text-muted-foreground">AI Agent — QA Assistant</span>
+              <span className="text-xs font-medium text-muted-foreground">AI Agent — QA Assistant</span>
               <span
-                className={`text-[8px] uppercase font-semibold px-1.5 py-0.5 rounded-full border ${
+                className={`text-xs uppercase font-semibold px-2 py-0.5 rounded-full border ${
                   settings.hasKey ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
                 }`}
               >
                 {settings.hasKey ? `${settings.provider} · ${settings.model}` : "Offline mode"}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowSettings(true)}
-                className="h-7 px-2.5 rounded-lg border border-border text-muted-foreground bg-card font-semibold flex items-center gap-1 text-[10px] hover:bg-muted/50"
+                className="h-7 px-3 rounded-lg border border-border text-muted-foreground bg-card font-semibold flex items-center gap-1 text-xs hover:bg-muted/50"
               >
                 <Settings size={12} /> Settings
               </button>
@@ -447,12 +447,12 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
           {/* Messages */}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto p-3 space-y-4 bg-muted/50 rounded-xl border text-[11px] font-medium leading-relaxed text-foreground"
+            className="flex-1 overflow-y-auto p-3 space-y-4 bg-muted/50 rounded-xl border text-xs font-medium leading-relaxed text-foreground"
           >
             {messages.length === 0 && (
               <div className="flex items-start gap-3 max-w-[85%]">
                 <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0 select-none bg-primary">🤖</div>
-                <div className="p-3.5 rounded-xl rounded-tl-none text-left bg-primary/10 border border-primary/25 text-indigo-950 shadow-sm">
+                <div className="p-3 rounded-xl rounded-tl-none text-left bg-primary/10 border border-primary/25 text-indigo-950 shadow-sm">
                   <Markdown text={WELCOME} />
                 </div>
               </div>
@@ -469,7 +469,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                 </div>
                 <div className="space-y-1 min-w-0">
                   <div
-                    className={`p-3.5 rounded-2xl text-left overflow-hidden ${
+                    className={`p-3 rounded-2xl text-left overflow-hidden ${
                       msg.role === "user"
                         ? "bg-muted text-foreground rounded-tr-none"
                         : "bg-primary/10 border border-primary/25 text-indigo-950 rounded-tl-none shadow-sm"
@@ -479,12 +479,12 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
 
                     {/* Server-provided action buttons */}
                     {msg.role === "assistant" && Array.isArray(msg.actions) && msg.actions.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap pt-2 mt-2 border-t border-primary/25">
+                      <div className="flex items-center gap-2 flex-wrap pt-2 mt-2 border-t border-primary/25">
                         {msg.actions.map((a, i) => (
                           <button
                             key={i}
                             onClick={() => handleAction(a)}
-                            className="h-6.5 min-h-7 px-2.5 rounded-lg bg-card border border-primary/25 text-primary hover:bg-primary hover:text-white text-[9.5px] font-semibold transition-colors"
+                            className="h-6.5 min-h-7 px-3 rounded-lg bg-card border border-primary/25 text-primary hover:bg-primary hover:text-white text-xs font-semibold transition-colors"
                           >
                             {a.label}
                           </button>
@@ -492,7 +492,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                       </div>
                     )}
                   </div>
-                  <span className="text-[8px] text-muted-foreground font-mono block">
+                  <span className="text-xs text-muted-foreground font-mono block">
                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
@@ -503,18 +503,18 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
             {sending && (
               <div className="flex items-start gap-3 max-w-[85%]">
                 <div className="h-8 w-8 rounded-full flex items-center justify-center text-sm shrink-0 bg-primary">🤖</div>
-                <div className="p-3.5 rounded-xl rounded-tl-none bg-primary/10 border border-primary/25 flex items-center gap-1.5">
+                <div className="p-3 rounded-xl rounded-tl-none bg-primary/10 border border-primary/25 flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "0ms" }} />
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                   <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: "300ms" }} />
-                  <span className="text-[9px] text-indigo-400 font-semibold ml-1.5">running tools & thinking...</span>
+                  <span className="text-xs text-indigo-400 font-semibold ml-2">running tools & thinking...</span>
                 </div>
               </div>
             )}
           </div>
 
           {/* Quick Actions */}
-          <div className="flex items-center gap-1.5 flex-wrap select-none">
+          <div className="flex items-center gap-2 flex-wrap select-none">
             {quickActions.map((act) => (
               <button
                 key={act.label}
@@ -527,7 +527,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                     handleSendMessage(act.text)
                   }
                 }}
-                className="px-2.5 py-1 text-[10px] font-semibold bg-muted hover:bg-muted text-foreground border rounded-lg transition-colors disabled:opacity-50"
+                className="px-3 py-1 text-xs font-semibold bg-muted hover:bg-muted text-foreground border rounded-lg transition-colors disabled:opacity-50"
               >
                 {act.label}
               </button>
@@ -561,7 +561,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
           <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3 flex flex-col justify-between h-[580px]">
             <div className="space-y-3 flex-1 flex flex-col overflow-hidden">
               <div className="flex items-center justify-between border-b pb-2 select-none">
-                <span className="text-[11px] font-medium text-muted-foreground">MCP Tool Call Audit</span>
+                <span className="text-xs font-medium text-muted-foreground">MCP Tool Call Audit</span>
                 <button
                   onClick={() =>
                     fetch("/api/hub/agent/mcp-log")
@@ -577,13 +577,13 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
 
               <div className="space-y-2 overflow-y-auto flex-1 pr-1 text-left">
                 {mcpCalls.map((call) => (
-                  <div key={call.id} className="p-2.5 border rounded-xl bg-muted/50 space-y-1">
+                  <div key={call.id} className="p-3 border rounded-xl bg-muted/50 space-y-1">
                     <div className="flex justify-between items-center gap-2">
-                      <span className="text-primary font-mono font-semibold text-[10px] truncate">{call.tool}()</span>
-                      <span className="flex items-center gap-1.5 shrink-0">
-                        <span className="text-[8px] font-mono text-amber-600 font-semibold">{call.duration}ms</span>
+                      <span className="text-primary font-mono font-semibold text-xs truncate">{call.tool}()</span>
+                      <span className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-mono text-amber-600 font-semibold">{call.duration}ms</span>
                         <span
-                          className={`text-[7.5px] border px-1.5 py-px rounded-full uppercase font-semibold flex items-center gap-0.5 ${
+                          className={`text-xs border px-2 py-px rounded-full uppercase font-semibold flex items-center gap-0.5 ${
                             call.status === "success"
                               ? "bg-emerald-50 border-emerald-100 text-emerald-700"
                               : call.status === "denied"
@@ -597,15 +597,15 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                       </span>
                     </div>
                     {call.params && Object.keys(call.params).length > 0 && (
-                      <code className="font-mono text-[8px] text-muted-foreground block truncate">{JSON.stringify(call.params)}</code>
+                      <code className="font-mono text-xs text-muted-foreground block truncate">{JSON.stringify(call.params)}</code>
                     )}
-                    <div className="text-[8px] text-muted-foreground font-mono">
+                    <div className="text-xs text-muted-foreground font-mono">
                       {new Date(call.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                     </div>
                   </div>
                 ))}
                 {mcpCalls.length === 0 && (
-                  <p className="text-muted-foreground italic text-center py-12 text-[10px]">
+                  <p className="text-muted-foreground text-center py-12 text-xs">
                     No tool calls yet. Every action the AI takes is audited here: timestamp, tool, parameters, status.
                   </p>
                 )}
@@ -615,7 +615,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
             <div className="pt-3 border-t">
               <button
                 onClick={handleClearHistory}
-                className="w-full text-muted-foreground hover:text-rose-600 rounded-lg text-[9.5px] font-semibold h-8 flex items-center justify-center gap-1.5 transition-colors"
+                className="w-full text-muted-foreground hover:text-rose-600 rounded-lg text-xs font-semibold h-8 flex items-center justify-center gap-2 transition-colors"
               >
                 <Trash2 size={11} /> Clear Conversation
               </button>
@@ -637,9 +637,9 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               </button>
             </div>
 
-            <div className="space-y-3.5">
+            <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">AI Provider</label>
+                <label className="text-xs font-semibold text-muted-foreground block uppercase">AI Provider</label>
                 <select
                   value={settings.provider}
                   onChange={(e) => {
@@ -658,7 +658,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">Model</label>
+                <label className="text-xs font-semibold text-muted-foreground block uppercase">Model</label>
                 <select
                   value={settings.model}
                   onChange={(e) => setSettings({ ...settings, model: e.target.value })}
@@ -673,7 +673,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">
+                <label className="text-xs font-semibold text-muted-foreground block uppercase">
                   API Key {settings.provider === "Ollama" && <span className="text-slate-300 normal-case">(not needed for local Ollama)</span>}
                 </label>
                 <input
@@ -683,11 +683,11 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                   placeholder={settings.apiKeyMasked || "Paste your provider API key..."}
                   className="flex h-9 w-full rounded-xl border px-3 text-xs bg-muted/50 font-mono"
                 />
-                <p className="text-[8.5px] text-muted-foreground font-medium">Stored server-side and never returned to the browser. Leave blank to keep the current key.</p>
+                <p className="text-xs text-muted-foreground font-medium">Stored server-side and never returned to the browser. Leave blank to keep the current key.</p>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[9.5px] font-semibold text-muted-foreground block uppercase">Permission Level</label>
+                <label className="text-xs font-semibold text-muted-foreground block uppercase">Permission Level</label>
                 <select
                   value={settings.permission}
                   onChange={(e) => setSettings({ ...settings, permission: e.target.value })}
@@ -699,14 +699,14 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                     </option>
                   ))}
                 </select>
-                <p className="text-[8.5px] text-muted-foreground font-medium">Read-Only blocks running tests and saving scripts — the agent can still inspect results.</p>
+                <p className="text-xs text-muted-foreground font-medium">Read-Only blocks running tests and saving scripts — the agent can still inspect results.</p>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] pt-1 bg-muted/50 border rounded-xl px-3 py-2.5">
-                <span className="font-semibold text-muted-foreground flex items-center gap-1.5">
+              <div className="flex items-center justify-between text-xs pt-1 bg-muted/50 border rounded-xl px-3 py-3">
+                <span className="font-semibold text-muted-foreground flex items-center gap-2">
                   <Server size={11} /> MCP Server
                 </span>
-                <span className="text-emerald-600 font-medium flex items-center gap-1 text-[11px]">
+                <span className="text-emerald-600 font-medium flex items-center gap-1 text-xs">
                   {mcp ? `${mcp.transport} · ${mcp.toolCount} tools` : "embedded"}
                   {settings.provider === "Ollama" && mcp?.providerReachable === false && (
                     <span className="text-rose-500 ml-1">· Ollama unreachable</span>

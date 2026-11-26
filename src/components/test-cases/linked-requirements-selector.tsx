@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Search, AlertCircle, Check, X } from "lucide-react"
+import { Search, AlertCircle, Check, X } from "@/components/ui/icons"
 
 interface Requirement {
   id: string
@@ -66,13 +66,13 @@ export function LinkedRequirementsSelector({
     <div className="space-y-2">
       {/* Selected Chips */}
       {selectedChips.length > 0 ? (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {selectedChips.map((req) => (
             <span
               key={req.id}
-              className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+              className="inline-flex h-7 max-w-full items-center gap-2 rounded-md border border-border bg-card px-2 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
             >
-              <span className="font-mono text-[11px] text-muted-foreground">{req.requirementKey}</span>
+              <span className="font-mono text-xs text-muted-foreground">{req.requirementKey}</span>
               <span className="truncate">{req.title}</span>
               <button
                 type="button"
@@ -86,7 +86,7 @@ export function LinkedRequirementsSelector({
           ))}
         </div>
       ) : (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <p className="flex items-center gap-2 text-xs text-muted-foreground">
           <AlertCircle size={14} className="shrink-0 text-amber-500" />
           Not linked to a story yet. Link one so coverage reports count this case.
         </p>
@@ -113,7 +113,7 @@ export function LinkedRequirementsSelector({
               <div
                 key={req.id}
                 onClick={() => handleToggle(req.id)}
-                className={`p-2.5 flex items-center justify-between text-xs cursor-pointer hover:bg-muted/50 transition-colors ${
+                className={`p-3 flex items-center justify-between text-xs cursor-pointer hover:bg-muted/50 transition-colors ${
                   isSelected ? "bg-blue-50/10" : ""
                 }`}
               >
@@ -122,7 +122,7 @@ export function LinkedRequirementsSelector({
                     {req.requirementKey} — {req.title}
                   </span>
                   {(req.epic || req.feature) && (
-                    <span className="text-[10px] text-muted-foreground block mt-0.5">
+                    <span className="text-xs text-muted-foreground block mt-0.5">
                       Path: {req.epic ? `${req.epic.epicKey} ${req.epic.title}` : ""}
                       {req.feature && `${req.epic ? " / " : ""}${req.feature.name}`}
                     </span>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Check, KeyRound, Loader2, Pencil, Plus, Trash2, UserPlus, Users, X } from "lucide-react"
+import { Check, KeyRound, Loader2, Pencil, Plus, Trash2, UserPlus, Users, X } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
@@ -33,7 +33,7 @@ interface Draft {
 }
 
 const EMPTY: Draft = { role: "", key: "", username: "", password: "", loginUrl: "", notes: "" }
-const input = "h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal text-foreground"
+const input = "h-8 w-full rounded-md border bg-card px-2 text-xs font-normal text-foreground"
 
 export function BrdTestUsers({ brdId }: { brdId: string }) {
   const [users, setUsers] = useState<TestUser[] | null>(null)
@@ -111,7 +111,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
 
   if (users === null) {
     return (
-      <p className="flex items-center gap-2 p-6 text-[13px] font-normal text-muted-foreground">
+      <p className="flex items-center gap-2 p-6 text-xs font-normal text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading…
       </p>
     )
@@ -171,7 +171,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
             <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Users className="h-4 w-4 text-primary" /> Test users of this BRD
             </h3>
-            <p className="mt-0.5 max-w-2xl text-[13px] font-normal text-muted-foreground">
+            <p className="mt-0.5 max-w-2xl text-xs font-normal text-muted-foreground">
               The people of the system this BRD describes, with the logins tests use. Test cases generated from this BRD write each step as “As
               reviewer: …”, and the Browser Agent in Automation Hub logs every user in, in their own browser. Passwords are stored encrypted and never
               shown again, and are never sent to the AI.
@@ -185,7 +185,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
         </div>
 
         {suggestions.length > 0 && canManage && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5 rounded-lg bg-muted/60 p-2.5">
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/60 p-3">
             <span className="text-xs font-medium text-foreground">Roles this BRD mentions without a user:</span>
             {suggestions.map((r) => (
               <button
@@ -207,7 +207,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
 
       {users.length === 0 && editing === null ? (
         <div className="rounded-xl border border-dashed bg-card p-6 text-center">
-          <p className="text-[13px] font-normal text-muted-foreground">No test users yet. Add the roles this BRD describes (applicant, reviewer, approver…) and their logins.</p>
+          <p className="text-xs font-normal text-muted-foreground">No test users yet. Add the roles this BRD describes (applicant, reviewer, approver…) and their logins.</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card">
@@ -219,7 +219,7 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
             ) : (
               <div key={u.id} className="flex flex-wrap items-center gap-3 border-b px-4 py-3 last:border-b-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-semibold text-foreground" dir="auto">
+                  <p className="text-xs font-semibold text-foreground" dir="auto">
                     {u.role}
                   </p>
                   <p className="text-xs font-normal text-muted-foreground">
@@ -241,10 +241,10 @@ export function BrdTestUsers({ brdId }: { brdId: string }) {
                 </div>
                 {canManage && (
                   <div className="flex gap-1">
-                    <button onClick={() => startEdit(u)} disabled={editing !== null} className="rounded p-1.5 hover:bg-muted disabled:opacity-40" title="Edit">
+                    <button onClick={() => startEdit(u)} disabled={editing !== null} className="rounded p-2 hover:bg-muted disabled:opacity-40" title="Edit">
                       <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                     </button>
-                    <button onClick={() => setRemoving(u)} disabled={editing !== null} className="rounded p-1.5 hover:bg-muted disabled:opacity-40" title="Remove">
+                    <button onClick={() => setRemoving(u)} disabled={editing !== null} className="rounded p-2 hover:bg-muted disabled:opacity-40" title="Remove">
                       <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-rose-600" />
                     </button>
                   </div>

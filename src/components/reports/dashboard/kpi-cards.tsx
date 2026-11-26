@@ -2,7 +2,7 @@
 
 import { memo } from "react"
 import { LineChart, Line, ResponsiveContainer } from "recharts"
-import { ArrowUp, ArrowDown, Minus, type LucideIcon } from "lucide-react"
+import { ArrowUp, ArrowDown, Minus, type LucideIcon } from "@/components/ui/icons"
 import { KPI_ACCENTS } from "@/lib/reports/colors"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -50,20 +50,20 @@ const KPICard = memo(function KPICard({ data }: { data: KPICardData }) {
     <button
       onClick={() => scrollToTarget(data.targetId)}
       aria-label={`${data.label}: ${data.value}, ${data.change}`}
-      className="group flex flex-col rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex flex-col rounded-xl border border-border bg-card p-6 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >
       <div className="flex items-start justify-between">
         <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", accent.iconBg)}>
           <Icon className={cn("h-5 w-5", accent.iconText)} />
         </div>
-        <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold", badgeCls)}>
+        <span className={cn("inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold", badgeCls)}>
           <TrendIcon className="h-3 w-3" />
           {data.change}
         </span>
       </div>
 
       <div className="mt-3 text-2xl font-semibold text-foreground">{data.value}</div>
-      <div className="text-[11px] font-medium text-muted-foreground">{data.label}</div>
+      <div className="text-xs font-medium text-muted-foreground">{data.label}</div>
 
       <div className="mt-2 h-6">
         {data.progress != null ? (
@@ -90,7 +90,7 @@ function ProgressRing({ value, color }: { value: number; color: string }) {
         <circle cx="12" cy="12" r={r} fill="none" stroke="#e2e8f0" strokeWidth="3" />
         <circle cx="12" cy="12" r={r} fill="none" stroke={color} strokeWidth="3" strokeDasharray={c} strokeDashoffset={off} strokeLinecap="round" />
       </svg>
-      <span className="text-[11px] font-semibold text-muted-foreground">{Math.round(value)}%</span>
+      <span className="text-xs font-semibold text-muted-foreground">{Math.round(value)}%</span>
     </div>
   )
 }

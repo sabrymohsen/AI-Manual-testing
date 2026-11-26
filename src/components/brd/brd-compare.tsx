@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 /**
@@ -56,7 +56,7 @@ export function BrdCompare({
   }
 
   const select = (value: string, set: (v: string) => void, label: string) => (
-    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <label className="flex items-center gap-2 text-xs text-muted-foreground">
       {label}
       <select value={value} onChange={(e) => set(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs text-foreground">
         {versions.map((v) => (
@@ -79,7 +79,7 @@ export function BrdCompare({
             <span className="font-medium text-red-700 dark:text-red-400">−{data.removed}</span> paragraphs
           </span>
         )}
-        <label className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
+        <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
           <input type="checkbox" checked={onlyChanges} onChange={(e) => setOnlyChanges(e.target.checked)} />
           Only show changes
         </label>
@@ -103,7 +103,7 @@ export function BrdCompare({
         <div className="space-y-1 rounded-lg border bg-card p-3 text-sm" dir="auto">
           {rows.map((r, i) =>
             r.op === "gap" ? (
-              <p key={i} className="py-0.5 text-center text-[11px] text-muted-foreground">
+              <p key={i} className="py-0.5 text-center text-xs text-muted-foreground">
                 · · · {r.count} unchanged paragraph{r.count === 1 ? "" : "s"} · · ·
               </p>
             ) : (

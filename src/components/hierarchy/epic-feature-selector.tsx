@@ -112,7 +112,7 @@ export function EpicFeatureSelector({
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Epic</label>
+        <label className="block text-xs font-semibold text-muted-foreground mb-2">Epic</label>
         <select
           value={epicId}
           onChange={(e) => handleEpicChange(e.target.value)}
@@ -125,9 +125,9 @@ export function EpicFeatureSelector({
         </select>
       </div>
       <div>
-        <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Feature</label>
+        <label className="block text-xs font-semibold text-muted-foreground mb-2">Feature</label>
         {creating ? (
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             <input
               autoFocus
               value={newFeatureName}
@@ -140,7 +140,7 @@ export function EpicFeatureSelector({
               type="button"
               onClick={handleCreateFeature}
               disabled={saving || !newFeatureName.trim()}
-              className="px-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold disabled:opacity-50"
+              className="px-3 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-semibold disabled:opacity-50"
             >
               {saving ? "…" : "Add"}
             </button>
@@ -153,7 +153,7 @@ export function EpicFeatureSelector({
             </button>
           </div>
         ) : (
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             <select
               value={featureId}
               onChange={(e) => handleFeatureChange(e.target.value)}
@@ -167,7 +167,7 @@ export function EpicFeatureSelector({
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="px-2.5 rounded-xl border border-violet-200 text-violet-600 hover:bg-violet-50 text-xs font-semibold whitespace-nowrap"
+              className="px-3 rounded-xl border border-violet-200 text-violet-600 hover:bg-violet-50 text-xs font-semibold whitespace-nowrap"
               title="Create a new feature"
             >
               ＋ New

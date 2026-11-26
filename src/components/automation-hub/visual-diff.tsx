@@ -25,7 +25,7 @@ import {
   Cloud,
   Cpu,
   History
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 // ---------- Types ----------
 
@@ -311,7 +311,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
               subTab === t.id ? "bg-card text-primary shadow-sm border" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -330,12 +330,12 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
           {subTab === "baselines" && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-muted-foreground">
+                <span className="text-xs font-medium text-muted-foreground">
                   {baselines.length} baseline{baselines.length === 1 ? "" : "s"}
                 </span>
                 <button
                   onClick={() => setShowCreate((v) => !v)}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-[10px] font-semibold"
+                  className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-semibold"
                 >
                   <Plus size={12} /> New Baseline
                 </button>
@@ -343,30 +343,30 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
 
               {showCreate && (
                 <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
-                  <span className="text-[11px] font-medium text-muted-foreground">Create baseline</span>
+                  <span className="text-xs font-medium text-muted-foreground">Create baseline</span>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    <input value={form.testName} onChange={(e) => setForm({ ...form, testName: e.target.value })} placeholder="Test name *" className="h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50" />
-                    <input value={form.pageName} onChange={(e) => setForm({ ...form, pageName: e.target.value })} placeholder="Page name" className="h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50" />
-                    <select value={form.browser} onChange={(e) => setForm({ ...form, browser: e.target.value })} className="h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50 cursor-pointer">
+                    <input value={form.testName} onChange={(e) => setForm({ ...form, testName: e.target.value })} placeholder="Test name *" className="h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50" />
+                    <input value={form.pageName} onChange={(e) => setForm({ ...form, pageName: e.target.value })} placeholder="Page name" className="h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50" />
+                    <select value={form.browser} onChange={(e) => setForm({ ...form, browser: e.target.value })} className="h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50 cursor-pointer">
                       {["chrome", "firefox", "edge", "safari"].map((b) => (
                         <option key={b} value={b}>{b}</option>
                       ))}
                     </select>
-                    <input value={form.versionTag} onChange={(e) => setForm({ ...form, versionTag: e.target.value })} placeholder="Tag (v1.0 / branch)" className="h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50" />
+                    <input value={form.versionTag} onChange={(e) => setForm({ ...form, versionTag: e.target.value })} placeholder="Tag (v1.0 / branch)" className="h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50" />
                   </div>
                   {/* source */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <select
                       value={form.evidenceId}
                       onChange={(e) => setForm({ ...form, evidenceId: e.target.value, dataUrl: "" })}
-                      className="h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50 cursor-pointer"
+                      className="h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50 cursor-pointer"
                     >
                       <option value="">From evidence screenshot…</option>
                       {screenshotOptions.map((s) => (
                         <option key={s.id} value={s.id}>{s.testName} #{s.stepNumber}</option>
                       ))}
                     </select>
-                    <label className="h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50 cursor-pointer flex items-center gap-1.5 text-muted-foreground">
+                    <label className="h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50 cursor-pointer flex items-center gap-2 text-muted-foreground">
                       <Upload size={12} /> {form.dataUrl ? "Image ready ✓" : "Or upload PNG/JPG…"}
                       <input
                         type="file"
@@ -383,7 +383,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                     <button
                       onClick={createBaseline}
                       disabled={creating || !form.testName || (!form.evidenceId && !form.dataUrl)}
-                      className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-[10px] font-semibold"
+                      className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold"
                     >
                       {creating ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Save baseline
                     </button>
@@ -394,8 +394,8 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
               {baselines.length === 0 ? (
                 <div className="py-16 text-center bg-card border rounded-xl space-y-2">
                   <Images size={26} className="text-slate-300 mx-auto" />
-                  <p className="text-[11px] font-medium text-muted-foreground">No baselines yet</p>
-                  <p className="text-[9.5px] text-muted-foreground font-medium">Capture a baseline from an evidence screenshot or upload one to start tracking visual regressions.</p>
+                  <p className="text-xs font-medium text-muted-foreground">No baselines yet</p>
+                  <p className="text-xs text-muted-foreground font-medium">Capture a baseline from an evidence screenshot or upload one to start tracking visual regressions.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
@@ -403,9 +403,9 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                     <div key={b.id} className="bg-card border rounded-xl shadow-sm overflow-hidden group">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={b.url} alt={b.testName} className="w-full h-36 object-cover bg-muted border-b" />
-                      <div className="p-2.5 space-y-1.5">
-                        <p className="text-[10px] font-semibold text-foreground truncate">{b.testName}</p>
-                        <div className="flex items-center gap-1 flex-wrap text-[11px] font-medium">
+                      <div className="p-3 space-y-2">
+                        <p className="text-xs font-semibold text-foreground truncate">{b.testName}</p>
+                        <div className="flex items-center gap-1 flex-wrap text-xs font-medium">
                           <span className="bg-muted border rounded px-1 py-px text-muted-foreground">{b.browser}</span>
                           {b.viewport && <span className="bg-muted border rounded px-1 py-px text-muted-foreground">{b.viewport}</span>}
                           {b.versionTag && <span className="bg-primary/10 border border-primary/25 rounded px-1 py-px text-primary inline-flex items-center gap-0.5"><Tag size={7} />{b.versionTag}</span>}
@@ -418,7 +418,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                               setIgnoreRegions([])
                               setSubTab("compare")
                             }}
-                            className="flex-1 inline-flex items-center justify-center gap-1 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/15 text-[9px] font-semibold"
+                            className="flex-1 inline-flex items-center justify-center gap-1 h-7 rounded-lg bg-primary/10 text-primary hover:bg-primary/15 text-xs font-semibold"
                           >
                             <ScanEye size={11} /> Compare
                           </button>
@@ -444,11 +444,11 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
           {subTab === "compare" && (
             <div className="space-y-4">
               {/* Controls */}
-              <div className="bg-card border rounded-xl shadow-sm p-3.5 space-y-3">
+              <div className="bg-card border rounded-xl shadow-sm p-3 space-y-3">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
                   <div>
-                    <label className="text-[11px] font-medium text-muted-foreground block mb-1">Baseline</label>
-                    <select value={selectedBaselineId} onChange={(e) => { setSelectedBaselineId(e.target.value); setComparison(null); setIgnoreRegions([]) }} className="w-full h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50 cursor-pointer">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Baseline</label>
+                    <select value={selectedBaselineId} onChange={(e) => { setSelectedBaselineId(e.target.value); setComparison(null); setIgnoreRegions([]) }} className="w-full h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50 cursor-pointer">
                       <option value="">Select baseline…</option>
                       {baselines.map((b) => (
                         <option key={b.id} value={b.id}>{b.testName} · {b.browser}{b.versionTag ? ` · ${b.versionTag}` : ""}</option>
@@ -456,8 +456,8 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                     </select>
                   </div>
                   <div>
-                    <label className="text-[11px] font-medium text-muted-foreground block mb-1">Current image</label>
-                    <select value={currentEvidenceId} onChange={(e) => { setCurrentEvidenceId(e.target.value); setCurrentDataUrl("") }} className="w-full h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50 cursor-pointer">
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">Current image</label>
+                    <select value={currentEvidenceId} onChange={(e) => { setCurrentEvidenceId(e.target.value); setCurrentDataUrl("") }} className="w-full h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50 cursor-pointer">
                       <option value="">From evidence screenshot…</option>
                       {screenshotOptions.map((s) => (
                         <option key={s.id} value={s.id}>{s.testName} #{s.stepNumber}</option>
@@ -465,20 +465,20 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
-                    <label className="flex-1 h-8 rounded-lg border px-2 text-[10px] font-semibold bg-muted/50 cursor-pointer flex items-center gap-1.5 text-muted-foreground">
+                    <label className="flex-1 h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50 cursor-pointer flex items-center gap-2 text-muted-foreground">
                       <Upload size={12} /> {currentDataUrl ? "Ready ✓" : "Upload"}
                       <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { setCurrentDataUrl(await fileToPngDataUrl(f)); setCurrentEvidenceId("") } }} />
                     </label>
                     <button
                       onClick={runComparison}
                       disabled={running || !selectedBaselineId || (!currentEvidenceId && !currentDataUrl)}
-                      className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-[10px] font-semibold shrink-0"
+                      className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold shrink-0"
                     >
                       {running ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} className="fill-current" />} Run
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-wrap text-[8.5px] font-semibold text-muted-foreground">
+                <div className="flex items-center gap-3 flex-wrap text-xs font-semibold text-muted-foreground">
                   <span>Threshold <span className="text-foreground font-semibold">{threshold}%</span></span>
                   <span>Sensitivity <span className="text-foreground font-semibold">{colorSensitivity}</span></span>
                   <span>AA ignore <span className="text-foreground font-semibold">{ignoreAntiAliasing ? "on" : "off"}</span></span>
@@ -496,7 +496,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
               {/* Baseline with ignore-region drawing */}
               {selectedBaseline && !comparison && (
                 <div className="bg-card border rounded-xl shadow-sm p-3">
-                  <span className="text-[11px] font-medium text-muted-foreground block mb-1.5">Baseline (draw to exclude regions)</span>
+                  <span className="text-xs font-medium text-muted-foreground block mb-2">Baseline (draw to exclude regions)</span>
                   <div className="relative inline-block max-w-full select-none" onMouseDown={onDrawStart} onMouseMove={onDrawMove} onMouseUp={onDrawEnd} onMouseLeave={onDrawEnd}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img ref={imgRef} src={selectedBaseline.url} alt="baseline" className="max-h-[46vh] w-auto rounded-lg border" draggable={false} />
@@ -514,18 +514,18 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
               {comparison && (
                 <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
                   {/* score / status header */}
-                  <div className="flex items-center gap-3 flex-wrap border-b pb-2.5">
+                  <div className="flex items-center gap-3 flex-wrap border-b pb-3">
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-semibold text-foreground">{comparison.diffScore}%</span>
-                      <span className="text-[9px] font-semibold text-muted-foreground">changed · threshold {comparison.threshold}%</span>
+                      <span className="text-xs font-semibold text-muted-foreground">changed · threshold {comparison.threshold}%</span>
                     </div>
                     {(() => { const m = statusMeta(comparison.status); const I = m.icon; return (
-                      <span className={`inline-flex items-center gap-1 rounded-full border font-medium px-2.5 py-1 text-[11px] ${m.cls}`}><I size={12} /> {m.label}</span>
+                      <span className={`inline-flex items-center gap-1 rounded-full border font-medium px-3 py-1 text-xs ${m.cls}`}><I size={12} /> {m.label}</span>
                     ) })()}
                     {comparison.dimensionMismatch && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 text-[11px] font-medium"><AlertTriangle size={9} /> dimension mismatch</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 text-xs font-medium"><AlertTriangle size={9} /> dimension mismatch</span>
                     )}
-                    <button onClick={() => setInvestigate(comparison)} className="ml-auto inline-flex items-center gap-1 text-[9.5px] font-semibold text-primary hover:text-primary">
+                    <button onClick={() => setInvestigate(comparison)} className="ml-auto inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary">
                       <Eye size={12} /> Investigate
                     </button>
                   </div>
@@ -538,7 +538,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                       { label: "Diff (changed pixels)", url: comparison.diffUrl }
                     ].map((pane) => (
                       <div key={pane.label} className="space-y-1">
-                        <span className="text-[11px] font-medium text-muted-foreground">{pane.label}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{pane.label}</span>
                         {pane.url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={pane.url} alt={pane.label} className="w-full max-h-64 object-contain rounded-lg border bg-slate-950" />
@@ -551,13 +551,13 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
 
                   {/* actions */}
                   <div className="flex items-center gap-2 flex-wrap pt-2 border-t">
-                    <button onClick={() => actOnComparison(comparison.id, "approve")} disabled={acting || comparison.status === "approved"} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-[10px] font-semibold">
+                    <button onClick={() => actOnComparison(comparison.id, "approve")} disabled={acting || comparison.status === "approved"} className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-xs font-semibold">
                       <Check size={12} /> Approve as New Baseline
                     </button>
-                    <button onClick={() => actOnComparison(comparison.id, "reject")} disabled={acting || comparison.status === "rejected"} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-rose-200 text-rose-600 bg-card hover:bg-rose-50 text-[10px] font-semibold">
+                    <button onClick={() => actOnComparison(comparison.id, "reject")} disabled={acting || comparison.status === "rejected"} className="inline-flex items-center gap-2 h-8 px-3 rounded-xl border border-rose-200 text-rose-600 bg-card hover:bg-rose-50 text-xs font-semibold">
                       <X size={12} /> Reject
                     </button>
-                    <button onClick={() => setInvestigate(comparison)} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border text-muted-foreground bg-card hover:bg-muted/50 text-[10px] font-semibold">
+                    <button onClick={() => setInvestigate(comparison)} className="inline-flex items-center gap-2 h-8 px-3 rounded-xl border border-border text-muted-foreground bg-card hover:bg-muted/50 text-xs font-semibold">
                       <Eye size={12} /> Investigate
                     </button>
                   </div>
@@ -566,8 +566,8 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
 
               {/* History */}
               {history.length > 0 && (
-                <div className="bg-card border rounded-xl shadow-sm p-3.5">
-                  <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 mb-2"><History size={13} className="text-primary" /> Comparison history</span>
+                <div className="bg-card border rounded-xl shadow-sm p-3">
+                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 mb-2"><History size={13} className="text-primary" /> Comparison history</span>
                   <div className="space-y-1">
                     {history.map((h) => { const m = statusMeta(h.status); const I = m.icon; return (
                       <button key={h.id} onClick={() => setInvestigate(h)} className="w-full flex items-center gap-2 p-2 rounded-xl border hover:border-border text-left">
@@ -575,9 +575,9 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={h.diffUrl} alt="diff" className="h-9 w-14 object-cover rounded border bg-slate-950" />
                         )}
-                        <span className="font-semibold text-foreground text-[11px] font-mono">{h.diffScore}%</span>
-                        <span className={`inline-flex items-center gap-1 rounded-full border font-medium px-1.5 py-px text-[11px] ${m.cls}`}><I size={9} /> {m.label}</span>
-                        <span className="ml-auto text-[8.5px] font-mono text-muted-foreground">{new Date(h.createdAt).toLocaleString()}</span>
+                        <span className="font-semibold text-foreground text-xs font-mono">{h.diffScore}%</span>
+                        <span className={`inline-flex items-center gap-1 rounded-full border font-medium px-2 py-px text-xs ${m.cls}`}><I size={9} /> {m.label}</span>
+                        <span className="ml-auto text-xs font-mono text-muted-foreground">{new Date(h.createdAt).toLocaleString()}</span>
                       </button>
                     ) })}
                   </div>
@@ -590,21 +590,21 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
           {subTab === "settings" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-card border rounded-xl shadow-sm p-4 space-y-4">
-                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2"><SlidersHorizontal size={13} className="text-primary" /> Comparison Settings</span>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[9.5px] font-semibold"><span className="text-muted-foreground">Diff threshold (pass/fail)</span><span className="text-primary font-semibold font-mono">{threshold}%</span></div>
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2"><SlidersHorizontal size={13} className="text-primary" /> Comparison Settings</span>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-semibold"><span className="text-muted-foreground">Diff threshold (pass/fail)</span><span className="text-primary font-semibold font-mono">{threshold}%</span></div>
                   <input type="range" min={0} max={100} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} className="w-full accent-indigo-600 cursor-pointer" />
-                  <p className="text-[8px] text-muted-foreground font-medium">Comparisons with a diff score ≤ threshold PASS.</p>
+                  <p className="text-xs text-muted-foreground font-medium">Comparisons with a diff score ≤ threshold PASS.</p>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-[9.5px] font-semibold"><span className="text-muted-foreground">Color sensitivity</span><span className="text-primary font-semibold font-mono">{colorSensitivity}</span></div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs font-semibold"><span className="text-muted-foreground">Color sensitivity</span><span className="text-primary font-semibold font-mono">{colorSensitivity}</span></div>
                   <input type="range" min={0} max={100} value={colorSensitivity} onChange={(e) => setColorSensitivity(Number(e.target.value))} className="w-full accent-indigo-600 cursor-pointer" />
-                  <p className="text-[8px] text-muted-foreground font-medium">Higher = stricter (smaller color differences count as changes).</p>
+                  <p className="text-xs text-muted-foreground font-medium">Higher = stricter (smaller color differences count as changes).</p>
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
                   <div>
-                    <span className="text-[10px] font-semibold text-foreground block">Ignore anti-aliasing</span>
-                    <span className="text-[8px] text-muted-foreground font-medium">Don't count anti-aliased edge pixels as changes</span>
+                    <span className="text-xs font-semibold text-foreground block">Ignore anti-aliasing</span>
+                    <span className="text-xs text-muted-foreground font-medium">Don't count anti-aliased edge pixels as changes</span>
                   </div>
                   <button onClick={() => setIgnoreAntiAliasing((v) => !v)} className={`h-6 w-11 rounded-full relative transition-colors ${ignoreAntiAliasing ? "bg-primary" : "bg-slate-300"}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${ignoreAntiAliasing ? "left-[22px]" : "left-0.5"}`} />
@@ -613,26 +613,26 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
               </div>
 
               <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
-                <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2"><Layers size={13} className="text-primary" /> Visual Testing Provider</span>
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2"><Layers size={13} className="text-primary" /> Visual Testing Provider</span>
                 {PROVIDERS.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => p.available && setProvider(p.id)}
                     disabled={!p.available}
-                    className={`w-full flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all ${
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
                       provider === p.id ? "border-primary/25 ring-1 ring-primary/30 bg-primary/10" : "hover:border-border"
                     } ${!p.available ? "opacity-50 cursor-not-allowed" : ""}`}
                   >
                     {p.id === "shaft-opencv" ? <Cpu size={15} className="text-primary" /> : <Cloud size={15} className="text-muted-foreground" />}
                     <div className="flex-1">
-                      <span className="text-[10.5px] font-semibold text-foreground block">{p.label}</span>
-                      <span className="text-[11px] font-medium text-muted-foreground">{p.note}</span>
+                      <span className="text-xs font-semibold text-foreground block">{p.label}</span>
+                      <span className="text-xs font-medium text-muted-foreground">{p.note}</span>
                     </div>
                     {provider === p.id && <CheckCircle2 size={14} className="text-primary" />}
-                    {!p.available && <span className="text-[7.5px] font-semibold uppercase bg-muted border rounded-full px-1.5 py-0.5 text-muted-foreground">optional</span>}
+                    {!p.available && <span className="text-xs font-semibold uppercase bg-muted border rounded-full px-2 py-0.5 text-muted-foreground">optional</span>}
                   </button>
                 ))}
-                <p className="text-[8px] text-muted-foreground font-medium leading-relaxed">
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                   The built-in engine runs a real OpenCV-equivalent pixel diff. Applitools Eyes and Selenium Shutterbug light up when their SDK credentials are configured in the Maven workspace.
                 </p>
               </div>
@@ -644,12 +644,12 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
       {/* INVESTIGATE MODAL */}
       {investigate && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setInvestigate(null)}>
-          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-6xl max-h-[92vh] overflow-y-auto p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-6xl max-h-[92vh] overflow-y-auto p-6 space-y-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b pb-2">
               <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <ScanEye size={16} className="text-primary" /> Visual Investigation — {investigate.diffScore}% changed
               </span>
-              <button onClick={() => setInvestigate(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground"><X size={18} /></button>
+              <button onClick={() => setInvestigate(null)} className="p-2 text-muted-foreground hover:text-muted-foreground"><X size={18} /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {[
@@ -658,7 +658,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                 { label: "Diff (red = changed)", url: investigate.diffUrl }
               ].map((pane) => (
                 <div key={pane.label} className="space-y-1">
-                  <span className="text-[11px] font-medium text-muted-foreground">{pane.label}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{pane.label}</span>
                   {pane.url && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={pane.url} alt={pane.label} className="w-full object-contain rounded-lg border bg-slate-950" />

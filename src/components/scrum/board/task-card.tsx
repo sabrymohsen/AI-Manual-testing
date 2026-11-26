@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import type { ScrumTask } from "@/types/scrum"
 import { AvatarStack, overdueDays, STATUS_META, PriorityIcon, DotLabel, TYPE_DOT } from "@/components/scrum/shared"
 import { TYPE_META } from "@/components/scrum/task/task-detail-config"
-import { MessageSquare, GitBranch, CalendarClock, User, Tag, Hash, Ban } from "lucide-react"
+import { MessageSquare, GitBranch, CalendarClock, User, Tag, Hash, Ban } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import { useUpdateTask, useScrumMembers, useBoardColumns } from "@/hooks/scrum/use-scrum"
 import { useCurrentUser } from "@/hooks/scrum/use-scrum"
@@ -70,8 +70,8 @@ export function TaskCard({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setQuickAction(null) }}
       className={cn(
-        "group relative cursor-pointer select-none rounded-[7px] border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-foreground/20",
-        layout === "compact" ? "px-2.5 py-2" : "p-2.5",
+        "group relative cursor-pointer select-none rounded-md border border-border bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors hover:border-foreground/20",
+        layout === "compact" ? "px-3 py-2" : "p-3",
         dragging && "border-primary/40 shadow-lg ring-1 ring-primary/30"
       )}
     >
@@ -94,17 +94,17 @@ export function TaskCard({
               <User className="h-3.5 w-3.5" />
             </button>
             {quickAction === "assignee" && (
-              <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-border bg-card p-1.5 shadow-md">
-                <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Assignee</p>
+              <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-border bg-card p-2 shadow-md">
+                <p className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Assignee</p>
                 {currentUser && (
                   <button
                     onClick={assignToMe}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                      "flex w-full items-center gap-2 rounded-md px-2 py-2 text-xs transition-colors",
                       isAssignedToMe ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent"
                     )}
                   >
-                    <span className="h-5 w-5 rounded-full bg-primary text-[10px] font-bold text-white flex items-center justify-center">
+                    <span className="h-5 w-5 rounded-full bg-primary text-xs font-bold text-white flex items-center justify-center">
                       {currentUser.name?.[0] || currentUser.email[0]}
                     </span>
                     {isAssignedToMe ? "Assigned to me" : "Assign to me"}
@@ -123,11 +123,11 @@ export function TaskCard({
                       setQuickAction(null)
                     }}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                      "flex w-full items-center gap-2 rounded-md px-2 py-2 text-xs transition-colors",
                       task.assignees.some((a) => a.id === m.id) ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent"
                     )}
                   >
-                    <span className="h-5 w-5 rounded-full bg-muted text-[10px] font-bold text-foreground flex items-center justify-center">
+                    <span className="h-5 w-5 rounded-full bg-muted text-xs font-bold text-foreground flex items-center justify-center">
                       {m.name?.[0] || m.email[0]}
                     </span>
                     {m.name || m.email}
@@ -150,14 +150,14 @@ export function TaskCard({
               <Tag className="h-3.5 w-3.5" />
             </button>
             {quickAction === "status" && (
-              <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border border-border bg-card p-1.5 shadow-md">
-                <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Status</p>
+              <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border border-border bg-card p-2 shadow-md">
+                <p className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</p>
                 {columns?.map((col) => (
                   <button
                     key={col.id}
                     onClick={() => setStatus(col.status)}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                      "flex w-full items-center gap-2 rounded-md px-2 py-2 text-xs transition-colors",
                       task.status === col.status ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent"
                     )}
                   >
@@ -190,15 +190,15 @@ export function TaskCard({
               <Hash className="h-3.5 w-3.5" />
             </button>
             {quickAction === "points" && (
-              <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-border bg-card p-1.5 shadow-md">
-                <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Story Points</p>
+              <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-border bg-card p-2 shadow-md">
+                <p className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Story Points</p>
                 <div className="grid grid-cols-4 gap-1">
                   {[null, 1, 2, 3, 5, 8, 13, 21].map((pts) => (
                     <button
                       key={pts ?? "null"}
                       onClick={() => setPoints(pts)}
                       className={cn(
-                        "rounded-md px-1.5 py-1 text-xs font-semibold transition-colors",
+                        "rounded-md px-2 py-1 text-xs font-semibold transition-colors",
                         task.storyPoints === pts
                           ? "bg-primary text-white"
                           : "bg-muted hover:bg-accent text-muted-foreground"
@@ -216,7 +216,7 @@ export function TaskCard({
 
       {/* Row 1: key + assignees */}
       <div className="flex items-center gap-2">
-        <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{task.key}</span>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">{task.key}</span>
         {layout === "compact" && <PriorityIcon priority={task.priority} />}
         <span className="ml-auto flex items-center">
           {task.assignees.length > 0 && <AvatarStack members={task.assignees} max={layout === "compact" ? 1 : 2} size="sm" />}
@@ -226,7 +226,7 @@ export function TaskCard({
       {/* Title */}
       <p
         className={cn(
-          "mt-1.5 text-[13px] font-medium leading-snug text-foreground",
+          "mt-2 text-xs font-medium leading-snug text-foreground",
           layout === "compact" ? "line-clamp-1" : "line-clamp-2"
         )}
       >
@@ -235,7 +235,7 @@ export function TaskCard({
 
       {layout === "compact" ? (
         (blocked || overdue !== null || (task.storyPoints != null && !hideEstimations)) && (
-          <div className="mt-1.5 flex items-center gap-1.5">
+          <div className="mt-2 flex items-center gap-2">
             {blocked && <BlockedChip />}
             {overdue !== null && <OverdueChip days={overdue} />}
             {task.storyPoints != null && !hideEstimations && <PointsChip points={task.storyPoints} />}
@@ -244,9 +244,9 @@ export function TaskCard({
       ) : (
         <>
           {/* Meta row */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <span
-              className="inline-flex h-5 w-5 items-center justify-center rounded-[5px] border border-border"
+              className="inline-flex h-5 w-5 items-center justify-center rounded border border-border"
               title={`Priority: ${task.priority.toLowerCase()}`}
             >
               <PriorityIcon priority={task.priority} />
@@ -257,13 +257,13 @@ export function TaskCard({
             {blocked && <BlockedChip />}
             {overdue !== null && <OverdueChip days={overdue} />}
             {task.branchName && (
-              <span className="inline-flex h-5 max-w-[9rem] items-center gap-1 rounded-[5px] border border-border px-1.5 text-[11px] text-muted-foreground">
+              <span className="inline-flex h-5 max-w-[9rem] items-center gap-1 rounded border border-border px-2 text-xs text-muted-foreground">
                 <GitBranch className="h-3 w-3 shrink-0" />
                 <span className="truncate">{task.branchName}</span>
               </span>
             )}
             {task.commentCount > 0 && (
-              <span className="ml-auto inline-flex items-center gap-1 text-[11px] text-muted-foreground" title={`${task.commentCount} comment(s)`}>
+              <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground" title={`${task.commentCount} comment(s)`}>
                 <MessageSquare className="h-3 w-3" />
                 {task.commentCount}
               </span>
@@ -272,7 +272,7 @@ export function TaskCard({
 
           {/* One progress line: test results win over subtasks */}
           {tests && tests.total > 0 ? (
-            <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted-foreground" title={`${tests.total} executed test case(s)`}>
+            <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground" title={`${tests.total} executed test case(s)`}>
               {tests.passed > 0 && (
                 <span className="inline-flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
@@ -300,7 +300,7 @@ export function TaskCard({
           ) : (
             total > 0 &&
             !hideSubtasks && (
-              <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted-foreground">
+              <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                 <span>
                   Subtasks {done}/{total}
                 </span>
@@ -319,7 +319,7 @@ export function TaskCard({
 function PointsChip({ points }: { points: number }) {
   return (
     <span
-      className="inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] border border-border px-1.5 text-[11px] tabular-nums text-muted-foreground"
+      className="inline-flex h-5 min-w-5 items-center justify-center rounded border border-border px-2 text-xs tabular-nums text-muted-foreground"
       title={`${points} story point(s)`}
     >
       {points}
@@ -329,7 +329,7 @@ function PointsChip({ points }: { points: number }) {
 
 function BlockedChip() {
   return (
-    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 text-[11px] font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
+    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 text-xs font-medium text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
       <Ban className="h-3 w-3" />
       Blocked
     </span>
@@ -338,7 +338,7 @@ function BlockedChip() {
 
 function OverdueChip({ days }: { days: number }) {
   return (
-    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 text-[11px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
+    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 text-xs font-medium text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-400">
       <CalendarClock className="h-3 w-3" />
       {days}d overdue
     </span>

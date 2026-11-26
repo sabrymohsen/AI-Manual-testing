@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
-import { Play, Layers, ShieldCheck, Check, Filter, Compass, Clock, AlertCircle } from "lucide-react"
+import { Play, Layers, ShieldCheck, Check, Filter, Compass, Clock, AlertCircle } from "@/components/ui/icons"
 
 interface ProjectCredential {
   id: string
@@ -165,7 +165,7 @@ export default function NewManualSessionPage() {
       <div className="flex items-center gap-4 mb-8">
         <BackButton />
         <div>
-          <h1 className="text-3xl font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-semibold text-blue-600 ">
             New Testing Session
           </h1>
           <p className="text-muted-foreground">Configure parameters and select session mode to execute manual qa suite.</p>
@@ -173,11 +173,11 @@ export default function NewManualSessionPage() {
       </div>
 
       {/* Mode Tabs switcher */}
-      <div className="flex border-b border-border mb-8 bg-muted/50 p-1.5 rounded-xl max-w-md">
+      <div className="flex border-b border-border mb-8 bg-muted/50 p-2 rounded-xl max-w-md">
         <button
           type="button"
           onClick={() => setSessionType("structured")}
-          className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
             sessionType === "structured" ? "bg-card text-blue-600 shadow" : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -186,7 +186,7 @@ export default function NewManualSessionPage() {
         <button
           type="button"
           onClick={() => setSessionType("exploratory")}
-          className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+          className={`flex-1 py-2 text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition-all ${
             sessionType === "exploratory" ? "bg-card text-blue-600 shadow" : "text-muted-foreground hover:text-foreground"
           }`}
         >
@@ -215,7 +215,7 @@ export default function NewManualSessionPage() {
               </h2>
 
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Session Name</label>
+                <label className="block text-sm font-semibold text-foreground mb-2">Session Name</label>
                 <input
                   type="text"
                   required
@@ -226,7 +226,7 @@ export default function NewManualSessionPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Environment</label>
+                <label className="block text-sm font-semibold text-foreground mb-2">Environment</label>
                 <select
                   value={environment}
                   onChange={(e) => setEnvironment(e.target.value)}
@@ -240,7 +240,7 @@ export default function NewManualSessionPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-foreground mb-1.5">Role / Credentials</label>
+                <label className="block text-sm font-semibold text-foreground mb-2">Role / Credentials</label>
                 <select
                   value={selectedCredentialId}
                   onChange={(e) => setSelectedCredentialId(e.target.value)}
@@ -257,7 +257,7 @@ export default function NewManualSessionPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Browser</label>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Browser</label>
                   <select
                     value={browserType}
                     onChange={(e) => setBrowserType(e.target.value)}
@@ -270,7 +270,7 @@ export default function NewManualSessionPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Viewport</label>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Viewport</label>
                   <select
                     value={viewport}
                     onChange={(e) => setViewport(e.target.value)}
@@ -324,7 +324,7 @@ export default function NewManualSessionPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <Button type="button" variant="outline" size="sm" onClick={handleSelectAllFiltered} className="text-muted-foreground text-xs py-1 px-3.5 h-8 border-border hover:bg-muted/50 rounded-lg">
+                    <Button type="button" variant="outline" size="sm" onClick={handleSelectAllFiltered} className="text-muted-foreground text-xs py-1 px-3 h-8 border-border hover:bg-muted/50 rounded-lg">
                       {filteredCases.every((c) => selectedCaseIds.includes(c.id)) ? "Deselect All Filtered" : "Select All Filtered"}
                     </Button>
                   </div>
@@ -332,14 +332,14 @@ export default function NewManualSessionPage() {
 
                 {/* Filter */}
                 <div className="mb-6">
-                  <label className="block text-[11px] font-semibold uppercase text-muted-foreground mb-1 flex items-center gap-1">
+                  <label className="block text-xs font-semibold uppercase text-muted-foreground mb-1 flex items-center gap-1">
                     <Filter size={12} /> Search test cases
                   </label>
                   <input
                     value={caseSearch}
                     onChange={(e) => setCaseSearch(e.target.value)}
                     placeholder="Filter by title..."
-                    className="w-full px-2.5 py-1.5 border border-border bg-card rounded-lg text-xs focus:outline-none text-foreground"
+                    className="w-full px-3 py-2 border border-border bg-card rounded-lg text-xs focus:outline-none text-foreground"
                   />
                 </div>
 
@@ -356,7 +356,7 @@ export default function NewManualSessionPage() {
                         <div
                           key={tc.id}
                           onClick={() => handleToggleCase(tc.id)}
-                          className={`p-3.5 flex items-start gap-3.5 cursor-pointer hover:bg-muted/80 transition-colors ${
+                          className={`p-3 flex items-start gap-3 cursor-pointer hover:bg-muted/80 transition-colors ${
                             isSelected ? "bg-blue-50/40" : ""
                           }`}
                         >
@@ -368,16 +368,16 @@ export default function NewManualSessionPage() {
                           <div className="flex-1">
                             <div className="flex items-center justify-between mb-0.5 gap-2 flex-wrap">
                               <span className="font-semibold text-sm text-foreground">{tc.title}</span>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 {tc.executionType === "Automated" && (
                                   <span
                                     title="Automated test — designed for Playwright, not manual step-by-step execution"
-                                    className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-0.5"
+                                    className="text-xs font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200 flex items-center gap-0.5"
                                   >
                                     ⚠ Automated
                                   </span>
                                 )}
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                                <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
                                   tc.priority === "Critical" ? "bg-red-100 text-red-700" :
                                   tc.priority === "High" ? "bg-orange-100 text-orange-700" :
                                   "bg-muted text-muted-foreground"
@@ -387,7 +387,7 @@ export default function NewManualSessionPage() {
                               </div>
                             </div>
                             {tc.executionType === "Automated" && isSelected && (
-                              <p className="text-[10px] text-amber-600 mt-0.5">
+                              <p className="text-xs text-amber-600 mt-0.5">
                                 This case is marked Automated. Steps are designed for Playwright — running it manually may not be meaningful.
                               </p>
                             )}
@@ -400,11 +400,11 @@ export default function NewManualSessionPage() {
 
                 <div className="flex items-center justify-end gap-3 mt-8 border-t pt-6">
                   <Link href={`/projects/${projectId}`}>
-                    <Button type="button" variant="outline" className="rounded-xl border-border hover:bg-muted/50 text-muted-foreground px-5">
+                    <Button type="button" variant="outline" className="rounded-xl border-border hover:bg-muted/50 text-muted-foreground px-6">
                       Cancel
                     </Button>
                   </Link>
-                  <Button type="submit" disabled={saving || selectedCaseIds.length === 0} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl px-6 shadow-md flex items-center gap-2">
+                  <Button type="submit" disabled={saving || selectedCaseIds.length === 0} className=" bg-blue-600 text-white font-semibold rounded-xl px-6 shadow-md flex items-center gap-2">
                     <Play size={16} fill="white" /> Start Manual Session
                   </Button>
                 </div>
@@ -418,7 +418,7 @@ export default function NewManualSessionPage() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Mission Description</label>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Mission Description</label>
                     <textarea
                       required
                       value={mission}
@@ -430,7 +430,7 @@ export default function NewManualSessionPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-foreground mb-1.5 flex items-center gap-1">
+                      <label className="block text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
                         <Clock size={16} className="text-muted-foreground" /> Session Timebox
                       </label>
                       <select
@@ -447,7 +447,7 @@ export default function NewManualSessionPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-foreground mb-1.5">Areas/Modules to Cover</label>
+                      <label className="block text-sm font-semibold text-foreground mb-2">Areas/Modules to Cover</label>
                       <input
                         type="text"
                         value={areasCovered}
@@ -461,11 +461,11 @@ export default function NewManualSessionPage() {
 
                 <div className="flex items-center justify-end gap-3 mt-8 border-t pt-6">
                   <Link href={`/projects/${projectId}`}>
-                    <Button type="button" variant="outline" className="rounded-xl border-border hover:bg-muted/50 text-muted-foreground px-5">
+                    <Button type="button" variant="outline" className="rounded-xl border-border hover:bg-muted/50 text-muted-foreground px-6">
                       Cancel
                     </Button>
                   </Link>
-                  <Button type="submit" disabled={saving || !mission.trim()} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl px-6 shadow-md flex items-center gap-2">
+                  <Button type="submit" disabled={saving || !mission.trim()} className=" bg-blue-600 text-white font-semibold rounded-xl px-6 shadow-md flex items-center gap-2">
                     <Play size={16} fill="white" /> Launch Exploratory Session
                   </Button>
                 </div>

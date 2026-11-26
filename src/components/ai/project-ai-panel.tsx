@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Bot, KeyRound, Loader2, CheckCircle2, AlertTriangle, Trash2, Lock, Server, ExternalLink, Cpu } from "lucide-react"
+import { Bot, KeyRound, Loader2, CheckCircle2, AlertTriangle, Trash2, Lock, Server, ExternalLink, Cpu } from "@/components/ui/icons"
 import { useLocalAi, bestLocalModel } from "@/components/desktop/use-local-ai"
 
 /**
@@ -210,7 +210,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
 
   if (loadFailed) {
     return (
-      <div className="p-6 border border-border shadow-sm rounded-xl bg-card flex items-center justify-between gap-3 text-[13px] text-muted-foreground">
+      <div className="p-6 border border-border shadow-sm rounded-xl bg-card flex items-center justify-between gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" /> Couldn&apos;t load the AI provider settings.
         </span>
@@ -223,7 +223,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
 
   const statusLine = (
     <div
-      className={`rounded-xl border px-3.5 py-2.5 text-[13px] font-medium flex items-center gap-2 ${
+      className={`rounded-xl border px-3 py-3 text-xs font-medium flex items-center gap-2 ${
         effective
           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
           : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
@@ -247,7 +247,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
   )
 
   return (
-    <div className="p-6 border border-border shadow-sm rounded-xl bg-card space-y-5 text-[13px]">
+    <div className="p-6 border border-border shadow-sm rounded-xl bg-card space-y-6 text-xs">
       <div>
         <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
           <Bot className="h-[18px] w-[18px] text-primary" /> AI provider
@@ -264,24 +264,24 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
         "no key was ever saved" — and the fix is on the host, not in this form.
       */}
       {config?.keyUnreadable && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-destructive space-y-1.5">
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-3 text-destructive space-y-2">
           <div className="flex items-center gap-2 font-semibold">
             <AlertTriangle className="h-3.5 w-3.5" />
             This project&apos;s saved AI key can no longer be read
           </div>
           <p className="leading-relaxed">
             The key is still stored, but it was encrypted with a different
-            <code className="mx-1 px-1 py-0.5 rounded bg-destructive/10 font-mono text-[12px]">APP_ENCRYPTION_KEY</code>
+            <code className="mx-1 px-1 py-0.5 rounded bg-destructive/10 font-mono text-xs">APP_ENCRYPTION_KEY</code>
             than this server holds. That happens when the variable is unset or regenerated on deploy,
             which is why the key seems to disappear after each one. Pasting it again only lasts until the
-            next deploy; setting a permanent <code className="font-mono text-[12px]">APP_ENCRYPTION_KEY</code>
+            next deploy; setting a permanent <code className="font-mono text-xs">APP_ENCRYPTION_KEY</code>
             on the host fixes it for good.
           </p>
         </div>
       )}
 
       {localFound && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-3 space-y-2">
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-3 space-y-2">
           <p className="flex items-center gap-2 font-medium text-emerald-700 dark:text-emerald-400">
             <Cpu className="h-3.5 w-3.5" /> Ollama found on this computer · {local.models.length} model
             {local.models.length === 1 ? "" : "s"}
@@ -300,7 +300,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
               aria-label="Model on this computer"
               value={local.model || ""}
               onChange={(e) => local.setModel(e.target.value || null)}
-              className="h-8 rounded-lg border bg-background px-2 text-[13px]"
+              className="h-8 rounded-lg border bg-background px-2 text-xs"
             >
               <option value="">Off</option>
               {local.models.map((m) => (
@@ -315,7 +315,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
               </Button>
             )}
           </div>
-          <p className="text-[12px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Teammates without the desktop app (or with it closed) use the provider below.
           </p>
         </div>
@@ -330,7 +330,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="ai-provider" className="text-muted-foreground">Provider</Label>
               <select
                 id="ai-provider"
@@ -341,7 +341,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                   setModel("")
                   setNotice(null)
                 }}
-                className="h-9 w-full rounded-lg border bg-background px-3 text-[13px]"
+                className="h-9 w-full rounded-lg border bg-background px-3 text-xs"
               >
                 {catalog.map((c) => (
                   <option key={c.provider} value={c.provider}>
@@ -349,17 +349,17 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                   </option>
                 ))}
               </select>
-              {meta && <p className="text-[12px] text-muted-foreground">{meta.docsHint}</p>}
+              {meta && <p className="text-xs text-muted-foreground">{meta.docsHint}</p>}
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label htmlFor="ai-model" className="text-muted-foreground">Model</Label>
               {modelOptions.length > 0 ? (
                 <select
                   id="ai-model"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  className="h-9 w-full rounded-lg border bg-background px-3 text-[13px]"
+                  className="h-9 w-full rounded-lg border bg-background px-3 text-xs"
                 >
                   <option value="">{isOllama ? "First installed model" : "Provider default"}</option>
                   {modelOptions.map((m) => (
@@ -378,7 +378,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                 />
               )}
               {detectedModels && detectedModels.length > 0 && (
-                <p className="text-[12px] text-emerald-700 dark:text-emerald-400">
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
                   {isOllama
                     ? `${detectedModels.length} model(s) installed in Ollama`
                     : `${detectedModels.length} model(s) available to this key`}
@@ -389,8 +389,8 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
 
           {isOllama && (
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ollama-url" className="text-muted-foreground flex items-center gap-1.5">
+              <div className="space-y-2">
+                <Label htmlFor="ollama-url" className="text-muted-foreground flex items-center gap-2">
                   <Server className="h-3.5 w-3.5" /> Ollama address
                 </Label>
                 <Input
@@ -403,16 +403,16 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                   placeholder={ollamaDefaultUrl}
                   className="h-9 bg-background font-mono"
                 />
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {localFound
                     ? "You don't need this for your own Ollama: it's already used through the desktop app (see above). Only fill this in for a shared Ollama server the whole team can reach."
                     : `Leave empty to use ${ollamaDefaultUrl}. The address must be reachable from the machine this app runs on. On a hosted app, "localhost" is the server, not your computer — use the desktop app to use Ollama on your computer.`}
                 </p>
               </div>
 
-              <div className="rounded-xl border border-border bg-muted/40 px-3.5 py-3 space-y-1.5">
+              <div className="rounded-xl border border-border bg-muted/40 px-3 py-3 space-y-2">
                 <p className="font-medium text-foreground">Setting up Ollama</p>
-                <ol className="list-decimal pl-5 space-y-1 text-muted-foreground">
+                <ol className="list-decimal pl-6 space-y-1 text-muted-foreground">
                   <li>
                     Download and install Ollama from{" "}
                     <a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-0.5">
@@ -421,8 +421,8 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                     and open it, so it&apos;s running.
                   </li>
                   <li>
-                    Download a model in a terminal: <code className="px-1 py-0.5 rounded bg-muted font-mono text-[12px]">ollama pull qwen3:8b</code>{" "}
-                    (about 5 GB; <code className="font-mono text-[12px]">llama3.2</code> is smaller).
+                    Download a model in a terminal: <code className="px-1 py-0.5 rounded bg-muted font-mono text-xs">ollama pull qwen3:8b</code>{" "}
+                    (about 5 GB; <code className="font-mono text-xs">llama3.2</code> is smaller).
                   </li>
                   <li>
                     If this app runs on a server, make your Ollama reachable from it (for example through a tunnel) and
@@ -435,8 +435,8 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
           )}
 
           {!meta?.local && (
-            <div className="space-y-1.5">
-              <Label htmlFor="ai-key" className="text-muted-foreground flex items-center gap-1.5">
+            <div className="space-y-2">
+              <Label htmlFor="ai-key" className="text-muted-foreground flex items-center gap-2">
                 <KeyRound className="h-3.5 w-3.5" /> API key
                 {config?.hasKey && config.provider === provider && (
                   <span className="text-emerald-700 dark:text-emerald-400 font-normal">· saved (encrypted)</span>
@@ -451,7 +451,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                 className="h-9 bg-background font-mono"
                 autoComplete="off"
               />
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Encrypted before it&apos;s stored and never shown again. Leave blank to use the
                 server&apos;s environment key instead.
               </p>
@@ -489,7 +489,7 @@ export function ProjectAiPanel({ projectId, canManage = true }: { projectId: str
                 onClick={handleClear}
                 disabled={saving}
                 variant="outline"
-                className="h-9 px-4 text-destructive hover:text-destructive flex items-center gap-1.5"
+                className="h-9 px-4 text-destructive hover:text-destructive flex items-center gap-2"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Use workspace default
               </Button>

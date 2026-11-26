@@ -2,7 +2,7 @@
 
 import type { ScrumActivity } from "@/types/scrum"
 import { formatDistanceToNow } from "date-fns"
-import { Plus, MoveRight, UserPlus, MessageSquare, Pencil } from "lucide-react"
+import { Plus, MoveRight, UserPlus, MessageSquare, Pencil } from "@/components/ui/icons"
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   created: Plus,

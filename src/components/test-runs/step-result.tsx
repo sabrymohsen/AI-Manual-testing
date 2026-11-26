@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "lucide-react"
+import { CheckCircle2, XCircle, Clock, AlertTriangle, ChevronDown, ChevronUp, Sparkles } from "@/components/ui/icons"
 
 interface StepResultProps {
   stepNumber: number
@@ -92,7 +92,7 @@ export function StepResultItem({
 
           {/* Self Healing Diagnostics Panel */}
           {wasHealed && actionMetadata && (
-            <div className="mt-3 p-3.5 rounded-lg border border-primary/25 bg-primary/10 backdrop-blur-sm shadow-sm space-y-2.5">
+            <div className="mt-3 p-3 rounded-lg border border-primary/25 bg-primary/10 backdrop-blur-sm shadow-sm space-y-3">
               <div className="flex items-center gap-2 text-primary font-semibold text-xs">
                 <Sparkles className="h-4 w-4 text-primary animate-pulse" />
                 <span>Self-Healing Diagnostics</span>
@@ -101,22 +101,22 @@ export function StepResultItem({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div className="p-2 rounded bg-white/70 border border-indigo-50/50">
                   <p className="text-muted-foreground font-medium mb-1">Original Locator</p>
-                  <code className="text-[10px] text-red-600 break-all select-all font-mono">
+                  <code className="text-xs text-red-600 break-all select-all font-mono">
                     {actionMetadata.oldLocator || "Unknown"}
                   </code>
                 </div>
                 <div className="p-2 rounded bg-white/70 border border-indigo-50/50">
                   <p className="text-muted-foreground font-medium mb-1">Healed Locator</p>
-                  <code className="text-[10px] text-green-600 break-all select-all font-mono">
+                  <code className="text-xs text-green-600 break-all select-all font-mono">
                     {actionMetadata.newLocator || "Unknown"}
                   </code>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1 text-xs">
                 <div>
                   <span className="text-muted-foreground font-medium">Strategy: </span>
-                  <span className="capitalize font-semibold text-primary font-mono text-[11px]">
+                  <span className="capitalize font-semibold text-primary font-mono text-xs">
                     {(actionMetadata.healingMethod || "fallback_locator").replace(/_/g, " ")}
                   </span>
                 </div>
@@ -132,15 +132,15 @@ export function StepResultItem({
               </div>
 
               {actionMetadata.confidence >= 90 ? (
-                <div className="p-2 rounded bg-green-50/70 border border-green-200/50 text-[11px] text-green-800 leading-relaxed">
+                <div className="p-2 rounded bg-green-50/70 border border-green-200/50 text-xs text-green-800 leading-relaxed">
                   <strong>Auto-Updated:</strong> This locator has a high confidence score (&ge; 90%). The locator has been automatically updated in the database.
                 </div>
               ) : actionMetadata.confidence >= 70 ? (
-                <div className="p-2 rounded bg-yellow-50/70 border border-yellow-200/50 text-[11px] text-yellow-800 leading-relaxed">
+                <div className="p-2 rounded bg-yellow-50/70 border border-yellow-200/50 text-xs text-yellow-800 leading-relaxed">
                   <strong>Suggestion:</strong> This locator has been healed with moderate confidence ({actionMetadata.confidence}%). We suggest updating the test step in your test case to this new selector.
                 </div>
               ) : (
-                <div className="p-2 rounded bg-orange-50/70 border border-orange-200/50 text-[11px] text-orange-800 leading-relaxed">
+                <div className="p-2 rounded bg-orange-50/70 border border-orange-200/50 text-xs text-orange-800 leading-relaxed">
                   <strong>Warning:</strong> This step was healed with low confidence ({actionMetadata.confidence}%). The locator might be unstable. Consider reviewing the UI element.
                 </div>
               )}
@@ -149,7 +149,7 @@ export function StepResultItem({
 
           {/* Failed Step Recovery / Suggestions Panel */}
           {status === "Failed" && actionMetadata?.suggestManualRerecord && (
-            <div className="mt-3 p-3.5 rounded-lg border border-red-200 bg-red-50/30 backdrop-blur-sm shadow-sm space-y-2">
+            <div className="mt-3 p-3 rounded-lg border border-red-200 bg-red-50/30 backdrop-blur-sm shadow-sm space-y-2">
               <div className="flex items-center gap-2 text-red-900 font-semibold text-xs">
                 <AlertTriangle className="h-4 w-4 text-red-600 animate-bounce" />
                 <span>Healing Failure Recovery Suggestions</span>

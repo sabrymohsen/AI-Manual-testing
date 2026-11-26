@@ -6,7 +6,7 @@ import {
   XCircle,
   AlertTriangle,
   type LucideIcon,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import type { CaseStatus, CasePriority, ReviewState } from "../_hooks/use-test-library"
 
 /**

@@ -36,7 +36,7 @@ import {
   ArrowDownToLine,
   Radio,
   Crosshair
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 // ---------- Types ----------
 
@@ -133,7 +133,7 @@ const StatusBadge = ({ status, small = false }: { status: string; small?: boolea
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border font-semibold uppercase ${meta.className} ${
-        small ? "px-1.5 py-px text-[8px]" : "px-2 py-0.5 text-[9px]"
+        small ? "px-2 py-px text-xs" : "px-2 py-0.5 text-xs"
       }`}
     >
       <Icon size={small ? 9 : 10} /> {meta.label}
@@ -203,12 +203,12 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
       const entry = entries[Math.min(harEntryIdx, entries.length - 1)]
       return (
         <div className="space-y-2">
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto pb-1">
             {entries.slice(0, 30).map((e: any, i: number) => (
               <button
                 key={i}
                 onClick={() => setHarEntryIdx(i)}
-                className={`shrink-0 px-2 py-1 rounded-lg border text-[8.5px] font-semibold font-mono ${
+                className={`shrink-0 px-2 py-1 rounded-lg border text-xs font-semibold font-mono ${
                   i === harEntryIdx ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground hover:bg-muted/50"
                 }`}
               >
@@ -217,31 +217,31 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
             ))}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <div className="bg-slate-950 rounded-xl p-3 space-y-1.5 overflow-hidden">
+            <div className="bg-slate-950 rounded-xl p-3 space-y-2 overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-[8.5px] font-semibold uppercase text-muted-foreground">Request</span>
-                <span className="text-[9px] font-mono font-semibold text-indigo-300">{entry.request?.method}</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">Request</span>
+                <span className="text-xs font-mono font-semibold text-indigo-300">{entry.request?.method}</span>
               </div>
-              <p className="font-mono text-[9px] text-slate-300 break-all">{entry.request?.url}</p>
+              <p className="font-mono text-xs text-slate-300 break-all">{entry.request?.url}</p>
               <pre
-                className="font-mono text-[9px] leading-relaxed overflow-auto max-h-40 text-slate-200"
+                className="font-mono text-xs leading-relaxed overflow-auto max-h-40 text-slate-200"
                 dangerouslySetInnerHTML={{
                   __html: highlightJson(JSON.stringify({ headers: entry.request?.headers, postData: entry.request?.postData }, null, 2))
                 }}
               />
             </div>
-            <div className="bg-slate-950 rounded-xl p-3 space-y-1.5 overflow-hidden">
+            <div className="bg-slate-950 rounded-xl p-3 space-y-2 overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-[8.5px] font-semibold uppercase text-muted-foreground">Response</span>
+                <span className="text-xs font-semibold uppercase text-muted-foreground">Response</span>
                 <span className="flex items-center gap-2">
-                  <span className={`text-[9px] font-mono font-semibold ${Number(entry.response?.status) < 400 ? "text-emerald-300" : "text-rose-300"}`}>
+                  <span className={`text-xs font-mono font-semibold ${Number(entry.response?.status) < 400 ? "text-emerald-300" : "text-rose-300"}`}>
                     {entry.response?.status}
                   </span>
-                  <span className="text-[8px] font-mono text-amber-300 font-semibold">{Math.round(entry.time || 0)}ms</span>
+                  <span className="text-xs font-mono text-amber-300 font-semibold">{Math.round(entry.time || 0)}ms</span>
                 </span>
               </div>
               <pre
-                className="font-mono text-[9px] leading-relaxed overflow-auto max-h-44 text-slate-200"
+                className="font-mono text-xs leading-relaxed overflow-auto max-h-44 text-slate-200"
                 dangerouslySetInnerHTML={{
                   __html: highlightJson(
                     JSON.stringify({ headers: entry.response?.headers, content: entry.response?.content?.text?.slice(0, 2000) }, null, 2)
@@ -259,7 +259,7 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
   const looksJson = /^\s*[{[]/.test(textContent)
   return (
     <pre
-      className={`font-mono text-[9.5px] leading-relaxed bg-slate-950 text-slate-200 rounded-xl p-3.5 overflow-auto whitespace-pre-wrap ${
+      className={`font-mono text-xs leading-relaxed bg-slate-950 text-slate-200 rounded-xl p-3 overflow-auto whitespace-pre-wrap ${
         large ? "max-h-[52vh]" : "max-h-[40vh]"
       }`}
       {...(looksJson
@@ -270,9 +270,9 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
 }
 
 const MissingFile = () => (
-  <div className="h-40 flex flex-col items-center justify-center gap-1.5 bg-muted border rounded-xl text-muted-foreground">
+  <div className="h-40 flex flex-col items-center justify-center gap-2 bg-muted border rounded-xl text-muted-foreground">
     <FolderOpen size={18} />
-    <span className="text-[11px] font-medium">File missing on disk</span>
+    <span className="text-xs font-medium">File missing on disk</span>
   </div>
 )
 
@@ -422,12 +422,12 @@ function GifPlayer({ item, large = false }: { item: EvidenceItem; large?: boolea
           className={`w-full object-contain bg-slate-950 rounded-xl ${maxH}`}
         />
         <div className="flex items-center justify-between px-1">
-          <span className="inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">
             <ImageIcon size={10} /> Animated GIF · native playback
           </span>
           <a
             href={`/api/hub/evidence/${item.id}/download`}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:text-primary"
+            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:text-primary"
           >
             <Download size={11} /> GIF
           </a>
@@ -445,13 +445,13 @@ function GifPlayer({ item, large = false }: { item: EvidenceItem; large?: boolea
           </div>
         )}
         <canvas ref={canvasRef} className={`w-full object-contain ${maxH}`} />
-        <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-black/60 text-white text-[11px] font-medium rounded-full px-2 py-0.5">
+        <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-black/60 text-white text-xs font-medium rounded-full px-2 py-0.5">
           <ImageIcon size={9} /> GIF
         </span>
       </div>
 
       {/* Transport controls */}
-      <div className="flex items-center gap-2 bg-muted/50 border rounded-xl px-2.5 py-1.5">
+      <div className="flex items-center gap-2 bg-muted/50 border rounded-xl px-3 py-2">
         <button
           onClick={() => setPlaying((p) => !p)}
           disabled={!ready}
@@ -484,7 +484,7 @@ function GifPlayer({ item, large = false }: { item: EvidenceItem; large?: boolea
           }}
           className="flex-1 accent-indigo-600 cursor-pointer"
         />
-        <span className="text-[8.5px] font-mono font-semibold text-muted-foreground tabular-nums shrink-0">
+        <span className="text-xs font-mono font-semibold text-muted-foreground tabular-nums shrink-0">
           {frameCount ? displayIdx + 1 : 0}/{frameCount}
         </span>
 
@@ -494,7 +494,7 @@ function GifPlayer({ item, large = false }: { item: EvidenceItem; large?: boolea
             value={speed}
             onChange={(e) => setSpeed(Number(e.target.value))}
             disabled={!ready}
-            className="h-7 rounded-lg border px-1.5 text-[9px] font-semibold bg-card cursor-pointer"
+            className="h-7 rounded-lg border px-2 text-xs font-semibold bg-card cursor-pointer"
           >
             {GIF_SPEEDS.map((s) => (
               <option key={s} value={s}>
@@ -587,7 +587,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
               title="Inspect highlighted element"
             >
               <span className="absolute inset-1.5 rounded-lg ring-2 ring-primary/80 group-hover:ring-primary/30 shadow-[0_0_0_9999px_rgba(0,0,0,0)] transition-all pointer-events-none" />
-              <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 bg-primary text-white text-[8.5px] font-semibold uppercase rounded-md px-2 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none">
+              <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 bg-primary text-white text-xs font-semibold uppercase rounded-md px-2 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none">
                 <Crosshair size={10} /> {action}
                 {loc.value && <span className="font-mono lowercase opacity-90">· {loc.strategy}</span>}
               </span>
@@ -596,13 +596,13 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
             {/* Hover tooltip */}
             {hovering && (
               <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-slate-900/95 text-white rounded-lg px-3 py-2 pointer-events-none space-y-0.5">
-                <p className="text-[11px] font-medium text-indigo-300 flex items-center gap-1">
+                <p className="text-xs font-medium text-indigo-300 flex items-center gap-1">
                   <MousePointerClick size={9} /> {action} · {loc.strategy} locator
                 </p>
-                <p className="font-mono text-[9px] break-all text-slate-200">
+                <p className="font-mono text-xs break-all text-slate-200">
                   {loc.value || item.pageUrl || "Full-page capture"}
                 </p>
-                <p className="text-[8px] text-muted-foreground font-semibold">Click to inspect element details →</p>
+                <p className="text-xs text-muted-foreground font-semibold">Click to inspect element details →</p>
               </div>
             )}
           </>
@@ -623,39 +623,39 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
       {/* Element details panel */}
       {detailsOpen && showHighlights && (
         <div className="bg-muted/50 border rounded-xl p-3 space-y-2 text-left">
-          <div className="flex items-center justify-between border-b pb-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5">
+          <div className="flex items-center justify-between border-b pb-2">
+            <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
               <Crosshair size={11} className="text-primary" /> Element Inspector
             </span>
             <button onClick={() => setDetailsOpen(false)} className="text-muted-foreground hover:text-muted-foreground">
               <X size={13} />
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[9px] font-semibold text-muted-foreground">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs font-semibold text-muted-foreground">
             <div>
-              <span className="text-muted-foreground text-[11px] block">Action</span>
+              <span className="text-muted-foreground text-xs block">Action</span>
               {action}
             </div>
             <div>
-              <span className="text-muted-foreground text-[11px] block">Locator strategy</span>
+              <span className="text-muted-foreground text-xs block">Locator strategy</span>
               <span className="font-mono text-primary">{loc.strategy}</span>
             </div>
             <div className="col-span-2">
-              <span className="text-muted-foreground text-[11px] block">Locator value</span>
+              <span className="text-muted-foreground text-xs block">Locator value</span>
               <span className="font-mono break-all text-primary">
                 {loc.value || "— (element region captured directly)"}
               </span>
             </div>
             <div className="col-span-2">
-              <span className="text-muted-foreground text-[11px] block">Page</span>
+              <span className="text-muted-foreground text-xs block">Page</span>
               <span className="font-mono break-all">{item.pageUrl || "—"}</span>
             </div>
             <div>
-              <span className="text-muted-foreground text-[11px] block">Host</span>
+              <span className="text-muted-foreground text-xs block">Host</span>
               <span className="font-mono">{host || "—"}</span>
             </div>
             <div>
-              <span className="text-muted-foreground text-[11px] block">Step / Status</span>
+              <span className="text-muted-foreground text-xs block">Step / Status</span>
               #{item.stepNumber} · {item.status.toUpperCase()}
             </div>
           </div>
@@ -803,7 +803,7 @@ function ExecutionLogViewer() {
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap border-b p-3 bg-muted/50">
         <ScrollText size={14} className="text-primary" />
-        <span className="text-[11px] font-medium text-muted-foreground">Execution Logs</span>
+        <span className="text-xs font-medium text-muted-foreground">Execution Logs</span>
         <span
           className={`inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase rounded-full px-2 py-0.5 ${
             connected ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-muted text-muted-foreground border"
@@ -818,7 +818,7 @@ function ExecutionLogViewer() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter log lines by keyword..."
-            className="w-full h-8 rounded-xl border pl-8 pr-3 text-[10px] bg-card font-semibold"
+            className="w-full h-8 rounded-xl border pl-8 pr-3 text-xs bg-card font-semibold"
           />
         </div>
 
@@ -842,14 +842,14 @@ function ExecutionLogViewer() {
         </button>
         <a
           href="/api/hub/logs?download=1"
-          className="h-8 px-2.5 rounded-xl border bg-card text-muted-foreground hover:bg-muted text-[11px] font-medium inline-flex items-center gap-1"
+          className="h-8 px-3 rounded-xl border bg-card text-muted-foreground hover:bg-muted text-xs font-medium inline-flex items-center gap-1"
         >
           <Download size={11} /> Log
         </a>
       </div>
 
       {/* Level filter chips */}
-      <div className="flex items-center gap-1.5 flex-wrap px-3 py-2 border-b bg-card">
+      <div className="flex items-center gap-2 flex-wrap px-3 py-2 border-b bg-card">
         {LOG_LEVELS.map((lvl) => (
           <button
             key={lvl}
@@ -866,15 +866,15 @@ function ExecutionLogViewer() {
       </div>
 
       {/* Log body */}
-      <div ref={scrollRef} className="bg-slate-950 h-[54vh] overflow-auto p-3 font-mono text-[10px] leading-relaxed">
+      <div ref={scrollRef} className="bg-slate-950 h-[54vh] overflow-auto p-3 font-mono text-xs leading-relaxed">
         {initialLoading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 size={18} className="animate-spin text-indigo-400" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-1.5 text-muted-foreground">
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
             <FileText size={20} />
-            <span className="text-[11px] font-medium">
+            <span className="text-xs font-medium">
               {rawLines.length === 0 ? "No log output yet — run a test in the Tests tab" : "No lines match these filters"}
             </span>
           </div>
@@ -886,7 +886,7 @@ function ExecutionLogViewer() {
                 {l.raw || " "}
               </span>
               {l.count > 1 && (
-                <span className="shrink-0 self-start bg-amber-500/20 text-amber-300 rounded px-1 text-[8px] font-semibold">
+                <span className="shrink-0 self-start bg-amber-500/20 text-amber-300 rounded px-1 text-xs font-semibold">
                   ×{l.count}
                 </span>
               )}
@@ -1100,11 +1100,11 @@ export default function EvidenceVaultSection({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search test name, page URL, element..."
-            className="w-full h-9 rounded-xl border pl-8 pr-3 text-[10.5px] bg-muted/50 font-semibold"
+            className="w-full h-9 rounded-xl border pl-8 pr-3 text-xs bg-muted/50 font-semibold"
           />
         </div>
 
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-xl border px-2.5 text-[10px] bg-muted/50 font-semibold cursor-pointer">
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer">
           <option value="all">All Types</option>
           <option value="screenshot">Screenshots</option>
           <option value="gif">Animated GIFs</option>
@@ -1113,21 +1113,21 @@ export default function EvidenceVaultSection({
           <option value="har">HAR Traces</option>
         </select>
 
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-xl border px-2.5 text-[10px] bg-muted/50 font-semibold cursor-pointer">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer">
           <option value="all">All Status</option>
           <option value="pass">Pass</option>
           <option value="fail">Fail</option>
           <option value="flaky">Flaky</option>
         </select>
 
-        <select value={rangeFilter} onChange={(e) => setRangeFilter(e.target.value)} className="h-9 rounded-xl border px-2.5 text-[10px] bg-muted/50 font-semibold cursor-pointer">
+        <select value={rangeFilter} onChange={(e) => setRangeFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer">
           <option value="all">Any Time</option>
           <option value="1h">Last Hour</option>
           <option value="24h">Last 24h</option>
           <option value="7d">Last 7 Days</option>
         </select>
 
-        <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="h-9 rounded-xl border px-2.5 text-[10px] bg-muted/50 font-semibold cursor-pointer max-w-[130px]">
+        <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer max-w-[130px]">
           <option value="">All Tags</option>
           {allTags.map((t) => (
             <option key={t} value={t}>{t}</option>
@@ -1163,8 +1163,8 @@ export default function EvidenceVaultSection({
           ) : items.length === 0 ? (
             <div className="py-20 text-center bg-card border rounded-xl space-y-2">
               <FolderOpen size={26} className="text-slate-300 mx-auto" />
-              <p className="text-[11px] font-medium text-muted-foreground">No evidence matches these filters</p>
-              <p className="text-[9.5px] text-muted-foreground font-medium">Run tests in the Tests tab — screenshots, videos, logs and HAR traces land here automatically.</p>
+              <p className="text-xs font-medium text-muted-foreground">No evidence matches these filters</p>
+              <p className="text-xs text-muted-foreground font-medium">Run tests in the Tests tab — screenshots, videos, logs and HAR traces land here automatically.</p>
             </div>
           ) : (
             <>
@@ -1195,7 +1195,7 @@ export default function EvidenceVaultSection({
                             loading="lazy"
                             className="w-full object-cover max-h-56"
                           />
-                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-black/60 text-white text-[11px] font-medium rounded-full px-2 py-0.5">
+                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-black/60 text-white text-xs font-medium rounded-full px-2 py-0.5">
                             <ImageIcon size={9} /> GIF
                           </span>
                         </div>
@@ -1212,27 +1212,27 @@ export default function EvidenceVaultSection({
                         <div className="h-20 flex items-center justify-center bg-muted/50 border-b gap-2 text-muted-foreground">
                           <TypeIcon size={18} />
                           {item.lineCount !== null && item.lineCount !== undefined && (
-                            <span className="text-[9px] font-semibold bg-muted border rounded-full px-2 py-0.5">{item.lineCount} lines</span>
+                            <span className="text-xs font-semibold bg-muted border rounded-full px-2 py-0.5">{item.lineCount} lines</span>
                           )}
                         </div>
                       )}
 
                       {/* meta area */}
-                      <div className="p-3 space-y-1.5">
-                        <div className="flex items-center gap-1.5">
+                      <div className="p-3 space-y-2">
+                        <div className="flex items-center gap-2">
                           <TypeIcon size={11} className="text-primary shrink-0" />
-                          <span className="text-[8.5px] font-semibold uppercase text-muted-foreground">{(TYPE_META[item.fileType] || TYPE_META.log).label}</span>
-                          <span className="ml-auto text-[8.5px] font-semibold text-muted-foreground flex items-center gap-1">
+                          <span className="text-xs font-semibold uppercase text-muted-foreground">{(TYPE_META[item.fileType] || TYPE_META.log).label}</span>
+                          <span className="ml-auto text-xs font-semibold text-muted-foreground flex items-center gap-1">
                             <Clock size={9} /> {relativeTime(item.createdAt)}
                           </span>
                         </div>
-                        <p className="font-semibold text-[10.5px] text-foreground truncate">
+                        <p className="font-semibold text-xs text-foreground truncate">
                           {item.testName} <span className="text-muted-foreground font-semibold">#{item.stepNumber}</span>
                         </p>
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <StatusBadge status={item.status} small />
                           {item.tags.slice(0, 3).map((t) => (
-                            <span key={t} className="text-[7.5px] uppercase font-semibold bg-muted text-muted-foreground border rounded-full px-1.5 py-px">{t}</span>
+                            <span key={t} className="text-xs uppercase font-semibold bg-muted text-muted-foreground border rounded-full px-2 py-px">{t}</span>
                           ))}
                         </div>
                       </div>
@@ -1242,13 +1242,13 @@ export default function EvidenceVaultSection({
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-muted-foreground">{items.length} of {total} evidence files</span>
+                <span className="text-xs font-medium text-muted-foreground">{items.length} of {total} evidence files</span>
                 {hasMore && (
                   <Button
                     onClick={() => loadEvidence(page + 1, true)}
                     disabled={loadingMore}
                     variant="outline"
-                    className="rounded-xl h-8 px-4 text-[10px] font-semibold border-border text-muted-foreground bg-card"
+                    className="rounded-xl h-8 px-4 text-xs font-semibold border-border text-muted-foreground bg-card"
                   >
                     {loadingMore ? <Loader2 size={11} className="animate-spin" /> : "Load More"}
                   </Button>
@@ -1264,11 +1264,11 @@ export default function EvidenceVaultSection({
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-4">
           <div className="flex items-center gap-2 flex-wrap border-b pb-3">
             <Film size={14} className="text-primary" />
-            <span className="text-[11px] font-medium text-muted-foreground">Timeline Walkthrough</span>
+            <span className="text-xs font-medium text-muted-foreground">Timeline Walkthrough</span>
             <select
               value={selectedExecId}
               onChange={(e) => setSelectedExecId(e.target.value)}
-              className="h-9 rounded-xl border px-2.5 text-[10px] bg-muted/50 font-semibold cursor-pointer min-w-[280px]"
+              className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer min-w-[280px]"
             >
               {executions.length === 0 && <option value="">No executions with evidence yet</option>}
               {executions.map((e) => (
@@ -1280,7 +1280,7 @@ export default function EvidenceVaultSection({
             {timelineExec && (
               <div className="flex items-center gap-2 ml-auto">
                 <StatusBadge status={timelineExec.status === "Passed" ? "pass" : timelineExec.status === "Failed" ? "fail" : "info"} />
-                <span className="text-[9px] font-mono font-semibold text-muted-foreground">{timelineExec.browser || "—"} · {formatDuration(timelineExec.duration)}</span>
+                <span className="text-xs font-mono font-semibold text-muted-foreground">{timelineExec.browser || "—"} · {formatDuration(timelineExec.duration)}</span>
               </div>
             )}
           </div>
@@ -1290,7 +1290,7 @@ export default function EvidenceVaultSection({
               <Loader2 size={22} className="animate-spin text-primary" />
             </div>
           ) : timelineSteps.length === 0 ? (
-            <p className="text-muted-foreground italic text-[10px] text-center py-16">No evidence recorded for this execution.</p>
+            <p className="text-muted-foreground text-xs text-center py-16">No evidence recorded for this execution.</p>
           ) : (
             <>
               {/* Large step view */}
@@ -1298,38 +1298,38 @@ export default function EvidenceVaultSection({
                 <div className="lg:col-span-2">
                   {activeStep && <EvidenceMedia item={activeStep} large />}
                 </div>
-                <div className="space-y-2.5 text-left">
+                <div className="space-y-3 text-left">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-semibold text-foreground">
+                    <span className="text-xs font-semibold text-foreground">
                       Step {stepIdx + 1} of {timelineSteps.length}
                     </span>
                     <div className="flex gap-1">
                       <button
                         onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
                         disabled={stepIdx === 0}
-                        className="p-1.5 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
+                        className="p-2 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
                       >
                         <ChevronLeft size={13} />
                       </button>
                       <button
                         onClick={() => setStepIdx((i) => Math.min(timelineSteps.length - 1, i + 1))}
                         disabled={stepIdx >= timelineSteps.length - 1}
-                        className="p-1.5 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
+                        className="p-2 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
                       >
                         <ChevronRight size={13} />
                       </button>
                     </div>
                   </div>
                   {activeStep && (
-                    <div className="space-y-2 text-[9.5px] font-semibold text-muted-foreground bg-muted/50 border rounded-xl p-3">
-                      <div><span className="text-muted-foreground text-[11px] block">Type</span>{(TYPE_META[activeStep.fileType] || TYPE_META.log).label}</div>
-                      <div><span className="text-muted-foreground text-[11px] block">Status</span><StatusBadge status={activeStep.status} small /></div>
-                      {activeStep.pageUrl && <div><span className="text-muted-foreground text-[11px] block">Page URL</span><span className="font-mono break-all">{activeStep.pageUrl}</span></div>}
-                      {activeStep.elementLocator && <div><span className="text-muted-foreground text-[11px] block">Locator / Command</span><span className="font-mono break-all text-primary">{activeStep.elementLocator}</span></div>}
-                      <div><span className="text-muted-foreground text-[11px] block">Captured</span>{new Date(activeStep.createdAt).toLocaleString()}</div>
+                    <div className="space-y-2 text-xs font-semibold text-muted-foreground bg-muted/50 border rounded-xl p-3">
+                      <div><span className="text-muted-foreground text-xs block">Type</span>{(TYPE_META[activeStep.fileType] || TYPE_META.log).label}</div>
+                      <div><span className="text-muted-foreground text-xs block">Status</span><StatusBadge status={activeStep.status} small /></div>
+                      {activeStep.pageUrl && <div><span className="text-muted-foreground text-xs block">Page URL</span><span className="font-mono break-all">{activeStep.pageUrl}</span></div>}
+                      {activeStep.elementLocator && <div><span className="text-muted-foreground text-xs block">Locator / Command</span><span className="font-mono break-all text-primary">{activeStep.elementLocator}</span></div>}
+                      <div><span className="text-muted-foreground text-xs block">Captured</span>{new Date(activeStep.createdAt).toLocaleString()}</div>
                       <a
                         href={`/api/hub/evidence/${activeStep.id}/download`}
-                        className="inline-flex items-center gap-1.5 text-primary hover:text-primary font-medium text-[11px] pt-1"
+                        className="inline-flex items-center gap-2 text-primary hover:text-primary font-medium text-xs pt-1"
                       >
                         <Download size={10} /> Download file
                       </a>
@@ -1358,7 +1358,7 @@ export default function EvidenceVaultSection({
                           <TypeIcon size={15} />
                         </div>
                       )}
-                      <div className="px-1.5 py-1 text-[8px] font-semibold text-muted-foreground truncate bg-card">
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground truncate bg-card">
                         #{i + 1} {(TYPE_META[s.fileType] || TYPE_META.log).label}
                       </div>
                     </button>
@@ -1377,7 +1377,7 @@ export default function EvidenceVaultSection({
       {(detail || detailLoading) && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
           <div
-            className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-4xl max-h-[92vh] overflow-y-auto p-5 space-y-4 text-left"
+            className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-4xl max-h-[92vh] overflow-y-auto p-6 space-y-4 text-left"
             onClick={(e) => e.stopPropagation()}
           >
             {detailLoading && !detail ? (
@@ -1386,29 +1386,29 @@ export default function EvidenceVaultSection({
               </div>
             ) : detail ? (
               <>
-                <div className="flex items-center justify-between border-b pb-2.5 gap-2">
+                <div className="flex items-center justify-between border-b pb-3 gap-2">
                   <h3 className="text-sm font-semibold text-foreground truncate">
                     {detail.evidence.testName} — Step #{detail.evidence.stepNumber}
                   </h3>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => detail.prevId && openDetail(detail.prevId)}
                       disabled={!detail.prevId}
                       title="Previous step"
-                      className="p-1.5 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
+                      className="p-2 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
                     >
                       <ChevronLeft size={13} />
                     </button>
-                    <span className="text-[8.5px] font-semibold text-muted-foreground">{detail.stepIndex}/{detail.stepTotal}</span>
+                    <span className="text-xs font-semibold text-muted-foreground">{detail.stepIndex}/{detail.stepTotal}</span>
                     <button
                       onClick={() => detail.nextId && openDetail(detail.nextId)}
                       disabled={!detail.nextId}
                       title="Next step"
-                      className="p-1.5 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
+                      className="p-2 rounded-lg border text-muted-foreground hover:bg-muted/50 disabled:opacity-30"
                     >
                       <ChevronRight size={13} />
                     </button>
-                    <button onClick={() => setDetail(null)} className="p-1.5 text-muted-foreground hover:text-muted-foreground">
+                    <button onClick={() => setDetail(null)} className="p-2 text-muted-foreground hover:text-muted-foreground">
                       <X size={16} />
                     </button>
                   </div>
@@ -1421,27 +1421,27 @@ export default function EvidenceVaultSection({
 
                   {/* metadata panel */}
                   <div className="space-y-3">
-                    <div className="space-y-2 text-[9.5px] font-semibold text-muted-foreground bg-muted/50 border rounded-xl p-3">
+                    <div className="space-y-2 text-xs font-semibold text-muted-foreground bg-muted/50 border rounded-xl p-3">
                       <div className="flex items-center justify-between">
                         <StatusBadge status={detail.evidence.status} />
-                        <span className="text-[8.5px] text-muted-foreground">{relativeTime(detail.evidence.createdAt)}</span>
+                        <span className="text-xs text-muted-foreground">{relativeTime(detail.evidence.createdAt)}</span>
                       </div>
-                      <div><span className="text-muted-foreground text-[11px] block">Test</span>{detail.evidence.testName} ({detail.evidence.scriptType || "—"})</div>
-                      <div><span className="text-muted-foreground text-[11px] block">Browser / Duration</span>{detail.evidence.browser || "—"} · {formatDuration(detail.evidence.executionDuration)}</div>
+                      <div><span className="text-muted-foreground text-xs block">Test</span>{detail.evidence.testName} ({detail.evidence.scriptType || "—"})</div>
+                      <div><span className="text-muted-foreground text-xs block">Browser / Duration</span>{detail.evidence.browser || "—"} · {formatDuration(detail.evidence.executionDuration)}</div>
                       {detail.evidence.pageUrl && (
-                        <div><span className="text-muted-foreground text-[11px] block">Page URL</span><span className="font-mono break-all">{detail.evidence.pageUrl}</span></div>
+                        <div><span className="text-muted-foreground text-xs block">Page URL</span><span className="font-mono break-all">{detail.evidence.pageUrl}</span></div>
                       )}
                       {detail.evidence.elementLocator && (
-                        <div><span className="text-muted-foreground text-[11px] block">Locator / Command</span><span className="font-mono break-all text-primary">{detail.evidence.elementLocator}</span></div>
+                        <div><span className="text-muted-foreground text-xs block">Locator / Command</span><span className="font-mono break-all text-primary">{detail.evidence.elementLocator}</span></div>
                       )}
                     </div>
 
                     {/* tags */}
                     <div className="bg-muted/50 border rounded-xl p-3 space-y-2">
-                      <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1"><Tag size={9} /> Tags</span>
-                      <div className="flex gap-1.5 flex-wrap">
+                      <span className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Tag size={9} /> Tags</span>
+                      <div className="flex gap-2 flex-wrap">
                         {detail.evidence.tags.map((t) => (
-                          <span key={t} className="inline-flex items-center gap-1 text-[8.5px] uppercase font-semibold bg-card text-muted-foreground border rounded-full pl-2 pr-1 py-0.5">
+                          <span key={t} className="inline-flex items-center gap-1 text-xs uppercase font-semibold bg-card text-muted-foreground border rounded-full pl-2 pr-1 py-0.5">
                             {t}
                             <button onClick={() => updateTags(detail.evidence.tags.filter((x) => x !== t))} className="text-slate-300 hover:text-rose-500">
                               <X size={9} />
@@ -1449,13 +1449,13 @@ export default function EvidenceVaultSection({
                           </span>
                         ))}
                       </div>
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-2">
                         <input
                           value={tagInput}
                           onChange={(e) => setTagInput(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && addTag()}
                           placeholder="Add tag..."
-                          className="flex-1 h-8 rounded-lg border px-2 text-[9.5px] bg-card font-semibold"
+                          className="flex-1 h-8 rounded-lg border px-2 text-xs bg-card font-semibold"
                         />
                         <button onClick={addTag} className="h-8 w-8 rounded-lg bg-primary hover:bg-primary/90 text-white flex items-center justify-center">
                           <Plus size={12} />
@@ -1466,7 +1466,7 @@ export default function EvidenceVaultSection({
                     {detail.evidence.fileType === "video" && onOpenVideoLab && (
                       <button
                         onClick={() => onOpenVideoLab(detail.evidence.id)}
-                        className="flex items-center justify-center gap-1.5 h-9 rounded-xl bg-primary hover:bg-primary/90 text-white text-[10px] font-semibold w-full"
+                        className="flex items-center justify-center gap-2 h-9 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-semibold w-full"
                       >
                         <Film size={12} /> Open in Video Lab
                       </button>
@@ -1474,7 +1474,7 @@ export default function EvidenceVaultSection({
 
                     <a
                       href={`/api/hub/evidence/${detail.evidence.id}/download`}
-                      className="flex items-center justify-center gap-1.5 h-9 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-[10px] font-semibold"
+                      className="flex items-center justify-center gap-2 h-9 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-xs font-semibold"
                     >
                       <Download size={12} /> Download File
                     </a>

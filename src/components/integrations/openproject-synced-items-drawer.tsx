@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { X, Loader2, ExternalLink, CheckCircle2, XCircle, CloudUpload, RefreshCw, Clock } from "lucide-react"
+import { X, Loader2, ExternalLink, CheckCircle2, XCircle, CloudUpload, RefreshCw, Clock } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 interface SyncedItem {
@@ -48,25 +48,25 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
   }
 
   function statusBadge(status: string | null) {
-    if (!status) return <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-semibold">Not Run</span>
+    if (!status) return <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground font-semibold">Not Run</span>
     const colors: Record<string, string> = {
       Passed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400",
       Failed: "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400",
       Blocked: "bg-slate-100 text-slate-700 dark:bg-slate-800/30 dark:text-slate-400",
     }
-    return <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${colors[status] || "bg-secondary text-muted-foreground"}`}>{status}</span>
+    return <span className={`text-xs px-2 py-0.5 rounded font-medium ${colors[status] || "bg-secondary text-muted-foreground"}`}>{status}</span>
   }
 
   function syncBadge(item: SyncedItem) {
     if (!item.externalId) {
-      return <span className="text-[10px] px-1.5 py-0.5 rounded border border-muted-foreground/20 text-muted-foreground/60 font-semibold flex items-center gap-0.5"><CloudUpload className="h-2.5 w-2.5" /> Not Synced</span>
+      return <span className="text-xs px-2 py-0.5 rounded border border-muted-foreground/20 text-muted-foreground/60 font-semibold flex items-center gap-0.5"><CloudUpload className="h-2.5 w-2.5" /> Not Synced</span>
     }
     if (item.lastSyncStatus === "failed") {
-      return <span className="text-[10px] px-1.5 py-0.5 rounded border border-red-200 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 font-semibold flex items-center gap-0.5"><XCircle className="h-2.5 w-2.5" /> Failed</span>
+      return <span className="text-xs px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 font-semibold flex items-center gap-0.5"><XCircle className="h-2.5 w-2.5" /> Failed</span>
     }
     return (
       <a href={item.externalUrl || "#"} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-        className="text-[10px] px-1.5 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 font-semibold flex items-center gap-0.5 hover:bg-blue-100">
+        className="text-xs px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 font-semibold flex items-center gap-0.5 hover:bg-blue-100">
         <CheckCircle2 className="h-2.5 w-2.5" /> #{item.externalId}
       </a>
     )
@@ -84,7 +84,7 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
       {/* Drawer */}
       <div className="w-full max-w-2xl bg-card border-l shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b bg-accent/10 shrink-0">
+        <div className="flex items-center justify-between p-6 border-b bg-accent/10 shrink-0">
           <div>
             <h2 className="font-semibold text-lg">Synced Items</h2>
             <p className="text-sm text-muted-foreground mt-0.5" dir="auto">{groupName}</p>
@@ -93,7 +93,7 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
             <Button variant="ghost" size="sm" onClick={loadItems} disabled={loading} className="h-8 w-8 p-0">
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
             </Button>
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground">
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -122,7 +122,7 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
               <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
             </div>
           ) : error ? (
-            <div className="p-5 text-center text-red-600 text-sm">{error}</div>
+            <div className="p-6 text-center text-red-600 text-sm">{error}</div>
           ) : items.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground text-sm">No test cases in this group.</div>
           ) : (
@@ -131,21 +131,21 @@ export function OpenProjectSyncedItemsDrawer({ projectId, groupId, groupName, on
                 <div key={item.testCaseId} className="p-4 flex items-start gap-3 hover:bg-accent/20">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{item.testCaseTitle}</p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       {statusBadge(item.localStatus)}
                       {syncBadge(item)}
                       {item.lastSyncAt && (
-                        <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5">
+                        <span className="text-xs text-muted-foreground/60 flex items-center gap-0.5">
                           <Clock className="h-2.5 w-2.5" />
                           {new Date(item.lastSyncAt).toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
                     {item.externalUrl && (
                       <a href={item.externalUrl} target="_blank" rel="noopener noreferrer"
-                        className="p-1.5 rounded hover:bg-blue-50 dark:hover:bg-blue-950/20 text-blue-600 dark:text-blue-400"
+                        className="p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-950/20 text-blue-600 dark:text-blue-400"
                         title="View in OpenProject">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>

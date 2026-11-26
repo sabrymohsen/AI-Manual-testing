@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2 } from "@/components/ui/icons";
 
 export function ThreadPanel({
   projectId,

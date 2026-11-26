@@ -18,7 +18,7 @@ import {
   Target,
   Timer,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 /** Keep in sync with LinkableEntityType in prisma/schema.prisma. */
 export type LinkableEntityType =
@@ -234,11 +234,11 @@ export function LinkedEntities({
   return (
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center justify-between gap-2">
-        <h4 className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+        <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Link2 className="h-3.5 w-3.5" />
           Linked items
           {total > 0 && (
-            <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
+            <span className="rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">
               {total}
             </span>
           )}
@@ -246,7 +246,7 @@ export function LinkedEntities({
         {!readOnly && (
           <button
             onClick={() => setAdding((a) => !a)}
-            className="flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-accent"
+            className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-accent"
           >
             <Plus className="h-3 w-3" /> Add link
           </button>
@@ -298,11 +298,11 @@ export function LinkedEntities({
                     key={`${r.type}:${r.id}`}
                     onClick={() => createLink(r)}
                     disabled={pendingId === r.id}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent/50 disabled:opacity-50"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-accent/50 disabled:opacity-50"
                   >
                     <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span
-                      className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-semibold ${Meta?.chip ?? ""}`}
+                      className={`shrink-0 rounded border px-1 py-0.5 text-xs font-semibold ${Meta?.chip ?? ""}`}
                     >
                       {r.key}
                     </span>
@@ -328,7 +328,7 @@ export function LinkedEntities({
             const Icon = Meta?.icon ?? Link2
             return (
               <div key={type}>
-                <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/70">
+                <p className="mb-1 flex items-center gap-2 text-xs font-medium text-muted-foreground/70">
                   <Icon className="h-3 w-3" />
                   {Meta?.plural ?? type} ({rows.length})
                 </p>
@@ -336,18 +336,18 @@ export function LinkedEntities({
                   {rows.map((row) => (
                     <li
                       key={row.linkId}
-                      className="group flex items-center gap-2 rounded-md border bg-card px-2 py-1.5 text-xs"
+                      className="group flex items-center gap-2 rounded-md border bg-card px-2 py-2 text-xs"
                     >
-                      <span className="shrink-0 text-[10px] italic text-muted-foreground">
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {row.relation}
                       </span>
                       <span
-                        className={`shrink-0 rounded border px-1 py-0.5 text-[9px] font-semibold ${Meta?.chip ?? ""}`}
+                        className={`shrink-0 rounded border px-1 py-0.5 text-xs font-semibold ${Meta?.chip ?? ""}`}
                       >
                         {row.entity.key}
                       </span>
                       {row.deleted ? (
-                        <span className="truncate italic text-muted-foreground">Deleted item</span>
+                        <span className="truncate text-muted-foreground">Deleted item</span>
                       ) : (
                         <Link
                           href={row.entity.url}
@@ -357,7 +357,7 @@ export function LinkedEntities({
                         </Link>
                       )}
                       {row.entity.meta && (
-                        <span className="ml-auto shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                        <span className="ml-auto shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                           {row.entity.meta}
                         </span>
                       )}

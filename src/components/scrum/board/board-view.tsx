@@ -25,7 +25,7 @@ import {
   Plus, MoreHorizontal, Trash2, Layers, User, FolderKanban, CheckCircle2,
   Pencil, Hash, AlertTriangle, X, Check,
   BarChart3,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { format } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -260,7 +260,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
 
   if (isLoading || !columns) {
     return (
-      <div className="flex gap-2.5 overflow-x-auto px-3 py-3">
+      <div className="flex gap-3 overflow-x-auto px-3 py-3">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-96 w-[272px] shrink-0 rounded-lg" />
         ))}
@@ -292,12 +292,12 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
     <div className="flex h-full flex-col">
       {/* Row 2 — quick filters on the left, sprint health on the right. */}
       <div className="flex h-10 shrink-0 items-center gap-3 overflow-hidden border-b border-border bg-card px-4 text-xs">
-        <div className="flex min-w-0 shrink items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+        <div className="flex min-w-0 shrink items-center gap-2 overflow-x-auto [scrollbar-width:none]">
           <QuickFilters activeFilters={quickFilters} onChange={setQuickFilters} />
           {epics && epics.length > 0 && (
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`inline-flex h-6 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors ${
+                className={`inline-flex h-6 items-center gap-2 rounded-md border px-2 text-xs transition-colors ${
                   activeEpic
                     ? "border-border bg-background text-foreground"
                     : "border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -335,7 +335,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
         </div>
 
         {activeSprint.goal && (
-          <span className="hidden min-w-0 flex-1 items-center gap-1.5 border-l border-border pl-3 xl:flex" title={activeSprint.goal}>
+          <span className="hidden min-w-0 flex-1 items-center gap-2 border-l border-border pl-3 xl:flex" title={activeSprint.goal}>
             <span className="text-muted-foreground">Goal</span>
             <span className="truncate text-foreground">{activeSprint.goal}</span>
           </span>
@@ -343,7 +343,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
 
         <div className="ml-auto flex shrink-0 items-center gap-3 whitespace-nowrap text-muted-foreground">
           {sprintStats.total > 0 && (
-            <span className="flex items-center gap-1.5" title={`${sprintStats.completed} of ${sprintStats.total} story points done`}>
+            <span className="flex items-center gap-2" title={`${sprintStats.completed} of ${sprintStats.total} story points done`}>
               <ProgressRing pct={sprintStats.pct} />
               <span className="font-medium tabular-nums text-foreground">{sprintStats.pct}%</span>
               <span className="hidden tabular-nums sm:inline">· {sprintStats.completed} of {sprintStats.total} pts</span>
@@ -362,7 +362,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
           <span className="h-4 w-px bg-border" aria-hidden="true" />
           <button
             onClick={() => setReportOpen(true)}
-            className="inline-flex h-6 items-center gap-1 rounded-md px-1.5 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="inline-flex h-6 items-center gap-1 rounded-md px-2 font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title="Burndown and velocity for this sprint"
           >
             <BarChart3 className="h-3.5 w-3.5" />
@@ -384,7 +384,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
       <DragDropContext onDragStart={() => setBoardDragging(true)} onDragEnd={(r) => { setBoardDragging(false); onDragEnd(r) }}>
         {/* Columns share the available width (flex-1) but never shrink below a
             readable 300px; past that the row overflows and scrolls sideways. */}
-        <div className="board-scroll flex min-h-0 flex-1 items-start gap-2.5 overflow-x-auto px-3 py-3">
+        <div className="board-scroll flex min-h-0 flex-1 items-start gap-3 overflow-x-auto px-3 py-3">
         {displayColumns.map((col: BoardColumn & { virtual?: boolean }) => {
           const rawList = byStatus.get(col.status) ?? []
           const overLimit = col.wipLimit != null && rawList.length > col.wipLimit
@@ -398,7 +398,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
               className="flex max-h-full w-[272px] shrink-0 flex-col rounded-lg bg-muted/60"
             >
               {/* Column header */}
-              <div className="group/col flex h-9 items-center justify-between gap-2 pl-3 pr-1.5">
+              <div className="group/col flex h-9 items-center justify-between gap-2 pl-3 pr-2">
                 <div className="flex min-w-0 items-center gap-2">
                   <StatusIcon status={col.status as TaskStatus} />
                   {editingColumn === col.id ? (
@@ -406,7 +406,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       <Input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="h-6 w-24 px-1.5 py-0 text-xs"
+                        className="h-6 w-24 px-2 py-0 text-xs"
                         aria-label="Column name"
                         autoFocus
                         onKeyDown={(e) => {
@@ -417,7 +417,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       <Input
                         value={editWip}
                         onChange={(e) => setEditWip(e.target.value)}
-                        className="h-6 w-14 px-1.5 py-0 text-xs"
+                        className="h-6 w-14 px-2 py-0 text-xs"
                         placeholder="WIP"
                         aria-label="WIP limit (blank for none)"
                         inputMode="numeric"
@@ -442,7 +442,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       </button>
                     </div>
                   ) : (
-                    <span className="truncate text-[13px] font-medium text-foreground">{col.name}</span>
+                    <span className="truncate text-xs font-medium text-foreground">{col.name}</span>
                   )}
                   <span
                     className={`shrink-0 text-xs tabular-nums ${overLimit ? "font-medium text-destructive" : "text-muted-foreground"}`}
@@ -472,7 +472,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       <button
                         onClick={() => createColumn.mutate({ name: col.name, status: col.status })}
                         disabled={createColumn.isPending}
-                        className="rounded px-1.5 py-0.5 text-[11px] font-medium text-primary transition-colors hover:bg-background"
+                        className="rounded px-2 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-background"
                         title="These issues have a status with no column. Save it as a column on this board."
                       >
                         Add column
@@ -513,7 +513,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
               </div>
 
               {editingColumn === col.id && editError && (
-                <p role="alert" className="px-3 pb-1.5 text-[11px] font-medium text-destructive">
+                <p role="alert" className="px-3 pb-2 text-xs font-medium text-destructive">
                   {editError}
                 </p>
               )}
@@ -528,7 +528,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                     // min-height:auto, which refuses to shrink below its
                     // content, so overflow-y-auto would never actually scroll
                     // and the column would grow past max-h-full instead.
-                    className={`min-h-[3rem] flex-1 space-y-1.5 overflow-y-auto rounded-md px-1.5 pb-1.5 transition-colors ${
+                    className={`min-h-[3rem] flex-1 space-y-2 overflow-y-auto rounded-md px-2 pb-2 transition-colors ${
                       snapshot.isDraggingOver ? "bg-primary/5 ring-1 ring-inset ring-primary/30" : ""
                     }`}
                   >
@@ -557,9 +557,9 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       // Swimlane grouped list
                       <>
                         {swimlaneGroups.map((group) => (
-                          <div key={group.key} className="space-y-1.5">
+                          <div key={group.key} className="space-y-2">
                             {/* Swimlane header */}
-                            <div className="flex items-center gap-1.5 px-1 pb-0.5 pt-1.5">
+                            <div className="flex items-center gap-2 px-1 pb-0.5 pt-2">
                               {swimlane === "assignee" && (
                                 <User className="h-3 w-3 text-muted-foreground" />
                               )}
@@ -577,8 +577,8 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                                   <FolderKanban className="h-3 w-3 text-muted-foreground" />
                                 </>
                               )}
-                              <span className="truncate text-[11px] font-medium text-muted-foreground">{group.label}</span>
-                              <span className="ml-auto text-[11px] tabular-nums text-muted-foreground">{group.tasks.length}</span>
+                              <span className="truncate text-xs font-medium text-muted-foreground">{group.label}</span>
+                              <span className="ml-auto text-xs tabular-nums text-muted-foreground">{group.tasks.length}</span>
                             </div>
                             {group.tasks.map((task) => (
                               <Draggable key={task.id} draggableId={task.id} index={indexMap.get(task.id)!}>
@@ -606,7 +606,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                       <PermissionGate permission="canCreateStories">
                         <button
                           onClick={() => openCreateTask(col.status, activeSprint?.id)}
-                          className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
+                          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
                         >
                           <Plus className="h-3.5 w-3.5" />
                           Add issue

@@ -1,7 +1,7 @@
 "use client"
 
 import { forwardRef, useEffect, useRef, useState } from "react"
-import { Search, X } from "lucide-react"
+import { Search, X } from "@/components/ui/icons"
 
 /** Debounced (300ms) search input. Reports the committed value upward. */
 export const SearchBar = forwardRef<
@@ -37,7 +37,7 @@ export const SearchBar = forwardRef<
         className="peer h-7 w-full rounded-md border border-border bg-background pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none focus:ring-2 focus:ring-primary/15"
       />
       {!local && (
-        <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 font-sans text-[10px] text-muted-foreground peer-focus:hidden">
+        <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1 font-sans text-xs text-muted-foreground peer-focus:hidden">
           /
         </kbd>
       )}

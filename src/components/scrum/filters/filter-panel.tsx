@@ -4,7 +4,7 @@ import type { TaskFilters, TaskStatus, TaskPriority } from "@/types/scrum"
 import { useScrumMembers, useScrumSprints, useScrumEpics } from "@/hooks/scrum/use-scrum"
 import { STATUS_META, PRIORITY_META } from "@/components/scrum/shared"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { SlidersHorizontal } from "lucide-react"
+import { SlidersHorizontal } from "@/components/ui/icons"
 
 const STATUSES: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "TESTING", "DEPLOYED", "DONE"]
 const PRIORITIES: TaskPriority[] = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"]
@@ -42,7 +42,7 @@ export function FilterPanel({
   const Chip = ({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) => (
     <button
       onClick={onClick}
-      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
         on ? "border-primary bg-primary/10 text-primary" : "border-input text-muted-foreground hover:bg-muted"
       }`}
     >
@@ -53,11 +53,11 @@ export function FilterPanel({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button aria-label="Filter issues" title="Filter issues" className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+        <button aria-label="Filter issues" title="Filter issues" className="inline-flex h-7 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <SlidersHorizontal className="h-3.5 w-3.5" />
           <span className="hidden xl:inline">Filter</span>
           {count > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
               {count}
             </span>
           )}
@@ -65,7 +65,7 @@ export function FilterPanel({
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 space-y-3">
         <Section title="Status">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {STATUSES.map((s) => (
               <Chip key={s} on={filters.status?.includes(s) ?? false} onClick={() => toggle("status", s)}>
                 {STATUS_META[s].label}
@@ -74,7 +74,7 @@ export function FilterPanel({
           </div>
         </Section>
         <Section title="Priority">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {PRIORITIES.map((p) => (
               <Chip key={p} on={filters.priority?.includes(p) ?? false} onClick={() => toggle("priority", p)}>
                 {PRIORITY_META[p].label}
@@ -83,7 +83,7 @@ export function FilterPanel({
           </div>
         </Section>
         <Section title="Assignee">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {members?.map((m) => (
               <Chip key={m.id} on={filters.assignee?.includes(m.id) ?? false} onClick={() => toggle("assignee", m.id)}>
                 {m.name || m.email}
@@ -96,7 +96,7 @@ export function FilterPanel({
             <select
               value={filters.sprint ?? ""}
               onChange={(e) => onChange({ ...filters, sprint: e.target.value || undefined })}
-              className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+              className="w-full rounded-md border border-input bg-background px-2 py-2 text-xs"
             >
               <option value="">All</option>
               {sprints?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -106,7 +106,7 @@ export function FilterPanel({
             <select
               value={filters.epic ?? ""}
               onChange={(e) => onChange({ ...filters, epic: e.target.value || undefined })}
-              className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+              className="w-full rounded-md border border-input bg-background px-2 py-2 text-xs"
             >
               <option value="">All</option>
               {epics?.map((ep) => <option key={ep.id} value={ep.id}>{ep.title}</option>)}
@@ -116,7 +116,7 @@ export function FilterPanel({
         {count > 0 && (
           <button
             onClick={() => onChange({ search: filters.search })}
-            className="w-full rounded-md border border-input py-1.5 text-xs font-semibold text-muted-foreground hover:bg-muted"
+            className="w-full rounded-md border border-input py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
           >
             Clear all filters
           </button>
@@ -128,8 +128,8 @@ export function FilterPanel({
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+    <div className="space-y-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
       {children}
     </div>
   )

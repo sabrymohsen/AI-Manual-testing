@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Activity, GitCommit, MessageSquare, CheckCircle2, Bug, FileText, Zap, UserPlus } from "lucide-react"
+import { Activity, GitCommit, MessageSquare, CheckCircle2, Bug, FileText, Zap, UserPlus } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 
@@ -76,7 +76,7 @@ export function ActivityStream({ projectId }: { projectId: string }) {
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex items-center gap-2 border-b px-5 py-3">
+      <div className="flex items-center gap-2 border-b px-6 py-3">
         <Activity className="h-4 w-4 text-primary" />
         <span className="text-xs font-medium text-foreground">Activity Stream</span>
       </div>
@@ -108,7 +108,7 @@ export function ActivityStream({ projectId }: { projectId: string }) {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.user.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
                   ) : (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                       {(item.user?.name || "?")[0]?.toUpperCase()}
                     </span>
                   )}
@@ -118,16 +118,16 @@ export function ActivityStream({ projectId }: { projectId: string }) {
                     <span className="font-semibold">{item.user?.name || "Someone"}</span>{" "}
                     <span className="text-muted-foreground">{getLabel(item.action)}</span>{" "}
                     {item.taskKey && (
-                      <span className="font-mono text-[10px] font-semibold text-primary">{item.taskKey}</span>
+                      <span className="font-mono text-xs font-semibold text-primary">{item.taskKey}</span>
                     )}
                     {item.taskTitle && !item.taskKey && (
                       <span className="font-medium text-muted-foreground">{item.taskTitle}</span>
                     )}
                   </p>
                   {item.details && (
-                    <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{item.details}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{item.details}</p>
                   )}
-                  <p className="mt-1 text-[10px] text-muted-foreground">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(item.createdAt), { addSuffix: true })}
                   </p>
                 </div>

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertTriangle, RefreshCw } from "lucide-react"
+import { AlertTriangle, RefreshCw } from "@/components/ui/icons"
 
 export type ConfirmDialogProps = {
   open: boolean
@@ -99,7 +99,7 @@ export function ConfirmDialog({
       >
         <div className="flex items-start gap-3">
           {headerIcon}
-          <div className="space-y-1.5 flex-1">
+          <div className="space-y-2 flex-1">
             <h3 className="text-lg font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
             {description && (
               <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{description}</p>
@@ -115,7 +115,7 @@ export function ConfirmDialog({
 
         {requireTextConfirmation && (
           <div className="space-y-2 pt-2 border-t border-border dark:border-slate-800">
-            <label className="text-[11px] font-medium text-muted-foreground block">
+            <label className="text-xs font-medium text-muted-foreground block">
               To confirm, type <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">"{requireTextConfirmation}"</span>:
             </label>
             <Input
@@ -147,7 +147,7 @@ export function ConfirmDialog({
             className={confirmButtonClass}
           >
             {isLoading ? (
-              <span className="flex items-center gap-1.5">
+              <span className="flex items-center gap-2">
                 <RefreshCw className="h-3 w-3 animate-spin" /> Processing...
               </span>
             ) : (

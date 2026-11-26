@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Zap, CheckCircle2, XCircle, Target, Timer, TrendingUp, ArrowRight, Inbox, ChevronDown
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
 
@@ -157,7 +157,7 @@ export function CompleteSprintModal({
           <TrendingUp className="h-5 w-5 text-emerald-500" />
           <div>
             <p className="text-sm font-bold text-slate-800">Velocity: {completedPoints} points</p>
-            <p className="text-[11px] text-slate-500">
+            <p className="text-xs text-slate-500">
               {completedTasks.length} of {sprint.tasks.length} issues completed
               {completedPoints > 0 && totalPoints > 0 && ` (${Math.round((completedPoints / totalPoints) * 100)}%)`}
             </p>
@@ -167,7 +167,7 @@ export function CompleteSprintModal({
         {/* Completed Issues */}
         {completedTasks.length > 0 && (
           <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-emerald-700 mb-2 flex items-center gap-1.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-2 flex items-center gap-2">
               <CheckCircle2 className="h-3.5 w-3.5" /> Completed Issues
             </h4>
             <div className="space-y-1 max-h-[200px] overflow-y-auto rounded-lg border border-slate-100">
@@ -181,7 +181,7 @@ export function CompleteSprintModal({
         {/* Incomplete Issues */}
         {incompleteTasks.length > 0 && (
           <div>
-            <h4 className="text-xs font-extrabold uppercase tracking-wider text-rose-700 mb-2 flex items-center gap-1.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-rose-700 mb-2 flex items-center gap-2">
               <XCircle className="h-3.5 w-3.5" /> Incomplete Issues
             </h4>
             <div className="space-y-1 max-h-[200px] overflow-y-auto rounded-lg border border-slate-100 mb-3">
@@ -197,7 +197,7 @@ export function CompleteSprintModal({
                 <button
                   onClick={() => setMoveTo("backlog")}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
+                    "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold transition-colors",
                     moveTo === "backlog"
                       ? "border-indigo-200 bg-indigo-50 text-indigo-700"
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -210,7 +210,7 @@ export function CompleteSprintModal({
                     key={s.id}
                     onClick={() => setMoveTo(s.id)}
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold transition-colors",
                       moveTo === s.id
                         ? "border-indigo-200 bg-indigo-50 text-indigo-700"
                         : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
@@ -247,8 +247,8 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string
   return (
     <div className="rounded-lg border border-slate-100 bg-card p-3 text-center">
       <div className="flex justify-center mb-1">{icon}</div>
-      <p className="text-lg font-extrabold text-slate-800">{value}</p>
-      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+      <p className="text-lg font-bold text-slate-800">{value}</p>
+      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{label}</p>
     </div>
   )
 }
@@ -267,13 +267,13 @@ function TaskRow({ task }: { task: SprintTask }) {
 
   return (
     <div className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50/40 transition-colors border-b border-slate-50 last:border-0">
-      <span className="shrink-0 font-mono text-[10px] font-bold text-primary">{task.key}</span>
+      <span className="shrink-0 font-mono text-xs font-bold text-primary">{task.key}</span>
       <span className="flex-1 truncate text-xs font-medium text-slate-700">{task.title}</span>
-      <span className={cn("rounded-full px-1.5 py-0.5 text-[9px] font-bold shrink-0", statusColor(task.status))}>
+      <span className={cn("rounded-full px-2 py-0.5 text-xs font-bold shrink-0", statusColor(task.status))}>
         {task.status.replace("_", " ")}
       </span>
       {task.storyPoints != null && (
-        <span className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-600">
+        <span className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-slate-100 px-2 text-xs font-bold text-slate-600">
           {task.storyPoints}
         </span>
       )}

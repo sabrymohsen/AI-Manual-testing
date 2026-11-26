@@ -1,6 +1,6 @@
 "use client"
 
-import { SlidersHorizontal } from "lucide-react"
+import { SlidersHorizontal } from "@/components/ui/icons"
 import { useScrumUI, boardDisplayFor, type BoardDisplay } from "@/stores/scrum-ui"
 import {
   DropdownMenu,
@@ -28,19 +28,19 @@ export function DisplayMenu({ projectId }: { projectId: string }) {
       <DropdownMenuTrigger
         aria-label="Display options"
         title="Display options"
-        className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="inline-flex h-7 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
         <SlidersHorizontal className="h-3.5 w-3.5 rotate-90" />
         <span className="hidden xl:inline">Display</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Cards</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Cards</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={display.cardLayout} onValueChange={(v) => set({ cardLayout: v as BoardDisplay["cardLayout"] })}>
           <DropdownMenuRadioItem value="detailed" className="text-xs" onSelect={keepOpen}>Detailed</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="compact" className="text-xs" onSelect={keepOpen}>Compact</DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Group by</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Group by</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={display.swimlane} onValueChange={(v) => set({ swimlane: v as BoardDisplay["swimlane"] })}>
           <DropdownMenuRadioItem value="none" className="text-xs" onSelect={keepOpen}>None</DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="assignee" className="text-xs" onSelect={keepOpen}>Assignee</DropdownMenuRadioItem>

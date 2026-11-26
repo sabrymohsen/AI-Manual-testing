@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Layers, Play, Pause, Square, Save, Trash2, Download, Plus, Bug, Loader2, X, ListPlus,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface Credential { id: string; roleName: string; username: string }
 interface PickedElement {
@@ -224,14 +224,14 @@ export function MultiElementPicker({
   const isLive = !!session?.sessionId && session.status !== "Stopped"
 
   return (
-    <div className="border rounded-xl bg-card/50 p-5 space-y-4">
+    <div className="border rounded-xl bg-card/50 p-6 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           <Layers className="h-5 w-5 text-primary" /> Multi-Element Session
-          <span className="text-[11px] font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 px-2 py-0.5 rounded">New</span>
+          <span className="text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-950/30 px-2 py-0.5 rounded">New</span>
         </h3>
         {session && (
-          <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
             session.status === "Active" ? "bg-emerald-100 text-emerald-700" :
             session.status === "Paused" ? "bg-amber-100 text-amber-700" : "bg-muted text-muted-foreground"
           }`}>{session.status} · {mergedElements.length} elements</span>
@@ -259,7 +259,7 @@ export function MultiElementPicker({
               {credentials.map((c) => <option key={c.id} value={c.id}>{c.roleName}</option>)}
             </select>
           </div>
-          <Button onClick={startSession} disabled={starting} className="bg-primary hover:bg-primary/90 text-white gap-1.5 h-10">
+          <Button onClick={startSession} disabled={starting} className="bg-primary hover:bg-primary/90 text-white gap-2 h-10">
             {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4 fill-current" />}
             Start Session
           </Button>
@@ -280,7 +280,7 @@ export function MultiElementPicker({
       )}
 
       {isLive && (
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           In the opened browser: <b>click elements</b> to capture them. Hit <b>⏸ Pause</b> in the toolbar (or here) to navigate to another page, then <b>Resume</b> to keep picking. Page history: {session!.pageHistory.length} page(s).
         </p>
       )}
@@ -288,7 +288,7 @@ export function MultiElementPicker({
       {/* Live / draft element list */}
       {session && mergedElements.length > 0 && (
         <div className="border rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-2 bg-accent/30 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+          <div className="grid grid-cols-12 gap-2 bg-accent/30 px-3 py-2 text-xs font-medium text-muted-foreground">
             <div className="col-span-4">Name</div>
             <div className="col-span-2">Action</div>
             <div className="col-span-4">Locator</div>
@@ -298,13 +298,13 @@ export function MultiElementPicker({
           <div className="max-h-72 overflow-auto">
             {mergedElements.map((e) => (
               <div key={e.id} className="grid grid-cols-12 gap-2 items-center px-3 py-2 border-t text-xs">
-                <input className="col-span-4 bg-transparent border rounded px-1.5 py-1" value={e.suggestedName}
+                <input className="col-span-4 bg-transparent border rounded px-2 py-1" value={e.suggestedName}
                   onChange={(ev) => setEdits((p) => ({ ...p, [e.id]: { ...p[e.id], name: ev.target.value } }))} />
                 <select className="col-span-2 bg-background border rounded px-1 py-1" value={e.actionType}
                   onChange={(ev) => setEdits((p) => ({ ...p, [e.id]: { ...p[e.id], actionType: ev.target.value } }))}>
                   {ACTION_TYPES.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
-                <div className="col-span-4 font-mono text-[10px] truncate text-primary" title={`${e.locatorType}=${e.locatorValue}`}>{e.locatorType}={e.locatorValue}</div>
+                <div className="col-span-4 font-mono text-xs truncate text-primary" title={`${e.locatorType}=${e.locatorValue}`}>{e.locatorType}={e.locatorValue}</div>
                 <div className={`col-span-1 text-center font-semibold ${e.reliabilityScore >= 80 ? "text-emerald-600" : e.reliabilityScore >= 50 ? "text-amber-600" : "text-red-600"}`}>{e.reliabilityScore}</div>
                 <div className="col-span-1 flex justify-end gap-1">
                   <button title="Create bug" onClick={() => { setBugFor(e); setBugTitle(`Element issue: ${e.suggestedName}`) }} className="text-red-500"><Bug className="h-3.5 w-3.5" /></button>
@@ -325,9 +325,9 @@ export function MultiElementPicker({
           <div key={c.id} className="border rounded-lg p-3 flex items-center justify-between gap-2 flex-wrap text-xs">
             <div>
               <p className="font-semibold">{c.name}</p>
-              <p className="text-[10px] text-muted-foreground">{c.elements.length} elements · {c.pageUrls.length} page(s)</p>
+              <p className="text-xs text-muted-foreground">{c.elements.length} elements · {c.pageUrls.length} page(s)</p>
             </div>
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => createTestCase(c.id, "create")}><Plus className="h-3 w-3" /> Test Case</Button>
               <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => openAppend(c.id)}><ListPlus className="h-3 w-3" /> Append</Button>
               <Button size="sm" variant="outline" className="gap-1 h-7" onClick={() => exportJson(c.elements)}><Download className="h-3 w-3" /></Button>
@@ -350,7 +350,7 @@ export function MultiElementPicker({
       {/* Save dialog */}
       {saveOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setSaveOpen(false)}>
-          <div className="bg-background rounded-xl p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-background rounded-xl p-6 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold">Save as Collection</h3>
             <Input placeholder="Collection name" value={collName} onChange={(e) => setCollName(e.target.value)} />
             <Input placeholder="Description (optional)" value={collDesc} onChange={(e) => setCollDesc(e.target.value)} />
@@ -366,9 +366,9 @@ export function MultiElementPicker({
       {/* Bug dialog */}
       {bugFor && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setBugFor(null)}>
-          <div className="bg-background rounded-xl p-5 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-background rounded-xl p-6 w-full max-w-md space-y-3" onClick={(e) => e.stopPropagation()}>
             <h3 className="font-semibold flex items-center gap-2"><Bug className="h-4 w-4 text-red-500" /> Create Bug from Element</h3>
-            <p className="text-[11px] text-muted-foreground font-mono">{bugFor.locatorType}={bugFor.locatorValue}</p>
+            <p className="text-xs text-muted-foreground font-mono">{bugFor.locatorType}={bugFor.locatorValue}</p>
             <Input placeholder="Bug title" value={bugTitle} onChange={(e) => setBugTitle(e.target.value)} />
             <p className="text-xs text-muted-foreground">{session?.sessionId ? "Screenshot + DOM snapshot will be captured from the live browser." : "Live browser closed — a basic bug will be created without a fresh snapshot."}</p>
             <div className="flex justify-end gap-2">

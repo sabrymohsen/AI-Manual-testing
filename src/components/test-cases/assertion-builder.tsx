@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Trash2, Plus } from "lucide-react"
+import { Trash2, Plus } from "@/components/ui/icons"
 
 interface Assertion {
   type: string

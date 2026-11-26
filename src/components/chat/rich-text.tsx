@@ -153,7 +153,7 @@ export function FormattedMessage({
     blocks.push(
       <Tag
         key={`l-${blocks.length}`}
-        className={`my-1 space-y-0.5 pl-5 ${list.ordered ? "list-decimal" : "list-disc"}`}
+        className={`my-1 space-y-0.5 pl-6 ${list.ordered ? "list-decimal" : "list-disc"}`}
       >
         {list.items.map((it, i) => (
           <li key={i}>{renderInline(it, people, entities, `li-${blocks.length}-${i}`)}</li>

@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react"
 import { cn } from "@/lib/utils"
-import { User, Clock, BookOpen, X, ArrowUp, AlertTriangle } from "lucide-react"
+import { User, Clock, BookOpen, X, ArrowUp, AlertTriangle } from "@/components/ui/icons"
 
 export type QuickFilter = "my-issues" | "recently-updated" | "only-stories" | "high-priority" | "overdue" | null
 
@@ -39,7 +39,7 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
   const visibleFilters = expanded ? FILTERS : FILTERS.slice(0, 3)
 
   return (
-    <div className="flex items-center gap-1.5 whitespace-nowrap">
+    <div className="flex items-center gap-2 whitespace-nowrap">
       {visibleFilters.map((f) => {
         const active = activeFilters.includes(f.key)
         return (
@@ -47,7 +47,7 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
             key={f.key}
             onClick={() => toggle(f.key)}
             className={cn(
-              "inline-flex h-6 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
+              "inline-flex h-6 items-center gap-2 rounded-md border px-2 text-xs transition-colors",
               active
                 ? "border-primary/30 bg-primary/10 text-foreground"
                 : "border-dashed border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -62,7 +62,7 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
       {!expanded && (
         <button
           onClick={() => setExpanded(true)}
-          className="h-6 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="h-6 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           + More
         </button>
@@ -70,7 +70,7 @@ export function QuickFilters({ onChange, activeFilters }: QuickFiltersProps) {
       {activeFilters.length > 0 && (
         <button
           onClick={clearAll}
-          className="h-6 rounded-md px-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="h-6 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           Clear
         </button>

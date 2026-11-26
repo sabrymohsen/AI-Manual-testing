@@ -1,5 +1,5 @@
 import type { TaskPriority, TaskStatus, TaskType, ScrumMember } from "@/types/scrum"
-import { ArrowUp, ArrowDown } from "lucide-react"
+import { ArrowUp, ArrowDown } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 export const PRIORITY_META: Record<
@@ -31,7 +31,7 @@ export function PriorityBadge({ priority, className }: { priority: TaskPriority;
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold",
+        "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-semibold",
         meta.className,
         className
       )}
@@ -53,11 +53,11 @@ export function initials(name: string | null | undefined, email?: string) {
 
 /** Overlapping avatar stack, showing up to `max` then a +N chip. */
 export function AvatarStack({ members, max = 2, size = "md" }: { members: ScrumMember[]; max?: number; size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "h-[18px] w-[18px] text-[8px] border" : "h-6 w-6 text-[9px] border-2"
+  const dim = size === "sm" ? "h-[18px] w-[18px] text-xs border" : "h-6 w-6 text-xs border-2"
   const shown = members.slice(0, max)
   const extra = members.length - shown.length
   return (
-    <div className={cn("flex", size === "sm" ? "-space-x-1" : "-space-x-1.5")}>
+    <div className={cn("flex", size === "sm" ? "-space-x-1" : "-space-x-2")}>
       {shown.map((m) => (
         <span
           key={m.id}
@@ -175,7 +175,7 @@ export function DotLabel({
   return (
     <span
       className={cn(
-        "inline-flex h-5 max-w-[11rem] items-center gap-1.5 rounded-full border border-border px-2 text-[11px] text-muted-foreground",
+        "inline-flex h-5 max-w-[11rem] items-center gap-2 rounded-full border border-border px-2 text-xs text-muted-foreground",
         className
       )}
     >

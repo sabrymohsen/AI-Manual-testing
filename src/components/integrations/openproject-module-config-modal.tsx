@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import {
   X, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff, ChevronDown, ChevronRight, LayoutDashboard
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -52,7 +52,7 @@ interface Props {
 }
 
 const selectClass =
-  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+  "flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 
 const BOARD_TYPE_LABELS: Record<string, string> = {
   status: "Status board",
@@ -279,7 +279,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
       <div className="bg-background border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-lg max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b">
+        <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="font-semibold text-base">OpenProject Config</h2>
             <p className="text-xs text-muted-foreground mt-0.5" dir="auto">{moduleName}</p>
@@ -294,7 +294,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
             <Loader2 className="h-4 w-4 animate-spin" /> Loading...
           </div>
         ) : (
-          <div className="p-5 space-y-5">
+          <div className="p-6 space-y-6">
             {/* Inheritance notice */}
             {projectHasIntegration && (
               <div className="text-xs text-muted-foreground border rounded-lg px-3 py-2 bg-blue-50/50 dark:bg-blue-950/20 flex items-start gap-2">
@@ -304,11 +304,11 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
             )}
 
             {/* Base URL */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">
                 Base URL
                 {effective?.baseUrl && !baseUrl && (
-                  <span className="ml-1.5 text-muted-foreground font-normal">(inherited: {effective.baseUrl})</span>
+                  <span className="ml-2 text-muted-foreground font-normal">(inherited: {effective.baseUrl})</span>
                 )}
               </Label>
               <Input
@@ -320,11 +320,11 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
             </div>
 
             {/* Project Identifier */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">
                 Project Identifier
                 {effective?.openProjectProjectIdentifier && !identifier && (
-                  <span className="ml-1.5 text-muted-foreground font-normal">(inherited: {effective.openProjectProjectIdentifier})</span>
+                  <span className="ml-2 text-muted-foreground font-normal">(inherited: {effective.openProjectProjectIdentifier})</span>
                 )}
               </Label>
               <Input
@@ -336,14 +336,14 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
             </div>
 
             {/* API Token */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">
                 API Token
                 {!config?.hasOwnToken && effective?.hasToken && (
-                  <span className="ml-1.5 text-emerald-600 dark:text-emerald-400 font-normal">(inherited from project)</span>
+                  <span className="ml-2 text-emerald-600 dark:text-emerald-400 font-normal">(inherited from project)</span>
                 )}
                 {config?.hasOwnToken && (
-                  <span className="ml-1.5 text-muted-foreground font-normal">(own token saved)</span>
+                  <span className="ml-2 text-muted-foreground font-normal">(own token saved)</span>
                 )}
               </Label>
               <div className="relative">
@@ -352,7 +352,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                   value={apiToken}
                   onChange={e => setApiToken(e.target.value)}
                   placeholder={config?.hasOwnToken ? "Enter new token to replace" : effective?.hasToken ? "Leave blank to keep project token" : "Your OpenProject API token"}
-                  className="h-9 text-sm pr-9"
+                  className="h-9 text-sm pr-8"
                 />
                 <button
                   type="button"
@@ -374,11 +374,11 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                 disabled={testing || !canTestConnection}
                 className="h-8 text-xs font-semibold"
               >
-                {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
                 {testing ? "Testing..." : "Test Connection"}
               </Button>
               {testing && (
-                <p className="text-[11px] text-muted-foreground">Loading boards, versions, types &amp; statuses…</p>
+                <p className="text-xs text-muted-foreground">Loading boards, versions, types &amp; statuses…</p>
               )}
 
               {testResult && (
@@ -399,7 +399,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
             <div>
               <button
                 onClick={() => setShowBoardSection(v => !v)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground mb-2"
+                className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground mb-2"
               >
                 {showBoardSection ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                 <LayoutDashboard className="h-3.5 w-3.5" />
@@ -416,7 +416,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
 
               {showBoardSection && (
                 <div className="space-y-3 border rounded-lg p-4 bg-accent/5">
-                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Select the OpenProject board where synced test cases will appear.
                     For <strong>Version/Sprint</strong> boards, also select the sprint below.
                     Click <em>Test Connection</em> first to load available boards.
@@ -483,7 +483,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                         </div>
                       )}
                       {targetColumnStatusId && boardColumns.length > 0 && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Synced work packages will be placed in the <strong>
                             {boardColumns.find(c => String(c.widgetId) === targetColumnStatusId)?.name || targetColumnStatusId}
                           </strong> column on sync.
@@ -524,7 +524,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                         />
                       )}
                       {targetVersionId && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           All synced work packages will be assigned to this sprint/version.
                         </p>
                       )}
@@ -538,7 +538,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
             <div>
               <button
                 onClick={() => setShowAdvanced(v => !v)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground mb-2"
+                className="flex items-center gap-2 text-xs font-semibold text-muted-foreground hover:text-foreground mb-2"
               >
                 {showAdvanced ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                 Type & Status Mapping
@@ -644,8 +644,8 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                   : <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
                 <div>
                   <span className="font-semibold">Last sync: {config.lastSyncStatus}</span>
-                  <span className="ml-1 text-[10px] opacity-70">{new Date(config.lastSyncAt).toLocaleString()}</span>
-                  {config.lastSyncError && <div className="mt-0.5 text-[10px]">{config.lastSyncError}</div>}
+                  <span className="ml-1 text-xs opacity-70">{new Date(config.lastSyncAt).toLocaleString()}</span>
+                  {config.lastSyncError && <div className="mt-0.5 text-xs">{config.lastSyncError}</div>}
                 </div>
               </div>
             )}
@@ -677,7 +677,7 @@ export function OpenProjectModuleConfigModal({ projectId, moduleId, moduleName, 
                 size="sm"
                 className="h-8 px-4 text-xs font-semibold"
               >
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : null}
                 {saving ? "Saving..." : "Save Feature Config"}
               </Button>
             </div>

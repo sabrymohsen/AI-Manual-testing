@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
-import { FileCheck } from "lucide-react"
+import { FileCheck } from "@/components/ui/icons"
 import { CHART_COLORS } from "@/lib/reports/colors"
 
 const STATUS_COLORS: Record<string, string> = {
@@ -63,7 +63,7 @@ export function TestsByStatusPie({ projectId }: { projectId: string }) {
   return (
     <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-muted-foreground/60">Tests by Status</span>
+        <span className="text-xs font-medium text-muted-foreground/60">Tests by Status</span>
         <FileCheck className="h-4 w-4 text-primary" />
       </div>
       <div className="h-48 w-full">

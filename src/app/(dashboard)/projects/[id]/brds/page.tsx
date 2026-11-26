@@ -16,7 +16,7 @@ import {
   RotateCcw,
   ListChecks,
   Archive,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface Brd {
@@ -199,22 +199,22 @@ export default function BrdHubPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search names and document text…"
-            className="h-9 w-full rounded-lg border bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            className="h-9 w-full rounded-lg border bg-background pl-8 pr-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-3 text-sm">
           <option value="">All types</option>
           <option value="pdf">PDF</option>
           <option value="docx">Word</option>
         </select>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-lg border bg-background px-3 text-sm">
           <option value="">All statuses</option>
           <option value="Draft">Draft</option>
           <option value="Reviewed">Reviewed</option>
           <option value="Final">Final</option>
           <option value="Archived">Archived</option>
         </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-9 rounded-lg border bg-background px-2.5 text-sm">
+        <select value={sort} onChange={(e) => setSort(e.target.value)} className="h-9 rounded-lg border bg-background px-3 text-sm">
           <option value="updated">Last updated</option>
           <option value="name">Name</option>
           <option value="created">Upload date</option>
@@ -223,14 +223,14 @@ export default function BrdHubPage() {
           <button
             onClick={() => setView("active")}
             aria-pressed={view === "active"}
-            className={`rounded-md px-2.5 py-1 ${view === "active" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+            className={`rounded-md px-3 py-1 ${view === "active" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
           >
             Documents
           </button>
           <button
             onClick={() => setView("trash")}
             aria-pressed={view === "trash"}
-            className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 ${view === "trash" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+            className={`inline-flex items-center gap-1 rounded-md px-3 py-1 ${view === "trash" ? "bg-muted text-foreground" : "text-muted-foreground"}`}
           >
             <Trash2 className="h-3 w-3" /> Trash{trashCount ? ` (${trashCount})` : ""}
           </button>
@@ -238,7 +238,7 @@ export default function BrdHubPage() {
       </div>
 
       {view === "active" && archivedCount > 0 && statusFilter !== "Archived" && (
-        <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <p className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
           <Archive className="h-3.5 w-3.5" /> {archivedCount} archived document{archivedCount === 1 ? " is" : "s are"} hidden.
           <button onClick={() => setStatusFilter("Archived")} className="font-medium text-primary hover:underline">
             Show archived
@@ -253,7 +253,7 @@ export default function BrdHubPage() {
 
       {/* Table */}
       <div className="overflow-hidden rounded-xl border bg-card">
-        <div className="grid grid-cols-[1fr_90px_130px_90px_90px_44px] gap-2 border-b bg-muted/30 px-4 py-2.5 text-[11px] font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1fr_90px_130px_90px_90px_44px] gap-2 border-b bg-muted/30 px-4 py-3 text-xs font-medium text-muted-foreground">
           <span>Document</span>
           <span>Type</span>
           <span>Updated</span>
@@ -283,11 +283,11 @@ export default function BrdHubPage() {
               onClick={() => view === "active" && router.push(`/projects/${projectId}/brds/${b.id}`)}
               className="grid cursor-pointer grid-cols-[1fr_90px_130px_90px_90px_44px] items-center gap-2 border-b px-4 py-3 text-sm transition-colors last:border-b-0 hover:bg-muted/50"
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <FileTypeIcon type={b.fileType} className="h-5 w-5 shrink-0" />
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-foreground">{b.name}</p>
-                  <p className="truncate text-[11px] text-muted-foreground">
+                  <p className="truncate text-xs text-muted-foreground">
                     {b.uploaderName}
                     {b.linkCount > 0 && (
                       <span className="ml-2 inline-flex items-center gap-0.5">
@@ -306,7 +306,7 @@ export default function BrdHubPage() {
                     )}
                   </p>
                   {b.snippet && (
-                    <p className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground" dir="auto" title={b.snippet}>
+                    <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground" dir="auto" title={b.snippet}>
                       {b.snippet}
                     </p>
                   )}
@@ -319,7 +319,7 @@ export default function BrdHubPage() {
               </span>
               <span className="text-center text-xs font-semibold text-muted-foreground">v{b.versionCount}</span>
               <span className="flex justify-center">
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${STATUS_STYLES[b.status] || STATUS_STYLES.Draft}`}>
+                <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[b.status] || STATUS_STYLES.Draft}`}>
                   {b.status}
                 </span>
               </span>
@@ -330,7 +330,7 @@ export default function BrdHubPage() {
                       e.stopPropagation()
                       setPendingDelete(b)
                     }}
-                    className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                     title="Delete"
                     aria-label={`Delete ${b.name}`}
                   >
@@ -343,7 +343,7 @@ export default function BrdHubPage() {
                       e.stopPropagation()
                       handleRestore(b)
                     }}
-                    className="rounded p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                     title="Restore"
                     aria-label={`Restore ${b.name}`}
                   >

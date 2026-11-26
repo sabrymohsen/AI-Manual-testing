@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { BackButton } from "@/components/ui/back-button"
-import { Eye, EyeOff, Plus, Trash2, Edit, Save, ShieldAlert, Sparkles, RefreshCw, Key } from "lucide-react"
+import { Eye, EyeOff, Plus, Trash2, Edit, Save, ShieldAlert, Sparkles, RefreshCw, Key } from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface TestDataVariable {
@@ -191,7 +191,7 @@ export default function TestDataPage() {
         <div className="flex items-center gap-4">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight text-blue-600 ">
               Test Data Manager
             </h1>
             <p className="text-muted-foreground">
@@ -201,7 +201,7 @@ export default function TestDataPage() {
         </div>
 
         {!(isCreating || editingId) && (
-          <Button onClick={handleOpenCreate} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium flex items-center gap-2 shadow-md">
+          <Button onClick={handleOpenCreate} className=" bg-blue-600 text-white font-medium flex items-center gap-2 shadow-md">
             <Plus size={18} /> Add Variable
           </Button>
         )}
@@ -225,7 +225,7 @@ export default function TestDataPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Variable Key</label>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Variable Key</label>
                   <input
                     type="text"
                     required
@@ -234,11 +234,11 @@ export default function TestDataPage() {
                     placeholder="e.g. admin.email"
                     className="w-full px-3 py-2 border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
                   />
-                  <span className="text-[10px] text-muted-foreground mt-1 block">Keys should be lowercase and dot-separated.</span>
+                  <span className="text-xs text-muted-foreground mt-1 block">Keys should be lowercase and dot-separated.</span>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Variable Value</label>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Variable Value</label>
                   <input
                     type={isSensitive || dataType === "secret" ? "password" : "text"}
                     value={value}
@@ -250,7 +250,7 @@ export default function TestDataPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Data Type</label>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Data Type</label>
                     <select
                       value={dataType}
                       onChange={(e) => {
@@ -266,7 +266,7 @@ export default function TestDataPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-1.5">Environment</label>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Environment</label>
                     <select
                       value={environment}
                       onChange={(e) => setEnvironment(e.target.value)}
@@ -286,13 +286,13 @@ export default function TestDataPage() {
                     onChange={(e) => setIsSensitive(e.target.checked)}
                     className="h-4 w-4 text-blue-600 border-border rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="isSensitive" className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  <label htmlFor="isSensitive" className="text-sm font-medium text-foreground flex items-center gap-2">
                     Encrypt & Mask (Sensitive Secret)
                   </label>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-foreground mb-1.5">Notes / Description</label>
+                  <label className="block text-sm font-semibold text-foreground mb-2">Notes / Description</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -306,7 +306,7 @@ export default function TestDataPage() {
                 <Button type="button" variant="outline" onClick={() => { setIsCreating(false); setEditingId(null); }} className="rounded-xl border-border text-muted-foreground hover:bg-muted/50">
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-5 rounded-xl">
+                <Button type="submit" className=" bg-blue-600 text-white font-medium px-6 rounded-xl">
                   Save Variable
                 </Button>
               </div>
@@ -323,7 +323,7 @@ export default function TestDataPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Target Environment Context</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Target Environment Context</label>
                   <select
                     value={resolverEnv}
                     onChange={(e) => setResolverEnv(e.target.value)}
@@ -336,7 +336,7 @@ export default function TestDataPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Input Text Template</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Input Text Template</label>
                   <textarea
                     value={resolverInput}
                     onChange={(e) => setResolverInput(e.target.value)}
@@ -350,7 +350,7 @@ export default function TestDataPage() {
 
                 {resolverOutput && (
                   <div className="p-3 bg-muted/50 border border-border rounded-xl">
-                    <span className="block text-[10px] font-semibold text-muted-foreground mb-1">RESOLVED OUTCOME:</span>
+                    <span className="block text-xs font-semibold text-muted-foreground mb-1">RESOLVED OUTCOME:</span>
                     <p className="text-xs font-mono text-foreground break-words">{resolverOutput}</p>
                   </div>
                 )}
@@ -362,9 +362,9 @@ export default function TestDataPage() {
         {/* Right Side: Variables List */}
         <div className="lg:col-span-2">
           <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-border flex items-center justify-between">
+            <div className="p-6 border-b border-border flex items-center justify-between">
               <h2 className="font-semibold text-foreground">Project Variables</h2>
-              <span className="text-xs text-muted-foreground bg-muted rounded px-2.5 py-0.5 font-semibold">
+              <span className="text-xs text-muted-foreground bg-muted rounded px-3 py-0.5 font-semibold">
                 {variables.length} defined
               </span>
             </div>
@@ -402,7 +402,7 @@ export default function TestDataPage() {
                         </td>
                         <td className="px-6 py-4 max-w-xs truncate">
                           {v.isSensitive ? (
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono italic">
+                            <span className="flex items-center gap-2 text-xs text-muted-foreground font-mono ">
                               <ShieldAlert size={14} className="text-amber-500" />
                               Encrypted Secret
                             </span>
@@ -411,7 +411,7 @@ export default function TestDataPage() {
                           )}
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                             !v.environment ? "bg-muted text-muted-foreground" :
                             v.environment === "Production" ? "bg-red-50 text-red-600 border border-red-100" :
                             v.environment === "Staging" ? "bg-amber-50 text-amber-600 border border-amber-100" :
@@ -424,7 +424,7 @@ export default function TestDataPage() {
                           {v.dataType}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-2">
                             <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(v)} className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50/50 p-1">
                               <Edit size={14} />
                             </Button>

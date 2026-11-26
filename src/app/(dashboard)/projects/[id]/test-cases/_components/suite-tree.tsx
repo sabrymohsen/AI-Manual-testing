@@ -24,7 +24,7 @@ import {
   Pencil,
   Plus,
   Trash2,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 /**
@@ -124,7 +124,7 @@ export function SuiteTree({
           }}
           style={{ paddingLeft: 8 + depth * 14 }}
           className={cn(
-            "group flex cursor-pointer items-center gap-1.5 rounded-md py-1.5 pr-2 text-sm transition-colors",
+            "group flex cursor-pointer items-center gap-2 rounded-md py-2 pr-2 text-sm transition-colors",
             isSelected
               ? "bg-primary/10 font-medium text-primary"
               : "text-foreground hover:bg-accent/60",
@@ -161,17 +161,17 @@ export function SuiteTree({
                 }
                 if (e.key === "Escape") setRenaming(null)
               }}
-              className="h-6 flex-1 px-1.5 py-0 text-xs"
+              className="h-6 flex-1 px-2 py-0 text-xs"
             />
           ) : (
-            <span className="flex-1 truncate text-[13px]" title={suite.name}>
+            <span className="flex-1 truncate text-xs" title={suite.name}>
               {suite.name}
             </span>
           )}
 
           <span
             className={cn(
-              "shrink-0 rounded-md px-1.5 text-[11px] font-semibold tabular-nums",
+              "shrink-0 rounded-md px-2 text-xs font-semibold tabular-nums",
               (rollupCount.get(suite.id) ?? 0) === 0
                 ? "text-muted-foreground/50"
                 : "bg-muted text-muted-foreground"
@@ -255,8 +255,8 @@ export function SuiteTree({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1.5 border-b px-3 py-2">
-        <span className="text-[11px] font-medium text-muted-foreground">
+      <div className="flex items-center gap-2 border-b px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">
           Suites
         </span>
         <button
@@ -277,7 +277,7 @@ export function SuiteTree({
         <div
           onClick={() => onSelectSuite(undefined)}
           className={cn(
-            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
             selectedSuite === undefined
               ? "bg-primary/10 font-medium text-primary"
               : "hover:bg-accent/60"
@@ -301,7 +301,7 @@ export function SuiteTree({
             handleDrop(null)
           }}
           className={cn(
-            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+            "flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm transition-colors",
             selectedSuite === "unfiled"
               ? "bg-primary/10 font-medium text-primary"
               : "hover:bg-accent/60",
@@ -314,7 +314,7 @@ export function SuiteTree({
           <span className="flex-1">Unfiled</span>
           <span
             className={cn(
-              "rounded-md px-1.5 text-[11px] font-semibold tabular-nums",
+              "rounded-md px-2 text-xs font-semibold tabular-nums",
               (data?.unfiledCount ?? 0) === 0
                 ? "text-muted-foreground/50"
                 : "bg-muted text-muted-foreground"
@@ -324,10 +324,10 @@ export function SuiteTree({
           </span>
         </div>
 
-        <div className="my-1.5 border-t" />
+        <div className="my-2 border-t" />
 
         {isLoading && (
-          <div className="space-y-1.5 p-1">
+          <div className="space-y-2 p-1">
             {[0, 1, 2, 3].map((i) => (
               <div key={i} className="h-6 animate-pulse rounded bg-muted" />
             ))}
@@ -335,7 +335,7 @@ export function SuiteTree({
         )}
 
         {!isLoading && roots.length === 0 && addingUnder !== null && (
-          <p className="px-2 py-3 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="px-2 py-3 text-xs leading-relaxed text-muted-foreground">
             No suites yet. Suites are folders for test cases — press + above to create one,
             e.g. &ldquo;Checkout&rdquo; or &ldquo;Login&rdquo;.
           </p>

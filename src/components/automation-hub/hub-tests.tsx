@@ -34,7 +34,7 @@ import {
   Link2,
   X,
   AlertTriangle,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -634,7 +634,7 @@ export default function HubTestsSection({
                   type="button"
                   onClick={() => setTagFilter(tagFilter === g ? null : g)}
                   aria-pressed={tagFilter === g}
-                  className={`rounded-full border px-2 py-0.5 text-[11px] ${tagFilter === g ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  className={`rounded-full border px-2 py-0.5 text-xs ${tagFilter === g ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   {g}
                 </button>
@@ -647,7 +647,7 @@ export default function HubTestsSection({
             </Button>
           )}
           {flakyCount > 0 && (
-            <p className="flex items-center gap-1 text-[11px] text-amber-700">
+            <p className="flex items-center gap-1 text-xs text-amber-700">
               <AlertTriangle className="h-3 w-3" /> {flakyCount} flaky test{flakyCount === 1 ? "" : "s"} — results flip between runs
             </p>
           )}
@@ -658,8 +658,8 @@ export default function HubTestsSection({
             const closed = closedFolders[f]
             return (
               <div key={f || "_unfiled"} className="mb-1">
-                <div className="group flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-muted/50">
-                  <button type="button" onClick={() => setClosedFolders((c) => ({ ...c, [f]: !c[f] }))} className="flex flex-1 items-center gap-1.5 text-left text-xs font-medium text-muted-foreground">
+                <div className="group flex items-center gap-1 rounded-md px-2 py-1 hover:bg-muted/50">
+                  <button type="button" onClick={() => setClosedFolders((c) => ({ ...c, [f]: !c[f] }))} className="flex flex-1 items-center gap-2 text-left text-xs font-medium text-muted-foreground">
                     {closed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                     {closed ? <Folder className="h-3.5 w-3.5" /> : <FolderOpen className="h-3.5 w-3.5" />}
                     {f || "No folder"} <span className="font-normal text-muted-foreground">{list.length}</span>
@@ -682,7 +682,7 @@ export default function HubTestsSection({
                         key={t.id}
                         type="button"
                         onClick={() => t.id !== selectedId && select(t)}
-                        className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 pl-7 text-left text-sm ${
+                        className={`flex w-full items-center gap-2 rounded-md px-2 py-2 pl-8 text-left text-sm ${
                           t.id === selectedId ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/50"
                         }`}
                       >
@@ -698,17 +698,17 @@ export default function HubTestsSection({
                         <span className="flex-1 truncate">{t.name}</span>
                         {t.flaky && (
                           <span
-                            className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700"
+                            className="rounded bg-amber-50 px-1 text-xs font-semibold text-amber-700"
                             title={`Flaky: ${t.flips ?? 0} pass/fail flips in the last ${t.history?.length ?? 0} runs, or it passed only on retry`}
                           >
                             Flaky
                           </span>
                         )}
-                        {t.type === "API" && <span className="rounded bg-muted px-1 text-[10px] font-semibold text-muted-foreground">API</span>}
-                        {t.mode === "steps" && <span className="rounded bg-primary/10 px-1 text-[10px] font-medium text-primary" title="Written as plain-English steps">No-code</span>}
-                        {t.mode === "local" && <span className="rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground" title="Runs on a tester's computer">Computer</span>}
-                        {t.mode === "agent" && <span className="rounded bg-muted px-1 text-[10px] font-medium text-muted-foreground" title="A manual test case run by the Browser Agent — run it from that tab">Agent</span>}
-                        {t.shared && <span className="rounded bg-amber-50 px-1 text-[10px] font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
+                        {t.type === "API" && <span className="rounded bg-muted px-1 text-xs font-semibold text-muted-foreground">API</span>}
+                        {t.mode === "steps" && <span className="rounded bg-primary/10 px-1 text-xs font-medium text-primary" title="Written as plain-English steps">No-code</span>}
+                        {t.mode === "local" && <span className="rounded bg-muted px-1 text-xs font-medium text-muted-foreground" title="Runs on a tester's computer">Computer</span>}
+                        {t.mode === "agent" && <span className="rounded bg-muted px-1 text-xs font-medium text-muted-foreground" title="A manual test case run by the Browser Agent — run it from that tab">Agent</span>}
+                        {t.shared && <span className="rounded bg-amber-50 px-1 text-xs font-semibold text-amber-700" title="Shared example, visible in every project">Example</span>}
                       </button>
                     )
                   })}
@@ -790,7 +790,7 @@ export default function HubTestsSection({
                   aria-label="Test name"
                   className="h-9 min-w-[180px] flex-1 rounded-md border border-transparent px-2 text-base font-semibold text-foreground outline-none hover:border-border focus:border-primary"
                 />
-                <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Folder className="h-4 w-4" />
                   <input
                     list="hub-folders"
@@ -822,7 +822,7 @@ export default function HubTestsSection({
 
               {/* tags + history */}
               <div className="flex flex-wrap items-center gap-3 border-b px-3 py-2 text-xs">
-                <label className="flex min-w-[220px] flex-1 items-center gap-1.5 text-muted-foreground">
+                <label className="flex min-w-[220px] flex-1 items-center gap-2 text-muted-foreground">
                   <Tag className="h-3.5 w-3.5" />
                   <input
                     value={tagsText}
@@ -911,7 +911,7 @@ export default function HubTestsSection({
                         role="tab"
                         aria-selected={view === v}
                         onClick={() => setView(v)}
-                        className={`rounded px-2.5 py-1 font-medium ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        className={`rounded px-3 py-1 font-medium ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                       >
                         {v === "steps" ? "Steps" : "Code"}
                       </button>
@@ -926,16 +926,16 @@ export default function HubTestsSection({
                     <div className="absolute right-0 z-20 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border bg-card p-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
                       {(["Test", "Find & act", "Check", "API", "Advanced"] as const).map((g) => (
                         <div key={g}>
-                          <p className="px-2 pb-1 pt-2 text-[11px] font-medium text-muted-foreground">{g}</p>
+                          <p className="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">{g}</p>
                           {PLAYWRIGHT_SNIPPETS.filter((s) => s.group === g).map((s) => (
                             <button
                               key={s.label}
                               type="button"
                               onClick={() => insertSnippet(s.insertText)}
-                              className="flex w-full items-baseline justify-between gap-3 rounded px-2 py-1.5 text-left text-sm hover:bg-primary/10"
+                              className="flex w-full items-baseline justify-between gap-3 rounded px-2 py-2 text-left text-sm hover:bg-primary/10"
                             >
                               <span className="text-foreground">{s.detail}</span>
-                              <code className="shrink-0 text-[11px] text-muted-foreground">{s.label}</code>
+                              <code className="shrink-0 text-xs text-muted-foreground">{s.label}</code>
                             </button>
                           ))}
                         </div>
@@ -1017,7 +1017,7 @@ export default function HubTestsSection({
               </div>
               )}
               {mode === "steps" ? (
-                <div className="flex flex-wrap items-center gap-3 border-t px-3 py-1.5 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs text-muted-foreground">
                   <span>No-code test · {steps.length} step{steps.length === 1 ? "" : "s"}</span>
                   {unclearSteps === 0 ? (
                     <span className="text-emerald-600">Every step is understood</span>
@@ -1029,7 +1029,7 @@ export default function HubTestsSection({
                   <span className="ml-auto hidden sm:inline">⌘/Ctrl+S saves · Runs as a real Playwright test</span>
                 </div>
               ) : (
-              <div className="flex flex-wrap items-center gap-3 border-t px-3 py-1.5 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-3 border-t px-3 py-2 text-xs text-muted-foreground">
                 <span>Playwright · JavaScript</span>
                 {errors === 0 && warnings === 0 ? (
                   <span className="text-emerald-600">No problems found</span>
@@ -1239,7 +1239,7 @@ function ExploreDialog({ projectId, projectUrl, onClose }: { projectId: string; 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-xl space-y-3 overflow-y-auto rounded-xl bg-card p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[90vh] w-full max-w-xl space-y-3 overflow-y-auto rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Wand2 className="h-5 w-5 text-violet-500" /> AI explorer
@@ -1290,7 +1290,7 @@ function ExploreDialog({ projectId, projectUrl, onClose }: { projectId: string; 
             placeholder={"email = sara@test.com\npassword = Secret123\ncoupon = SAVE10"}
             className="w-full rounded-md border px-3 py-2 font-mono text-xs"
           />
-          <span className="text-[11px] text-muted-foreground">Passwords, tokens and keys are never sent to the AI — it only sees their names.</span>
+          <span className="text-xs text-muted-foreground">Passwords, tokens and keys are never sent to the AI — it only sees their names.</span>
         </label>
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" onClick={onClose}>
@@ -1333,7 +1333,7 @@ function NewTestDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onCancel}>
-      <div className="w-full max-w-md space-y-4 rounded-xl bg-card p-5 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-md space-y-4 rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold text-foreground">New test</h2>
         <label className="block space-y-1 text-sm">
           <span className="font-medium text-foreground">Name</span>
@@ -1497,7 +1497,7 @@ function DataTable({
                       onChange={(e) => setCol(j, e.target.value)}
                       placeholder="column"
                       aria-label={`Column ${j + 1} name`}
-                      className="h-7 w-full min-w-[90px] rounded border bg-muted/50 px-1.5 font-mono font-medium"
+                      className="h-7 w-full min-w-[90px] rounded border bg-muted/50 px-2 font-mono font-medium"
                     />
                     {data.columns.length > 1 && (
                       <button
@@ -1533,7 +1533,7 @@ function DataTable({
                       value={v}
                       onChange={(e) => setCell(i, j, e.target.value)}
                       aria-label={`Row ${i + 1}, ${data.columns[j] || `column ${j + 1}`}`}
-                      className="h-7 w-full min-w-[90px] rounded border bg-card px-1.5"
+                      className="h-7 w-full min-w-[90px] rounded border bg-card px-2"
                     />
                   </td>
                 ))}
@@ -1619,7 +1619,7 @@ function LinkedCases({
         </Button>
       </div>
       {linked.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-2">
           {linked.map((c) => (
             <span key={c.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs">
               <a href={`/projects/${projectId}/test-cases?case=${c.id}`} className="max-w-[260px] truncate hover:text-primary hover:underline" title={c.title}>
@@ -1655,12 +1655,12 @@ function LinkedCases({
                   key={r.id}
                   type="button"
                   onClick={() => onSave([...linked.map((l) => l.id), r.id])}
-                  className="block w-full truncate rounded px-2 py-1.5 text-left text-xs hover:bg-primary/10"
+                  className="block w-full truncate rounded px-2 py-2 text-left text-xs hover:bg-primary/10"
                 >
                   {r.title}
                 </button>
               ))}
-            {rows.length === 0 && <p className="px-2 py-1.5 text-xs text-muted-foreground">No test cases found.</p>}
+            {rows.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground">No test cases found.</p>}
           </div>
         </div>
       )}

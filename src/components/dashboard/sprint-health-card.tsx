@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Zap, Timer, Target, TrendingUp, TrendingDown } from "lucide-react"
+import { Zap, Timer, Target, TrendingUp, TrendingDown } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
 
@@ -64,7 +64,7 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-xl border border-border bg-card shadow-sm p-5 space-y-4">
+      <div className="rounded-xl border border-border bg-card shadow-sm p-6 space-y-4">
         <Skeleton className="h-4 w-32" />
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-4 w-24" />
@@ -74,7 +74,7 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
 
   if (!sprint) {
     return (
-      <div className="rounded-xl border border-border bg-card shadow-sm p-5">
+      <div className="rounded-xl border border-border bg-card shadow-sm p-6">
         <div className="flex items-center gap-2 mb-3">
           <Zap className="h-4 w-4 text-amber-500" />
           <span className="text-xs font-medium text-foreground">Sprint Health</span>
@@ -97,23 +97,23 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
   const isAtRisk = remainingDays <= 2 && workProgress < 80
 
   return (
-    <div className="rounded-xl border border-border bg-card shadow-sm p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card shadow-sm p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />
           <span className="text-xs font-medium text-foreground">Sprint Health</span>
         </div>
-        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">Active</span>
+        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">Active</span>
       </div>
 
       <div>
         <h3 className="text-sm font-semibold text-foreground">{sprint.name}</h3>
-        {sprint.goal && <p className="text-[11px] text-muted-foreground mt-0.5 italic">{sprint.goal}</p>}
+        {sprint.goal && <p className="text-xs text-muted-foreground mt-0.5 ">{sprint.goal}</p>}
       </div>
 
       {/* Time progress */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-[10px] font-semibold text-muted-foreground">
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs font-semibold text-muted-foreground">
           <span className="flex items-center gap-1"><Timer className="h-3 w-3" /> Time</span>
           <span>{elapsedDays}d / {totalDays}d ({remainingDays}d left)</span>
         </div>
@@ -123,8 +123,8 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
       </div>
 
       {/* Work progress */}
-      <div className="space-y-1.5">
-        <div className="flex justify-between text-[10px] font-semibold text-muted-foreground">
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs font-semibold text-muted-foreground">
           <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Story Points</span>
           <span>{sprint.completedPoints} / {sprint.totalPoints} pts</span>
         </div>
@@ -137,21 +137,21 @@ export function SprintHealthCard({ projectId }: { projectId: string }) {
       <div className="grid grid-cols-3 gap-3 pt-2 border-t">
         <div className="text-center">
           <p className="text-lg font-semibold text-foreground">{sprint.totalIssues}</p>
-          <p className="text-[11px] font-medium text-muted-foreground">Issues</p>
+          <p className="text-xs font-medium text-muted-foreground">Issues</p>
         </div>
         <div className="text-center">
           <p className="text-lg font-semibold text-emerald-600">{sprint.completedIssues}</p>
-          <p className="text-[11px] font-medium text-muted-foreground">Done</p>
+          <p className="text-xs font-medium text-muted-foreground">Done</p>
         </div>
         <div className="text-center">
           <p className="text-lg font-semibold text-foreground">{remainingDays}</p>
-          <p className="text-[11px] font-medium text-muted-foreground">Days Left</p>
+          <p className="text-xs font-medium text-muted-foreground">Days Left</p>
         </div>
       </div>
 
       {/* Health indicator */}
       <div className={cn(
-        "flex items-center gap-1.5 rounded-lg px-3 py-2 text-[10px] font-semibold",
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold",
         isAtRisk ? "bg-red-50 text-red-700" : isAhead ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
       )}>
         {isAtRisk ? <TrendingDown className="h-3.5 w-3.5" /> : isAhead ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingUp className="h-3.5 w-3.5" />}

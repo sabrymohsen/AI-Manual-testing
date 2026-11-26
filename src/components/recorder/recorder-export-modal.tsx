@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { X, Copy, Download, Check, Code2, FileText } from "lucide-react"
+import { X, Copy, Download, Check, Code2, FileText } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import {
   stepsToNeutral,
@@ -52,7 +52,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
+      className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
       title="Copy to clipboard"
     >
       {copied ? (
@@ -95,10 +95,10 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-background border rounded-xl w-full max-w-3xl flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in fade-in zoom-in-95 duration-150 max-h-[92vh]">
+      <div className="bg-background border rounded-xl w-full max-w-3xl flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in fade-in zoom-in-95 duration-200 max-h-[92vh]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
           <div>
             <h2 className="text-base font-semibold flex items-center gap-2">
               <Code2 className="h-5 w-5 text-purple-500" />
@@ -118,7 +118,7 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
 
         {/* Zero-step warning */}
         {includedCount === 0 && (
-          <div className="px-5 py-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-b">
+          <div className="px-6 py-4 text-sm text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-b">
             No steps are marked "Include in Test Case". Toggle at least one step to generate code.
           </div>
         )}
@@ -127,7 +127,7 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
         <div className="flex border-b shrink-0 text-sm font-semibold bg-accent/10">
           <button
             onClick={() => setMainTab("playwright")}
-            className={`flex items-center gap-1.5 px-5 py-2.5 border-r transition-colors ${
+            className={`flex items-center gap-2 px-6 py-3 border-r transition-colors ${
               mainTab === "playwright"
                 ? "bg-background text-primary border-b-2 border-b-primary"
                 : "text-muted-foreground hover:bg-accent/20"
@@ -153,7 +153,7 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
                   onClick={() =>
                     downloadText(playwrightCode, `${safeFilename}.spec.ts`)
                   }
-                  className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
+                  className="flex items-center gap-1 text-xs font-semibold px-3 py-2 rounded-lg border border-border bg-background hover:bg-accent transition-colors"
                 >
                   <Download className="h-3.5 w-3.5" />
                   .spec.ts
@@ -166,7 +166,7 @@ export function RecorderExportModal({ steps, title, onClose }: Props) {
 
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t shrink-0 flex items-center justify-between text-xs text-muted-foreground">
+        <div className="px-6 py-3 border-t shrink-0 flex items-center justify-between text-xs text-muted-foreground">
           <span>
             Selectors are captured live — prefer{" "}
             <code className="font-mono text-foreground">data-testid</code> attributes

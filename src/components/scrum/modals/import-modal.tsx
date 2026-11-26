@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Download, FileSpreadsheet, ListChecks, Loader2, Search, Upload, X } from "lucide-react"
+import { CheckCircle2, Download, FileSpreadsheet, ListChecks, Loader2, Search, Upload, X } from "@/components/ui/icons"
 
 type ImportSource = "file" | "testCases"
 
@@ -247,7 +247,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
         </DialogHeader>
 
         {/* Source tabs */}
-        <div className="flex gap-1.5">
+        <div className="flex gap-2">
           {(
             [
               { id: "file", label: "From file", icon: FileSpreadsheet, hint: "stories, test cases, bugs" },
@@ -260,7 +260,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
                 key={t.id}
                 type="button"
                 onClick={() => { setSource(t.id); setResult(null); setError(null) }}
-                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
+                className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
                   on ? "border-primary bg-primary/10 text-primary" : "border-input text-muted-foreground hover:bg-muted"
                 }`}
               >
@@ -274,7 +274,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
         {/* Success summary */}
         {result && (
           <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm">
-            <p className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+            <p className="flex items-center gap-2 font-semibold text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-4 w-4" /> Imported {result.created}{" "}
               {result.created === 1 ? "issue" : "issues"}
             </p>
@@ -304,12 +304,12 @@ export function ImportModal({ projectId }: { projectId: string }) {
             {/* What are we importing? This used to be hidden until a file was
                 parsed, so on open there was no sign the importer handles user
                 stories, test cases or bugs at all. */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-semibold text-muted-foreground">
                 Import rows as{" "}
                 <span className="font-normal">— overridden per row by a Type column, if your file has one</span>
               </label>
-              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {IMPORT_TYPES.map((t) => {
                   const meta = TYPE_META[t]
                   const Icon = meta.icon
@@ -320,7 +320,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
                       type="button"
                       aria-pressed={on}
                       onClick={() => setDefaultType(t)}
-                      className={`inline-flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold transition-colors ${
+                      className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
                         on
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -390,7 +390,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
             <button
               type="button"
               onClick={downloadTemplate}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
             >
               <Download className="h-3.5 w-3.5" /> Download CSV template
             </button>
@@ -398,12 +398,12 @@ export function ImportModal({ projectId }: { projectId: string }) {
             {headers.length > 0 && (
               <>
                 {/* Column mapping */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground">Column mapping</p>
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                     {FILE_FIELDS.map((f) => (
                       <div key={f.key} className="space-y-0.5">
-                        <label className="text-[11px] font-medium text-muted-foreground">
+                        <label className="text-xs font-medium text-muted-foreground">
                           {f.label}
                           {"required" in f && f.required ? " *" : ""}
                         </label>
@@ -442,25 +442,25 @@ export function ImportModal({ projectId }: { projectId: string }) {
                     <table className="w-full text-xs">
                       <thead className="bg-muted/50 text-left text-muted-foreground">
                         <tr>
-                          <th className="px-2 py-1.5 font-semibold">Title</th>
-                          <th className="px-2 py-1.5 font-semibold">Type</th>
-                          <th className="px-2 py-1.5 font-semibold">Priority</th>
-                          <th className="px-2 py-1.5 font-semibold">Points</th>
+                          <th className="px-2 py-2 font-semibold">Title</th>
+                          <th className="px-2 py-2 font-semibold">Type</th>
+                          <th className="px-2 py-2 font-semibold">Priority</th>
+                          <th className="px-2 py-2 font-semibold">Points</th>
                         </tr>
                       </thead>
                       <tbody>
                         {mappedPreview.map((r, i) => (
                           <tr key={i} className="border-t">
-                            <td className="max-w-[260px] truncate px-2 py-1.5 font-medium">{r.title || <span className="text-destructive">missing</span>}</td>
-                            <td className="px-2 py-1.5">{r.type || <span className="text-muted-foreground">{TYPE_META[defaultType].label}</span>}</td>
-                            <td className="px-2 py-1.5">{r.priority || <span className="text-muted-foreground">Medium</span>}</td>
-                            <td className="px-2 py-1.5">{r.storyPoints}</td>
+                            <td className="max-w-[260px] truncate px-2 py-2 font-medium">{r.title || <span className="text-destructive">missing</span>}</td>
+                            <td className="px-2 py-2">{r.type || <span className="text-muted-foreground">{TYPE_META[defaultType].label}</span>}</td>
+                            <td className="px-2 py-2">{r.priority || <span className="text-muted-foreground">Medium</span>}</td>
+                            <td className="px-2 py-2">{r.storyPoints}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                     {rows.length > 5 && (
-                      <p className="border-t bg-muted/30 px-2 py-1 text-[11px] text-muted-foreground">
+                      <p className="border-t bg-muted/30 px-2 py-1 text-xs text-muted-foreground">
                         …and {rows.length - 5} more rows
                       </p>
                     )}
@@ -505,7 +505,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
                   : "Select all visible"}
               </button>
             </div>
-            <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-1.5">
+            <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-2">
               {pickerLoading && (
                 <p className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Loading test cases…
@@ -519,7 +519,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
                 return (
                   <label
                     key={tc.id}
-                    className={`flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                    className={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm transition-colors ${
                       tc.alreadyImported ? "cursor-not-allowed opacity-50" : on ? "bg-primary/10" : "hover:bg-muted"
                     }`}
                   >
@@ -537,14 +537,14 @@ export function ImportModal({ projectId }: { projectId: string }) {
                       }
                     />
                     <span className="min-w-0 flex-1 truncate font-medium">{tc.title}</span>
-                    <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    <span className="shrink-0 rounded border px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                       {tc.priority}
                     </span>
-                    <span className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    <span className="shrink-0 rounded border px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                       {tc.executionType}
                     </span>
                     {tc.alreadyImported && (
-                      <span className="shrink-0 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="shrink-0 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         on board
                       </span>
                     )}
@@ -552,7 +552,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
                 )
               })}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Imported test cases become <span className="font-semibold">Test Case</span> issues linked back to the
               original test case — preconditions and steps are carried into the description.
             </p>
@@ -588,7 +588,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
             {result ? "Done" : "Cancel"}
           </Button>
           <Button onClick={submit} disabled={!canSubmit}>
-            {submitting && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
+            {submitting && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
             {source === "file"
               ? `Import ${validRowCount || ""} ${
                   validRowCount === 1

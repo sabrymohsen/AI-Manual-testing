@@ -26,7 +26,7 @@ import {
   Minimize2,
   Plus,
   RotateCw
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 type Phase = "idle" | "starting" | "recording" | "review"
 
@@ -483,7 +483,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Read-only Device view details badge */}
-          <div className="flex items-center gap-1.5 px-3 h-9 bg-muted/50 border rounded-xl text-[11px] font-medium text-slate-650">
+          <div className="flex items-center gap-2 px-3 h-9 bg-muted/50 border rounded-xl text-xs font-medium text-slate-650">
             <DeviceIcon size={12} className="text-indigo-650" />
             <span>{selectedDevice.label} ({activeViewport.width}×{activeViewport.height})</span>
           </div>
@@ -492,7 +492,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
             value={browser}
             onChange={(e) => setBrowser(e.target.value)}
             disabled={phase === "recording" || phase === "starting"}
-            className="h-9 rounded-xl border px-2.5 text-[10px] bg-muted/50 font-semibold cursor-pointer disabled:opacity-60"
+            className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer disabled:opacity-60"
           >
             {BROWSERS.map((b) => (
               <option key={b} value={b}>{b}</option>
@@ -503,7 +503,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
             <Button
               onClick={handleStart}
               disabled={phase === "starting"}
-              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-9 px-4 text-xs font-semibold shadow-sm flex items-center gap-1.5"
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-9 px-4 text-xs font-semibold shadow-sm flex items-center gap-2"
             >
               {phase === "starting" ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} />}
               {phase === "starting" ? "Launching..." : "Start Recording"}
@@ -511,7 +511,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
           ) : phase === "recording" ? (
             <Button
               onClick={handleStop}
-              className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl h-9 px-4 text-xs font-black shadow-sm flex items-center gap-1.5"
+              className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl h-9 px-4 text-xs font-bold shadow-sm flex items-center gap-2"
             >
               <Square size={11} className="fill-current" /> Stop
             </Button>
@@ -519,7 +519,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
             <Button
               onClick={handleDiscard}
               variant="outline"
-              className="rounded-xl h-9 px-3.5 text-xs font-semibold border-border text-slate-650 bg-card flex items-center gap-1.5"
+              className="rounded-xl h-9 px-3 text-xs font-semibold border-border text-slate-650 bg-card flex items-center gap-2"
             >
               <RefreshCw size={12} /> New Recording
             </Button>
@@ -529,11 +529,11 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
 
       {/* DEVICE EMULATION GALLERY & CUSTOM DEVICE ACTIONS */}
       {(phase === "idle" || phase === "starting") && (
-        <div className="bg-card border rounded-xl p-5 shadow-xs space-y-5 text-left">
+        <div className="bg-card border rounded-xl p-6 shadow-xs space-y-6 text-left">
           <div className="flex items-center justify-between border-b pb-3 flex-wrap gap-3 select-none">
             <div className="space-y-1">
               <h3 className="text-xs font-medium text-foreground leading-tight">Device Emulation Gallery</h3>
-              <p className="text-[11px] text-slate-450 font-medium">Select viewport configuration preset for live action recording</p>
+              <p className="text-xs text-slate-450 font-medium">Select viewport configuration preset for live action recording</p>
             </div>
             
             <div className="flex items-center gap-3">
@@ -565,7 +565,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
 
               <Button
                 onClick={() => setCustomDeviceModalOpen(true)}
-                className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl h-8.5 px-3.5 font-black text-[10px] flex items-center gap-1 shadow-xs"
+                className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl h-8.5 px-3 font-bold text-xs flex items-center gap-1 shadow-xs"
               >
                 <Plus size={11} /> Add Custom Device
               </Button>
@@ -597,19 +597,19 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
                     }`}>
                       <DevIcon size={14} className={isSelected && dev.isMobile && orientation === "landscape" ? "rotate-90 transition-transform" : "transition-transform"} />
                     </div>
-                    <span className="text-[9px] font-semibold text-muted-foreground uppercase font-mono">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase font-mono">
                       {dev.isCustom ? "Custom" : dev.os}
                     </span>
                   </div>
 
                   <div>
-                    <span className="font-semibold text-[11.5px] text-foreground block truncate">{dev.label}</span>
-                    <span className="text-[10px] font-semibold text-muted-foreground font-mono mt-0.5 block">
+                    <span className="font-semibold text-xs text-foreground block truncate">{dev.label}</span>
+                    <span className="text-xs font-semibold text-muted-foreground font-mono mt-0.5 block">
                       {w} × {h} px
                     </span>
                   </div>
 
-                  <div className="flex items-center justify-between text-[9px] font-semibold text-muted-foreground font-mono pt-1.5 border-t">
+                  <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground font-mono pt-2 border-t">
                     <span>Scale: {dev.scaleFactor}x</span>
                     <span>{dev.isMobile ? "Mobile" : "Desktop"}</span>
                   </div>
@@ -619,21 +619,21 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
           </div>
 
           {/* Viewport Live Preview parameters panel */}
-          <div className="bg-muted/50 border p-3 rounded-xl flex items-center justify-between flex-wrap gap-4 text-[10px] font-semibold text-muted-foreground select-none">
-            <div className="flex items-center gap-1.5">
+          <div className="bg-muted/50 border p-3 rounded-xl flex items-center justify-between flex-wrap gap-4 text-xs font-semibold text-muted-foreground select-none">
+            <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Viewport Size:</span>
               <span className="text-foreground font-mono">
                 {activeViewport.width} × {activeViewport.height} px
                 {selectedDevice.isMobile ? ` (${orientation === "portrait" ? "Portrait" : "Landscape"})` : ""}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               <span className="text-muted-foreground">Device Scale Factor:</span>
               <span className="text-foreground font-mono">{selectedDevice.scaleFactor}x</span>
             </div>
-            <div className="flex items-center gap-1.5 max-w-[400px] truncate">
+            <div className="flex items-center gap-2 max-w-[400px] truncate">
               <span className="text-muted-foreground shrink-0">User Agent:</span>
-              <span className="text-foreground font-mono text-[9px]" title={selectedDevice.userAgent}>
+              <span className="text-foreground font-mono text-xs" title={selectedDevice.userAgent}>
                 {selectedDevice.userAgent}
               </span>
             </div>
@@ -642,25 +642,25 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
       )}
 
       {startError && (
-        <p className="text-rose-600 text-[10px] font-semibold bg-rose-50 border border-rose-100 rounded-xl p-3">{startError}</p>
+        <p className="text-rose-600 text-xs font-semibold bg-rose-50 border border-rose-100 rounded-xl p-3">{startError}</p>
       )}
 
       {/* TWO-PANEL LAYOUT: browser 60% | code + actions 40% */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
         {/* LEFT: BROWSER VIEW */}
         <div className={isFullScreen ? "fixed inset-0 z-[9999] bg-card flex flex-col h-screen w-screen p-4 animate-in fade-in" : "lg:col-span-3 bg-card border rounded-xl shadow-sm overflow-hidden"}>
-          <div className="bg-muted/50 border-b p-2.5 flex items-center justify-between gap-2">
-            <div className="flex gap-1.5 shrink-0">
+          <div className="bg-muted/50 border-b p-3 flex items-center justify-between gap-2">
+            <div className="flex gap-2 shrink-0">
               <span className="h-2.5 w-2.5 rounded-full bg-rose-400 block" />
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400 block" />
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 block" />
             </div>
-            <span className="font-mono text-[9.5px] text-muted-foreground truncate flex-1 text-center">
+            <span className="font-mono text-xs text-muted-foreground truncate flex-1 text-center">
               {currentUrl || "Recorder browser"}
             </span>
             <div className="flex items-center gap-2 shrink-0">
               {phase === "recording" && (
-                <span className="flex items-center gap-1.5 text-rose-600 font-medium text-[11px]">
+                <span className="flex items-center gap-2 text-rose-600 font-medium text-xs">
                   <span className="h-2 w-2 rounded-full bg-rose-600 animate-pulse" /> REC
                 </span>
               )}
@@ -700,7 +700,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
                 <img ref={imgRef} src={frame} alt="Live browser view" className="w-full block select-none" draggable={false} />
                 {highlight && imgRef.current && (
                   <div
-                    className="absolute border-2 border-rose-500 bg-rose-400/10 rounded pointer-events-none transition-all duration-150"
+                    className="absolute border-2 border-rose-500 bg-rose-400/10 rounded pointer-events-none transition-all duration-200"
                     style={{
                       left: `${(highlight.x / viewport.width) * 100}%`,
                       top: `${(highlight.y / viewport.height) * 100}%`,
@@ -715,15 +715,15 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
                 {phase === "starting" ? (
                   <>
                     <Loader2 size={22} className="animate-spin text-rose-500 mx-auto" />
-                    <p className="text-[11px] font-medium text-muted-foreground">Launching recorder browser...</p>
+                    <p className="text-xs font-medium text-muted-foreground">Launching recorder browser...</p>
                   </>
                 ) : (
                   <>
                     <Camera size={26} className="text-slate-300 mx-auto" />
-                    <p className="text-[11px] font-medium text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground">
                       Enter a URL and press Start Recording
                     </p>
-                    <p className="text-[9.5px] text-muted-foreground font-medium max-w-sm mx-auto leading-relaxed">
+                    <p className="text-xs text-muted-foreground font-medium max-w-sm mx-auto leading-relaxed">
                       The page streams here live. Click, type, and scroll directly on the view — every interaction is
                       captured with a Smart Locator and turned into Playwright code in real time.
                     </p>
@@ -734,7 +734,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
           </div>
 
           {phase === "recording" && (
-            <div className="bg-muted/50 border-t p-2 text-center text-[9px] font-semibold text-muted-foreground">
+            <div className="bg-muted/50 border-t p-2 text-center text-xs font-semibold text-muted-foreground">
               Click to interact · type on your keyboard to fill focused fields · scroll with the mouse wheel · passwords are auto-masked
             </div>
           )}
@@ -745,25 +745,25 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
           {/* Action log */}
           <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
             <div className="p-3 border-b flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">Recorded Actions</span>
-              <span className="text-[8.5px] font-semibold bg-muted text-muted-foreground rounded-full px-2 py-0.5">{actions.length} steps</span>
+              <span className="text-xs font-medium text-muted-foreground">Recorded Actions</span>
+              <span className="text-xs font-semibold bg-muted text-muted-foreground rounded-full px-2 py-0.5">{actions.length} steps</span>
             </div>
             <div className="max-h-[230px] overflow-y-auto divide-y">
               {actions.map((a) => {
                 const Icon = ACTION_ICONS[a.kind] || MousePointerClick
                 return (
-                  <div key={a.id} className="p-2.5 flex items-start gap-2 hover:bg-muted/70 group">
-                    <span className="h-5 w-5 rounded-full bg-muted text-muted-foreground text-[8.5px] font-semibold flex items-center justify-center shrink-0 mt-0.5">
+                  <div key={a.id} className="p-3 flex items-start gap-2 hover:bg-muted/70 group">
+                    <span className="h-5 w-5 rounded-full bg-muted text-muted-foreground text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5">
                       {a.step}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         <Icon size={11} className="text-primary shrink-0" />
-                        <span className="text-[11px] font-medium text-muted-foreground">{a.kind}</span>
-                        <span className="text-[9.5px] font-semibold text-foreground truncate">{a.label}</span>
+                        <span className="text-xs font-medium text-muted-foreground">{a.kind}</span>
+                        <span className="text-xs font-semibold text-foreground truncate">{a.label}</span>
                       </div>
                       {a.locator && (
-                        <code className="font-mono text-[8.5px] text-primary block truncate mt-0.5">{a.locator}</code>
+                        <code className="font-mono text-xs text-primary block truncate mt-0.5">{a.locator}</code>
                       )}
                       {a.kind === "type" && (
                         <span className={`text-[8.5px] font-mono block truncate ${a.isPassword ? "text-rose-500 font-semibold" : "text-muted-foreground"}`}>
@@ -782,7 +782,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
                 )
               })}
               {actions.length === 0 && (
-                <p className="text-muted-foreground italic text-[10px] text-center py-8 px-4">
+                <p className="text-muted-foreground text-xs text-center py-8 px-4">
                   No actions captured yet. Interactions with the browser view will appear here numbered, with their Smart Locators.
                 </p>
               )}
@@ -791,11 +791,11 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
 
           {/* Code preview */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-md">
-            <div className="bg-slate-950 px-3 py-2.5 flex items-center justify-between border-b border-slate-800">
-              <span className="font-mono font-semibold text-[9.5px] text-slate-300 uppercase tracking-wider">
+            <div className="bg-slate-950 px-3 py-3 flex items-center justify-between border-b border-slate-800">
+              <span className="font-mono font-semibold text-xs text-slate-300 uppercase tracking-wider">
                 Generated Playwright TypeScript {phase === "recording" ? "(live)" : phase === "review" ? "(editable)" : ""}
               </span>
-              {codeEdited && <span className="text-[11px] font-medium text-amber-400">edited</span>}
+              {codeEdited && <span className="text-xs font-medium text-amber-400">edited</span>}
             </div>
             <Editor
               height="300px"
@@ -818,25 +818,25 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
               }}
             />
             {phase === "review" && (
-              <div className="bg-slate-950 border-t border-slate-800 p-2.5 grid grid-cols-3 gap-2">
+              <div className="bg-slate-950 border-t border-slate-800 p-3 grid grid-cols-3 gap-2">
                 <Button
                   onClick={handleSaveToStudio}
                   disabled={saving || actions.length === 0}
-                  className="bg-primary hover:bg-primary/90 text-white rounded-xl h-8 text-[9.5px] font-semibold flex items-center gap-1 justify-center"
+                  className="bg-primary hover:bg-primary/90 text-white rounded-xl h-8 text-xs font-semibold flex items-center gap-1 justify-center"
                 >
                   {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save to Studio
                 </Button>
                 <Button
                   onClick={handleCopy}
                   variant="outline"
-                  className="rounded-xl h-8 text-[9.5px] font-black border-slate-700 text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white flex items-center gap-1 justify-center"
+                  className="rounded-xl h-8 text-xs font-bold border-slate-700 text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white flex items-center gap-1 justify-center"
                 >
                   <Copy size={11} /> Copy
                 </Button>
                 <Button
                   onClick={handleDownload}
                   variant="outline"
-                  className="rounded-xl h-8 text-[9.5px] font-black border-slate-700 text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white flex items-center gap-1 justify-center"
+                  className="rounded-xl h-8 text-xs font-bold border-slate-700 text-slate-300 bg-slate-900 hover:bg-slate-800 hover:text-white flex items-center gap-1 justify-center"
                 >
                   <Download size={11} /> .java
                 </Button>
@@ -845,7 +845,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
           </div>
 
           {savedName && (
-            <p className="text-emerald-700 text-[10px] font-semibold bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center gap-1.5">
+            <p className="text-emerald-700 text-xs font-semibold bg-emerald-50 border border-emerald-100 rounded-xl p-3 flex items-center gap-2">
               <Play size={11} /> Saved as “{savedName}” in the Recorded folder — open the Tests tab to run it.
             </p>
           )}
@@ -855,8 +855,8 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
       {/* SAVE-TO-STUDIO CONFIRMATION MODAL */}
       {saveModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-md p-5 space-y-4 text-left">
-            <div className="flex items-center justify-between border-b pb-2.5">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-md p-6 space-y-4 text-left">
+            <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Save size={14} className="text-primary" /> Save as a test
               </h3>
@@ -869,8 +869,8 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
               </button>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground block">Test name</label>
+            <div className="space-y-2">
+              <label className="text-xs font-medium text-muted-foreground block">Test name</label>
               <input
                 value={saveName}
                 onChange={(e) => {
@@ -883,12 +883,12 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
                 placeholder="Login with valid user"
                 className="w-full h-10 rounded-xl border px-3 text-xs bg-muted/50 font-mono font-semibold disabled:opacity-60"
               />
-              <p className="text-[9px] text-muted-foreground font-medium leading-relaxed">
+              <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                 Saved as Playwright JavaScript in this project's “Recorded” folder. The test's title in the code
                 is renamed to match.
               </p>
               {code.includes("process.env.RECORDED_PASSWORD") && (
-                <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-2.5 leading-relaxed">
+                <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed">
                   The password you typed is not saved in the test. Before running it, add a secret named{" "}
                   <span className="font-mono font-semibold">RECORDED_PASSWORD</span> under More tools → Data &amp; settings →
                   Secrets.
@@ -897,7 +897,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
             </div>
 
             {saveError && (
-              <p className="text-rose-600 text-[10px] font-semibold bg-rose-50 border border-rose-100 rounded-xl p-2.5">
+              <p className="text-rose-600 text-xs font-semibold bg-rose-50 border border-rose-100 rounded-xl p-3">
                 {saveError}
               </p>
             )}
@@ -914,7 +914,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
               <Button
                 onClick={handleConfirmSave}
                 disabled={saving || !saveName.trim()}
-                className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-xl h-9 text-xs font-semibold flex items-center gap-1.5 justify-center"
+                className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-xl h-9 text-xs font-semibold flex items-center gap-2 justify-center"
               >
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save Script
               </Button>
@@ -926,8 +926,8 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
       {/* CUSTOM DEVICE EMULATION MODAL */}
       {customDeviceModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-sm p-6 space-y-4 text-left animate-in zoom-in duration-150">
-            <div className="flex items-center justify-between border-b pb-2.5 select-none">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-sm p-6 space-y-4 text-left animate-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b pb-3 select-none">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Plus size={14} className="text-indigo-650" /> Create Custom Device
               </h3>
@@ -939,9 +939,9 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
               </button>
             </div>
 
-            <div className="space-y-3.5">
+            <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-450 block">Device Name / Label</label>
+                <label className="text-xs font-medium text-slate-450 block">Device Name / Label</label>
                 <input
                   value={customName}
                   onChange={(e) => setCustomName(e.target.value)}
@@ -952,7 +952,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-450 block">Width (px)</label>
+                  <label className="text-xs font-medium text-slate-450 block">Width (px)</label>
                   <input
                     type="number"
                     value={customWidth}
@@ -961,7 +961,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-slate-450 block">Height (px)</label>
+                  <label className="text-xs font-medium text-slate-450 block">Height (px)</label>
                   <input
                     type="number"
                     value={customHeight}
@@ -972,7 +972,7 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-450 block">Device Scale Factor</label>
+                <label className="text-xs font-medium text-slate-450 block">Device Scale Factor</label>
                 <input
                   type="number"
                   step="0.1"
@@ -983,12 +983,12 @@ export default function VisualRecorderSection({ onSavedToStudio, projectId }: Vi
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-slate-450 block">User Agent Override</label>
+                <label className="text-xs font-medium text-slate-450 block">User Agent Override</label>
                 <textarea
                   value={customUserAgent}
                   onChange={(e) => setCustomUserAgent(e.target.value)}
                   rows={2}
-                  className="w-full rounded-xl border p-2.5 text-xs bg-muted/50 font-mono text-[9px] font-semibold leading-relaxed resize-none"
+                  className="w-full rounded-xl border p-3 text-xs bg-muted/50 font-mono text-xs font-semibold leading-relaxed resize-none"
                 />
               </div>
             </div>

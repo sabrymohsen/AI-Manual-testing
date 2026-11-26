@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { AlertTriangle, ArrowLeft, Bug, Loader2, MinusCircle, PlusCircle, Square } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Bug, Loader2, MinusCircle, PlusCircle, Square } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -92,7 +92,7 @@ export default function VisualRunPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5 p-6">
+    <div className="mx-auto max-w-7xl space-y-6 p-6">
       <Link href={`/projects/${projectId}/visual-tests/${test.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> {test.name}
       </Link>
@@ -168,7 +168,7 @@ export default function VisualRunPage() {
 
       {tab === "summary" && (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="space-y-3 rounded-xl border bg-card p-5 lg:col-span-1">
+          <div className="space-y-3 rounded-xl border bg-card p-6 lg:col-span-1">
             <h2 className="font-semibold text-foreground">Screens</h2>
             {(["Unresolved", "Error", "Rejected", "Passed", "Accepted", "New", "Removed"] as ScreenStatus[]).map(st => (
               <button
@@ -178,14 +178,14 @@ export default function VisualRunPage() {
                   setStatusFilter(st)
                   setTab("screens")
                 }}
-                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted/50 disabled:opacity-50"
+                className="flex w-full items-center justify-between rounded-md px-2 py-2 text-sm hover:bg-muted/50 disabled:opacity-50"
               >
                 <ScreenStatusBadge status={st} />
                 <span className="font-semibold text-foreground">{countBy(st)}</span>
               </button>
             ))}
           </div>
-          <div className="space-y-3 rounded-xl border bg-card p-5 lg:col-span-2">
+          <div className="space-y-3 rounded-xl border bg-card p-6 lg:col-span-2">
             <h2 className="font-semibold text-foreground">By browser &amp; screen size</h2>
             <table className="w-full text-sm">
               <thead className="text-left text-xs uppercase text-muted-foreground">

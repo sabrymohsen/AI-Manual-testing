@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Undo2, Square, Type, ArrowUpRight, Circle, Crop, Move, Sparkles, X, Check, EyeOff } from "lucide-react"
+import { Undo2, Square, Type, ArrowUpRight, Circle, Crop, Move, Sparkles, X, Check, EyeOff } from "@/components/ui/icons"
 
 interface ScreenshotAnnotatorProps {
   imageSrc: string
@@ -272,12 +272,12 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
         
         {/* Editor Header Toolbar */}
         <div className="bg-slate-50 border-b border-slate-200 p-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5 bg-white border border-slate-200 p-1 rounded-xl">
+          <div className="flex items-center gap-2 bg-white border border-slate-200 p-1 rounded-xl">
             <Button
               type="button"
               variant={tool === "rect" ? "default" : "ghost"}
               onClick={() => setTool("rect")}
-              className="px-2.5 py-1.5 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
+              className="px-3 py-2 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
             >
               <Square size={14} /> Rectangle
             </Button>
@@ -285,7 +285,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
               type="button"
               variant={tool === "arrow" ? "default" : "ghost"}
               onClick={() => setTool("arrow")}
-              className="px-2.5 py-1.5 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
+              className="px-3 py-2 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
             >
               <ArrowUpRight size={14} /> Arrow
             </Button>
@@ -293,7 +293,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
               type="button"
               variant={tool === "circle" ? "default" : "ghost"}
               onClick={() => setTool("circle")}
-              className="px-2.5 py-1.5 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
+              className="px-3 py-2 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
             >
               <Circle size={14} /> Circle
             </Button>
@@ -301,7 +301,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
               type="button"
               variant={tool === "text" ? "default" : "ghost"}
               onClick={() => setTool("text")}
-              className="px-2.5 py-1.5 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
+              className="px-3 py-2 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
             >
               <Type size={14} /> Text
             </Button>
@@ -309,7 +309,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
               type="button"
               variant={tool === "blur" ? "default" : "ghost"}
               onClick={() => setTool("blur")}
-              className="px-2.5 py-1.5 h-8 text-xs font-semibold rounded-lg flex items-center gap-1 text-slate-700"
+              className="px-3 py-2 h-8 text-xs font-semibold rounded-lg flex items-center gap-1 text-slate-700"
             >
               <EyeOff size={14} /> Blur Sensitive
             </Button>
@@ -317,7 +317,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
               type="button"
               variant={tool === "crop" ? "default" : "ghost"}
               onClick={() => setTool("crop")}
-              className="px-2.5 py-1.5 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
+              className="px-3 py-2 h-8 text-xs font-semibold rounded-lg flex items-center gap-1"
             >
               <Crop size={14} /> Crop
             </Button>
@@ -339,7 +339,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
 
             {/* Line width */}
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold text-slate-400">Size:</span>
+              <span className="text-xs font-bold text-slate-400">Size:</span>
               <input
                 type="range"
                 min="2"
@@ -356,7 +356,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
               variant="outline"
               disabled={history.length <= 1}
               onClick={handleUndo}
-              className="h-8 py-1.5 px-3 border-slate-200 rounded-lg flex items-center gap-1 hover:bg-slate-100 disabled:opacity-50"
+              className="h-8 py-2 px-3 border-slate-200 rounded-lg flex items-center gap-1 hover:bg-slate-100 disabled:opacity-50"
             >
               <Undo2 size={14} /> Undo
             </Button>
@@ -388,7 +388,7 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
                 onChange={(e) => setTextInputValue(e.target.value)}
                 placeholder="Type annotation..."
                 autoFocus
-                className="border border-slate-200 px-3 py-1.5 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+                className="border border-slate-200 px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleApplyText()
                   if (e.key === "Escape") setShowTextInput(false)
@@ -406,10 +406,10 @@ export function ScreenshotAnnotator({ imageSrc, onSave, onCancel }: ScreenshotAn
 
         {/* Footer actions */}
         <div className="bg-slate-50 border-t border-slate-200 p-4 flex items-center justify-end gap-3">
-          <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 px-5">
+          <Button type="button" variant="outline" onClick={onCancel} className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 px-6">
             Cancel
           </Button>
-          <Button type="button" onClick={handleSaveAnnotated} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl px-6 shadow-md flex items-center gap-1.5">
+          <Button type="button" onClick={handleSaveAnnotated} className=" bg-green-600 text-white font-semibold rounded-xl px-6 shadow-md flex items-center gap-2">
             <Check size={18} /> Apply & Save Screenshot
           </Button>
         </div>

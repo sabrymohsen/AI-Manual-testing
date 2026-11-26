@@ -21,7 +21,7 @@ import {
   HelpCircle,
   Loader2,
   Calendar
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface EvidenceItem {
   id: string
@@ -172,7 +172,7 @@ export default function EvidenceVaultPage() {
               setCompareSelection([])
             }}
             variant="outline"
-            className={`border-indigo-150 text-primary h-9 text-xs rounded-xl flex items-center gap-1.5 shadow-2xs ${
+            className={`border-indigo-150 text-primary h-9 text-xs rounded-xl flex items-center gap-2 shadow-2xs ${
               compareMode ? "bg-primary/10 font-semibold border-primary/25" : "bg-card"
             }`}
           >
@@ -206,7 +206,7 @@ export default function EvidenceVaultPage() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Search locator, URL..."
-                      className="w-full h-8 pl-8 pr-2 rounded-xl border border-border text-[10.5px] focus:outline-none focus:ring-1 focus:ring-primary bg-muted/50"
+                      className="w-full h-8 pl-8 pr-2 rounded-xl border border-border text-xs focus:outline-none focus:ring-1 focus:ring-primary bg-muted/50"
                     />
                   </div>
 
@@ -214,7 +214,7 @@ export default function EvidenceVaultPage() {
                   <select
                     value={filterType}
                     onChange={(e) => setFilterType(e.target.value)}
-                    className="flex h-8 w-28 rounded-xl border border-input bg-background px-3 py-1 text-[10.5px] focus-visible:ring-1 focus-visible:ring-primary cursor-pointer"
+                    className="flex h-8 w-28 rounded-xl border border-input bg-background px-3 py-1 text-xs focus-visible:ring-1 focus-visible:ring-primary cursor-pointer"
                   >
                     <option value="all">All Types</option>
                     <option value="screenshot">Screenshots</option>
@@ -227,7 +227,7 @@ export default function EvidenceVaultPage() {
                   <select
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}
-                    className="flex h-8 w-28 rounded-xl border border-input bg-background px-3 py-1 text-[10.5px] focus-visible:ring-1 focus-visible:ring-primary cursor-pointer"
+                    className="flex h-8 w-28 rounded-xl border border-input bg-background px-3 py-1 text-xs focus-visible:ring-1 focus-visible:ring-primary cursor-pointer"
                   >
                     <option value="all">All Status</option>
                     <option value="pass">Passed</option>
@@ -237,7 +237,7 @@ export default function EvidenceVaultPage() {
 
                 </div>
 
-                <div className="text-[10px] text-muted-foreground font-mono font-semibold">
+                <div className="text-xs text-muted-foreground font-mono font-semibold">
                   {filteredEvidence.length} items found
                 </div>
               </div>
@@ -253,9 +253,9 @@ export default function EvidenceVaultPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {compareSelection.map((item, idx) => (
                       <div key={idx} className="border bg-muted/50 rounded-xl overflow-hidden p-3 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] border-b pb-1">
+                        <div className="flex justify-between items-center text-xs border-b pb-1">
                           <span className="font-semibold text-foreground">{item.pageUrl}</span>
-                          <span className={`px-2 py-0.2 border text-[9px] rounded font-semibold uppercase ${
+                          <span className={`px-2 py-0.2 border text-xs rounded font-semibold uppercase ${
                             item.status === "pass" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-rose-50 text-rose-700 border-rose-100"
                           }`}>
                             {item.status}
@@ -263,15 +263,15 @@ export default function EvidenceVaultPage() {
                         </div>
                         
                         <div className="aspect-video bg-muted border rounded-xl overflow-hidden flex items-center justify-center relative">
-                          <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] flex flex-col justify-center items-center text-center">
-                            <span className="text-[11px] text-muted-foreground font-medium">Comparison Screenshot {idx + 1}</span>
-                            <span className="text-[8px] font-mono text-muted-foreground mt-1">ID: {item.id.slice(0, 8)}</span>
+                          <div className="absolute inset-0 [background-size:16px_16px] flex flex-col justify-center items-center text-center">
+                            <span className="text-xs text-muted-foreground font-medium">Comparison Screenshot {idx + 1}</span>
+                            <span className="text-xs font-mono text-muted-foreground mt-1">ID: {item.id.slice(0, 8)}</span>
                           </div>
                         </div>
                       </div>
                     ))}
                     {compareSelection.length < 2 && (
-                      <div className="border border-dashed p-10 rounded-xl flex flex-col items-center justify-center text-muted-foreground italic gap-2 min-h-[220px]">
+                      <div className="border border-dashed p-10 rounded-xl flex flex-col items-center justify-center text-muted-foreground gap-2 min-h-[220px]">
                         <ImageIcon size={28} />
                         <span>Select another item below to start comparison</span>
                       </div>
@@ -286,12 +286,12 @@ export default function EvidenceVaultPage() {
                       <div
                         key={item.id}
                         onClick={() => selectFile(item)}
-                        className={`border rounded-2xl p-3.5 space-y-3 bg-muted/50 hover:bg-muted/50 cursor-pointer transition-all ${
+                        className={`border rounded-2xl p-3 space-y-3 bg-muted/50 hover:bg-muted/50 cursor-pointer transition-all ${
                           isSelected ? "border-primary/25 ring-2 ring-indigo-100" : "border-border"
                         }`}
                       >
-                        <div className="flex justify-between items-center text-[10px]">
-                          <span className={`px-1.5 py-0.2 border rounded text-[9px] font-semibold uppercase ${
+                        <div className="flex justify-between items-center text-xs">
+                          <span className={`px-2 py-0.2 border rounded text-xs font-semibold uppercase ${
                             item.fileType === "screenshot" ? "bg-blue-50 text-blue-700 border-blue-100" :
                             item.fileType === "video" ? "bg-purple-50 text-purple-700 border-purple-100" : "bg-amber-50 text-amber-700 border-amber-100"
                           }`}>
@@ -303,13 +303,13 @@ export default function EvidenceVaultPage() {
                         </div>
 
                         <div className="aspect-video bg-muted border rounded-xl overflow-hidden flex items-center justify-center relative select-none text-center">
-                          <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:12px_12px] flex flex-col justify-center items-center p-1">
-                            <span className="text-[7.5px] font-semibold text-slate-450 block truncate w-32">{item.pageUrl}</span>
-                            <span className="text-[7px] text-muted-foreground font-mono block mt-0.5">{item.fileType.toUpperCase()} file</span>
+                          <div className="absolute inset-0 [background-size:12px_12px] flex flex-col justify-center items-center p-1">
+                            <span className="text-xs font-semibold text-slate-450 block truncate w-32">{item.pageUrl}</span>
+                            <span className="text-xs text-muted-foreground font-mono block mt-0.5">{item.fileType.toUpperCase()} file</span>
                           </div>
                         </div>
 
-                        <div className="flex justify-between items-center text-[9px]">
+                        <div className="flex justify-between items-center text-xs">
                           <span className="text-slate-450 font-semibold font-mono">Step #{item.stepNumber}</span>
                           <span className="text-muted-foreground font-medium">{new Date(item.createdAt).toLocaleTimeString()}</span>
                         </div>
@@ -317,7 +317,7 @@ export default function EvidenceVaultPage() {
                     )
                   })}
                   {filteredEvidence.length === 0 && (
-                    <p className="text-muted-foreground italic text-center py-12 col-span-3">No matching evidence items found in Allure attachments.</p>
+                    <p className="text-muted-foreground text-center py-12 col-span-3">No matching evidence items found in Allure attachments.</p>
                   )}
                 </div>
               )}
@@ -327,8 +327,8 @@ export default function EvidenceVaultPage() {
             {/* Timeline walkthrough builder */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
-                <span className="text-[11px] font-medium text-slate-450">Chronological Timeline Walkthrough</span>
-                <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-450">Chronological Timeline Walkthrough</span>
+                <div className="flex items-center gap-2">
                   <button
                     disabled={timelineStep === 1}
                     onClick={() => setTimelineStep(prev => Math.max(1, prev - 1))}
@@ -336,7 +336,7 @@ export default function EvidenceVaultPage() {
                   >
                     <ChevronLeft size={12} />
                   </button>
-                  <span className="text-[10px] font-semibold font-mono">{timelineStep} / {timelineSteps.length}</span>
+                  <span className="text-xs font-semibold font-mono">{timelineStep} / {timelineSteps.length}</span>
                   <button
                     disabled={timelineStep === timelineSteps.length}
                     onClick={() => setTimelineStep(prev => Math.min(timelineSteps.length, prev + 1))}
@@ -347,17 +347,17 @@ export default function EvidenceVaultPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center bg-muted/50 border p-3 rounded-xl">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center bg-muted/50 border p-3 rounded-xl">
                 <div className="md:col-span-7 space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="h-5 w-5 bg-indigo-650 text-white rounded-full flex items-center justify-center font-semibold text-[9px]">
+                    <span className="h-5 w-5 bg-indigo-650 text-white rounded-full flex items-center justify-center font-semibold text-xs">
                       {activeTimeline.step}
                     </span>
-                    <span className="font-semibold text-foreground text-[10.5px]">Step Description</span>
+                    <span className="font-semibold text-foreground text-xs">Step Description</span>
                   </div>
-                  <p className="text-muted-foreground font-medium text-[10.5px] leading-relaxed pl-7">{activeTimeline.action}</p>
-                  <div className="pl-7 pt-1">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-semibold border uppercase ${
+                  <p className="text-muted-foreground font-medium text-xs leading-relaxed pl-8">{activeTimeline.action}</p>
+                  <div className="pl-8 pt-1">
+                    <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold border uppercase ${
                       activeTimeline.status === "pass" 
                         ? "bg-emerald-50 text-emerald-700 border-emerald-100" 
                         : "bg-rose-50 text-rose-700 border-rose-100"
@@ -368,9 +368,9 @@ export default function EvidenceVaultPage() {
                 </div>
 
                 <div className="md:col-span-5 aspect-video bg-card border rounded-xl overflow-hidden flex items-center justify-center relative select-none">
-                  <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:12px_12px] flex flex-col justify-center items-center text-center p-2">
-                    <span className="text-[8.5px] font-semibold text-slate-450 uppercase">{activeTimeline.img}</span>
-                    <span className="text-[7.5px] text-muted-foreground font-mono mt-0.5">Walkthrough Screenshot</span>
+                  <div className="absolute inset-0 [background-size:12px_12px] flex flex-col justify-center items-center text-center p-2">
+                    <span className="text-xs font-semibold text-slate-450 uppercase">{activeTimeline.img}</span>
+                    <span className="text-xs text-muted-foreground font-mono mt-0.5">Walkthrough Screenshot</span>
                   </div>
                 </div>
               </div>
@@ -384,12 +384,12 @@ export default function EvidenceVaultPage() {
             {selectedFile ? (
               <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
                 <div className="flex justify-between items-center border-b pb-2">
-                  <span className="text-[11px] font-medium text-slate-450">Evidence Inspector</span>
+                  <span className="text-xs font-medium text-slate-450">Evidence Inspector</span>
                   {compareMode && (
                     <Button
                       onClick={() => handleToggleCompare(selectedFile)}
                       variant="outline"
-                      className={`h-7 px-2.5 text-[9px] font-bold rounded-xl border flex items-center gap-1 ${
+                      className={`h-7 px-3 text-xs font-bold rounded-xl border flex items-center gap-1 ${
                         compareSelection.some(item => item.id === selectedFile.id)
                           ? "bg-primary/10 border-primary/25 text-primary"
                           : "border-border text-foreground bg-card"
@@ -402,45 +402,45 @@ export default function EvidenceVaultPage() {
 
                 {/* Main preview box */}
                 <div className="aspect-video bg-muted/50 border rounded-xl overflow-hidden flex items-center justify-center relative select-none text-center">
-                  <div className="absolute inset-0 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:16px_16px] flex flex-col justify-between p-2.5">
-                    <div className="bg-white/80 border text-[8px] p-1 rounded font-mono font-semibold truncate">{selectedFile.pageUrl}</div>
-                    <div className="text-center text-slate-450 font-medium text-[11px] flex flex-col items-center gap-1">
+                  <div className="absolute inset-0 [background-size:16px_16px] flex flex-col justify-between p-3">
+                    <div className="bg-white/80 border text-xs p-1 rounded font-mono font-semibold truncate">{selectedFile.pageUrl}</div>
+                    <div className="text-center text-slate-450 font-medium text-xs flex flex-col items-center gap-1">
                       <FolderOpen size={24} className="text-muted-foreground" />
                       <span>{selectedFile.fileType} artifact preview</span>
                     </div>
-                    <div className="bg-slate-800/80 border text-[7.5px] p-1 rounded font-mono text-white text-center">Step #{selectedFile.stepNumber} log details</div>
+                    <div className="bg-slate-800/80 border text-xs p-1 rounded font-mono text-white text-center">Step #{selectedFile.stepNumber} log details</div>
                   </div>
                 </div>
 
                 {/* Metadata info */}
-                <div className="space-y-2.5">
-                  <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-3 text-xs border-b pb-2 gap-2">
                     <span className="text-muted-foreground font-semibold uppercase">Artifact Type</span>
                     <span className="col-span-2 font-mono font-semibold text-slate-850 uppercase">{selectedFile.fileType}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
+                  <div className="grid grid-cols-3 text-xs border-b pb-2 gap-2">
                     <span className="text-muted-foreground font-semibold uppercase">Locator Used</span>
                     <span className="col-span-2 font-mono font-semibold text-slate-650 break-all select-all">{selectedFile.elementLocator}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
+                  <div className="grid grid-cols-3 text-xs border-b pb-2 gap-2">
                     <span className="text-muted-foreground font-semibold uppercase">Timestamp</span>
                     <span className="col-span-2 font-mono font-semibold text-muted-foreground">{new Date(selectedFile.createdAt).toLocaleString()}</span>
                   </div>
 
-                  <div className="grid grid-cols-3 text-[10px] border-b pb-1.5 gap-2">
+                  <div className="grid grid-cols-3 text-xs border-b pb-2 gap-2">
                     <span className="text-muted-foreground font-semibold uppercase">Execution ID</span>
                     <span className="col-span-2 font-mono font-semibold text-muted-foreground break-all">{selectedFile.testExecutionId}</span>
                   </div>
                 </div>
 
                 {/* Tags block & buttons */}
-                <div className="space-y-3.5">
+                <div className="space-y-3">
                   
                   {/* Tag editor */}
                   <div className="space-y-2">
-                    <label className="text-[11px] font-medium text-muted-foreground block">Modify Tags</label>
+                    <label className="text-xs font-medium text-muted-foreground block">Modify Tags</label>
                     <div className="flex gap-2">
                       <input
                         value={editingTags}
@@ -451,7 +451,7 @@ export default function EvidenceVaultPage() {
                       <Button
                         onClick={handleUpdateTags}
                         disabled={savingTags}
-                        className="bg-slate-800 text-white hover:bg-slate-900 rounded-xl h-8 text-[10px] font-semibold shadow-xs px-3"
+                        className="bg-slate-800 text-white hover:bg-slate-900 rounded-xl h-8 text-xs font-semibold shadow-xs px-3"
                       >
                         {savingTags ? <Loader2 className="animate-spin" size={12} /> : <Tag size={12} />}
                       </Button>
@@ -461,7 +461,7 @@ export default function EvidenceVaultPage() {
                   {/* Actions buttons */}
                   <Button
                     onClick={() => alert("Simulated download triggered for file ID: " + selectedFile.id)}
-                    className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5"
+                    className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-2"
                   >
                     <Download size={13} /> Download Test Evidence File
                   </Button>
@@ -479,18 +479,18 @@ export default function EvidenceVaultPage() {
             {/* API Request Response logger block */}
             {selectedFile?.fileType === "log" && (
               <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-3">
-                <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">API Request Response Logger</span>
+                <span className="text-xs font-medium text-slate-450 block border-b pb-2">API Request Response Logger</span>
                 
-                <div className="space-y-2 font-mono text-[9px] leading-relaxed">
+                <div className="space-y-2 font-mono text-xs leading-relaxed">
                   <div>
-                    <span className="text-[11px] font-medium text-primary block">Request URL & Headers</span>
+                    <span className="text-xs font-medium text-primary block">Request URL & Headers</span>
                     <pre className="bg-muted/50 border p-2 rounded-xl text-slate-650 overflow-x-auto">
                       {`GET https://reqres.in/api/users?page=2\nAccept: application/json\nContent-Type: application/json`}
                     </pre>
                   </div>
                   <div>
-                    <span className="text-[11px] font-medium text-rose-600 block">Response Body payload (Status 429)</span>
-                    <pre className="bg-rose-50/20 border border-rose-100 p-2.5 rounded-xl text-rose-700 overflow-x-auto whitespace-pre-wrap select-text">
+                    <span className="text-xs font-medium text-rose-600 block">Response Body payload (Status 429)</span>
+                    <pre className="bg-rose-50/20 border border-rose-100 p-3 rounded-xl text-rose-700 overflow-x-auto whitespace-pre-wrap select-text">
                       {`{\n  "status": 429,\n  "error": "Too Many Requests",\n  "message": "API rate limiting threshold reached."\n}`}
                     </pre>
                   </div>

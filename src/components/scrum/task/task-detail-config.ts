@@ -12,7 +12,7 @@ import {
   GitFork,
   FlaskConical,
   type LucideIcon,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 /** Jira-style status pill tokens (bg / text / border / dot). */
 export const STATUS_COLORS: Record<

@@ -5,7 +5,7 @@ import { ChatMessage as MessageType, useChatStore } from "@/stores/chatStore";
 import { ChatMessage } from "./ChatMessage";
 import { Virtuoso, VirtuosoHandle } from "react-virtuoso";
 import { format, isToday, isYesterday } from "date-fns";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown } from "@/components/ui/icons";
 
 type ListItem =
   | { type: "date-divider"; key: string; dateText: string }
@@ -129,7 +129,7 @@ export function ChatMessageList({
       return (
         <div className="flex items-center justify-center my-4">
           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
-          <span className="mx-4 text-[10px] font-semibold text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full border border-slate-150 dark:border-slate-800">
+          <span className="mx-4 text-xs font-semibold text-slate-400 bg-white dark:bg-slate-900 px-2 py-0.5 rounded-full border border-slate-150 dark:border-slate-800">
             {item.dateText}
           </span>
           <div className="h-px bg-slate-200 dark:bg-slate-800 flex-1" />
@@ -141,7 +141,7 @@ export function ChatMessageList({
       return (
         <div className="flex items-center my-2">
           <div className="h-[2px] bg-red-500 flex-grow" />
-          <span className="bg-red-500 text-white font-medium text-[11px] px-2 py-0.5 rounded-sm">
+          <span className="bg-red-500 text-white font-medium text-xs px-2 py-0.5 rounded-sm">
             New
           </span>
           <div className="h-[2px] bg-red-500 flex-grow" />

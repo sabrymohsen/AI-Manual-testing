@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { FolderOpen, Laptop, Loader2, Play, Square, Unlink } from "lucide-react"
+import { FolderOpen, Laptop, Loader2, Play, Square, Unlink } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 interface PwApi {
@@ -58,7 +58,7 @@ export function LocalProjectsSidebar({ selectedPath, onSelect }: { selectedPath:
 
   return (
     <div className="border-t p-2">
-      <p className="flex items-center gap-1.5 px-1 py-1 text-xs font-medium text-muted-foreground">
+      <p className="flex items-center gap-2 px-1 py-1 text-xs font-medium text-muted-foreground">
         <Laptop className="h-3.5 w-3.5" /> On my computer
       </p>
       {list.map((p) => (
@@ -67,13 +67,13 @@ export function LocalProjectsSidebar({ selectedPath, onSelect }: { selectedPath:
           type="button"
           onClick={() => onSelect(p)}
           title={p.path}
-          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm ${selectedPath === p.path ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
+          className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm ${selectedPath === p.path ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}
         >
           <FolderOpen className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">{p.name}</span>
         </button>
       ))}
-      <button type="button" onClick={link} className="mt-1 w-full rounded-md px-2 py-1.5 text-left text-xs font-medium text-primary hover:bg-primary/10">
+      <button type="button" onClick={link} className="mt-1 w-full rounded-md px-2 py-2 text-left text-xs font-medium text-primary hover:bg-primary/10">
         + Link a Playwright project folder
       </button>
     </div>
@@ -177,7 +177,7 @@ export function LocalProjectPanel({
             <Play className="h-4 w-4" /> Run on this computer
           </Button>
         )}
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <input type="checkbox" checked={headed} onChange={(e) => setHeaded(e.target.checked)} /> Show the browser
         </label>
         <input

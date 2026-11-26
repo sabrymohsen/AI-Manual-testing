@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Bookmark, Keyboard, Trash2, Undo2, X } from "lucide-react"
+import { Bookmark, Keyboard, Trash2, Undo2, X } from "@/components/ui/icons"
 
 /* ─── Keyboard shortcuts ──────────────────────────────────────────────────── */
 
@@ -68,7 +68,7 @@ export function useBugShortcuts(handlers: {
 export function ShortcutHelp({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="w-[340px] rounded-xl border bg-background p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-[340px] rounded-xl border bg-background p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <Keyboard className="h-4 w-4" /> Keyboard shortcuts
@@ -77,11 +77,11 @@ export function ShortcutHelp({ onClose }: { onClose: () => void }) {
             <X className="h-4 w-4" />
           </button>
         </div>
-        <ul className="space-y-1.5 text-xs">
+        <ul className="space-y-2 text-xs">
           {SHORTCUTS.map(([k, label]) => (
             <li key={k} className="flex items-center justify-between">
               <span className="text-muted-foreground">{label}</span>
-              <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px]">{k}</kbd>
+              <kbd className="rounded border bg-muted px-2 py-0.5 font-mono text-xs">{k}</kbd>
             </li>
           ))}
         </ul>
@@ -185,12 +185,12 @@ export function UndoBar({ pending, onUndo, onCommit }: { pending: { label: strin
   if (!pending) return null
   const left = Math.max(0, Math.ceil((pending.until - now) / 1000))
   return (
-    <div role="status" className="fixed bottom-5 left-1/2 z-[65] flex -translate-x-1/2 items-center gap-3 rounded-xl border bg-foreground px-4 py-2.5 text-xs font-semibold text-background shadow-2xl">
+    <div role="status" className="fixed bottom-5 left-1/2 z-[65] flex -translate-x-1/2 items-center gap-3 rounded-xl border bg-foreground px-4 py-3 text-xs font-semibold text-background shadow-2xl">
       <Trash2 className="h-4 w-4" />
       <span>
         {pending.label} <span className="opacity-60">· {left}s</span>
       </span>
-      <button onClick={onUndo} className="inline-flex items-center gap-1 rounded-md bg-background/15 px-2.5 py-1 hover:bg-background/25">
+      <button onClick={onUndo} className="inline-flex items-center gap-1 rounded-md bg-background/15 px-3 py-1 hover:bg-background/25">
         <Undo2 className="h-3.5 w-3.5" /> Undo
       </button>
       <button onClick={onCommit} className="rounded p-1 opacity-60 hover:opacity-100" aria-label="Delete now" title="Delete now">
@@ -262,17 +262,17 @@ export function SavedViews({ projectId, current, apply }: { projectId: string; c
   const same = (a: BugFilters, b: BugFilters) => JSON.stringify(a) === JSON.stringify(b)
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-2">
       <Bookmark className="h-3.5 w-3.5 text-muted-foreground" />
       {views.map((v) => (
         <span
           key={v.name}
-          className={`inline-flex h-7 items-center overflow-hidden rounded-full border text-[11px] ${same(v.filters, current) ? "border-primary bg-primary/10 text-primary" : ""}`}
+          className={`inline-flex h-7 items-center overflow-hidden rounded-full border text-xs ${same(v.filters, current) ? "border-primary bg-primary/10 text-primary" : ""}`}
         >
-          <button onClick={() => apply(v.filters)} className="h-full px-2.5 font-semibold hover:bg-muted">
+          <button onClick={() => apply(v.filters)} className="h-full px-3 font-semibold hover:bg-muted">
             {v.name}
           </button>
-          <button onClick={() => remove(v.name)} className="h-full px-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={`Remove view ${v.name}`}>
+          <button onClick={() => remove(v.name)} className="h-full px-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label={`Remove view ${v.name}`}>
             <X className="h-3 w-3" />
           </button>
         </span>
@@ -288,14 +288,14 @@ export function SavedViews({ projectId, current, apply }: { projectId: string; c
               if (e.key === "Escape") setNaming(false)
             }}
             placeholder="View name, e.g. My critical"
-            className="h-7 w-44 rounded-md border bg-background px-2 text-[11px] outline-none focus:ring-2 focus:ring-primary/30"
+            className="h-7 w-44 rounded-md border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
           />
-          <button onClick={save} disabled={!name.trim()} className="h-7 rounded-md bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground disabled:opacity-50">
+          <button onClick={save} disabled={!name.trim()} className="h-7 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50">
             Save
           </button>
         </span>
       ) : (
-        <button onClick={() => setNaming(true)} className="h-7 rounded-full border border-dashed px-2.5 text-[11px] font-semibold text-muted-foreground hover:bg-muted">
+        <button onClick={() => setNaming(true)} className="h-7 rounded-full border border-dashed px-3 text-xs font-semibold text-muted-foreground hover:bg-muted">
           + Save current filters
         </button>
       )}

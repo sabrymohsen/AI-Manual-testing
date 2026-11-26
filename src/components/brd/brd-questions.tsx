@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   Trash2,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { cn } from "@/lib/utils"
 import { ANSWER_SOURCES, QUESTION_PRIORITIES, stakeholderEmail, type Gate } from "@/lib/brd/readiness"
@@ -167,7 +167,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
               {gate.state === "override" &&
                 `By ${gate.override?.byName ?? "a tester"}${gate.override?.at ? ` on ${new Date(gate.override.at).toLocaleString()}` : ""}: “${gate.override?.why}”. Tests generated now are tagged “tester-override”. Blocking: ${gate.blockingKeys.join(", ")}.`}
             </p>
-            <p className="mt-1.5 text-[11px] text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               {gate.open} open · {gate.answered} answered · {gate.dismissed} dismissed
             </p>
           </div>
@@ -232,7 +232,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
             onClick={() => setFilter(f)}
             aria-pressed={filter === f}
             className={cn(
-              "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+              "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
               filter === f ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent"
             )}
           >
@@ -243,7 +243,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
           {counts.Open > 0 && (
             <button
               onClick={() => setShowEmail(!showEmail)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium hover:bg-accent"
+              className="inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium hover:bg-accent"
               title="A draft email of the open questions for the business. The app never sends it."
             >
               <Mail className="h-3.5 w-3.5" /> Stakeholder email
@@ -257,7 +257,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
                   toast.success(d.added ? `${d.added} question${d.added === 1 ? "" : "s"} added from the analysis` : "Every analysis issue is already a question")
                 })
               }
-              className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium hover:bg-accent"
+              className="inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium hover:bg-accent"
               title="Turn the latest analysis's ambiguities, conflicts and gaps into questions"
             >
               <Download className="h-3.5 w-3.5" /> From analysis ({analysisIssues})
@@ -266,7 +266,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
           {canEdit && (
             <button
               onClick={() => setAdding(true)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+              className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
             >
               <Plus className="h-3.5 w-3.5" /> Add question
             </button>
@@ -278,13 +278,13 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
         <div className="rounded-lg border bg-card p-3">
           <div className="mb-2 flex items-center justify-between gap-2">
             <p className="text-xs font-medium">Draft email (copy it into your mail app; nothing is sent from here)</p>
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(`Subject: ${email.subject}\n\n${email.body}`)
                   toast.success("Email copied")
                 }}
-                className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-xs font-medium hover:bg-accent"
               >
                 <Copy className="h-3.5 w-3.5" /> Copy
               </button>
@@ -294,7 +294,7 @@ export function BrdQuestions({ brdId, canEdit, onGateChange }: { brdId: string; 
             </div>
           </div>
           <p className="text-xs font-semibold">{email.subject}</p>
-          <pre dir="auto" className="mt-1.5 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-muted/50 p-2 font-sans text-xs text-muted-foreground">
+          <pre dir="auto" className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-muted/50 p-2 font-sans text-xs text-muted-foreground">
             {email.body}
           </pre>
         </div>
@@ -456,16 +456,16 @@ function QuestionCard({
   return (
     <div className={cn("rounded-lg border bg-card p-3", q.status === "Dismissed" && "opacity-60")}>
       <div className="flex items-start gap-2">
-        <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{q.key}</span>
+        <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{q.key}</span>
         <div className="min-w-0 flex-1">
           <p dir="auto" className="text-sm font-medium">{q.question}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className={cn("rounded px-1.5 py-0.5 font-medium", PRIORITY_CHIP[q.priority] ?? PRIORITY_CHIP.Low)}>{q.priority}</span>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className={cn("rounded px-2 py-0.5 font-medium", PRIORITY_CHIP[q.priority] ?? PRIORITY_CHIP.Low)}>{q.priority}</span>
             <span>{KIND_LABEL[q.kind] ?? q.kind}</span>
             {q.status !== "Open" && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium",
+                  "inline-flex items-center gap-1 rounded px-2 py-0.5 font-medium",
                   q.status === "Answered" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-muted"
                 )}
               >
@@ -473,20 +473,20 @@ function QuestionCard({
               </span>
             )}
             {q.relatedKeys.map((k) => (
-              <span key={k} className="rounded border px-1.5 py-0.5">{k}</span>
+              <span key={k} className="rounded border px-2 py-0.5">{k}</span>
             ))}
             {q.askTo && <span>· ask {q.askTo}</span>}
-            {q.origin === "analysis" && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">from analysis</span>}
+            {q.origin === "analysis" && <span className="rounded bg-primary/10 px-2 py-0.5 text-primary">from analysis</span>}
           </div>
-          {q.why && <p dir="auto" className="mt-1.5 text-xs text-muted-foreground">{q.why}</p>}
+          {q.why && <p dir="auto" className="mt-2 text-xs text-muted-foreground">{q.why}</p>}
           {q.quote && (
-            <blockquote dir="auto" className="mt-1.5 border-s-2 border-primary/30 ps-2 text-xs italic text-muted-foreground">{q.quote}</blockquote>
+            <blockquote dir="auto" className="mt-2 border-s-2 border-primary/30 ps-2 text-xs text-muted-foreground">{q.quote}</blockquote>
           )}
           {q.answer && mode !== "answer" && (
             <div className="mt-2 rounded-md bg-emerald-500/5 p-2 text-xs">
               <p dir="auto" className="whitespace-pre-wrap">{q.answer}</p>
               {q.answeredByName && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {q.answeredByName}
                   {q.answerSource ? ` · via ${q.answerSource}` : ""}
                   {q.answeredAt ? ` · ${new Date(q.answeredAt).toLocaleDateString()}` : ""}
@@ -506,13 +506,13 @@ function QuestionCard({
                 className="w-full rounded-md border bg-card p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
               />
               <div className="flex flex-wrap items-center justify-end gap-2">
-                <label className="text-[11px] text-muted-foreground">Answered via</label>
-                <select value={source} onChange={(e) => setSource(e.target.value)} className="h-7 rounded-md border bg-card px-2 text-[11px]">
+                <label className="text-xs text-muted-foreground">Answered via</label>
+                <select value={source} onChange={(e) => setSource(e.target.value)} className="h-7 rounded-md border bg-card px-2 text-xs">
                   {ANSWER_SOURCES.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
-                <button onClick={() => setMode("view")} className="rounded-md border px-2.5 py-1 text-[11px] font-medium">
+                <button onClick={() => setMode("view")} className="rounded-md border px-3 py-1 text-xs font-medium">
                   Cancel
                 </button>
                 <button
@@ -520,7 +520,7 @@ function QuestionCard({
                   onClick={async () => {
                     if (await onPatch({ answer: answer.trim(), answerSource: source }, `${q.key} answered`)) setMode("view")
                   }}
-                  className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-60"
+                  className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
                 >
                   Save answer
                 </button>
@@ -530,15 +530,15 @@ function QuestionCard({
         </div>
       </div>
       {canEdit && mode === "view" && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t pt-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2 border-t pt-2">
           {q.status === "Open" && (
             <>
-              <button onClick={() => setMode("answer")} className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-medium text-primary-foreground">
+              <button onClick={() => setMode("answer")} className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Answer
               </button>
               <button
                 onClick={() => onPatch({ status: "Dismissed" }, `${q.key} dismissed`)}
-                className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                className="inline-flex h-7 items-center rounded-md border px-3 text-xs font-medium hover:bg-accent"
                 title="Not a real question (e.g. the analysis misread the document)"
               >
                 Dismiss
@@ -546,16 +546,16 @@ function QuestionCard({
             </>
           )}
           {q.status !== "Open" && (
-            <button onClick={() => onPatch({ status: "Open" }, `${q.key} reopened`)} className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent">
+            <button onClick={() => onPatch({ status: "Open" }, `${q.key} reopened`)} className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-xs font-medium hover:bg-accent">
               <RotateCcw className="h-3.5 w-3.5" /> Reopen
             </button>
           )}
           {q.status === "Answered" && (
-            <button onClick={() => setMode("answer")} className="inline-flex h-7 items-center rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent">
+            <button onClick={() => setMode("answer")} className="inline-flex h-7 items-center rounded-md border px-3 text-xs font-medium hover:bg-accent">
               Edit answer
             </button>
           )}
-          <button onClick={() => setMode("edit")} className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground">
+          <button onClick={() => setMode("edit")} className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground">
             <Pencil className="h-3.5 w-3.5" /> Edit
           </button>
           <button onClick={onDelete} className="inline-flex h-7 items-center rounded-md px-2 text-muted-foreground hover:text-destructive" aria-label={`Delete ${q.key}`}>

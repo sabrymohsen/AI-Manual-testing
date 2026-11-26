@@ -61,7 +61,7 @@ import {
   ListOrdered,
   FileCheck,
   AlertCircle
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { generatePlaywrightCode } from "@/lib/recording/code-generators"
 
 interface RecordedStep {
@@ -1278,15 +1278,15 @@ export default function LiveQASessionPage() {
         <div className="flex-1 overflow-y-auto w-full max-w-7xl mx-auto px-8 py-8 space-y-8 select-none text-xs font-medium">
           
           {/* Header Banner - Full Width */}
-          <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 p-8 text-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-primary/20">
+          <div className="relative overflow-hidden rounded-xl bg-indigo-950 p-8 text-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-primary/20">
             <div className="absolute -top-12 -right-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
             <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
               <div className="space-y-3 max-w-2xl">
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-primary/20 text-indigo-300 border border-primary/30">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-primary/20 text-indigo-300 border border-primary/30">
                     <Sparkles className="h-3 w-3" /> Interactive Manual Workstation
                   </span>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     <CheckCircle2 className="h-3 w-3" /> Zero-Lag 30 FPS Stream
                   </span>
                 </div>
@@ -1300,25 +1300,25 @@ export default function LiveQASessionPage() {
 
                 {/* Presets Bar */}
                 <div className="pt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-medium text-muted-foreground mr-1">Presets:</span>
+                  <span className="text-xs font-medium text-muted-foreground mr-1">Presets:</span>
                   <button
                     type="button"
                     onClick={() => applyPreset({ title: "Quick Exploratory Smoke Test", browser: "Chromium", viewport: "Desktop", priority: "High" })}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-1.5 hover:scale-105"
+                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
                   >
                     <Zap size={12} className="text-amber-400" /> Smoke Test
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset({ title: "Mobile Responsiveness Audit", browser: "WebKit", viewport: "Mobile", priority: "Medium" })}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-1.5 hover:scale-105"
+                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
                   >
                     <Smartphone size={12} className="text-indigo-400" /> Mobile Layout
                   </button>
                   <button
                     type="button"
                     onClick={() => applyPreset({ title: "Role Security & Permissions Audit", browser: "Firefox", viewport: "Desktop", priority: "Critical" })}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-[11px] font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-1.5 hover:scale-105"
+                    className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-slate-200 border border-white/10 transition-all flex items-center gap-2 hover:scale-105"
                   >
                     <ShieldCheck size={12} className="text-emerald-400" /> Security Audit
                   </button>
@@ -1349,7 +1349,7 @@ export default function LiveQASessionPage() {
                     <FileText className="h-4 w-4 text-primary" /> Session Identity &amp; Scope
                   </h3>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="work-title" className="font-semibold text-xs">Session / Test Case Title *</Label>
                     <Input
                       id="work-title"
@@ -1361,7 +1361,7 @@ export default function LiveQASessionPage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="work-url" className="font-semibold text-xs">Target Startup URL *</Label>
                     <div className="relative">
                       <Globe className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -1371,12 +1371,12 @@ export default function LiveQASessionPage() {
                         onChange={(e) => setStartUrl(e.target.value)}
                         required
                         placeholder="https://example.com/login"
-                        className="pl-9 h-10 text-xs font-mono"
+                        className="pl-8 h-10 text-xs font-mono"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label className="font-semibold text-xs">Default Test Priority</Label>
                     <div className="grid grid-cols-4 gap-2">
                       {["Low", "Medium", "High", "Critical"].map((p) => (
@@ -1402,7 +1402,7 @@ export default function LiveQASessionPage() {
                 </div>
 
                 {/* Browser & Viewport Platform Selection Grid */}
-                <div className="p-6 rounded-xl border bg-card space-y-5 shadow-sm">
+                <div className="p-6 rounded-xl border bg-card space-y-6 shadow-sm">
                   <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
                     <Laptop className="h-4 w-4 text-primary" /> Browser Engine &amp; Device Configuration
                   </h3>
@@ -1425,11 +1425,11 @@ export default function LiveQASessionPage() {
                               : "border-input bg-background hover:bg-muted/40"
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center justify-between mb-2">
                             <span className="font-semibold text-xs text-foreground">{b.label}</span>
                             {browserType === b.id && <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />}
                           </div>
-                          <span className="text-[10px] text-muted-foreground">{b.desc}</span>
+                          <span className="text-xs text-muted-foreground">{b.desc}</span>
                         </div>
                       ))}
                     </div>
@@ -1455,11 +1455,11 @@ export default function LiveQASessionPage() {
                                 : "border-input bg-background hover:bg-muted/40"
                             }`}
                           >
-                            <div className="flex items-center gap-2 mb-1.5">
+                            <div className="flex items-center gap-2 mb-2">
                               <Icon className={`h-4 w-4 ${viewport === v.id ? "text-primary" : "text-muted-foreground"}`} />
                               <span className="font-semibold text-xs text-foreground">{v.label}</span>
                             </div>
-                            <span className="text-[10px] font-mono text-muted-foreground">{v.dim}</span>
+                            <span className="text-xs font-mono text-muted-foreground">{v.dim}</span>
                           </div>
                         )
                       })}
@@ -1468,13 +1468,13 @@ export default function LiveQASessionPage() {
 
                   {/* Credentials & Preconditions */}
                   <div className="grid grid-cols-2 gap-4 pt-2">
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="work-cred" className="font-semibold text-xs">Pre-Authenticated Role Context</Label>
                       <select
                         id="work-cred"
                         value={credentialId}
                         onChange={(e) => setCredentialId(e.target.value)}
-                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-1.5 text-xs font-semibold"
+                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-xs font-semibold"
                       >
                         <option value="">-- Anonymous / No Login --</option>
                         {project?.credentials.map((c) => (
@@ -1485,7 +1485,7 @@ export default function LiveQASessionPage() {
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label htmlFor="work-precond" className="font-semibold text-xs">Preconditions</Label>
                       <Input
                         id="work-precond"
@@ -1499,7 +1499,7 @@ export default function LiveQASessionPage() {
                 </div>
 
                 {startError && (
-                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 flex items-center gap-2.5">
+                  <div className="p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-900 dark:bg-rose-950/50 flex items-center gap-3">
                     <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
                     <p className="text-xs font-semibold">{startError}</p>
                   </div>
@@ -1508,7 +1508,7 @@ export default function LiveQASessionPage() {
                 <Button
                   type="submit"
                   disabled={startingSession}
-                  className="w-full flex items-center justify-center gap-2 font-semibold h-12 text-sm rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] shadow-indigo-500/25 transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 font-semibold h-12 text-sm rounded-xl bg-indigo-600 text-white shadow-[0_8px_24px_rgba(0,0,0,0.08)] shadow-indigo-500/25 transition-all cursor-pointer"
                 >
                   {startingSession ? (
                     <>
@@ -1536,7 +1536,7 @@ export default function LiveQASessionPage() {
                 <div className="space-y-3 divide-y divide-border/50 text-xs">
                   <div className="pt-2 flex items-center justify-between">
                     <span className="text-muted-foreground font-semibold">Engine</span>
-                    <span className="font-black text-foreground bg-indigo-50 dark:bg-indigo-950/50 px-2.5 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{browserType}</span>
+                    <span className="font-bold text-foreground bg-indigo-50 dark:bg-indigo-950/50 px-3 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300">{browserType}</span>
                   </div>
                   <div className="pt-2 flex items-center justify-between">
                     <span className="text-muted-foreground font-semibold">Resolution</span>
@@ -1561,7 +1561,7 @@ export default function LiveQASessionPage() {
                   <Info className="h-4 w-4 text-primary shrink-0" />
                   <span>Workstation Capabilities</span>
                 </div>
-                <ul className="space-y-2 text-[11px] text-primary dark:text-indigo-300 leading-relaxed font-medium list-disc list-inside">
+                <ul className="space-y-2 text-xs text-primary dark:text-indigo-300 leading-relaxed font-medium list-disc list-inside">
                   <li><b>Step Recording</b>: Captures clicks and typing directly into TypeScript automation scripts.</li>
                   <li><b>1-Click Bug Reports</b>: Files issues pre-filled with screenshots, console logs, and step trace.</li>
                   <li><b>Live Network &amp; Console</b>: Monitor HTTP status codes and JS errors live in real time.</li>
@@ -1589,11 +1589,11 @@ export default function LiveQASessionPage() {
                 }`} />
               </span>
               <div className="min-w-0">
-                <h1 className="text-xs font-semibold text-foreground truncate max-w-xs flex items-center gap-1.5" title={title}>
+                <h1 className="text-xs font-semibold text-foreground truncate max-w-xs flex items-center gap-2" title={title}>
                   {title}
                 </h1>
-                <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1.5">
-                  <span className="text-[11px] px-1.5 py-0.2 rounded bg-muted font-medium">{browserType}</span>
+                <p className="text-xs text-muted-foreground font-semibold flex items-center gap-2">
+                  <span className="text-xs px-2 py-0.2 rounded bg-muted font-medium">{browserType}</span>
                   <span>&middot;</span>
                   <span>{connectionStatus}</span>
                   <span>&middot;</span>
@@ -1613,7 +1613,7 @@ export default function LiveQASessionPage() {
                   size="sm"
                   onClick={() => handleTakeScreenshot(false)}
                   disabled={capturingScreenshot}
-                  className="h-7 px-2.5 text-[11px] font-semibold gap-1 text-foreground hover:bg-background"
+                  className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
                   title="Capture visible viewport & annotate"
                 >
                   {capturingScreenshot ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5 text-primary" />}
@@ -1624,7 +1624,7 @@ export default function LiveQASessionPage() {
                   size="sm"
                   onClick={() => handleTakeScreenshot(true)}
                   disabled={capturingScreenshot}
-                  className="h-7 px-2.5 text-[11px] font-semibold gap-1 text-foreground hover:bg-background"
+                  className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
                   title="Capture entire scrollable page"
                 >
                   <Maximize className="h-3.5 w-3.5 text-primary" />
@@ -1652,7 +1652,7 @@ export default function LiveQASessionPage() {
                     size="sm"
                     onClick={handleToggleStepRecording}
                     disabled={togglingSteps}
-                    className="h-7 px-2.5 text-[11px] font-semibold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
+                    className="h-7 px-3 text-xs font-semibold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
                   >
                     <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
                     <span>Steps ({recordedSteps.length})</span>
@@ -1664,7 +1664,7 @@ export default function LiveQASessionPage() {
                     size="sm"
                     onClick={handleToggleStepRecording}
                     disabled={togglingSteps}
-                    className="h-7 px-2.5 text-[11px] font-semibold gap-1 text-foreground hover:bg-background"
+                    className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
                     title="Record user clicks and inputs into step timeline"
                   >
                     <MousePointerClick className="h-3.5 w-3.5 text-primary" />
@@ -1677,7 +1677,7 @@ export default function LiveQASessionPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleStopRecording}
-                    className="h-7 px-2.5 text-[11px] font-semibold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
+                    className="h-7 px-3 text-xs font-semibold gap-1 text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50"
                   >
                     <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
                     <span className="tabular-nums">{fmtElapsed(recStartedAt)}</span>
@@ -1689,7 +1689,7 @@ export default function LiveQASessionPage() {
                     size="sm"
                     onClick={handleStartRecording}
                     disabled={uploadingRecording}
-                    className="h-7 px-2.5 text-[11px] font-semibold gap-1 text-foreground hover:bg-background"
+                    className="h-7 px-3 text-xs font-semibold gap-1 text-foreground hover:bg-background"
                     title="Record live browser view as WebM video clip"
                   >
                     {uploadingRecording ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5 text-primary" />}
@@ -1703,7 +1703,7 @@ export default function LiveQASessionPage() {
                 <Button
                   size="sm"
                   onClick={() => setShowBugDrawer(true)}
-                  className="h-7 px-3 text-[11px] font-semibold gap-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs"
+                  className="h-7 px-3 text-xs font-semibold gap-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-xs"
                 >
                   <Bug className="h-3.5 w-3.5" />
                   <span>Create Bug</span>
@@ -1713,7 +1713,7 @@ export default function LiveQASessionPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setRightTab("diagnostics")}
-                  className={`h-7 px-2.5 text-[11px] font-semibold gap-1.5 rounded-xl ${
+                  className={`h-7 px-3 text-xs font-semibold gap-2 rounded-xl ${
                     consoleErrors.length > 0 || networkErrors.length > 0
                       ? "border-rose-300 text-rose-600 bg-rose-50 dark:bg-rose-950/40"
                       : "border-input text-muted-foreground"
@@ -1722,7 +1722,7 @@ export default function LiveQASessionPage() {
                   <Terminal className="h-3.5 w-3.5" />
                   <span>Logs</span>
                   {(consoleErrors.length > 0 || networkErrors.length > 0) && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[9px]">
+                    <span className="px-2 py-0.2 rounded-full bg-rose-600 text-white text-xs">
                       {consoleErrors.length + networkErrors.length}
                     </span>
                   )}
@@ -1735,14 +1735,14 @@ export default function LiveQASessionPage() {
                   variant="ghost"
                   size="sm"
                   onClick={handlePauseResume}
-                  className="h-7 px-2 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                  className="h-7 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
                 >
                   {sessionStatus === "Active" ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 text-emerald-500" />}
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => handleEndSession(true)}
-                  className="h-7 px-3 text-[11px] font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs"
+                  className="h-7 px-3 text-xs font-semibold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs"
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   <span>Complete &amp; Save</span>
@@ -1801,7 +1801,7 @@ export default function LiveQASessionPage() {
                   </div>
 
                   {/* Address Bar */}
-                  <div className="flex-1 flex items-center gap-1.5 h-7 rounded-lg bg-slate-950/80 px-2.5 border border-slate-800">
+                  <div className="flex-1 flex items-center gap-2 h-7 rounded-lg bg-slate-950/80 px-3 border border-slate-800">
                     <Lock size={11} className="text-emerald-400 shrink-0" />
                     <input
                       value={urlInput}
@@ -1822,7 +1822,7 @@ export default function LiveQASessionPage() {
                       }}
                       placeholder="Enter URL and press Enter..."
                       spellCheck={false}
-                      className="flex-1 bg-transparent font-mono text-[11px] text-slate-200 focus:outline-none"
+                      className="flex-1 bg-transparent font-mono text-xs text-slate-200 focus:outline-none"
                     />
                   </div>
 
@@ -1841,9 +1841,9 @@ export default function LiveQASessionPage() {
                       onChange={(e) => setZoomText(e.target.value)}
                       onBlur={commitZoomText}
                       onKeyDown={(e) => { if (e.key === "Enter") commitZoomText() }}
-                      className="w-8 bg-transparent text-center font-mono text-[10px] font-semibold text-slate-300 focus:outline-none"
+                      className="w-8 bg-transparent text-center font-mono text-xs font-semibold text-slate-300 focus:outline-none"
                     />
-                    <span className="text-[10px] font-semibold text-muted-foreground mr-1">%</span>
+                    <span className="text-xs font-semibold text-muted-foreground mr-1">%</span>
                     <button
                       onClick={() => applyZoom(zoom + ZOOM_STEP)}
                       disabled={zoom >= ZOOM_MAX}
@@ -1860,7 +1860,7 @@ export default function LiveQASessionPage() {
                       value={streamQuality}
                       onChange={(e) => changeStreamQuality(e.target.value as "sharp" | "balanced" | "fast")}
                       title="Live view quality. Sharp: crisp text, needs a fast connection (best in the desktop app). Fast: lower quality for slow connections."
-                      className="h-6 shrink-0 rounded-md border border-slate-700 bg-slate-900 px-1.5 text-[10px] font-semibold text-slate-200 focus:outline-none"
+                      className="h-6 shrink-0 rounded-md border border-slate-700 bg-slate-900 px-2 text-xs font-semibold text-slate-200 focus:outline-none"
                     >
                       <option value="sharp">Sharp</option>
                       <option value="balanced">Balanced</option>
@@ -1869,7 +1869,7 @@ export default function LiveQASessionPage() {
                   )}
 
                   {/* Stream Mode Indicator */}
-                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                     {streamMode === "streaming" ? "CDP Stream" : streamMode}
                   </span>
 
@@ -1989,7 +1989,7 @@ export default function LiveQASessionPage() {
                   )}
 
                   {/* Watermark / Guidance Overlay */}
-                  <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-[10px] text-slate-300 font-semibold flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="absolute bottom-3 left-3 px-3 py-2 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-800 text-xs text-slate-300 font-semibold flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <MousePointerClick size={12} className="text-indigo-400" />
                     <span>Interact directly in the screen above</span>
                   </div>
@@ -2003,55 +2003,55 @@ export default function LiveQASessionPage() {
               <aside className="w-[380px] border-l bg-card flex flex-col shrink-0 min-h-0">
                 
                 {/* Tab Strip */}
-                <div className="p-2 border-b bg-muted/30 grid grid-cols-5 gap-1 text-[11px] font-semibold shrink-0">
+                <div className="p-2 border-b bg-muted/30 grid grid-cols-5 gap-1 text-xs font-semibold shrink-0">
                   <button
                     onClick={() => setRightTab("steps")}
-                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                    className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
                       rightTab === "steps" ? "bg-background text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <ListOrdered size={14} />
-                    <span className="text-[10px]">Steps</span>
+                    <span className="text-xs">Steps</span>
                   </button>
 
                   <button
                     onClick={() => setRightTab("screenshots")}
-                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                    className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
                       rightTab === "screenshots" ? "bg-background text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Camera size={14} />
-                    <span className="text-[10px]">Shots ({screenshots.length})</span>
+                    <span className="text-xs">Shots ({screenshots.length})</span>
                   </button>
 
                   <button
                     onClick={() => setRightTab("videos")}
-                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                    className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
                       rightTab === "videos" ? "bg-background text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Video size={14} />
-                    <span className="text-[10px]">Clips ({recordings.length})</span>
+                    <span className="text-xs">Clips ({recordings.length})</span>
                   </button>
 
                   <button
                     onClick={() => setRightTab("selectors")}
-                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                    className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
                       rightTab === "selectors" ? "bg-background text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Layers size={14} />
-                    <span className="text-[10px]">Locators</span>
+                    <span className="text-xs">Locators</span>
                   </button>
 
                   <button
                     onClick={() => setRightTab("diagnostics")}
-                    className={`py-1.5 rounded-lg flex flex-col items-center gap-1 transition-all ${
+                    className={`py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${
                       rightTab === "diagnostics" ? "bg-background text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
                     <Terminal size={14} />
-                    <span className="text-[10px]">Logs</span>
+                    <span className="text-xs">Logs</span>
                   </button>
                 </div>
 
@@ -2063,12 +2063,12 @@ export default function LiveQASessionPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground text-xs">Scenario Step Timeline</span>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={handleCopyPlaywrightCode}
-                            className="h-7 text-[10px] font-semibold gap-1"
+                            className="h-7 text-xs font-semibold gap-1"
                           >
                             {copiedCode ? <Check size={12} className="text-emerald-500" /> : <Code size={12} />}
                             {copiedCode ? "Copied!" : "Export Code"}
@@ -2076,7 +2076,7 @@ export default function LiveQASessionPage() {
                           <Button
                             size="sm"
                             onClick={() => setShowManualStepDrawer(true)}
-                            className="h-7 text-[10px] font-semibold gap-1 bg-primary hover:bg-primary/90 text-white"
+                            className="h-7 text-xs font-semibold gap-1 bg-primary hover:bg-primary/90 text-white"
                           >
                             <Plus size={12} /> Add Step
                           </Button>
@@ -2087,17 +2087,17 @@ export default function LiveQASessionPage() {
                         <div className="p-8 border border-dashed rounded-xl text-center space-y-2 text-muted-foreground">
                           <MousePointerClick className="mx-auto h-8 w-8 text-slate-300" />
                           <p className="font-semibold text-xs">No steps captured yet.</p>
-                          <p className="text-[11px] max-w-xs mx-auto">
+                          <p className="text-xs max-w-xs mx-auto">
                             Click <b>Record Steps</b> in the header toolbar to capture your live browser clicks &amp; inputs into steps.
                           </p>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           {recordedSteps.map((step, idx) => (
-                            <div key={step.id || idx} className="p-3 rounded-xl border bg-card hover:bg-muted/40 transition-all space-y-1.5 group relative">
+                            <div key={step.id || idx} className="p-3 rounded-xl border bg-card hover:bg-muted/40 transition-all space-y-2 group relative">
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 text-[10px] font-black">
+                                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 text-xs font-bold">
                                     {step.stepNumber}
                                   </span>
                                   <span className="font-medium text-xs text-foreground">
@@ -2115,13 +2115,13 @@ export default function LiveQASessionPage() {
                               <p className="font-medium text-xs text-foreground">{step.actionDescription}</p>
 
                               {step.recommendedSelector && (
-                                <p className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-1.5 rounded-lg truncate">
+                                <p className="font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-2 rounded-lg truncate">
                                   {step.recommendedSelector}
                                 </p>
                               )}
 
                               {step.inputValue && (
-                                <p className="text-[11px] text-muted-foreground">
+                                <p className="text-xs text-muted-foreground">
                                   Input: <span className="font-semibold text-foreground">&quot;{step.inputValue}&quot;</span>
                                 </p>
                               )}
@@ -2140,7 +2140,7 @@ export default function LiveQASessionPage() {
                         <Button
                           size="sm"
                           onClick={() => handleTakeScreenshot(false)}
-                          className="h-7 text-[10px] font-semibold gap-1 bg-primary text-white"
+                          className="h-7 text-xs font-semibold gap-1 bg-primary text-white"
                         >
                           <Camera size={12} /> Take Shot
                         </Button>
@@ -2150,7 +2150,7 @@ export default function LiveQASessionPage() {
                         <div className="p-8 border border-dashed rounded-xl text-center space-y-2 text-muted-foreground">
                           <Camera className="mx-auto h-8 w-8 text-slate-300" />
                           <p className="font-semibold text-xs">No screenshots captured yet.</p>
-                          <p className="text-[11px] max-w-xs mx-auto">
+                          <p className="text-xs max-w-xs mx-auto">
                             Click <b>Screenshot</b> or <b>Full Page</b> in the header toolbar to capture visual evidence.
                           </p>
                         </div>
@@ -2166,7 +2166,7 @@ export default function LiveQASessionPage() {
                                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                 />
                                 {shot.fullPage && (
-                                  <span className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-slate-900/80 text-white text-[11px] font-medium">
+                                  <span className="absolute top-1 left-1 px-2 py-0.5 rounded bg-slate-900/80 text-white text-xs font-medium">
                                     Full Page
                                   </span>
                                 )}
@@ -2174,14 +2174,14 @@ export default function LiveQASessionPage() {
                               <div className="p-2 flex items-center justify-between border-t bg-muted/20">
                                 <button
                                   onClick={() => setAnnotatingShot({ kind: "saved", shot })}
-                                  className="text-[10px] font-semibold text-primary dark:text-indigo-400 flex items-center gap-1 hover:underline"
+                                  className="text-xs font-semibold text-primary dark:text-indigo-400 flex items-center gap-1 hover:underline"
                                 >
                                   <Pencil size={11} /> Annotate
                                 </button>
                                 <a
                                   href={`/api/files/${encodeURIComponent(shot.filePath)}`}
                                   download
-                                  className="text-[10px] font-semibold text-muted-foreground hover:text-foreground"
+                                  className="text-xs font-semibold text-muted-foreground hover:text-foreground"
                                 >
                                   <Download size={11} />
                                 </a>
@@ -2204,7 +2204,7 @@ export default function LiveQASessionPage() {
                         <div className="p-8 border border-dashed rounded-xl text-center space-y-2 text-muted-foreground">
                           <Video className="mx-auto h-8 w-8 text-slate-300" />
                           <p className="font-semibold text-xs">No video clips recorded yet.</p>
-                          <p className="text-[11px] max-w-xs mx-auto">
+                          <p className="text-xs max-w-xs mx-auto">
                             Click <b>Record Video</b> in the header toolbar to record live stream clips.
                           </p>
                         </div>
@@ -2213,11 +2213,11 @@ export default function LiveQASessionPage() {
                           {recordings.map((clip, idx) => (
                             <div key={clip.id || idx} className="p-3 rounded-xl border bg-card space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-xs text-foreground flex items-center gap-1.5">
+                                <span className="font-semibold text-xs text-foreground flex items-center gap-2">
                                   <Video size={14} className="text-primary" /> Video Clip #{idx + 1}
                                 </span>
                                 {clip.durationMs && (
-                                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-muted">
+                                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-muted">
                                     {Math.round(clip.durationMs / 1000)}s
                                   </span>
                                 )}
@@ -2245,7 +2245,7 @@ export default function LiveQASessionPage() {
                         <Button
                           size="sm"
                           onClick={() => setShowElementDrawer(true)}
-                          className="h-7 text-[10px] font-semibold gap-1 bg-primary text-white"
+                          className="h-7 text-xs font-semibold gap-1 bg-primary text-white"
                         >
                           <Plus size={12} /> Add Selector
                         </Button>
@@ -2255,7 +2255,7 @@ export default function LiveQASessionPage() {
                         <div className="p-8 border border-dashed rounded-xl text-center space-y-2 text-muted-foreground">
                           <Layers className="mx-auto h-8 w-8 text-slate-300" />
                           <p className="font-semibold text-xs">No element selectors captured yet.</p>
-                          <p className="text-[11px] max-w-xs mx-auto">
+                          <p className="text-xs max-w-xs mx-auto">
                             Click <b>Add Selector</b> to inspect and save reusable DOM locators.
                           </p>
                         </div>
@@ -2265,11 +2265,11 @@ export default function LiveQASessionPage() {
                             <div key={el.id} className="p-3 rounded-xl border bg-card space-y-1">
                               <div className="flex items-center justify-between">
                                 <span className="font-semibold text-xs text-foreground">{el.tagName}</span>
-                                <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                                <span className="text-xs font-medium px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
                                   {el.type}
                                 </span>
                               </div>
-                              <p className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-1.5 rounded-lg truncate">
+                              <p className="font-mono text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 p-2 rounded-lg truncate">
                                 {el.selector}
                               </p>
                             </div>
@@ -2284,7 +2284,7 @@ export default function LiveQASessionPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="font-medium text-foreground text-xs">Live Diagnostics Inspector</span>
-                        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg text-[10px] font-semibold">
+                        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg text-xs font-semibold">
                           <button
                             onClick={() => setDiagnosticTab("console")}
                             className={`px-2 py-1 rounded-md ${diagnosticTab === "console" ? "bg-background text-foreground shadow-xs" : "text-muted-foreground"}`}
@@ -2308,8 +2308,8 @@ export default function LiveQASessionPage() {
                             </div>
                           ) : (
                             consoleErrors.map((err, idx) => (
-                              <div key={idx} className="p-3 rounded-xl border border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 font-mono text-[10px] space-y-1">
-                                <div className="flex items-center gap-1.5 font-semibold">
+                              <div key={idx} className="p-3 rounded-xl border border-rose-200 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 font-mono text-xs space-y-1">
+                                <div className="flex items-center gap-2 font-semibold">
                                   <AlertCircle size={12} className="text-rose-600" /> JS Error
                                 </div>
                                 <p className="whitespace-pre-wrap leading-relaxed">{err}</p>
@@ -2327,8 +2327,8 @@ export default function LiveQASessionPage() {
                             </div>
                           ) : (
                             networkErrors.map((net, idx) => (
-                              <div key={idx} className="p-3 rounded-xl border border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-mono text-[10px] space-y-1">
-                                <div className="flex items-center gap-1.5 font-semibold">
+                              <div key={idx} className="p-3 rounded-xl border border-amber-200 bg-amber-50/50 dark:border-amber-900 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-mono text-xs space-y-1">
+                                <div className="flex items-center gap-2 font-semibold">
                                   <Globe size={12} className="text-amber-600" /> Network Error
                                 </div>
                                 <p className="whitespace-pre-wrap leading-relaxed">{net}</p>
@@ -2416,19 +2416,19 @@ export default function LiveQASessionPage() {
             <div className="grid grid-cols-3 gap-3 p-4 rounded-xl bg-muted/40 border text-xs">
               <div className="space-y-0.5">
                 <span className="font-semibold text-lg text-primary">{completionSummary?.steps ?? 0}</span>
-                <span className="block text-[11px] font-medium text-muted-foreground">Steps</span>
+                <span className="block text-xs font-medium text-muted-foreground">Steps</span>
               </div>
               <div className="space-y-0.5">
                 <span className="font-semibold text-lg text-emerald-600">{completionSummary?.shots ?? 0}</span>
-                <span className="block text-[11px] font-medium text-muted-foreground">Shots</span>
+                <span className="block text-xs font-medium text-muted-foreground">Shots</span>
               </div>
               <div className="space-y-0.5">
                 <span className="font-semibold text-lg text-purple-600">{completionSummary?.videos ?? 0}</span>
-                <span className="block text-[11px] font-medium text-muted-foreground">Videos</span>
+                <span className="block text-xs font-medium text-muted-foreground">Videos</span>
               </div>
             </div>
             {!!completionSummary && completionSummary.consoleErrors + completionSummary.networkErrors > 0 && (
-              <p className="text-[11px] text-amber-700 dark:text-amber-400 font-semibold">
+              <p className="text-xs text-amber-700 dark:text-amber-400 font-semibold">
                 The app logged {completionSummary.consoleErrors} console error(s) and {completionSummary.networkErrors} failed request(s) during the session.
               </p>
             )}
@@ -2476,8 +2476,8 @@ export default function LiveQASessionPage() {
       {showManualStepDrawer && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-[450px] bg-background h-full shadow-[0_8px_24px_rgba(0,0,0,0.08)] border-l flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-5 border-b flex items-center justify-between bg-muted/30">
-              <h3 className="font-semibold text-base flex items-center gap-1.5">
+            <div className="p-6 border-b flex items-center justify-between bg-muted/30">
+              <h3 className="font-semibold text-base flex items-center gap-2">
                 <Plus className="h-5 w-5 text-primary" /> Append Test Step
               </h3>
               <button onClick={() => setShowManualStepDrawer(false)} className="text-muted-foreground hover:text-foreground">
@@ -2486,15 +2486,15 @@ export default function LiveQASessionPage() {
             </div>
 
             <form onSubmit={handleAddManualStep} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs font-semibold">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="man-desc">Action Description *</Label>
                 <Input id="man-desc" value={manualDescription} onChange={(e) => setManualDescription(e.target.value)} required placeholder="e.g. Click submit button and verify dashboard navigation" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="man-atype">Action Type</Label>
-                  <select id="man-atype" value={manualActionType} onChange={(e) => setManualActionType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+                  <select id="man-atype" value={manualActionType} onChange={(e) => setManualActionType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                     <option value="click">click</option>
                     <option value="fill">fill / type</option>
                     <option value="open_url">open_url</option>
@@ -2502,9 +2502,9 @@ export default function LiveQASessionPage() {
                     <option value="assert_visible">assert / verify</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="man-ttype">Target Element Type</Label>
-                  <select id="man-ttype" value={manualTargetType} onChange={(e) => setManualTargetType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+                  <select id="man-ttype" value={manualTargetType} onChange={(e) => setManualTargetType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                     <option value="role">button</option>
                     <option value="label">input / field</option>
                     <option value="css">css selector</option>
@@ -2513,17 +2513,17 @@ export default function LiveQASessionPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="man-tval">Target Selector Value</Label>
                 <Input id="man-tval" value={manualTargetValue} onChange={(e) => setManualTargetValue(e.target.value)} placeholder="e.g. #submit-btn or [data-testid='login']" />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="man-ival">Input Value (if applicable)</Label>
                 <Input id="man-ival" value={manualInputValue} onChange={(e) => setManualInputValue(e.target.value)} placeholder="e.g. john@example.com" />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="man-exp">Expected Result</Label>
                 <textarea id="man-exp" value={manualExpected} onChange={(e) => setManualExpected(e.target.value)} placeholder="Application navigates to dashboard and success message appears" className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-xs" />
               </div>
@@ -2541,8 +2541,8 @@ export default function LiveQASessionPage() {
       {showElementDrawer && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div className="w-[450px] bg-background h-full shadow-[0_8px_24px_rgba(0,0,0,0.08)] border-l flex flex-col animate-in slide-in-from-right duration-300">
-            <div className="p-5 border-b flex items-center justify-between bg-muted/30">
-              <h3 className="font-semibold text-base flex items-center gap-1.5">
+            <div className="p-6 border-b flex items-center justify-between bg-muted/30">
+              <h3 className="font-semibold text-base flex items-center gap-2">
                 <Layers className="h-5 w-5 text-primary" /> Capture Element Selector
               </h3>
               <button onClick={() => setShowElementDrawer(false)} className="text-muted-foreground hover:text-foreground">
@@ -2551,33 +2551,33 @@ export default function LiveQASessionPage() {
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto flex-1 text-xs font-semibold">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="el-sel">Element Selector *</Label>
                 <Input id="el-sel" value={capSelector} onChange={(e) => setCapSelector(e.target.value)} required placeholder="e.g. [data-testid='submit-login'] or #username" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="el-type">Selector Type</Label>
-                  <select id="el-type" value={capType} onChange={(e) => setCapType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs">
+                  <select id="el-type" value={capType} onChange={(e) => setCapType(e.target.value)} className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs">
                     <option value="CSS">CSS Selector</option>
                     <option value="XPath">XPath Query</option>
                     <option value="ID">Standard ID</option>
                     <option value="Attribute">Data Attribute</option>
                   </select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="el-tag">Tag Name</Label>
                   <Input id="el-tag" value={capTagName} onChange={(e) => setCapTagName(e.target.value)} placeholder="e.g. button" />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="el-text">Visible Text Selector</Label>
                 <Input id="el-text" value={capText} onChange={(e) => setCapText(e.target.value)} placeholder="e.g. Login" />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="el-attr">Additional Attributes</Label>
                 <Input id="el-attr" value={capAttributes} onChange={(e) => setCapAttributes(e.target.value)} placeholder="e.g. type='submit'" />
               </div>
@@ -2608,8 +2608,8 @@ export default function LiveQASessionPage() {
       {/* REMOTE FILE CHOOSER DIALOG OVERLAY */}
       {showFileChooserModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs select-none">
-          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-sm p-6 space-y-4 text-left animate-in zoom-in duration-150">
-            <div className="flex items-center justify-between border-b pb-2.5">
+          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-sm p-6 space-y-4 text-left animate-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <Camera size={14} className="text-primary" /> Upload File to Browser
               </h3>
@@ -2622,7 +2622,7 @@ export default function LiveQASessionPage() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-[10px] text-muted-foreground font-semibold leading-relaxed">
+              <p className="text-xs text-muted-foreground font-semibold leading-relaxed">
                 The web page in the remote browser requested a file upload. Choose a local file to forward to it:
               </p>
 
@@ -2636,15 +2636,15 @@ export default function LiveQASessionPage() {
                 {uploadingFile ? (
                   <>
                     <Loader2 size={24} className="text-primary animate-spin" />
-                    <span className="text-[11px] font-medium text-primary">Uploading file...</span>
+                    <span className="text-xs font-medium text-primary">Uploading file...</span>
                   </>
                 ) : (
                   <>
-                    <div className="p-2.5 rounded-xl bg-card border shadow-xs text-muted-foreground">
+                    <div className="p-3 rounded-xl bg-card border shadow-xs text-muted-foreground">
                       <Camera size={20} />
                     </div>
-                    <span className="text-[10.5px] font-semibold text-foreground uppercase tracking-wide">Select Local File</span>
-                    <span className="text-[9px] font-semibold text-muted-foreground">Drag and drop or click here</span>
+                    <span className="text-xs font-semibold text-foreground uppercase tracking-wide">Select Local File</span>
+                    <span className="text-xs font-semibold text-muted-foreground">Drag and drop or click here</span>
                   </>
                 )}
               </div>

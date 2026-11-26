@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ChevronDown, ChevronRight, Monitor, Smartphone, Tablet } from "lucide-react"
+import { ChevronDown, ChevronRight, Monitor, Smartphone, Tablet } from "@/components/ui/icons"
 import { ModuleSelect } from "@/components/bug-reports/module-select"
 import { ENVIRONMENT_PRESETS, environmentKey, type VisualBrowser, type VisualEnvironment } from "@/lib/visual-tests/environments"
 import { MATCH_LEVEL_META } from "./shared"
@@ -116,7 +116,7 @@ export function CompareSettings({
   }, [projectId])
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="space-y-2">
         <p className="text-sm font-medium text-foreground">How strict should the comparison be?</p>
         <div className="grid gap-2 sm:grid-cols-3">

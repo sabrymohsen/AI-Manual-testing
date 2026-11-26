@@ -6,7 +6,7 @@
  * Once sent, later edits on the board update the tracker item automatically.
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ExternalLink, Loader2, RefreshCw, Send, Share2 } from "lucide-react"
+import { ExternalLink, Loader2, RefreshCw, Send, Share2 } from "@/components/ui/icons"
 import { formatDistanceToNow } from "date-fns"
 import { toast } from "sonner"
 
@@ -42,7 +42,7 @@ export function TaskTrackerPanel({ taskId }: { taskId: string }) {
 
   return (
     <div>
-      <h4 className="mb-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+      <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
         <Share2 className="h-4 w-4 text-indigo-500" /> Tracker
       </h4>
       {isLoading ? (
@@ -62,7 +62,7 @@ export function TaskTrackerPanel({ taskId }: { taskId: string }) {
             <button
               onClick={() => send.mutate()}
               disabled={send.isPending}
-              className="ml-auto inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted"
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted"
               title="Push the current title, description, status and priority"
             >
               {send.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />} Update
@@ -82,7 +82,7 @@ export function TaskTrackerPanel({ taskId }: { taskId: string }) {
           <button
             onClick={() => send.mutate()}
             disabled={send.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
           >
             {send.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />} Send to {name}
           </button>

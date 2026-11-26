@@ -25,7 +25,7 @@ import {
   Save,
   GraduationCap,
   ChevronDown
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
@@ -176,7 +176,7 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
       <div className="flex items-center gap-2">
         <Bot size={16} className="text-primary" />
         <h3 className="text-sm font-semibold text-foreground">AI Providers</h3>
-        <span className="text-[11px] text-muted-foreground font-semibold">
+        <span className="text-xs text-muted-foreground font-semibold">
           Configure and enable providers. The <Star size={10} className="inline text-amber-500 fill-amber-400" /> default is what the agent uses.
         </span>
       </div>
@@ -198,15 +198,15 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                 <div className="flex items-center gap-2">
                   <span className="text-lg leading-none">{PROVIDER_EMOJI[c.provider] || "🤖"}</span>
                   <div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <span className="font-semibold text-foreground text-sm">{c.label}</span>
                       {c.isDefault && (
-                        <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 flex items-center gap-0.5">
+                        <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 flex items-center gap-0.5">
                           <Star size={8} className="fill-indigo-500" /> default
                         </span>
                       )}
                     </div>
-                    <p className="text-[10px] text-muted-foreground font-semibold">{c.docsHint}</p>
+                    <p className="text-xs text-muted-foreground font-semibold">{c.docsHint}</p>
                   </div>
                 </div>
                 {/* enable toggle */}
@@ -222,7 +222,7 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
               {/* key */}
               {!c.local && (
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
                     <KeyRound size={10} /> API Key
                     {c.hasKey && (
                       <span className="text-emerald-600 normal-case ml-1">
@@ -230,18 +230,18 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                       </span>
                     )}
                   </label>
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-2">
                     <input
                       type="password"
                       value={keyInputs[c.provider] || ""}
                       onChange={(e) => setKeyInputs((p) => ({ ...p, [c.provider]: e.target.value }))}
                       placeholder={c.apiKeyMasked || "Paste API key..."}
-                      className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-muted/50 font-mono outline-none focus:ring-2 focus:ring-indigo-100"
+                      className="flex-1 h-8 rounded-lg border px-3 text-xs bg-muted/50 font-mono outline-none focus:ring-2 focus:ring-indigo-100"
                     />
                     <Button
                       onClick={() => saveKey(c)}
                       disabled={!keyInputs[c.provider] || savingKey === c.provider}
-                      className="h-8 px-2.5 bg-primary text-white hover:bg-primary/90 rounded-lg text-[10px] font-semibold disabled:opacity-40"
+                      className="h-8 px-3 bg-primary text-white hover:bg-primary/90 rounded-lg text-xs font-semibold disabled:opacity-40"
                     >
                       {savingKey === c.provider ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
                     </Button>
@@ -252,24 +252,24 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
               {/* Ollama server address */}
               {c.provider === "Ollama" && (
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-muted-foreground">Ollama address</label>
-                  <div className="flex gap-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Ollama address</label>
+                  <div className="flex gap-2">
                     <input
                       value={urlInput ?? c.baseUrl ?? ""}
                       onChange={(e) => setUrlInput(e.target.value)}
                       placeholder={c.defaultBaseUrl || "http://localhost:11434"}
-                      className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-muted/50 font-mono outline-none focus:ring-2 focus:ring-primary/20"
+                      className="flex-1 h-8 rounded-lg border px-3 text-xs bg-muted/50 font-mono outline-none focus:ring-2 focus:ring-primary/20"
                     />
                     <Button
                       onClick={() => saveOllamaUrl(c)}
                       disabled={urlInput === null || urlInput.trim() === (c.baseUrl || "")}
-                      className="h-8 px-2.5 rounded-lg text-[10px] font-semibold disabled:opacity-40"
+                      className="h-8 px-3 rounded-lg text-xs font-semibold disabled:opacity-40"
                       title="Save address"
                     >
                       <Save size={12} />
                     </Button>
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Must be reachable from the machine this app runs on. Install Ollama from ollama.com, then run{" "}
                     <code className="font-mono">ollama pull qwen3:8b</code>.
                   </p>
@@ -278,16 +278,16 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
 
               {/* model */}
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">Model</label>
+                <label className="text-xs font-medium text-muted-foreground">Model</label>
                 {c.provider === "Ollama" && models.length === 0 ? (
-                  <p className="h-8 flex items-center text-[11px] text-muted-foreground">
+                  <p className="h-8 flex items-center text-xs text-muted-foreground">
                     No installed models found. Press Test for details.
                   </p>
                 ) : (
                 <select
                   value={c.model}
                   onChange={(e) => changeModel(c, e.target.value)}
-                  className="h-8 w-full rounded-lg border px-2.5 text-[11px] font-semibold bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
+                  className="h-8 w-full rounded-lg border px-3 text-xs font-semibold bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
                 >
                   {models.map((m) => (
                     <option key={m} value={m}>
@@ -305,14 +305,14 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                   variant="outline"
                   onClick={() => runTest(c)}
                   disabled={t?.loading}
-                  className="h-8 rounded-lg bg-card border-border text-muted-foreground text-[10px] font-semibold gap-1"
+                  className="h-8 rounded-lg bg-card border-border text-muted-foreground text-xs font-semibold gap-1"
                 >
                   {t?.loading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />} Test
                 </Button>
                 <button
                   onClick={() => setDefault(c.provider)}
                   disabled={c.isDefault}
-                  className={`h-8 px-2.5 rounded-lg text-[10px] font-semibold flex items-center gap-1 border transition-colors ${
+                  className={`h-8 px-3 rounded-lg text-xs font-semibold flex items-center gap-1 border transition-colors ${
                     c.isDefault
                       ? "bg-primary/10 text-indigo-400 border-primary/25 cursor-default"
                       : "bg-card text-muted-foreground border-border hover:bg-muted/50"
@@ -322,14 +322,14 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                 </button>
 
                 {t && !t.loading && (
-                  <span className={`ml-auto text-[10px] font-semibold flex items-center gap-1 ${t.ok ? "text-emerald-600" : "text-rose-600"}`}>
+                  <span className={`ml-auto text-xs font-semibold flex items-center gap-1 ${t.ok ? "text-emerald-600" : "text-rose-600"}`}>
                     {t.ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
                     {t.ok ? `OK${t.latencyMs ? ` ${t.latencyMs}ms` : ""}` : "Failed"}
                   </span>
                 )}
               </div>
               {t && !t.loading && t.detail && (
-                <p className={`text-[9.5px] font-semibold ${t.ok ? "text-emerald-600" : "text-rose-500"}`}>{t.detail}</p>
+                <p className={`text-xs font-semibold ${t.ok ? "text-emerald-600" : "text-rose-500"}`}>{t.detail}</p>
               )}
             </div>
           )
@@ -442,19 +442,19 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
       <div className="flex items-center gap-2">
         <Terminal size={16} className="text-primary" />
         <h3 className="text-sm font-semibold text-foreground">Command Library</h3>
-        <span className="text-[11px] text-muted-foreground font-semibold">
+        <span className="text-xs text-muted-foreground font-semibold">
           One click sends the command to the assistant. <span className="text-emerald-600 font-semibold">●</span> = runs a real engine tool.
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {COMMAND_LIBRARY.map((cat, ci) => (
-          <div key={cat.title} className="bg-card border rounded-xl p-4 shadow-sm space-y-2.5">
+          <div key={cat.title} className="bg-card border rounded-xl p-4 shadow-sm space-y-3">
             <div className="flex items-center gap-2 border-b pb-2">
               <cat.icon size={14} className="text-primary" />
               <span className="text-xs font-semibold text-foreground">{cat.title}</span>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {cat.commands.map((c, cmi) => {
                 const isActive = param?.key === `${ci}-${cmi}`
                 return (
@@ -462,31 +462,31 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
                     <button
                       onClick={() => fire(c, ci, cmi)}
                       disabled={sending}
-                      className="w-full text-left flex items-center gap-2 px-2.5 py-2 rounded-lg text-[11px] font-semibold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50 group"
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors disabled:opacity-50 group"
                     >
                       {c.native ? (
-                        <span className="text-emerald-500 text-[8px] shrink-0" title="Runs a real engine tool">●</span>
+                        <span className="text-emerald-500 text-xs shrink-0" title="Runs a real engine tool">●</span>
                       ) : (
-                        <span className="text-slate-300 text-[8px] shrink-0" title="Sent as a prompt">●</span>
+                        <span className="text-slate-300 text-xs shrink-0" title="Sent as a prompt">●</span>
                       )}
                       <span className="flex-1 truncate">{c.label}</span>
                       {c.template ? (
-                        <span className="text-[11px] text-slate-300 font-medium">param</span>
+                        <span className="text-xs text-slate-300 font-medium">param</span>
                       ) : (
                         <Send size={11} className="text-slate-300 group-hover:text-primary shrink-0" />
                       )}
                     </button>
                     {isActive && (
-                      <div className="flex gap-1.5 mt-1 mb-1 pl-2">
+                      <div className="flex gap-2 mt-1 mb-1 pl-2">
                         <input
                           autoFocus
                           value={paramValue}
                           onChange={(e) => setParamValue(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && submitParam()}
                           placeholder={param!.label}
-                          className="flex-1 h-8 rounded-lg border px-2.5 text-[11px] bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
+                          className="flex-1 h-8 rounded-lg border px-3 text-xs bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
                         />
-                        <Button onClick={submitParam} disabled={!paramValue.trim()} className="h-8 px-2.5 bg-primary text-white hover:bg-primary/90 rounded-lg text-[10px] font-semibold disabled:opacity-40">
+                        <Button onClick={submitParam} disabled={!paramValue.trim()} className="h-8 px-3 bg-primary text-white hover:bg-primary/90 rounded-lg text-xs font-semibold disabled:opacity-40">
                           <Send size={12} />
                         </Button>
                       </div>
@@ -590,8 +590,8 @@ export function UsagePrivacyPanel() {
       {/* BUDGET BAR */}
       {budget > 0 && (
         <div className="bg-card border rounded-xl p-4 shadow-sm space-y-2">
-          <div className="flex items-center justify-between text-[11px] font-semibold">
-            <span className="text-muted-foreground flex items-center gap-1.5">
+          <div className="flex items-center justify-between text-xs font-semibold">
+            <span className="text-muted-foreground flex items-center gap-2">
               <DollarSign size={13} className="text-primary" /> Monthly budget
             </span>
             <span className={budgetPct >= 100 ? "text-rose-600" : budgetPct >= 80 ? "text-amber-600" : "text-muted-foreground"}>
@@ -605,7 +605,7 @@ export function UsagePrivacyPanel() {
             />
           </div>
           {budgetPct >= 100 && (
-            <p className="text-[10px] text-rose-600 font-semibold flex items-center gap-1">
+            <p className="text-xs text-rose-600 font-semibold flex items-center gap-1">
               <ShieldAlert size={11} /> Budget reached — paid provider calls are paused until next month.
             </p>
           )}
@@ -617,22 +617,22 @@ export function UsagePrivacyPanel() {
         <div className="lg:col-span-2 bg-card border rounded-xl p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-semibold text-foreground">Daily token usage · 30 days</h3>
-            <span className="text-[10px] text-muted-foreground font-semibold">tokens/day</span>
+            <span className="text-xs text-muted-foreground font-semibold">tokens/day</span>
           </div>
           <UsageBarChart daily={usage.daily} />
         </div>
 
         {/* PER PROVIDER */}
         <div className="bg-card border rounded-xl p-4 shadow-sm">
-          <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-1.5">
+          <h3 className="text-xs font-semibold text-foreground mb-3 flex items-center gap-2">
             <Server size={13} className="text-primary" /> By provider
           </h3>
           {usage.byProvider.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground font-semibold py-8 text-center">No provider usage recorded yet.</p>
+            <p className="text-xs text-muted-foreground font-semibold py-8 text-center">No provider usage recorded yet.</p>
           ) : (
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {usage.byProvider.map((p) => (
-                <div key={p.provider} className="flex items-center justify-between text-[11px]">
+                <div key={p.provider} className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-foreground">{PROVIDER_EMOJI[p.provider] || "🤖"} {p.provider}</span>
                   <span className="text-muted-foreground font-semibold">
                     {formatTokens(p.tokens)} · <span className="text-primary font-semibold">${p.cost.toFixed(2)}</span> · {p.calls} calls
@@ -646,7 +646,7 @@ export function UsagePrivacyPanel() {
 
       {/* CONSENT & PRIVACY */}
       <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3">
-        <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+        <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
           <ShieldCheck size={14} className="text-primary" /> Consent & Privacy
         </h3>
         <ToggleRow
@@ -665,24 +665,24 @@ export function UsagePrivacyPanel() {
         />
         <div className="flex items-center justify-between gap-3 pt-1">
           <div>
-            <p className="text-[11px] font-semibold text-foreground">Monthly budget limit (USD)</p>
-            <p className="text-[9.5px] text-muted-foreground font-semibold">0 = unlimited. Paid calls pause when the month's estimated spend hits this.</p>
+            <p className="text-xs font-semibold text-foreground">Monthly budget limit (USD)</p>
+            <p className="text-xs text-muted-foreground font-semibold">0 = unlimited. Paid calls pause when the month's estimated spend hits this.</p>
           </div>
-          <div className="flex gap-1.5 shrink-0">
+          <div className="flex gap-2 shrink-0">
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-[11px] font-semibold">$</span>
+              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">$</span>
               <input
                 type="number"
                 min={0}
                 value={budgetInput}
                 onChange={(e) => setBudgetInput(e.target.value)}
-                className="w-28 h-8 rounded-lg border pl-5 pr-2.5 text-[11px] font-semibold bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
+                className="w-28 h-8 rounded-lg border pl-6 pr-3 text-xs font-semibold bg-muted/50 outline-none focus:ring-2 focus:ring-indigo-100"
               />
             </div>
             <Button
               onClick={() => savePolicy({ monthlyBudgetUsd: Number(budgetInput) || 0 })}
               disabled={savingPolicy}
-              className="h-8 px-3 bg-primary text-white hover:bg-primary/90 rounded-lg text-[10px] font-semibold"
+              className="h-8 px-3 bg-primary text-white hover:bg-primary/90 rounded-lg text-xs font-semibold"
             >
               Set
             </Button>
@@ -692,26 +692,26 @@ export function UsagePrivacyPanel() {
 
       {/* DATA ACCESS AUDIT */}
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        <div className="px-4 py-2.5 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
+        <div className="px-4 py-3 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
           <ShieldCheck size={13} /> Data Access Audit
-          <span className="text-[10px] text-muted-foreground font-semibold ml-1">what was sent to (or withheld from) a provider</span>
+          <span className="text-xs text-muted-foreground font-semibold ml-1">what was sent to (or withheld from) a provider</span>
         </div>
         <div className="max-h-72 overflow-auto divide-y">
           {log.length === 0 ? (
-            <div className="p-6 text-center text-[11px] text-muted-foreground font-semibold">
+            <div className="p-6 text-center text-xs text-muted-foreground font-semibold">
               No AI data-access events yet. They appear here once the agent runs with a provider configured.
             </div>
           ) : (
             log.map((r) => (
-              <div key={r.id} className="px-4 py-2 text-[11px] flex items-center gap-2">
+              <div key={r.id} className="px-4 py-2 text-xs flex items-center gap-2">
                 <span className="font-semibold text-foreground w-20 shrink-0">{r.provider}</span>
                 <span className="font-mono text-muted-foreground truncate flex-1">{r.dataSummary}</span>
                 {r.withheld ? (
-                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">withheld</span>
+                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">withheld</span>
                 ) : r.redacted ? (
-                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">redacted</span>
+                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">redacted</span>
                 ) : (
-                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">sent</span>
+                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">sent</span>
                 )}
                 <span className="text-muted-foreground font-semibold whitespace-nowrap">{new Date(r.createdAt).toLocaleTimeString()}</span>
               </div>
@@ -758,11 +758,11 @@ export function SkillsPanel() {
       <div className="bg-card border rounded-xl p-4 shadow-sm">
         <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
           <GraduationCap size={16} className="text-primary" /> QA skills
-          <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+          <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
             {skills.length} always on
           </span>
         </h3>
-        <p className="text-[11px] text-muted-foreground font-semibold mt-1">
+        <p className="text-xs text-muted-foreground font-semibold mt-1">
           Testing know-how the AI applies to every feature: generating test cases, writing bug reports, rating severity,
           explaining failures and the chat. Each feature gets only the skills that fit it (up to 3), whichever provider is set up.
         </p>
@@ -772,27 +772,27 @@ export function SkillsPanel() {
         {skills.map((s) => (
           <div key={s.id} className="bg-card border rounded-xl p-4 shadow-sm space-y-2">
             <div>
-              <p className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-foreground flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-emerald-600" /> {s.name}
               </p>
-              <p className="text-[9.5px] text-muted-foreground font-semibold">{s.description}</p>
+              <p className="text-xs text-muted-foreground font-semibold">{s.description}</p>
             </div>
             <div className="flex flex-wrap gap-1">
               {s.usedBy.map((u) => (
-                <span key={u} className="text-[9.5px] font-semibold text-primary bg-primary/10 border border-primary/25 rounded-full px-2 py-0.5">
+                <span key={u} className="text-xs font-semibold text-primary bg-primary/10 border border-primary/25 rounded-full px-2 py-0.5">
                   {u}
                 </span>
               ))}
             </div>
             <button
               onClick={() => setOpen(open === s.id ? null : s.id)}
-              className="text-[10px] font-semibold text-muted-foreground hover:text-primary flex items-center gap-1"
+              className="text-xs font-semibold text-muted-foreground hover:text-primary flex items-center gap-1"
             >
               <ChevronDown size={12} className={`transition-transform ${open === s.id ? "rotate-180" : ""}`} />
               {open === s.id ? "Hide" : "Show"} what the AI is told
             </button>
             {open === s.id && (
-              <p className="text-[11px] leading-relaxed text-muted-foreground bg-muted/50 border rounded-xl p-3">{s.instructions}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground bg-muted/50 border rounded-xl p-3">{s.instructions}</p>
             )}
           </div>
         ))}
@@ -810,7 +810,7 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
 
   if (daily.every((d) => d.tokens === 0)) {
     return (
-      <div className="h-[160px] flex items-center justify-center text-[11px] text-muted-foreground font-semibold">
+      <div className="h-[160px] flex items-center justify-center text-xs text-muted-foreground font-semibold">
         No usage in the last 30 days — token usage appears here after the agent talks to a provider.
       </div>
     )
@@ -818,7 +818,7 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
 
   return (
     <div className="relative">
-      <div className="flex items-end gap-[2px] h-[140px]" style={{ ["--gap" as any]: `${gap}px` }}>
+      <div className="flex items-end gap-0.5 h-[140px]" style={{ ["--gap" as any]: `${gap}px` }}>
         {daily.map((d, i) => {
           const h = d.tokens > 0 ? Math.max(3, (d.tokens / max) * H) : 0
           return (
@@ -838,13 +838,13 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
       </div>
       {/* baseline */}
       <div className="h-px bg-muted mt-0" />
-      <div className="flex justify-between mt-1 text-[8.5px] text-muted-foreground font-semibold">
+      <div className="flex justify-between mt-1 text-xs text-muted-foreground font-semibold">
         <span>{daily[0]?.date.slice(5)}</span>
         <span>{daily[Math.floor(n / 2)]?.date.slice(5)}</span>
         <span>{daily[n - 1]?.date.slice(5)}</span>
       </div>
       {hover !== null && daily[hover] && (
-        <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] font-semibold rounded-lg px-2.5 py-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none whitespace-nowrap">
+        <div className="absolute -top-1 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs font-semibold rounded-lg px-3 py-2 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none whitespace-nowrap">
           {daily[hover].date} · {formatTokens(daily[hover].tokens)} tok · ${daily[hover].cost.toFixed(3)} · {daily[hover].calls} calls
         </div>
       )}
@@ -855,12 +855,12 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
 // ---- shared bits ----
 function StatTile({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string; hint?: string }) {
   return (
-    <div className="bg-card border rounded-xl p-3.5 shadow-sm">
-      <div className="flex items-center gap-1.5 text-[9.5px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="bg-card border rounded-xl p-3 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <Icon size={12} className="text-primary" /> {label}
       </div>
       <div className="text-xl font-semibold text-foreground mt-1">{value}</div>
-      {hint && <div className="text-[9.5px] text-muted-foreground font-semibold">{hint}</div>}
+      {hint && <div className="text-xs text-muted-foreground font-semibold">{hint}</div>}
     </div>
   )
 }
@@ -869,8 +869,8 @@ function ToggleRow({ label, hint, on, disabled, onChange }: { label: string; hin
   return (
     <div className="flex items-center justify-between gap-3 py-1">
       <div>
-        <p className="text-[11px] font-semibold text-foreground">{label}</p>
-        <p className="text-[9.5px] text-muted-foreground font-semibold">{hint}</p>
+        <p className="text-xs font-semibold text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground font-semibold">{hint}</p>
       </div>
       <button
         onClick={() => onChange(!on)}
@@ -887,7 +887,7 @@ function PanelLoader({ label }: { label: string }) {
   return (
     <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
       <Loader2 className="animate-spin text-primary" size={28} />
-      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-[9.5px]">{label}</span>
+      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-xs">{label}</span>
     </div>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, ExternalLink, Loader2, MinusCircle, Play, Search, Square, XCircle } from "lucide-react"
+import { CheckCircle2, ExternalLink, Loader2, MinusCircle, Play, Search, Square, XCircle } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { AgentBrowser, fillData, parseTestData, sleep } from "@/lib/browser-agent/client"
 import { parseSnapshot, redactSecrets } from "@/lib/browser-agent/snapshot"
@@ -354,41 +354,41 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
       <div className="space-y-3">
         <div className="rounded-xl border bg-card p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[13px] font-semibold text-foreground">{adHoc ? "Quick test" : "Test cases"}</p>
+            <p className="text-xs font-semibold text-foreground">{adHoc ? "Quick test" : "Test cases"}</p>
             <button onClick={() => setAdHoc((v) => !v)} className="text-xs font-medium text-primary hover:underline" disabled={running}>
               {adHoc ? "Pick from test cases" : "Write steps instead"}
             </button>
           </div>
           {adHoc ? (
             <div className="space-y-2">
-              <input value={adHocTitle} onChange={(e) => setAdHocTitle(e.target.value)} placeholder="Test name" className="h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal" dir="auto" />
+              <input value={adHocTitle} onChange={(e) => setAdHocTitle(e.target.value)} placeholder="Test name" className="h-8 w-full rounded-md border bg-card px-2 text-xs font-normal" dir="auto" />
               <textarea
                 value={adHocSteps}
                 onChange={(e) => setAdHocSteps(e.target.value)}
                 rows={7}
                 dir="auto"
                 placeholder={
-                  "One step per line:  action | expected result\nAs submitter: Log in with {submitter_user} and {submitter_password} | Home page opens\nAs submitter: Send a new request and remember its number as {request_id} | \"Request sent\" is shown\nAs reviewer: Log in with {reviewer_user} and {reviewer_password} | Inbox opens\nAs reviewer: Open request {request_id} and approve it | Status is \"Approved\""
+                  "One step per line: action | expected result\nAs submitter: Log in with {submitter_user} and {submitter_password} | Home page opens\nAs submitter: Send a new request and remember its number as {request_id} | \"Request sent\" is shown\nAs reviewer: Log in with {reviewer_user} and {reviewer_password} | Inbox opens\nAs reviewer: Open request {request_id} and approve it | Status is \"Approved\""
                 }
-                className="w-full rounded-md border bg-card px-2 py-1.5 text-[13px] font-normal"
+                className="w-full rounded-md border bg-card px-2 py-2 text-xs font-normal"
               />
             </div>
           ) : (
             <>
               <div className="relative mb-2">
                 <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search test cases" className="h-8 w-full rounded-md border bg-card pl-7 pr-2 text-[13px] font-normal" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search test cases" className="h-8 w-full rounded-md border bg-card pl-8 pr-2 text-xs font-normal" />
               </div>
               <div className="max-h-80 overflow-auto rounded-md border">
                 {cases === null ? (
-                  <p className="flex items-center gap-2 p-3 text-[13px] font-normal text-muted-foreground">
+                  <p className="flex items-center gap-2 p-3 text-xs font-normal text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
                   </p>
                 ) : shown.length === 0 ? (
-                  <p className="p-3 text-[13px] font-normal text-muted-foreground">{cases.length ? "No match." : "This project has no test cases with steps yet. Write steps instead."}</p>
+                  <p className="p-3 text-xs font-normal text-muted-foreground">{cases.length ? "No match." : "This project has no test cases with steps yet. Write steps instead."}</p>
                 ) : (
                   shown.map((c) => (
-                    <label key={c.id} className="flex cursor-pointer items-start gap-2 border-b px-2.5 py-2 last:border-b-0 hover:bg-muted/50">
+                    <label key={c.id} className="flex cursor-pointer items-start gap-2 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50">
                       <input
                         type="checkbox"
                         className="mt-0.5"
@@ -397,7 +397,7 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
                         onChange={(e) => setPicked((p) => (e.target.checked ? [...p, c.id] : p.filter((x) => x !== c.id)))}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium text-foreground" dir="auto">
+                        <span className="block truncate text-xs font-medium text-foreground" dir="auto">
                           {c.title}
                         </span>
                         <span className="text-xs font-normal text-muted-foreground">
@@ -481,7 +481,7 @@ function CaseCard({ run, onOpenRun }: { run: CaseRun; onOpenRun: (id: string) =>
   return (
     <div className="rounded-xl border bg-card p-3">
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-foreground" dir="auto">
+        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" dir="auto">
           {run.title}
         </span>
         <span className={`rounded border px-1.5 py-0.5 text-[11px] font-medium ${tone}`}>{run.status === "error" ? "couldn't run" : run.status}</span>
@@ -492,9 +492,9 @@ function CaseCard({ run, onOpenRun }: { run: CaseRun; onOpenRun: (id: string) =>
         )}
       </div>
       {run.error && <p className="mt-1 text-xs font-normal text-rose-700">{run.error}</p>}
-      <ol className="mt-2 space-y-1.5">
+      <ol className="mt-2 space-y-2">
         {run.steps.map((s, i) => (
-          <li key={i} className="text-[13px]">
+          <li key={i} className="text-xs">
             <div className="flex items-start gap-2">
               <span className="w-4 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}</span>
               <StepIcon s={s.status} />

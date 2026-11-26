@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, ClipboardPaste, Database, Loader2, Plus, Sparkles, Trash2, Wand2 } from "lucide-react"
+import { AlertTriangle, CheckCircle2, ChevronDown, ChevronUp, ClipboardPaste, Database, Loader2, Plus, Sparkles, Trash2, Wand2 } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { parseStep, suggestSteps, variablesSet, variablesUsed } from "@/lib/plain-english/grammar"
@@ -98,7 +98,7 @@ function StepInput({
             }
           } else if (e.key === "Escape") setOpen(false)
         }}
-        className="h-9 w-full rounded-md border bg-card px-3 font-mono text-[13px] focus:border-primary focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        className="h-9 w-full rounded-md border bg-card px-3 font-mono text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-indigo-100"
         spellCheck={false}
       />
       {open && suggestions.length > 0 && (
@@ -112,13 +112,13 @@ function StepInput({
                   if (blurTimer.current) clearTimeout(blurTimer.current)
                   pick(s)
                 }}
-                className={`block w-full px-3 py-1.5 text-left font-mono text-xs ${i === active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/50"}`}
+                className={`block w-full px-3 py-2 text-left font-mono text-xs ${i === active ? "bg-primary/10 text-primary" : "text-foreground hover:bg-muted/50"}`}
               >
                 {s}
               </button>
             </li>
           ))}
-          <li className="border-t px-3 py-1 text-[10px] text-muted-foreground">↑↓ to move · Tab to use · replace the quoted words with yours</li>
+          <li className="border-t px-3 py-1 text-xs text-muted-foreground">↑↓ to move · Tab to use · replace the quoted words with yours</li>
         </ul>
       )}
     </div>
@@ -409,7 +409,7 @@ export function PlainEnglishEditor({
                   <p className="flex flex-wrap items-center gap-1 text-amber-700">
                     <AlertTriangle className="h-3.5 w-3.5" /> {parsed.error}
                     {parsed.suggestion && (
-                      <button type="button" onClick={() => setSentence(i, parsed.suggestion!, true)} className="rounded border border-amber-300 px-1.5 py-0.5 font-mono text-[11px] hover:bg-amber-50">
+                      <button type="button" onClick={() => setSentence(i, parsed.suggestion!, true)} className="rounded border border-amber-300 px-2 py-0.5 font-mono text-xs hover:bg-amber-50">
                         Try: {parsed.suggestion}
                       </button>
                     )}

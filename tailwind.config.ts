@@ -16,8 +16,13 @@ const config: Config = {
       },
     },
     extend: {
+      // SKILL.md B7: every transition decelerates on one curve, never under 200ms.
       transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.22, 1, 0.36, 1)",
         "out-soft": "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+      transitionDuration: {
+        DEFAULT: "300ms",
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "ui-sans-serif", "system-ui", "sans-serif"],

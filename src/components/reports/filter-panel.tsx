@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Filter, Calendar, Folder, Timer, User, X } from "lucide-react"
+import { Filter, Calendar, Folder, Timer, User, X } from "@/components/ui/icons"
 
 interface FilterPanelProps {
   projectId: string
@@ -48,7 +48,7 @@ export function FilterPanel({
   onRoleChange,
   className,
 }: FilterPanelProps) {
-  const selectCls = "w-full h-8 rounded-md border border-border bg-card px-2.5 text-[11px] font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
+  const selectCls = "w-full h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-blue-400"
 
   return (
     <div className={cn("w-64 shrink-0 border-r border-border bg-card", className)}>
@@ -61,8 +61,8 @@ export function FilterPanel({
 
       <div className="p-4 space-y-4">
         {/* Project */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Folder className="h-3 w-3" /> Project
           </label>
           <select className={selectCls} value={projectId} onChange={(e) => onProjectChange(e.target.value)}>
@@ -73,8 +73,8 @@ export function FilterPanel({
         </div>
 
         {/* Sprint */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Timer className="h-3 w-3" /> Sprint
           </label>
           <select
@@ -92,8 +92,8 @@ export function FilterPanel({
         </div>
 
         {/* Date Range */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <Calendar className="h-3 w-3" /> Date Range
           </label>
           <select className={selectCls} value={preset} onChange={(e) => onPresetChange(e.target.value)}>
@@ -102,27 +102,27 @@ export function FilterPanel({
             ))}
           </select>
           {preset === "Custom" && (
-            <div className="flex items-center gap-1.5 pt-1">
+            <div className="flex items-center gap-2 pt-1">
               <input
                 type="date"
                 value={from}
                 onChange={(e) => onFromChange(e.target.value)}
-                className="h-7 flex-1 rounded-md border border-border px-2 text-[10px]"
+                className="h-7 flex-1 rounded-md border border-border px-2 text-xs"
               />
               <span className="text-muted-foreground">→</span>
               <input
                 type="date"
                 value={to}
                 onChange={(e) => onToChange(e.target.value)}
-                className="h-7 flex-1 rounded-md border border-border px-2 text-[10px]"
+                className="h-7 flex-1 rounded-md border border-border px-2 text-xs"
               />
             </div>
           )}
         </div>
 
         {/* Role */}
-        <div className="space-y-1.5">
-          <label className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <User className="h-3 w-3" /> Role View
           </label>
           <select className={selectCls} value={role} onChange={(e) => onRoleChange(e.target.value)}>
@@ -134,7 +134,7 @@ export function FilterPanel({
 
         {/* Active filters summary */}
         <div className="pt-2 border-t border-border">
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             <FilterBadge label={`Project: ${projects.find(p => p.id === projectId)?.name || "All"}`} />
             {sprintId && <FilterBadge label={`Sprint`} onRemove={() => onSprintChange(undefined)} />}
             <FilterBadge label={`${preset === "Custom" ? `${from} → ${to}` : PRESETS.find(p => p.value === preset)?.label}`} />
@@ -148,7 +148,7 @@ export function FilterPanel({
 
 function FilterBadge({ label, onRemove }: { label: string; onRemove?: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-semibold text-blue-700">
+    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
       {label}
       {onRemove && (
         <button onClick={onRemove} className="hover:text-blue-900">

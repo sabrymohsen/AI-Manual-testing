@@ -7,7 +7,7 @@ import { ChatSidebar } from "./ChatSidebar";
 import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
 import { ThreadPanel } from "./ThreadPanel";
-import { MessageCircle, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { MessageCircle, X, ChevronLeft, ChevronRight } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { PRESENCE_HEARTBEAT_MS } from "@/lib/presence";
 
@@ -163,7 +163,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
       >
         <MessageCircle className="h-6 w-6" />
         {totalUnreads > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold h-6 min-w-6 px-1.5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-semibold h-6 min-w-6 px-2 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center">
             {totalUnreads}
           </span>
         )}
@@ -213,7 +213,7 @@ export function ChatContainer({ projectId, token, currentUserId }: ChatContainer
                 )}
               </h4>
               {activeChannel?.description && (
-                <p className="text-[10px] text-muted-foreground truncate">{activeChannel.description}</p>
+                <p className="text-xs text-muted-foreground truncate">{activeChannel.description}</p>
               )}
             </div>
           </div>

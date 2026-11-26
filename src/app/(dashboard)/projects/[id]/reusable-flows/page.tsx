@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Plus, Trash2, Edit, Save, MoveUp, MoveDown, Layers, Folder, Play } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, Edit, Save, MoveUp, MoveDown, Layers, Folder, Play } from "@/components/ui/icons"
 import { BackButton } from "@/components/ui/back-button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
@@ -250,7 +250,7 @@ export default function ReusableFlowsPage() {
         <div className="flex items-center gap-4">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight text-blue-600 ">
               Reusable Step Library
             </h1>
             <p className="text-muted-foreground">
@@ -260,7 +260,7 @@ export default function ReusableFlowsPage() {
         </div>
 
         {!(isCreating || isEditing) && (
-          <Button onClick={handleOpenCreate} className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200">
+          <Button onClick={handleOpenCreate} className=" bg-blue-600 text-white font-medium flex items-center gap-2 shadow-md hover:shadow-lg transition-all duration-200">
             <Plus size={18} /> New Reusable Flow
           </Button>
         )}
@@ -288,7 +288,7 @@ export default function ReusableFlowsPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Login as Administrator"
-                className="w-full px-4 py-2.5 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground"
+                className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground"
               />
             </div>
             <div>
@@ -298,7 +298,7 @@ export default function ReusableFlowsPage() {
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
                 placeholder="e.g. Authentication"
-                className="w-full px-4 py-2.5 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground"
+                className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground"
               />
             </div>
           </div>
@@ -309,7 +309,7 @@ export default function ReusableFlowsPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Provide context for when to use this reusable flow..."
-              className="w-full px-4 py-2.5 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground h-20 resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-border focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-foreground h-20 resize-none"
             />
           </div>
 
@@ -318,16 +318,16 @@ export default function ReusableFlowsPage() {
               <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
                 Steps Sequence ({steps.length})
               </h3>
-              <Button type="button" variant="outline" onClick={handleAddStep} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 border-blue-200 flex items-center gap-1.5 rounded-lg py-1.5 px-3">
+              <Button type="button" variant="outline" onClick={handleAddStep} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 border-blue-200 flex items-center gap-2 rounded-lg py-2 px-3">
                 <Plus size={16} /> Add Step
               </Button>
             </div>
 
             <div className="space-y-4">
               {steps.map((step, idx) => (
-                <div key={idx} className="p-4 bg-muted/50 border border-border/60 rounded-xl relative flex flex-col gap-4 group hover:border-border transition-all duration-150">
+                <div key={idx} className="p-4 bg-muted/50 border border-border/60 rounded-xl relative flex flex-col gap-4 group hover:border-border transition-all duration-200">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm bg-muted text-foreground rounded-full px-2.5 py-0.5">
+                    <span className="font-semibold text-sm bg-muted text-foreground rounded-full px-3 py-0.5">
                       Step {step.stepNumber}
                     </span>
                     <div className="flex items-center gap-1">
@@ -352,7 +352,7 @@ export default function ReusableFlowsPage() {
                         value={step.actionDescription}
                         onChange={(e) => handleStepChange(idx, "actionDescription", e.target.value)}
                         placeholder="Click login, fill credentials, etc."
-                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                     <div className="md:col-span-2">
@@ -362,7 +362,7 @@ export default function ReusableFlowsPage() {
                         value={step.expectedResult || ""}
                         onChange={(e) => handleStepChange(idx, "expectedResult", e.target.value)}
                         placeholder="Expected outcome"
-                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                   </div>
@@ -373,7 +373,7 @@ export default function ReusableFlowsPage() {
                       <select
                         value={step.actionType}
                         onChange={(e) => handleStepChange(idx, "actionType", e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-card text-foreground"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-card text-foreground"
                       >
                         {ACTION_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
@@ -383,7 +383,7 @@ export default function ReusableFlowsPage() {
                       <select
                         value={step.targetType}
                         onChange={(e) => handleStepChange(idx, "targetType", e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-card text-foreground"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 bg-card text-foreground"
                       >
                         {TARGET_TYPES.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
@@ -395,7 +395,7 @@ export default function ReusableFlowsPage() {
                         value={step.targetValue || ""}
                         onChange={(e) => handleStepChange(idx, "targetValue", e.target.value)}
                         placeholder="Selector, role name, etc."
-                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                     <div>
@@ -405,7 +405,7 @@ export default function ReusableFlowsPage() {
                         value={step.inputValue || ""}
                         onChange={(e) => handleStepChange(idx, "inputValue", e.target.value)}
                         placeholder="Text to type / select value"
-                        className="w-full px-3 py-1.5 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
+                        className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-foreground"
                       />
                     </div>
                   </div>
@@ -418,7 +418,7 @@ export default function ReusableFlowsPage() {
             <Button type="button" variant="outline" onClick={() => { setIsEditing(false); setIsCreating(false); }} className="rounded-xl border-border text-muted-foreground hover:bg-muted/50">
               Cancel
             </Button>
-            <Button type="submit" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium px-6 rounded-xl flex items-center gap-1.5">
+            <Button type="submit" className=" bg-blue-600 text-white font-medium px-6 rounded-xl flex items-center gap-2">
               <Save size={18} /> Save Flow
             </Button>
           </div>
@@ -447,7 +447,7 @@ export default function ReusableFlowsPage() {
                 <div key={flow.id} className="bg-card border border-border/70 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between group">
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1">
+                      <span className="text-xs font-semibold px-3 py-0.5 rounded-full bg-blue-50 text-blue-600 flex items-center gap-1">
                         <Folder size={12} /> {flow.category || "General"}
                       </span>
                       <span className="text-xs text-muted-foreground">
@@ -455,7 +455,7 @@ export default function ReusableFlowsPage() {
                       </span>
                     </div>
 
-                    <h3 className="font-semibold text-lg text-foreground mb-1.5 group-hover:text-blue-600 transition-colors">
+                    <h3 className="font-semibold text-lg text-foreground mb-2 group-hover:text-blue-600 transition-colors">
                       {flow.name}
                     </h3>
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
@@ -467,17 +467,17 @@ export default function ReusableFlowsPage() {
                         <div key={step.id || step.stepNumber} className="flex gap-2 text-xs text-muted-foreground">
                           <span className="font-semibold text-muted-foreground min-w-4 text-right">{step.stepNumber}.</span>
                           <span className="truncate flex-1 font-medium">{step.actionDescription}</span>
-                          <span className="text-[10px] text-muted-foreground italic bg-muted/50 rounded px-1">{step.actionType}</span>
+                          <span className="text-xs text-muted-foreground bg-muted/50 rounded px-1">{step.actionType}</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-end gap-2 border-t pt-4">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(flow)} className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50/50 rounded-lg py-1 px-3.5 flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(flow)} className="text-muted-foreground hover:text-blue-600 hover:bg-blue-50/50 rounded-lg py-1 px-3 flex items-center gap-1">
                       <Edit size={14} /> Edit
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(flow.id)} className="text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg py-1 px-3.5 flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(flow.id)} className="text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg py-1 px-3 flex items-center gap-1">
                       <Trash2 size={14} /> Delete
                     </Button>
                   </div>

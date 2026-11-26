@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { KanbanSquare, Loader2, X } from "lucide-react"
+import { KanbanSquare, Loader2, X } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 export interface BoardReq {
@@ -108,7 +108,7 @@ export function BrdToBoard({
         </p>
       ) : (
         <>
-          <div className="flex gap-3 text-[11px]">
+          <div className="flex gap-3 text-xs">
             <button className="text-primary hover:underline" onClick={() => setPicked(new Set(pending.map((r) => r.id)))}>
               Select all
             </button>
@@ -129,11 +129,11 @@ export function BrdToBoard({
                 className={cn("flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-accent", !isEpic(r.type) && r.parentKey && "ps-6")}
               >
                 <input type="checkbox" checked={picked.has(r.id)} onChange={() => toggle(r.id)} className="rounded" />
-                <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{r.key}</span>
+                <span className="shrink-0 rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{r.key}</span>
                 <span dir="auto" className={cn("min-w-0 flex-1 truncate", isEpic(r.type) && "font-semibold")}>
                   {r.title}
                 </span>
-                <span className="shrink-0 text-[10px] text-muted-foreground">{r.type ?? "Requirement"}</span>
+                <span className="shrink-0 text-xs text-muted-foreground">{r.type ?? "Requirement"}</span>
               </label>
             ))}
           </div>
@@ -144,7 +144,7 @@ export function BrdToBoard({
             <button
               onClick={send}
               disabled={busy || picked.size === 0}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KanbanSquare className="h-3.5 w-3.5" />}
               Create {picked.size} on board

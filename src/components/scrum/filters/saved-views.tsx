@@ -6,7 +6,7 @@
  */
 import { useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Bookmark, BookmarkPlus, Check, Trash2, Users } from "lucide-react"
+import { Bookmark, BookmarkPlus, Check, Trash2, Users } from "@/components/ui/icons"
 import { toast } from "sonner"
 import {
   DropdownMenu,
@@ -109,14 +109,14 @@ export function SavedViews({ projectId, currentQuery, onApply }: { projectId: st
   return (
     <>
       <DropdownMenu>
-        <DropdownMenuTrigger aria-label="Saved views" title="Saved views" className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+        <DropdownMenuTrigger aria-label="Saved views" title="Saved views" className="inline-flex h-7 items-center gap-2 rounded-md border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
           <Bookmark className="h-3.5 w-3.5" />
           <span className="hidden max-w-[140px] truncate xl:inline">{active ? active.name : "Views"}</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          {mine.length > 0 && <DropdownMenuLabel className="text-[11px] uppercase text-muted-foreground">My views</DropdownMenuLabel>}
+          {mine.length > 0 && <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">My views</DropdownMenuLabel>}
           {mine.map(row)}
-          {team.length > 0 && <DropdownMenuLabel className="text-[11px] uppercase text-muted-foreground">Shared with the team</DropdownMenuLabel>}
+          {team.length > 0 && <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">Shared with the team</DropdownMenuLabel>}
           {team.map(row)}
           {views.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground">No saved views yet. Set some filters, then save them here.</p>}
           <DropdownMenuSeparator />

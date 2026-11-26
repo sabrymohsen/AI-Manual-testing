@@ -6,7 +6,7 @@ import { useScrumLinkables, useTraceabilityMutations } from "@/hooks/scrum/use-s
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
-import { Plus, X, FlaskConical, Bug, Search, Link2, Play, Loader2 } from "lucide-react"
+import { Plus, X, FlaskConical, Bug, Search, Link2, Play, Loader2 } from "@/components/ui/icons"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
@@ -76,11 +76,11 @@ export function TraceabilityLinks({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Test cases */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <FlaskConical className="h-3.5 w-3.5" /> Test Cases {testCases.length > 0 && <span className="text-foreground">({testCases.length})</span>}
           </h4>
           <Picker
@@ -107,7 +107,7 @@ export function TraceabilityLinks({
             <DropdownMenu>
               <DropdownMenuTrigger
                 disabled={running}
-                className="ml-auto inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-[11px] font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                className="ml-auto inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
               >
                 {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />} Run linked tests
               </DropdownMenuTrigger>
@@ -127,17 +127,17 @@ export function TraceabilityLinks({
         ) : (
           <ul className="space-y-1">
             {testCases.map((tc) => (
-              <li key={tc.id} className="group flex items-center gap-2 rounded border border-border px-2 py-1.5 text-sm">
+              <li key={tc.id} className="group flex items-center gap-2 rounded border border-border px-2 py-2 text-sm">
                 <TestStatusDot status={tc.lastStatus} />
                 <Link href={`/projects/${projectId}/test-cases/${tc.id}`} className="flex-1 truncate hover:text-primary hover:underline" title="Open test case">
                   {tc.title}
                 </Link>
                 {tc.lastRunAt && (
-                  <span className="hidden shrink-0 text-[10px] text-muted-foreground sm:inline" title={new Date(tc.lastRunAt).toLocaleString()}>
+                  <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline" title={new Date(tc.lastRunAt).toLocaleString()}>
                     {formatDistanceToNow(new Date(tc.lastRunAt), { addSuffix: true })}
                   </span>
                 )}
-                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   {tc.executionType === "Automated" ? "Auto" : "Manual"}
                 </span>
                 <button
@@ -155,12 +155,12 @@ export function TraceabilityLinks({
       {/* Bugs */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <Bug className="h-3.5 w-3.5" /> Bugs {bugs.length > 0 && <span className="text-foreground">({bugs.length})</span>}
           </h4>
           <button
             onClick={() => setBugDialogOpen(true)}
-            className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted"
+            className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted"
           >
             <Plus className="h-3 w-3" /> Link bug
           </button>
@@ -170,11 +170,11 @@ export function TraceabilityLinks({
         ) : (
           <ul className="space-y-1">
             {bugs.map((b) => (
-              <li key={b.id} className="group flex items-center gap-2 rounded border border-border px-2 py-1.5 text-sm">
+              <li key={b.id} className="group flex items-center gap-2 rounded border border-border px-2 py-2 text-sm">
                 <Bug className="h-3.5 w-3.5 shrink-0 text-red-600" />
-                {b.bugKey && <span className="font-mono text-[10px] font-bold text-red-600">{b.bugKey}</span>}
+                {b.bugKey && <span className="font-mono text-xs font-bold text-red-600">{b.bugKey}</span>}
                 <span className="flex-1 truncate">{b.title}</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{b.status}</span>
+                <span className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{b.status}</span>
                 <button
                   onClick={() => setBugs.mutate(bugs.filter((x) => x.id !== b.id).map((x) => x.id))}
                   className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
@@ -239,24 +239,24 @@ function LinkBugDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b bg-muted/30 px-5 py-4">
+        <DialogHeader className="border-b bg-muted/30 px-6 py-4">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Bug className="h-4 w-4 text-red-600" /> Link a bug
           </DialogTitle>
           <DialogDescription>Choose an existing bug, or create a new one and link it to this issue.</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 px-5 py-4">
+        <div className="space-y-3 px-6 py-4">
           <button
             onClick={onCreateNew}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/60 py-2.5 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-300 bg-indigo-50/60 py-3 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50"
           >
             <Plus className="h-4 w-4" /> Create new bug
           </button>
 
           <div className="flex items-center gap-2">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">or link existing</span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">or link existing</span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
@@ -270,7 +270,7 @@ function LinkBugDialog({
             />
           </div>
 
-          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border p-1.5">
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border p-2">
             {results.length === 0 ? (
               <div className="flex flex-col items-center gap-1 px-2 py-8 text-center">
                 <Link2 className="h-6 w-6 text-muted-foreground/40" />
@@ -283,12 +283,12 @@ function LinkBugDialog({
                 <button
                   key={b.id}
                   onClick={() => onPick(b.id)}
-                  className="flex w-full items-center gap-2.5 rounded-md border border-transparent px-2.5 py-2 text-left text-sm transition-colors hover:border-red-200 hover:bg-muted"
+                  className="flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm transition-colors hover:border-red-200 hover:bg-muted"
                 >
                   <Bug className="h-4 w-4 shrink-0 text-red-600" />
                   {b.bugKey && <span className="font-mono text-xs font-bold text-red-600">{b.bugKey}</span>}
                   <span className="flex-1 truncate text-foreground">{b.title}</span>
-                  <span className={cn("shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground")}>{b.severity}</span>
+                  <span className={cn("shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground")}>{b.severity}</span>
                 </button>
               ))
             )}
@@ -317,7 +317,7 @@ function Picker({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted">
+        <button className="inline-flex items-center gap-1 rounded-md border border-input px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-muted">
           <Plus className="h-3 w-3" /> Link
         </button>
       </PopoverTrigger>
@@ -326,7 +326,7 @@ function Picker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={label}
-          className="mb-2 w-full rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+          className="mb-2 w-full rounded-md border border-input bg-background px-2 py-2 text-xs"
         />
         <div className="max-h-64 space-y-0.5 overflow-y-auto">
           {filtered.length === 0 && <p className="px-2 py-3 text-center text-xs text-muted-foreground">{emptyText}</p>}
@@ -334,12 +334,12 @@ function Picker({
             <button
               key={i.id}
               onClick={() => onToggle(i.id)}
-              className="flex w-full items-start gap-2 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
+              className="flex w-full items-start gap-2 rounded px-2 py-2 text-left text-xs hover:bg-muted"
             >
               <input type="checkbox" checked={selected.has(i.id)} readOnly className="mt-0.5 h-3.5 w-3.5 accent-primary" />
               <span className="flex-1">
                 <span className="block truncate font-medium">{i.primary}</span>
-                {i.secondary && <span className="block truncate text-[10px] text-muted-foreground">{i.secondary}</span>}
+                {i.secondary && <span className="block truncate text-xs text-muted-foreground">{i.secondary}</span>}
               </span>
             </button>
           ))}

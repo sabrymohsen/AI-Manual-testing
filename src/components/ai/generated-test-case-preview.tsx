@@ -108,7 +108,7 @@ export function GeneratedTestCasePreview({
           {testCase.steps.map((step, i) => (
             <li key={i} className="text-sm">
               {step.actionDescription}
-              <span className="text-xs text-muted-foreground ml-2 px-1.5 py-0.5 rounded bg-secondary/80 border text-[11px] font-medium">
+              <span className="text-xs text-muted-foreground ml-2 px-2 py-0.5 rounded bg-secondary/80 border text-xs font-medium">
                 {ACTION_TYPE_LABELS[step.actionType] || step.actionType}
               </span>
             </li>

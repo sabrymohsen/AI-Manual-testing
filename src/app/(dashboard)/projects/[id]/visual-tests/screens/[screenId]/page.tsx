@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Bug, Check, ChevronLeft, ChevronRight, Crop, ExternalLink, Loader2, Undo2, X } from "lucide-react"
+import { ArrowLeft, Bug, Check, ChevronLeft, ChevronRight, Crop, ExternalLink, Loader2, Undo2, X } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ScreenStatusBadge, api, pathOf, type ScreenStatus } from "@/components/visual-tests/shared"
@@ -267,7 +267,7 @@ export default function VisualScreenAnalyzerPage() {
                 <button
                   key={String(z)}
                   onClick={() => setZoom(z)}
-                  className={`px-2.5 py-1 text-xs ${zoom === z ? "bg-slate-800 text-white" : "hover:bg-slate-100"}`}
+                  className={`px-3 py-1 text-xs ${zoom === z ? "bg-slate-800 text-white" : "hover:bg-slate-100"}`}
                   title={z === "fit" ? "Fit the screenshot to the pane" : `Show at ${label} — panes scroll together`}
                 >
                   {label}
@@ -355,7 +355,7 @@ export default function VisualScreenAnalyzerPage() {
                       <button
                         key={i}
                         onClick={() => jumpTo(b)}
-                        className="rounded border border-rose-200 bg-card px-1.5 py-0.5 text-[11px] font-medium text-rose-700 hover:bg-rose-50"
+                        className="rounded border border-rose-200 bg-card px-2 py-0.5 text-xs font-medium text-rose-700 hover:bg-rose-50"
                         title={`Zoom to change ${i + 1} (${b.width}×${b.height}px at ${b.x},${b.y})`}
                       >
                         Change {i + 1}
@@ -383,7 +383,7 @@ export default function VisualScreenAnalyzerPage() {
                   {deciding === "reject" ? <Loader2 className="animate-spin" /> : <X />} Reject
                 </Button>
               </div>
-              <p className="text-center text-[11px] text-muted-foreground">Keyboard: A accept · R reject · ← → move</p>
+              <p className="text-center text-xs text-muted-foreground">Keyboard: A accept · R reject · ← → move</p>
               {test?.autoMaintenance && screen.diffRegions.length > 0 && (
                 <label className="block space-y-1 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">Also decide identical changes on</span>
@@ -478,7 +478,7 @@ export default function VisualScreenAnalyzerPage() {
                   ))}
                 </select>
                 <textarea value={bugForm.notes} onChange={e => setBugForm(f => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Notes (optional)" className="w-full rounded-md border p-2 text-xs" />
-                <p className="text-[11px] text-muted-foreground">The approved, new and difference images are attached.</p>
+                <p className="text-xs text-muted-foreground">The approved, new and difference images are attached.</p>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={fileBug} disabled={busy}>
                     {busy ? <Loader2 className="animate-spin" /> : <Bug />} File bug

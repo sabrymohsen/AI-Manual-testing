@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CheckCircle2, AlertCircle, Loader2, Plug, RefreshCw, Copy } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2, Plug, RefreshCw, Copy } from "@/components/ui/icons"
 import { ALL_PROVIDERS, providerLabels } from "@/lib/integrations/labels"
 import type { ProviderId } from "@/lib/integrations/core/types"
 

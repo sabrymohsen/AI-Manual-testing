@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import {
   Shield, CheckCircle2, AlertCircle, RefreshCw, CloudUpload, Loader2,
   Link2, Eye, RotateCcw, ChevronDown, ChevronRight, ExternalLink
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface IntegrationConfigProps {
   projectId: string
@@ -467,7 +467,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
       <button
         type="button"
         onClick={() => togglePanel(id)}
-        className="flex items-center justify-between w-full py-2.5 text-left group"
+        className="flex items-center justify-between w-full py-3 text-left group"
       >
         <div>
           <h4 className="font-semibold text-sm group-hover:text-primary transition-colors">{title}</h4>
@@ -482,7 +482,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
     if (!result) return null
     const isSuccess = result.success
     return (
-      <div className={`flex items-start gap-2.5 p-3 rounded-lg border text-sm mt-2 ${
+      <div className={`flex items-start gap-3 p-3 rounded-lg border text-sm mt-2 ${
         isSuccess ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-300"
                   : "bg-destructive/10 border-destructive/20 text-destructive-foreground"
       }`}>
@@ -516,7 +516,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
             Sync test cases, results, and bugs to external project tracking tools.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full font-medium border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-400">
+        <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-0.5 rounded-full font-medium border border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-400">
           <Shield className="h-3.5 w-3.5" />
           Encrypted Storage
         </div>
@@ -552,25 +552,25 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
             {expandedPanels.connection && (
               <div className="px-4 pb-4 space-y-3 border-t bg-accent/5">
                 <div className="grid gap-3 md:grid-cols-2 pt-3">
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="op-base-url">OpenProject Base URL</Label>
                     <Input id="op-base-url" value={op.baseUrl} onChange={(e) => setOp((p) => ({ ...p, baseUrl: e.target.value }))}
                       placeholder="https://openproject.example.com" />
-                    <p className="text-[11px] text-muted-foreground">Root URL only, e.g. <code className="bg-accent px-1 rounded">https://openproject.roaa.tech</code></p>
+                    <p className="text-xs text-muted-foreground">Root URL only, e.g. <code className="bg-accent px-1 rounded">https://openproject.roaa.tech</code></p>
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label htmlFor="op-project-id">Project Identifier (slug)</Label>
                     <Input id="op-project-id" value={op.openProjectProjectIdentifier}
                       onChange={(e) => setOp((p) => ({ ...p, openProjectProjectIdentifier: e.target.value }))}
                       placeholder="shd" />
-                    <p className="text-[11px] text-muted-foreground">The slug from <code className="bg-accent px-1 rounded">/projects/<strong>shd</strong></code></p>
+                    <p className="text-xs text-muted-foreground">The slug from <code className="bg-accent px-1 rounded">/projects/<strong>shd</strong></code></p>
                   </div>
-                  <div className="space-y-1.5 md:col-span-2">
+                  <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="op-token">API Token</Label>
                     <Input id="op-token" type="password" value={op.apiToken}
                       onChange={(e) => setOp((p) => ({ ...p, apiToken: e.target.value }))}
                       placeholder={op.hasToken ? "•••••••••••••••• (Leave blank to keep saved)" : "Enter API token"} />
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Generate from <strong>My Account → Access Tokens → API token</strong>
                     </p>
                   </div>
@@ -578,7 +578,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button type="button" variant="outline" onClick={handleTestConnection}
                     disabled={testing || !op.baseUrl || !op.openProjectProjectIdentifier}>
-                    {testing ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Testing...</> : "Test Connection"}
+                    {testing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Testing...</> : "Test Connection"}
                   </Button>
                   {op.lastConnectionStatus && (
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -604,14 +604,14 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                   <p className="text-xs text-muted-foreground">Test connection first to load available types.</p>
                 ) : (
                   <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label>Test Case Type</Label>
                       <select value={op.testCaseTypeId} onChange={(e) => setOp((p) => ({ ...p, testCaseTypeId: e.target.value }))} className={selectClass}>
                         <option value="">— Select type —</option>
                         {opTypes.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label>Bug Type</Label>
                       <select value={op.bugTypeId} onChange={(e) => setOp((p) => ({ ...p, bugTypeId: e.target.value }))} className={selectClass}>
                         <option value="">— Select type —</option>
@@ -651,7 +651,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                         </div>
                       ))}
                     </div>
-                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-2.5">
+                    <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
                       <p className="text-xs text-blue-700 dark:text-blue-400">
                         💡 If no status mapping exists for a result, it will sync as a comment only — no status will be updated.
                       </p>
@@ -668,7 +668,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
             {expandedPanels.parent && (
               <div className="px-4 pb-4 space-y-3 border-t bg-accent/5 pt-3">
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label>Parent Strategy</Label>
                     <select value={op.parentStrategy} onChange={(e) => setOp((p) => ({ ...p, parentStrategy: e.target.value }))} className={selectClass}>
                       <option value="None">No parent</option>
@@ -679,7 +679,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                     </select>
                   </div>
                   {op.parentStrategy !== "None" && (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <Label>Default Parent WP ID</Label>
                       <div className="flex gap-2">
                         <Input value={op.defaultParentWorkPackageId}
@@ -704,7 +704,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
               <div className="px-4 pb-4 space-y-4 border-t bg-accent/5 pt-3">
 
                 {/* Board selector */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label>Target Board</Label>
                   {opBoards.length > 0 ? (
                     <select
@@ -737,7 +737,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 {/* Create a bug-workflow board. Status columns rather than a free
                     board: a work package holds one status, so a card can only
                     render in one column — no id filters, no duplicate cards. */}
-                <div className="space-y-1.5 rounded-lg border border-primary/25 bg-primary/10 p-3">
+                <div className="space-y-2 rounded-lg border border-primary/25 bg-primary/10 p-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="space-y-0.5">
                       <p className="text-sm font-semibold">Bug workflow board</p>
@@ -775,7 +775,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
 
                 {/* Board column selector — shown once a board is selected */}
                 {op.targetBoardId && (
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     <Label>Target Column <span className="text-muted-foreground font-normal">(which column to place items in)</span></Label>
                     {loadingColumns ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground border rounded-md px-3 py-2 bg-muted/30">
@@ -812,7 +812,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 )}
 
                 {/* Version / Sprint selector */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label>Sprint / Version <span className="text-muted-foreground font-normal">(optional)</span></Label>
                   {opVersions.length > 0 ? (
                     <select
@@ -840,7 +840,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 </div>
 
                 {/* Board strategy (advanced) */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label>Board Visibility Strategy <span className="text-muted-foreground font-normal">(advanced)</span></Label>
                   <select value={op.boardStrategy} onChange={(e) => setOp((p) => ({ ...p, boardStrategy: e.target.value }))} className={selectClass}>
                     <option value="StatusBased">Status-Based</option>
@@ -849,7 +849,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                   </select>
                 </div>
 
-                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-2.5">
+                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
                   <p className="text-xs text-blue-700 dark:text-blue-400">
                     💡 Select a board to track where synced test cases and bugs should appear. For version boards, pick the sprint. Click <strong>Test Connection</strong> to populate the lists.
                   </p>
@@ -891,17 +891,17 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 <div className="flex gap-2 flex-wrap">
                   <Button type="button" onClick={handleSyncTestCases} disabled={syncing || !op.hasToken}
                     className="bg-blue-600 hover:bg-blue-700 text-white">
-                    {syncing ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-1.5" />Sync Test Cases</>}
+                    {syncing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-2" />Sync Test Cases</>}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleApplyParent}
                     disabled={applyingParent || !op.hasToken || op.parentStrategy === "None"}>
-                    {applyingParent ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Applying...</> : <><Link2 className="h-4 w-4 mr-1.5" />Apply Parent</>}
+                    {applyingParent ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Applying...</> : <><Link2 className="h-4 w-4 mr-2" />Apply Parent</>}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleSyncToBoard} disabled={syncingBoard || !op.hasToken}>
-                    {syncingBoard ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-1.5" />Sync to Board</>}
+                    {syncingBoard ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Syncing...</> : <><CloudUpload className="h-4 w-4 mr-2" />Sync to Board</>}
                   </Button>
                   <Button type="button" variant="outline" onClick={handleCheckBoard} disabled={checkingBoard || !op.hasToken}>
-                    {checkingBoard ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Checking...</> : <><Eye className="h-4 w-4 mr-1.5" />Check Board Visibility</>}
+                    {checkingBoard ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Checking...</> : <><Eye className="h-4 w-4 mr-2" />Check Board Visibility</>}
                   </Button>
                 </div>
                 <ResultBanner result={syncResult} />
@@ -918,7 +918,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
                 {syncRuns.length === 0 ? (
                   <p className="text-xs text-muted-foreground">No sync operations yet.</p>
                 ) : (
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
                     {syncRuns.map((run) => (
                       <div key={run.id} className="flex items-center justify-between text-xs border rounded px-3 py-2 bg-background">
                         <div className="flex items-center gap-2">
@@ -952,7 +952,7 @@ export function IntegrationConfig({ projectId }: IntegrationConfigProps) {
           {success && <p className="text-sm text-emerald-600">{success}</p>}
           <div className="pt-2 border-t">
             <Button onClick={handleSaveOpenProject} disabled={saving}>
-              {saving ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Saving...</> : "Save OpenProject Settings"}
+              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</> : "Save OpenProject Settings"}
             </Button>
           </div>
         </div>

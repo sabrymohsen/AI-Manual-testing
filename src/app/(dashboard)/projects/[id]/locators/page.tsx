@@ -18,7 +18,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Zap
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { MultiElementPicker } from "@/components/locators/multi-element-picker"
 
@@ -352,14 +352,14 @@ export default function ElementLocatorPickerPage() {
             <div className="p-6 border rounded-xl bg-card shadow-md space-y-6">
               <div className="flex items-center justify-between border-b pb-4">
                 <div>
-                  <h3 className="text-xl font-semibold text-purple-600 flex items-center gap-1.5">
+                  <h3 className="text-xl font-semibold text-purple-600 flex items-center gap-2">
                     <Zap className="h-5 w-5 fill-current" /> Element Captured
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     URL: {capturedLocator.pageUrl}
                   </p>
                 </div>
-                <span className={`text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1 ${
+                <span className={`text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 ${
                   capturedLocator.reliabilityScore >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                   capturedLocator.reliabilityScore >= 50 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
                   "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -389,7 +389,7 @@ export default function ElementLocatorPickerPage() {
                   <div className="space-y-1 bg-accent/20 p-3 rounded-lg text-xs">
                     <div>Tag Name: <strong className="text-foreground">{capturedLocator.tagName}</strong></div>
                     {capturedLocator.visibleText && (
-                      <div className="mt-1 line-clamp-3">Text: <span className="italic">&quot;{capturedLocator.visibleText}&quot;</span></div>
+                      <div className="mt-1 line-clamp-3">Text: <span>&quot;{capturedLocator.visibleText}&quot;</span></div>
                     )}
                   </div>
                 </div>
@@ -397,7 +397,7 @@ export default function ElementLocatorPickerPage() {
                 {/* Form and Selectors */}
                 <div className="md:col-span-2 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <label className="text-xs font-semibold text-muted-foreground">Friendly Name *</label>
                       <Input 
                         value={friendlyName}
@@ -405,7 +405,7 @@ export default function ElementLocatorPickerPage() {
                         placeholder="e.g. Login Email Input"
                       />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <label className="text-xs font-semibold text-muted-foreground">Description</label>
                       <Input 
                         value={description}
@@ -556,20 +556,20 @@ export default function ElementLocatorPickerPage() {
                   </div>
 
                   {/* Validation Actions */}
-                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-accent/15 p-3.5 rounded-lg text-xs">
+                  <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-accent/15 p-3 rounded-lg text-xs">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleValidateSelector(selectedLocatorType, selectedLocatorValue)}
                       disabled={isSelfValidating}
-                      className="flex items-center gap-1.5 h-8 bg-background"
+                      className="flex items-center gap-2 h-8 bg-background"
                     >
                       <RefreshCw className={`h-3.5 w-3.5 ${isSelfValidating ? "animate-spin" : ""}`} />
                       Validate Selector On Page
                     </Button>
 
                     {selfValidationResult && (
-                      <div className="flex items-center gap-1.5 font-medium mt-1.5 sm:mt-0">
+                      <div className="flex items-center gap-2 font-medium mt-2 sm:mt-0">
                         {selfValidationResult.valid ? (
                           <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
                             <CheckCircle className="h-4 w-4 fill-current" />
@@ -649,7 +649,7 @@ export default function ElementLocatorPickerPage() {
                       {loc.locatorValue}
                     </td>
                     <td className="p-3">
-                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                      <span className={`text-xs px-3 py-0.5 rounded-full font-bold ${
                         loc.reliabilityScore >= 80 ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
                         loc.reliabilityScore >= 50 ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
                         "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -670,7 +670,7 @@ export default function ElementLocatorPickerPage() {
                             </span>
                           )}
                           {loc.lastValidatedAt && (
-                            <span className="text-[10px] text-muted-foreground">
+                            <span className="text-xs text-muted-foreground">
                               {new Date(loc.lastValidatedAt).toLocaleTimeString()}
                             </span>
                           )}
@@ -680,7 +680,7 @@ export default function ElementLocatorPickerPage() {
                       )}
                     </td>
                     <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
                           size="icon"

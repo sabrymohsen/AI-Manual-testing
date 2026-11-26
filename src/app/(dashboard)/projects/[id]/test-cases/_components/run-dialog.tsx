@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Loader2, Play } from "lucide-react"
+import { Loader2, Play } from "@/components/ui/icons"
 import type { RunOptions } from "../_hooks/use-test-library"
 
 /**
@@ -74,7 +74,7 @@ export function RunDialog({
         <div className="space-y-4 py-1">
           {GROUPS.map((g) => (
             <div key={g.key}>
-              <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{g.label}</p>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">{g.label}</p>
               <div className="flex flex-wrap gap-1" role="radiogroup" aria-label={g.label}>
                 {g.options.map((o) => (
                   <button
@@ -102,7 +102,7 @@ export function RunDialog({
           <Button variant="ghost" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button size="sm" onClick={confirm} disabled={pending} className="gap-1.5">
+          <Button size="sm" onClick={confirm} disabled={pending} className="gap-2">
             {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5 fill-current" />}
             Start run
           </Button>

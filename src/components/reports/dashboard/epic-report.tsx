@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Layers, CheckCircle2, Target, ArrowRight } from "lucide-react"
+import { Layers, CheckCircle2, Target, ArrowRight } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 interface EpicData {
@@ -103,12 +103,12 @@ export function EpicReport({ projectId }: { projectId: string }) {
               <div className="min-w-0 flex-1">
                 <h4 className="text-sm font-semibold text-foreground">{epic.title}</h4>
                 {epic.description && (
-                  <p className="text-[11px] text-muted-foreground truncate">{epic.description}</p>
+                  <p className="text-xs text-muted-foreground truncate">{epic.description}</p>
                 )}
               </div>
               <div className="text-right shrink-0">
                 <p className="text-lg font-semibold text-foreground">{progress}%</p>
-                <p className="text-[10px] text-muted-foreground">{completed}/{total} issues</p>
+                <p className="text-xs text-muted-foreground">{completed}/{total} issues</p>
               </div>
             </div>
 
@@ -129,15 +129,15 @@ export function EpicReport({ projectId }: { projectId: string }) {
             <div className="grid grid-cols-3 gap-2 px-4 pb-3">
               <div className="text-center rounded-lg bg-muted/50 py-2">
                 <p className="text-sm font-semibold text-foreground">{total}</p>
-                <p className="text-[11px] font-medium text-muted-foreground">Total Issues</p>
+                <p className="text-xs font-medium text-muted-foreground">Total Issues</p>
               </div>
               <div className="text-center rounded-lg bg-emerald-50 py-2">
                 <p className="text-sm font-semibold text-emerald-700">{completed}</p>
-                <p className="text-[11px] font-medium text-emerald-500">Completed</p>
+                <p className="text-xs font-medium text-emerald-500">Completed</p>
               </div>
               <div className="text-center rounded-lg bg-blue-50 py-2">
                 <p className="text-sm font-semibold text-blue-700">{totalPoints > 0 ? `${completedPoints}/${totalPoints}` : "—"}</p>
-                <p className="text-[11px] font-medium text-blue-500">Story Points</p>
+                <p className="text-xs font-medium text-blue-500">Story Points</p>
               </div>
             </div>
 
@@ -146,11 +146,11 @@ export function EpicReport({ projectId }: { projectId: string }) {
               <div className="border-t divide-y divide-slate-50">
                 {epic.tasks.slice(0, 5).map((task) => (
                   <div key={task.id} className="flex items-center gap-3 px-4 py-2 hover:bg-muted/40 transition-colors">
-                    <span className="shrink-0 font-mono text-[10px] font-semibold text-primary">{task.key}</span>
+                    <span className="shrink-0 font-mono text-xs font-semibold text-primary">{task.key}</span>
                     <span className="flex-1 truncate text-xs font-medium text-foreground">{task.title}</span>
                     <span
                       className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[9px] font-semibold shrink-0",
+                        "rounded-full px-2 py-0.5 text-xs font-semibold shrink-0",
                         task.status === "DONE"
                           ? "bg-emerald-100 text-emerald-700"
                           : task.status === "IN_PROGRESS"
@@ -161,7 +161,7 @@ export function EpicReport({ projectId }: { projectId: string }) {
                       {task.status.replace("_", " ")}
                     </span>
                     {task.storyPoints != null && (
-                      <span className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-semibold text-muted-foreground">
+                      <span className="shrink-0 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-2 text-xs font-semibold text-muted-foreground">
                         {task.storyPoints}
                       </span>
                     )}
@@ -169,7 +169,7 @@ export function EpicReport({ projectId }: { projectId: string }) {
                 ))}
                 {epic.tasks.length > 5 && (
                   <div className="px-4 py-2 text-center">
-                    <span className="text-[10px] font-semibold text-muted-foreground">
+                    <span className="text-xs font-semibold text-muted-foreground">
                       +{epic.tasks.length - 5} more issues
                     </span>
                   </div>

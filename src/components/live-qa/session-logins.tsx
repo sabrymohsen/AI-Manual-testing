@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { KeyRound, Loader2, LogIn, Save } from "lucide-react"
+import { KeyRound, Loader2, LogIn, Save } from "@/components/ui/icons"
 
 /**
  * Saved logins inside a Live QA session, like a browser's password manager:
@@ -92,7 +92,7 @@ export function SessionLogins({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex h-7 items-center gap-1 rounded-lg px-2.5 text-[11px] font-semibold text-foreground hover:bg-background"
+        className="inline-flex h-7 items-center gap-1 rounded-lg px-3 text-xs font-semibold text-foreground hover:bg-background"
         title="Saved logins: fill a username and password, or save the one you typed"
       >
         <KeyRound className="h-3.5 w-3.5 text-primary" />
@@ -101,22 +101,22 @@ export function SessionLogins({
 
       {open && (
         <div className="absolute right-0 top-9 z-50 w-80 rounded-xl border bg-background p-3 shadow-xl">
-          <p className="mb-2 text-[11px] font-semibold">Saved logins</p>
+          <p className="mb-2 text-xs font-semibold">Saved logins</p>
           {logins.length === 0 ? (
-            <p className="mb-3 text-[11px] text-muted-foreground">None yet. Type a username and password into the page, then save it below.</p>
+            <p className="mb-3 text-xs text-muted-foreground">None yet. Type a username and password into the page, then save it below.</p>
           ) : (
             <ul className="mb-3 max-h-56 space-y-1 overflow-y-auto">
               {logins.map((l) => (
-                <li key={l.id} className="flex items-center gap-2 rounded-lg border px-2 py-1.5">
+                <li key={l.id} className="flex items-center gap-2 rounded-lg border px-2 py-2">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[11px] font-semibold">{l.roleName}</p>
-                    <p className="truncate text-[10px] text-muted-foreground" dir="auto">{l.username}</p>
+                    <p className="truncate text-xs font-semibold">{l.roleName}</p>
+                    <p className="truncate text-xs text-muted-foreground" dir="auto">{l.username}</p>
                   </div>
                   <button
                     type="button"
                     disabled={!!busy}
                     onClick={() => fill(l.id, false)}
-                    className="h-6 rounded-md border px-2 text-[10px] font-semibold hover:bg-muted disabled:opacity-50"
+                    className="h-6 rounded-md border px-2 text-xs font-semibold hover:bg-muted disabled:opacity-50"
                     title="Fill the username and password into the page"
                   >
                     {busy === l.id ? <Loader2 className="h-3 w-3 animate-spin" /> : "Fill"}
@@ -125,7 +125,7 @@ export function SessionLogins({
                     type="button"
                     disabled={!!busy}
                     onClick={() => fill(l.id, true)}
-                    className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-2 text-[10px] font-semibold text-primary-foreground disabled:opacity-50"
+                    className="inline-flex h-6 items-center gap-1 rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
                     title="Fill and sign in"
                   >
                     {busy === l.id + ":submit" ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogIn className="h-3 w-3" />}
@@ -137,8 +137,8 @@ export function SessionLogins({
           )}
 
           <div className="border-t pt-2">
-            <p className="mb-1.5 text-[11px] font-semibold">Save the login typed in the page</p>
-            <div className="flex gap-1.5">
+            <p className="mb-2 text-xs font-semibold">Save the login typed in the page</p>
+            <div className="flex gap-2">
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -147,19 +147,19 @@ export function SessionLogins({
                   if (e.key === "Enter") save()
                 }}
                 placeholder="Name, e.g. Admin, Case worker"
-                className="h-7 min-w-0 flex-1 rounded-md border bg-background px-2 text-[11px] outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-7 min-w-0 flex-1 rounded-md border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
               />
               <button
                 type="button"
                 disabled={!name.trim() || !!busy}
                 onClick={save}
-                className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground disabled:opacity-50"
+                className="inline-flex h-7 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground disabled:opacity-50"
               >
                 {busy === "save" ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                 Save
               </button>
             </div>
-            <p className="mt-1.5 text-[10px] text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               Saved encrypted in this project (Owner or Admin). Same username again updates its password.
             </p>
           </div>

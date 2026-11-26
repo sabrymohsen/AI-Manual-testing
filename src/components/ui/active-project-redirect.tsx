@@ -21,6 +21,6 @@ export function ActiveProjectRedirect({ workflow, title, description }: { workfl
     else setPick(true)
   }, [router, workflow])
 
-  if (!pick) return <div className="flex h-full items-center justify-center text-[13px] text-muted-foreground">Opening {title}…</div>
+  if (!pick) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Opening {title}…</div>
   return <ProjectSelectionGateway title={title} description={description} targetWorkflow={workflow} />
 }

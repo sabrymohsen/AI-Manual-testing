@@ -13,7 +13,7 @@ export const PRIORITY_STYLES: Record<string, string> = {
 
 export function getPriorityBadge(priority: string) {
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${PRIORITY_STYLES[priority] || PRIORITY_STYLES.Low}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${PRIORITY_STYLES[priority] || PRIORITY_STYLES.Low}`}>
       {priority}
     </span>
   )
@@ -33,7 +33,7 @@ export const REQUIREMENT_STATUS_STYLES: Record<string, { label: string; cls: str
 export function getStatusBadge(status: string) {
   const style = REQUIREMENT_STATUS_STYLES[status] || { label: status, cls: "bg-muted/50 text-muted-foreground border-border" }
   return (
-    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border whitespace-nowrap ${style.cls}`}>
+    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border whitespace-nowrap ${style.cls}`}>
       {style.label}
     </span>
   )
@@ -51,7 +51,7 @@ const COVERAGE_STYLES: Record<string, { label: string; cls: string }> = {
 export function getCoverageBadge(coverage: string) {
   const style = COVERAGE_STYLES[coverage] || { label: coverage, cls: "bg-muted text-muted-foreground" }
   return (
-    <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full whitespace-nowrap ${style.cls}`}>
+    <span className={`text-xs font-medium px-3 py-0.5 rounded-full whitespace-nowrap ${style.cls}`}>
       {style.label}
     </span>
   )

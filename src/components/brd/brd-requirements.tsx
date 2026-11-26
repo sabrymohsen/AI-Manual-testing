@@ -23,7 +23,7 @@ import {
   Trash2,
   X,
   XCircle,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { BrdAnalysis } from "@/components/brd/brd-analysis"
 import { BrdToBoard, boardSummary } from "@/components/brd/brd-to-board"
@@ -293,7 +293,7 @@ export function BrdRequirements({
             )}
           </span>
           {onOpenQuestions && (
-            <button onClick={onOpenQuestions} className="rounded-md border bg-card px-2.5 py-1 font-medium hover:bg-accent">
+            <button onClick={onOpenQuestions} className="rounded-md border bg-card px-3 py-1 font-medium hover:bg-accent">
               Open questions
             </button>
           )}
@@ -338,7 +338,7 @@ export function BrdRequirements({
       {/* Summary */}
       <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
         <div className="min-w-[160px]">
-          <p className="text-[11px] text-muted-foreground">Requirement coverage</p>
+          <p className="text-xs text-muted-foreground">Requirement coverage</p>
           <p className="text-lg font-semibold tabular-nums">
             {summary?.covered ?? 0}/{summary?.total ?? 0} <span className="text-sm font-normal text-muted-foreground">({pct}%)</span>
           </p>
@@ -346,7 +346,7 @@ export function BrdRequirements({
             <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {(
             [
               ["all", `All ${summary?.total ?? 0}`],
@@ -361,7 +361,7 @@ export function BrdRequirements({
               onClick={() => setFilter(f)}
               aria-pressed={filter === f}
               className={cn(
-                "rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                 filter === f ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent",
                 f === "review" && (summary?.needsReview ?? 0) > 0 && filter !== f && "border-amber-500/40 text-amber-700 dark:text-amber-400"
               )}
@@ -375,7 +375,7 @@ export function BrdRequirements({
             {reqs.length > 0 && (
               <button
                 onClick={() => setToBoard(!toBoard)}
-                className="inline-flex h-8 items-center gap-1.5 rounded-md border px-3 text-xs font-medium hover:bg-accent"
+                className="inline-flex h-8 items-center gap-2 rounded-md border px-3 text-xs font-medium hover:bg-accent"
                 title="Create this BRD's epics and user stories on the Scrum board"
               >
                 <KanbanSquare className="h-3.5 w-3.5" /> Create on Scrum board
@@ -383,7 +383,7 @@ export function BrdRequirements({
             )}
             <button
               onClick={() => setAdding(true)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+              className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
             >
               <Plus className="h-3.5 w-3.5" /> Add
             </button>
@@ -562,15 +562,15 @@ function RequirementCard({
   return (
     <div className={cn("rounded-lg border bg-card", r.status === "removed" && "opacity-60")}>
       <button onClick={() => setOpen(!open)} className="flex w-full items-start gap-3 p-3 text-left" aria-expanded={open}>
-        <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">{r.key}</span>
+        <span className="mt-0.5 shrink-0 rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{r.key}</span>
         <span className="min-w-0 flex-1">
           <span dir="auto" className={cn("block text-sm font-medium", r.status === "removed" && "line-through")}>{r.title}</span>
-          <span className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium", cov.chip)}>
+          <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className={cn("inline-flex items-center gap-1 rounded px-2 py-0.5 font-medium", cov.chip)}>
               <CovIcon className="h-3 w-3" /> {cov.label}
             </span>
             {r.status === "changed" && (
-              <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+              <span className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 font-medium text-amber-700 dark:text-amber-400">
                 <AlertTriangle className="h-3 w-3" /> Changed in v{r.changedInVersion}
               </span>
             )}
@@ -578,12 +578,12 @@ function RequirementCard({
               {r.testCases.length} test case{r.testCases.length === 1 ? "" : "s"}
             </span>
             {r.priority && <span>· {r.priority}</span>}
-            {r.origin === "ai" && <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">AI</span>}
+            {r.origin === "ai" && <span className="rounded bg-primary/10 px-2 py-0.5 text-primary">AI</span>}
             {r.story && (
               <Link
                 href={`/projects/${projectId}/scrum?task=${r.story.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-700 hover:underline dark:text-violet-400"
+                className="inline-flex items-center gap-1 rounded bg-violet-500/10 px-2 py-0.5 font-medium text-violet-700 hover:underline dark:text-violet-400"
                 title="The Scrum story made from this requirement"
               >
                 <KanbanSquare className="h-3 w-3" /> {r.story.key}
@@ -593,19 +593,19 @@ function RequirementCard({
               <Link
                 href={`/projects/${projectId}/scrum?view=backlog`}
                 onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 rounded bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-700 hover:underline dark:text-violet-400"
+                className="inline-flex items-center gap-1 rounded bg-violet-500/10 px-2 py-0.5 font-medium text-violet-700 hover:underline dark:text-violet-400"
               >
                 <KanbanSquare className="h-3 w-3" /> Epic on board
               </Link>
             )}
             {r.acceptanceCriteria.length > 0 && <span>· {r.acceptanceCriteria.length} criteria</span>}
             {topImpact && (
-              <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium", LEVEL_CHIP[topImpact.level])} title="Highest impact on another requirement">
+              <span className={cn("inline-flex items-center gap-1 rounded px-2 py-0.5 font-medium", LEVEL_CHIP[topImpact.level])} title="Highest impact on another requirement">
                 <GitBranch className="h-3 w-3" /> {r.impacts.filter((i) => i.level === "Critical" || i.level === "High").length} high impact
               </span>
             )}
             {r.openQuestions.length > 0 && (
-              <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-1.5 py-0.5 font-medium text-red-700 dark:text-red-400" title="Open questions about this requirement">
+              <span className="inline-flex items-center gap-1 rounded bg-red-500/10 px-2 py-0.5 font-medium text-red-700 dark:text-red-400" title="Open questions about this requirement">
                 <HelpCircle className="h-3 w-3" /> {r.openQuestions.length} open question{r.openQuestions.length === 1 ? "" : "s"}
               </span>
             )}
@@ -628,15 +628,15 @@ function RequirementCard({
       )}
 
       {open && !editing && (
-        <div className="space-y-3 border-t px-3 pb-3 pt-2.5">
-          {r.section && <p dir="auto" className="text-[11px] text-muted-foreground">{r.section}</p>}
+        <div className="space-y-3 border-t px-3 pb-3 pt-3">
+          {r.section && <p dir="auto" className="text-xs text-muted-foreground">{r.section}</p>}
           {r.description && r.description !== r.title && (
             <p dir="auto" className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground">{r.description}</p>
           )}
           {r.acceptanceCriteria.length > 0 && (
             <div>
-              <p className="mb-1 text-[11px] font-medium">Acceptance criteria</p>
-              <ul dir="auto" className="list-disc space-y-0.5 ps-5 text-xs text-muted-foreground">
+              <p className="mb-1 text-xs font-medium">Acceptance criteria</p>
+              <ul dir="auto" className="list-disc space-y-0.5 ps-6 text-xs text-muted-foreground">
                 {r.acceptanceCriteria.map((a, i) => (
                   <li key={i}>{a}</li>
                 ))}
@@ -644,14 +644,14 @@ function RequirementCard({
             </div>
           )}
           {r.sourceQuote && r.origin !== "manual" && (
-            <blockquote dir="auto" className="border-s-2 border-primary/30 ps-2 text-xs italic text-muted-foreground" title="Text in the document this requirement came from">
+            <blockquote dir="auto" className="border-s-2 border-primary/30 ps-2 text-xs text-muted-foreground" title="Text in the document this requirement came from">
               {r.sourceQuote}
             </blockquote>
           )}
 
           {r.openQuestions.length > 0 && (
-            <div className="rounded-md border border-red-500/20 bg-red-500/5 p-2.5">
-              <p className="mb-1 text-[11px] font-medium text-red-800 dark:text-red-300">Open questions: expected results here are not confirmed yet</p>
+            <div className="rounded-md border border-red-500/20 bg-red-500/5 p-3">
+              <p className="mb-1 text-xs font-medium text-red-800 dark:text-red-300">Open questions: expected results here are not confirmed yet</p>
               <ul dir="auto" className="space-y-0.5 text-xs text-muted-foreground">
                 {r.openQuestions.map((q) => (
                   <li key={q.key}>
@@ -664,21 +664,21 @@ function RequirementCard({
 
           {r.impacts.length > 0 && (
             <div>
-              <p className="mb-1 flex items-center gap-1 text-[11px] font-medium">
+              <p className="mb-1 flex items-center gap-1 text-xs font-medium">
                 <GitBranch className="h-3.5 w-3.5" /> Impacted requirements:
                 <span className="font-normal text-muted-foreground">what a change here can break (Likelihood × Severity). Critical/High get regression tests.</span>
               </p>
               <div className="space-y-1">
                 {r.impacts.map((i) => (
-                  <div key={i.id} className="flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-xs">
-                    <span className={cn("shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold", LEVEL_CHIP[i.level])} title={`L${i.likelihood} × S${i.severity} = ${i.score}`}>
+                  <div key={i.id} className="flex items-start gap-2 rounded-md border px-3 py-2 text-xs">
+                    <span className={cn("shrink-0 rounded px-2 py-0.5 text-xs font-semibold", LEVEL_CHIP[i.level])} title={`L${i.likelihood} × S${i.severity} = ${i.score}`}>
                       {i.level} {i.score}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span dir="auto" className="font-medium">
                         {i.key} · {i.title}
                       </span>
-                      <span dir="auto" className="block text-[11px] text-muted-foreground">
+                      <span dir="auto" className="block text-xs text-muted-foreground">
                         {RELATION_LABEL[i.relation]} — {i.evidence}
                       </span>
                     </span>
@@ -689,17 +689,17 @@ function RequirementCard({
           )}
 
           {r.status === "changed" && (
-            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs">
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
               <p className="font-medium text-amber-800 dark:text-amber-300">
                 This wording is no longer in v{r.changedInVersion}. Check the new version (Versions → Compare), update the text below if needed,
                 then re-check the linked tests.
               </p>
               {canEdit && (
                 <div className="mt-2 flex gap-2">
-                  <button onClick={onAccept} className="rounded-md bg-amber-600 px-2.5 py-1 text-[11px] font-medium text-white hover:bg-amber-700">
+                  <button onClick={onAccept} className="rounded-md bg-amber-600 px-3 py-1 text-xs font-medium text-white hover:bg-amber-700">
                     Requirement is up to date
                   </button>
-                  <button onClick={onRetire} className="rounded-md border px-2.5 py-1 text-[11px] font-medium hover:bg-accent">
+                  <button onClick={onRetire} className="rounded-md border px-3 py-1 text-xs font-medium hover:bg-accent">
                     It was removed — retire it
                   </button>
                 </div>
@@ -710,7 +710,7 @@ function RequirementCard({
           {/* Linked test cases */}
           <div className="space-y-1">
             {r.testCases.map((t) => (
-              <div key={t.id} className="flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs">
+              <div key={t.id} className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs">
                 <Link
                   href={`/projects/${projectId}/test-cases?case=${t.id}`}
                   className="min-w-0 flex-1 truncate font-medium hover:text-primary hover:underline"
@@ -719,21 +719,21 @@ function RequirementCard({
                   {t.title}
                 </Link>
                 {t.reviewState === "Draft" && (
-                  <span className="shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-700 dark:text-amber-400">Draft</span>
+                  <span className="shrink-0 rounded bg-amber-500/10 px-2 py-0.5 text-xs text-amber-700 dark:text-amber-400">Draft</span>
                 )}
-                <span className={cn("shrink-0 text-[11px]", CASE_STATUS[t.lastStatus] ?? "text-muted-foreground")}>
+                <span className={cn("shrink-0 text-xs", CASE_STATUS[t.lastStatus] ?? "text-muted-foreground")}>
                   {t.lastStatus === "NotExecuted" ? "Not run" : t.lastStatus}
                 </span>
                 {t.needsReview && (
                   <span
-                    className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-400"
+                    className="inline-flex shrink-0 items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400"
                     title={t.reviewReason ?? undefined}
                   >
                     <AlertTriangle className="h-3 w-3" /> Needs review
                   </span>
                 )}
                 {canEdit && t.needsReview && (
-                  <button onClick={() => onReviewed(t.id)} className="shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium hover:bg-accent">
+                  <button onClick={() => onReviewed(t.id)} className="shrink-0 rounded border px-2 py-0.5 text-xs font-medium hover:bg-accent">
                     Reviewed
                   </button>
                 )}
@@ -764,7 +764,7 @@ function RequirementCard({
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setPicking(!picking)}
-                className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-xs font-medium hover:bg-accent"
               >
                 <Link2 className="h-3.5 w-3.5" /> Link existing test
               </button>
@@ -772,7 +772,7 @@ function RequirementCard({
               {!r.story && !(/^(epic|ملحمة)$/i.test((r.type ?? "").trim()) && r.epic) && (
                 <button
                   onClick={onCreateStory}
-                  className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                  className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-xs font-medium hover:bg-accent"
                   title="Create this on the Scrum board"
                 >
                   <KanbanSquare className="h-3.5 w-3.5" /> {/^(epic|ملحمة)$/i.test((r.type ?? "").trim()) ? "Create epic" : "Create story"}
@@ -782,14 +782,14 @@ function RequirementCard({
                 <>
                   <Link
                     href={`/projects/${projectId}/scrum?task=${r.story.id}`}
-                    className="inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-[11px] font-medium hover:bg-accent"
+                    className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-xs font-medium hover:bg-accent"
                     title="Open the user story to edit it"
                   >
                     <KanbanSquare className="h-3.5 w-3.5" /> Edit story {r.story.key}
                   </Link>
                   <button
                     onClick={onDeleteStory}
-                    className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-destructive"
+                    className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-destructive"
                     title="Delete the user story made from this requirement"
                   >
                     <Trash2 className="h-3.5 w-3.5" /> Story
@@ -798,13 +798,13 @@ function RequirementCard({
               )}
               <button
                 onClick={() => setEditing(true)}
-                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                className="ml-auto inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 <Pencil className="h-3.5 w-3.5" /> Edit
               </button>
               <button
                 onClick={onRetire}
-                className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                className="inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground hover:text-foreground"
               >
                 Retire
               </button>
@@ -814,7 +814,7 @@ function RequirementCard({
             </div>
           )}
           {canEdit && r.status === "removed" && (
-            <button onClick={onRestore} className="text-[11px] font-medium text-primary hover:underline">
+            <button onClick={onRestore} className="text-xs font-medium text-primary hover:underline">
               Bring back
             </button>
           )}
@@ -852,14 +852,14 @@ function RequirementEditForm({
   const [saving, setSaving] = useState(false)
   return (
     <div className="space-y-2">
-      <label className="block text-[11px] font-medium">Title</label>
+      <label className="block text-xs font-medium">Title</label>
       <input
         dir="auto"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="h-8 w-full rounded-md border bg-card px-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
       />
-      <label className="block text-[11px] font-medium">Description</label>
+      <label className="block text-xs font-medium">Description</label>
       <textarea
         dir="auto"
         value={description}
@@ -867,7 +867,7 @@ function RequirementEditForm({
         rows={3}
         className="w-full rounded-md border bg-card p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
       />
-      <label className="block text-[11px] font-medium">Acceptance criteria (one per line)</label>
+      <label className="block text-xs font-medium">Acceptance criteria (one per line)</label>
       <textarea
         dir="auto"
         value={criteria}
@@ -876,7 +876,7 @@ function RequirementEditForm({
         className="w-full rounded-md border bg-card p-2 font-mono text-xs outline-none focus:ring-2 focus:ring-primary/30"
       />
       <div className="flex flex-wrap items-center gap-2">
-        <label className="text-[11px] font-medium">Priority</label>
+        <label className="text-xs font-medium">Priority</label>
         <select value={priority} onChange={(e) => setPriority(e.target.value)} className="h-8 rounded-md border bg-card px-2 text-xs">
           <option value="">None</option>
           {["Critical", "High", "Medium", "Low"].map((p) => (
@@ -921,7 +921,7 @@ function GenerateButton({ generating, onGenerate }: { generating: boolean; onGen
       <button
         onClick={() => onGenerate(count)}
         disabled={generating}
-        className="inline-flex h-7 items-center gap-1 px-2.5 text-[11px] font-medium hover:bg-accent disabled:opacity-60"
+        className="inline-flex h-7 items-center gap-1 px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
         title="Draft test cases for this requirement with the project's AI provider"
       >
         {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-violet-500" />}
@@ -932,7 +932,7 @@ function GenerateButton({ generating, onGenerate }: { generating: boolean; onGen
         onChange={(e) => setCount(Number(e.target.value))}
         disabled={generating}
         aria-label="How many test cases"
-        className="h-7 border-l bg-transparent px-1 text-[11px]"
+        className="h-7 border-l bg-transparent px-1 text-xs"
       >
         {[1, 3, 5, 8].map((n) => (
           <option key={n} value={n}>
@@ -988,11 +988,11 @@ function CasePicker({
           className="h-8 w-full rounded-md border bg-card pl-8 pr-2 text-xs outline-none focus:ring-2 focus:ring-primary/30"
         />
       </div>
-      <div className="mt-1.5 max-h-56 overflow-y-auto">
-        {loading && <p className="px-2 py-2 text-[11px] text-muted-foreground">Searching…</p>}
-        {!loading && visible.length === 0 && <p className="px-2 py-2 text-[11px] text-muted-foreground">No matching test cases.</p>}
+      <div className="mt-2 max-h-56 overflow-y-auto">
+        {loading && <p className="px-2 py-2 text-xs text-muted-foreground">Searching…</p>}
+        {!loading && visible.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground">No matching test cases.</p>}
         {visible.map((r) => (
-          <label key={r.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs hover:bg-accent">
+          <label key={r.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-xs hover:bg-accent">
             <input
               type="checkbox"
               checked={chosen.includes(r.id)}
@@ -1003,14 +1003,14 @@ function CasePicker({
           </label>
         ))}
       </div>
-      <div className="mt-1.5 flex justify-end gap-2">
-        <button onClick={onClose} className="rounded-md border px-2.5 py-1 text-[11px] font-medium">
+      <div className="mt-2 flex justify-end gap-2">
+        <button onClick={onClose} className="rounded-md border px-3 py-1 text-xs font-medium">
           Cancel
         </button>
         <button
           onClick={() => onPick(chosen)}
           disabled={!chosen.length}
-          className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-60"
+          className="rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground disabled:opacity-60"
         >
           Link {chosen.length || ""}
         </button>

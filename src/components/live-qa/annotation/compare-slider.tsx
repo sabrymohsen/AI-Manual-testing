@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { X } from "lucide-react"
+import { X } from "@/components/ui/icons"
 
 /**
  * GitHub-style before/after image comparison. The "after" image is clipped to a
@@ -44,12 +44,12 @@ export function CompareSlider({ beforeSrc, afterSrc, onClose }: { beforeSrc: str
           {/* before (full) */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={beforeSrc} alt="Before" className="block max-w-full max-h-[75vh] w-auto h-auto pointer-events-none" draggable={false} />
-          <span className="absolute top-2 left-2 text-[11px] font-medium bg-black/60 text-white px-1.5 py-0.5 rounded">Before</span>
+          <span className="absolute top-2 left-2 text-xs font-medium bg-black/60 text-white px-2 py-0.5 rounded">Before</span>
           {/* after (clipped to divider) */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={afterSrc} alt="After" className="block max-w-full max-h-[75vh] w-auto h-auto" draggable={false} />
-            <span className="absolute top-2 right-2 text-[11px] font-medium bg-black/60 text-white px-1.5 py-0.5 rounded">After</span>
+            <span className="absolute top-2 right-2 text-xs font-medium bg-black/60 text-white px-2 py-0.5 rounded">After</span>
           </div>
           {/* divider handle */}
           <div

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Loader2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles } from "@/components/ui/icons"
 
 interface Job {
   id: string
@@ -103,17 +103,17 @@ export function AiJobsTray() {
 
   if (!running) return null
   return (
-    <div className="fixed bottom-4 end-4 z-50 w-80 space-y-1.5 rounded-xl border bg-card p-3 shadow-lg" role="status" aria-live="polite">
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground">
+    <div className="fixed bottom-4 end-4 z-50 w-80 space-y-2 rounded-xl border bg-card p-3 shadow-lg" role="status" aria-live="polite">
+      <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
         <Sparkles className="h-3.5 w-3.5 text-violet-500" /> AI is working — you can keep using the app
       </p>
       {jobs.map((j) => (
-        <div key={j.id} className="flex items-center gap-2 text-[13px]">
+        <div key={j.id} className="flex items-center gap-2 text-xs">
           <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
           <span dir="auto" className="min-w-0 flex-1 truncate">
             {j.title}
           </span>
-          <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">{elapsed(j.createdAt)}</span>
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">{elapsed(j.createdAt)}</span>
         </div>
       ))}
     </div>

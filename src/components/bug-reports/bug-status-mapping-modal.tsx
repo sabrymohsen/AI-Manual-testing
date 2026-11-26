@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, CheckCircle2, GitCompare, Info, X } from "lucide-react"
+import { ArrowRight, CheckCircle2, GitCompare, Info, X } from "@/components/ui/icons"
 
 /**
  * Which tracker status each of this app's bug statuses means.
@@ -95,8 +95,8 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="flex max-h-[90vh] w-[560px] flex-col overflow-hidden rounded-xl border bg-background text-xs font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.08)] animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between border-b bg-accent/10 p-5">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        <div className="flex items-center justify-between border-b bg-accent/10 p-6">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <GitCompare className="h-4 w-4 text-primary" /> Bug status mapping
           </h3>
           <button
@@ -108,9 +108,9 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
           </button>
         </div>
 
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
+        <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-[11px] font-semibold text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
               {error}
             </div>
           )}
@@ -122,16 +122,16 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
           ) : (
             <>
               {isSuggestion && trackerStatuses.length > 0 && (
-                <div className="flex items-start gap-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
                   <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-700" />
-                  <p className="text-[10px] font-medium leading-relaxed text-amber-800">
+                  <p className="text-xs font-medium leading-relaxed text-amber-800">
                     These are a first guess, not saved yet. Check every row, change what is wrong,
                     and press Save — nothing is applied until you do.
                   </p>
                 </div>
               )}
 
-              <p className="text-[10px] font-medium leading-relaxed text-muted-foreground">
+              <p className="text-xs font-medium leading-relaxed text-muted-foreground">
                 When a bug&apos;s status changes here, sync sets the status you choose below in{" "}
                 {provider}. Leave a row empty and sync will not touch that bug&apos;s status there.
               </p>
@@ -141,7 +141,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
                   const current = mapping[app.value] || ""
                   return (
                     <div key={app.value} className="grid grid-cols-[1fr_auto_1.3fr] items-center gap-2">
-                      <span className="truncate rounded-md border bg-muted/40 px-2 py-1.5 text-[11px] font-semibold">
+                      <span className="truncate rounded-md border bg-muted/40 px-2 py-2 text-xs font-semibold">
                         {app.label}
                       </span>
                       <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
@@ -155,7 +155,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
                           setMapping(next)
                           setSaved(false)
                         }}
-                        className="h-8 w-full cursor-pointer rounded-md border bg-background px-2 text-[11px] font-semibold outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+                        className="h-8 w-full cursor-pointer rounded-md border bg-background px-2 text-xs font-semibold outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
                       >
                         <option value="">— Not mapped —</option>
                         {trackerStatuses.map((s) => {
@@ -177,7 +177,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
               </div>
 
               {trackerStatuses.length === 0 && !error && (
-                <p className="text-[10px] font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   No statuses came back from {provider}. Check the integration connection first.
                 </p>
               )}
@@ -186,7 +186,7 @@ export default function BugStatusMappingModal({ projectId, open, onClose, onSave
         </div>
 
         <div className="flex items-center justify-between gap-2 border-t bg-accent/5 p-4">
-          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700">
+          <span className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
             {saved && (
               <>
                 <CheckCircle2 className="h-3.5 w-3.5" /> Saved

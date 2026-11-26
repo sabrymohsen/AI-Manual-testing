@@ -59,7 +59,7 @@ import {
   Download,
   FileBarChart,
   FileUp
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
 import { BugTriagePanel } from "@/components/bug-reports/bug-triage-panel"
 import {
@@ -307,7 +307,7 @@ function BoardMirrorBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card/65 px-3 py-2">
-      <span className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground min-w-0">
+      <span className="flex items-center gap-2 text-xs font-semibold text-foreground min-w-0">
         <Kanban className="h-3.5 w-3.5 text-primary shrink-0" />
         {mirrorLoading ? (
           <span className="text-muted-foreground">Reading the tracker board…</span>
@@ -319,7 +319,7 @@ function BoardMirrorBar({
       </span>
 
       {mirrorActive && (
-        <span className="text-[10px] font-semibold text-muted-foreground">
+        <span className="text-xs font-semibold text-muted-foreground">
           {mirror!.columns.some((c) => c.fromBoard)
             ? "columns mirrored from the tracker board"
             : "columns mirrored from the tracker workflow"}
@@ -327,14 +327,14 @@ function BoardMirrorBar({
       )}
 
       {mirror?.error && (
-        <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700">
+        <span className="flex items-center gap-1 text-xs font-semibold text-amber-700">
           <AlertTriangle className="h-3 w-3" />
           {mirror.error}
         </span>
       )}
 
       {mirrorActive && unsyncedCount > 0 && (
-        <span className="text-[10px] font-semibold text-amber-700">
+        <span className="text-xs font-semibold text-amber-700">
           {unsyncedCount} not synced
         </span>
       )}
@@ -345,7 +345,7 @@ function BoardMirrorBar({
             href={mirror.boardUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-[10px] font-semibold hover:bg-accent transition-colors"
+            className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-xs font-semibold hover:bg-accent transition-colors"
           >
             <ExternalLink className="h-3 w-3" />
             Open in {trackerName || mirror.provider}
@@ -355,7 +355,7 @@ function BoardMirrorBar({
         {/* When the last read landed. Without it, "auto" is a claim the user
             has to take on faith while looking at a board that may be stale. */}
         {lastPulledAt && !pulling && (
-          <span className="text-[10px] font-semibold text-muted-foreground" title={new Date(lastPulledAt).toLocaleTimeString()}>
+          <span className="text-xs font-semibold text-muted-foreground" title={new Date(lastPulledAt).toLocaleTimeString()}>
             {autoPulling ? "Checking…" : `Updated ${sinceLabel(lastPulledAt)}`}
           </span>
         )}
@@ -364,7 +364,7 @@ function BoardMirrorBar({
           onClick={onPull}
           disabled={pulling}
           title={`Pull status changes made in ${trackerName || "the tracker"} right now`}
-          className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-[10px] font-semibold hover:bg-accent transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-xs font-semibold hover:bg-accent transition-colors disabled:opacity-50"
         >
           <Download className={`h-3 w-3 ${pulling ? "animate-pulse" : ""}`} />
           {pulling ? "Pulling…" : "Pull changes"}
@@ -377,7 +377,7 @@ function BoardMirrorBar({
               ? "Stop checking the tracker automatically"
               : `Check ${trackerName || "the tracker"} every minute while this page is open`
           }
-          className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[10px] font-bold transition-colors ${
+          className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors ${
             autoPull
               ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
               : "bg-background hover:bg-accent"
@@ -395,7 +395,7 @@ function BoardMirrorBar({
                 ? "Show this app's own bug statuses as columns instead"
                 : `Mirror the ${trackerName || "tracker"} board's columns`
             }
-            className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-[10px] font-semibold hover:bg-accent transition-colors"
+            className="flex items-center gap-1 rounded-lg border bg-background px-2 py-1 text-xs font-semibold hover:bg-accent transition-colors"
           >
             <GitCompare className="h-3 w-3 text-primary" />
             {useMirror ? "App statuses" : `${trackerName || "Tracker"} columns`}
@@ -410,7 +410,7 @@ function BoardMirrorBar({
 function DrawerSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h4 className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+      <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <Icon className="h-3.5 w-3.5" /> {title}
       </h4>
       {children}
@@ -442,7 +442,7 @@ const SIDE_SELECT =
 /** One card in the right-hand metadata column. */
 function SideCard({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-card/80 p-5 shadow-xs">
+    <div className="rounded-xl border bg-card/80 p-6 shadow-xs">
       <h4 className="mb-4 flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <Icon className="h-4 w-4 text-primary" /> {title}
       </h4>
@@ -454,7 +454,7 @@ function SideCard({ icon: Icon, title, children }: { icon: React.ComponentType<{
 /** A label/value line inside a SideCard. */
 function SideRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[86px_1fr] items-center gap-2 border-b border-border/40 py-1.5 last:border-0">
+    <div className="grid grid-cols-[86px_1fr] items-center gap-2 border-b border-border/40 py-2 last:border-0">
       <span className="text-xs font-semibold text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
@@ -468,7 +468,7 @@ function BugStatusPill({ status, onChange }: { status: string; onChange: (s: str
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-semibold shadow-2xs transition-all hover:scale-105 ${st.chip}`}
+          className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1 text-xs font-semibold shadow-2xs transition-all hover:scale-105 ${st.chip}`}
         >
           <span className={`h-2 w-2 rounded-full ${st.dot}`} />
           {st.label}
@@ -1607,12 +1607,12 @@ export default function ProjectBugReportsPage() {
       {/* Delete confirmation: choose app-only or app + OpenProject */}
       {deleteTarget && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-[440px] bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-5 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
-            <div className="space-y-1.5">
-              <h3 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+          <div className="w-[440px] bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
+            <div className="space-y-2">
+              <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
                 <Trash2 className="h-4 w-4 text-rose-600" /> Delete Defect
               </h3>
-              <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+              <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                 You can undo it for 10 seconds.
                 {deleteTarget.synced
                   ? ` This bug is synced to ${trackerName} — choose whether to also delete the linked work package.`
@@ -1652,12 +1652,12 @@ export default function ProjectBugReportsPage() {
         const syncedCount = selectedBugIds.filter(id => bugs.find(b => b.id === id)?.openProjectSyncStatus === "Synced").length
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="w-[440px] bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-5 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
-              <div className="space-y-1.5">
-                <h3 className="font-semibold text-sm text-foreground flex items-center gap-1.5">
+            <div className="w-[440px] bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
                   <Trash2 className="h-4 w-4 text-rose-600" /> Delete {selectedBugIds.length} Defect{selectedBugIds.length === 1 ? "" : "s"}
                 </h3>
-                <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                   You can undo it for 10 seconds.
                   {syncedCount > 0
                     ? ` ${syncedCount} of these ${syncedCount === 1 ? "is" : "are"} synced to ${trackerName} — choose whether to also delete the linked work package${syncedCount === 1 ? "" : "s"}.`
@@ -1756,7 +1756,7 @@ export default function ProjectBugReportsPage() {
             }}
             className="p-4 border rounded-xl bg-card hover:bg-muted/50 cursor-pointer border-border shadow-sm transition-all text-center space-y-1"
           >
-            <span className="text-[11px] font-medium text-muted-foreground/60">{c.label}</span>
+            <span className="text-xs font-medium text-muted-foreground/60">{c.label}</span>
             <div className={`text-xl font-semibold ${c.color}`}>{c.count}</div>
           </div>
         ))}
@@ -1771,7 +1771,7 @@ export default function ProjectBugReportsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by title, testcase, logs…  ( / )" 
-            className="pl-9 h-9 text-xs bg-background"
+            className="pl-8 h-9 text-xs bg-background"
           />
         </div>
 
@@ -1862,7 +1862,7 @@ export default function ProjectBugReportsPage() {
                 router.replace(`?${p.toString()}`, { scroll: false })
               }}
               title="Showing only bugs filed against one test case — click to clear"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 text-xs font-medium text-primary"
             >
               One test case only <span aria-hidden="true">×</span>
             </button>
@@ -1886,7 +1886,7 @@ export default function ProjectBugReportsPage() {
             <button
               onClick={() => setShowCreateBoardModal(true)}
               title={`Create a board in ${trackerName || "the tracker"} with one column per status`}
-              className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-1.5"
+              className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-2"
             >
               <Kanban className="h-3.5 w-3.5 text-primary" />
               Create bug board
@@ -1897,7 +1897,7 @@ export default function ProjectBugReportsPage() {
             <button
               onClick={() => setShowStatusMappingModal(true)}
               title={`Choose which ${trackerName} status each bug status means`}
-              className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-1.5"
+              className="h-9 px-3 rounded-lg border bg-background text-xs font-semibold hover:bg-accent transition-colors shrink-0 flex items-center gap-2"
             >
               <GitCompare className="h-3.5 w-3.5 text-primary" />
               Status mapping
@@ -1908,7 +1908,7 @@ export default function ProjectBugReportsPage() {
             <button
               onClick={() => setShowRebuildModal(true)}
               title={`Delete every bug work item in ${trackerName} and push this project's bugs back as a clean set`}
-              className="h-9 px-3 rounded-lg border border-red-200 bg-background text-red-700 text-xs font-semibold hover:bg-red-50 transition-colors shrink-0 flex items-center gap-1.5"
+              className="h-9 px-3 rounded-lg border border-red-200 bg-background text-red-700 text-xs font-semibold hover:bg-red-50 transition-colors shrink-0 flex items-center gap-2"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Rebuild {trackerName}
@@ -1941,9 +1941,9 @@ export default function ProjectBugReportsPage() {
 
       {/* Bulk action bar: assignee / board+column / parent / delete for many bugs at once */}
       {selectedBugIds.length > 0 && (
-        <div className="p-3 border border-primary/25 bg-primary/10 rounded-xl space-y-2.5 shadow-sm">
+        <div className="p-3 border border-primary/25 bg-primary/10 rounded-xl space-y-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 font-semibold text-primary text-[11px]">
+            <span className="flex items-center gap-2 font-semibold text-primary text-xs">
               <CheckSquare className="h-4 w-4" />
               {selectedBugIds.length} selected
             </span>
@@ -1953,7 +1953,7 @@ export default function ProjectBugReportsPage() {
                 disabled={bulkApplying}
                 size="sm"
                 variant="ghost"
-                className="h-8 font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 shrink-0 gap-1.5"
+                className="h-8 font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 shrink-0 gap-2"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </Button>
@@ -1970,9 +1970,9 @@ export default function ProjectBugReportsPage() {
 
           <div className="flex flex-wrap items-end gap-3">
             {/* Assignee */}
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-end gap-2">
               <div className="space-y-1">
-                <span className="text-[11px] font-medium text-primary/80 flex items-center gap-1"><UserPlus className="h-3 w-3" /> Assignee</span>
+                <span className="text-xs font-medium text-primary/80 flex items-center gap-1"><UserPlus className="h-3 w-3" /> Assignee</span>
                 {opMembers.length > 0 ? (
                   <select
                     value={bulkAssigneeValue}
@@ -1995,9 +1995,9 @@ export default function ProjectBugReportsPage() {
             </div>
 
             {/* Module / service */}
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-end gap-2">
               <div className="space-y-1">
-                <span className="text-[11px] font-medium text-primary/80 flex items-center gap-1"><Layers className="h-3 w-3" /> Module</span>
+                <span className="text-xs font-medium text-primary/80 flex items-center gap-1"><Layers className="h-3 w-3" /> Module</span>
                 <select
                   value={bulkModuleValue}
                   onChange={(e) => setBulkModuleValue(e.target.value)}
@@ -2012,9 +2012,9 @@ export default function ProjectBugReportsPage() {
 
             {/* Board + column */}
             {opBoards.length > 0 && (
-              <div className="flex items-end gap-1.5">
+              <div className="flex items-end gap-2">
                 <div className="space-y-1">
-                  <span className="text-[11px] font-medium text-primary/80 flex items-center gap-1"><Kanban className="h-3 w-3" /> Board</span>
+                  <span className="text-xs font-medium text-primary/80 flex items-center gap-1"><Kanban className="h-3 w-3" /> Board</span>
                   <select
                     value={bulkBoardValue}
                     onChange={(e) => { setBulkBoardValue(e.target.value); setBulkColumnValue(""); loadBulkBoardColumns(e.target.value) }}
@@ -2025,7 +2025,7 @@ export default function ProjectBugReportsPage() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[11px] font-medium text-primary/80">Column</span>
+                  <span className="text-xs font-medium text-primary/80">Column</span>
                   <select
                     value={bulkColumnValue}
                     onChange={(e) => setBulkColumnValue(e.target.value)}
@@ -2041,9 +2041,9 @@ export default function ProjectBugReportsPage() {
             )}
 
             {/* Parent */}
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-end gap-2">
               <div className="space-y-1">
-                <span className="text-[11px] font-medium text-primary/80 flex items-center gap-1"><Layers className="h-3 w-3" /> Parent WP</span>
+                <span className="text-xs font-medium text-primary/80 flex items-center gap-1"><Layers className="h-3 w-3" /> Parent WP</span>
                 <Input
                   value={bulkParentValue}
                   onChange={(e) => setBulkParentValue(e.target.value)}
@@ -2055,7 +2055,7 @@ export default function ProjectBugReportsPage() {
             </div>
           </div>
           {opBoards.length > 0 && (
-            <p className="text-[9px] text-primary/70 font-semibold">Board/column moves already-synced bugs on {trackerName} immediately; others store the target for their next sync.</p>
+            <p className="text-xs text-primary/70 font-semibold">Board/column moves already-synced bugs on {trackerName} immediately; others store the target for their next sync.</p>
           )}
         </div>
       )}
@@ -2072,7 +2072,7 @@ export default function ProjectBugReportsPage() {
           </div>
           <div className="space-y-1">
             <h3 className="font-semibold text-sm text-foreground">No bugs reported yet</h3>
-            <p className="text-[10px] text-muted-foreground font-medium max-w-xs mx-auto leading-relaxed">
+            <p className="text-xs text-muted-foreground font-medium max-w-xs mx-auto leading-relaxed">
               Create bugs manually, capture screenshots from Live QA Sessions, or auto-create them from failed playwright test runs.
             </p>
           </div>
@@ -2097,7 +2097,7 @@ export default function ProjectBugReportsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b bg-slate-500/[0.02] text-[11px] text-muted-foreground/80">
+                    <tr className="border-b bg-slate-500/[0.02] text-xs text-muted-foreground/80">
                       <th className="p-3 w-8">
                         <input
                           type="checkbox"
@@ -2134,15 +2134,15 @@ export default function ProjectBugReportsPage() {
                             />
                           </td>
                           <td className="p-3 space-y-1 max-w-sm">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="font-mono text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-semibold">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="font-mono text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-semibold">
                                 {b.bugKey || "BUG"}
                               </span>
                               <span className="font-semibold text-foreground truncate block hover:text-primary transition-colors" title={b.title}>
                                 {b.title}
                               </span>
                             </div>
-                            <div className="flex items-center gap-2 text-[9px] text-muted-foreground font-medium">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
                               <span>Env: {b.environment || "Staging"}</span>
                               <span>&bull;</span>
                               <span>Browser: {b.browser || "Chromium"}</span>
@@ -2157,7 +2157,7 @@ export default function ProjectBugReportsPage() {
                             </div>
                           </td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] ${
+                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-xs ${
                               b.severity === "Critical" ? "bg-red-100 text-red-700" :
                               b.severity === "High" ? "bg-orange-100 text-orange-700" :
                               b.severity === "Medium" ? "bg-blue-100 text-blue-700" :
@@ -2170,7 +2170,7 @@ export default function ProjectBugReportsPage() {
                             <span className="text-slate-650 font-semibold">{b.priority}</span>
                           </td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[8px] ${
+                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-xs ${
                               b.status === "Open" ? "bg-amber-100 text-amber-700" :
                               b.status === "InProgress" ? "bg-blue-100 text-blue-750" :
                               b.status === "Resolved" || b.status === "Closed" ? "bg-emerald-100 text-emerald-700" :
@@ -2182,7 +2182,7 @@ export default function ProjectBugReportsPage() {
                           <td className="p-3 space-y-0.5 max-w-[200px]">
                             {b.suite && (
                               <div
-                                className="flex items-center gap-1 text-[10px] font-semibold text-sky-700 truncate"
+                                className="flex items-center gap-1 text-xs font-semibold text-sky-700 truncate"
                                 title="Module / service"
                               >
                                 <Layers className="h-3.5 w-3.5 text-sky-500 shrink-0" />
@@ -2190,19 +2190,19 @@ export default function ProjectBugReportsPage() {
                               </div>
                             )}
                             {b.testCase && (
-                              <div className="flex items-center gap-1 text-[10px] font-semibold text-muted-foreground truncate">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-muted-foreground truncate">
                                 <FileText className="h-3.5 w-3.5 text-primary shrink-0" />
                                 <span className="truncate">{b.testCase.title}</span>
                               </div>
                             )}
                             {b.testRun && (
-                              <div className="flex items-center gap-1 text-[9px] text-muted-foreground font-mono">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
                                 <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
                                 <span className="truncate">RUN-{b.testRun.id.slice(0, 8)}</span>
                               </div>
                             )}
                             {!b.testCase && !b.testRun && (
-                              <span className="text-[10px] text-muted-foreground italic">No execution link</span>
+                              <span className="text-xs text-muted-foreground ">No execution link</span>
                             )}
                             {/* Recurrence. BugOccurrence rows have been written
                                 by on-test-run-completed.ts all along and were
@@ -2210,7 +2210,7 @@ export default function ProjectBugReportsPage() {
                                 separates a one-off from a live regression. */}
                             {(b.occurrenceCount ?? 0) > 1 && (
                               <div
-                                className="flex items-center gap-1 text-[10px] font-semibold text-amber-700"
+                                className="flex items-center gap-1 text-xs font-semibold text-amber-700"
                                 title={`This defect has reproduced ${b.occurrenceCount} times across test runs`}
                               >
                                 <RefreshCw className="h-3 w-3 shrink-0" />
@@ -2222,7 +2222,7 @@ export default function ProjectBugReportsPage() {
                                 from one that simply bounced back after a fix. */}
                             {(b.reopenCount ?? 0) > 0 && (
                               <div
-                                className="flex items-center gap-1 text-[10px] font-semibold text-rose-700"
+                                className="flex items-center gap-1 text-xs font-semibold text-rose-700"
                                 title={`Reopened ${b.reopenCount} time(s) after being settled`}
                               >
                                 <AlertCircle className="h-3 w-3 shrink-0" />
@@ -2230,7 +2230,7 @@ export default function ProjectBugReportsPage() {
                               </div>
                             )}
                           </td>
-                          <td className="p-3 text-[10px] font-medium text-muted-foreground">
+                          <td className="p-3 text-xs font-medium text-muted-foreground">
                             <div>{new Date(b.createdAt).toLocaleDateString()}</div>
                             {/* Age, so a defect quietly sitting for months is
                                 visible without doing date arithmetic by eye.
@@ -2252,7 +2252,7 @@ export default function ProjectBugReportsPage() {
                               )}
                           </td>
                           <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1.5">
+                            <div className="flex items-center justify-end gap-2">
                               <Button 
                                 size="sm" 
                                 variant="ghost" 
@@ -2368,7 +2368,7 @@ export default function ProjectBugReportsPage() {
                   >
                     <div className="flex justify-between items-center border-b pb-2 select-none gap-1">
                       <span
-                        className="font-medium text-foreground text-[11px] flex items-center gap-1.5 min-w-0"
+                        className="font-medium text-foreground text-xs flex items-center gap-2 min-w-0"
                         title={
                           col.mirrored
                             ? col.mirrored.appStatus
@@ -2388,14 +2388,14 @@ export default function ProjectBugReportsPage() {
                           />
                         )}
                       </span>
-                      <span className="bg-muted text-foreground px-1.5 py-0.5 rounded-full text-[9px] font-semibold shrink-0">
+                      <span className="bg-muted text-foreground px-2 py-0.5 rounded-full text-xs font-semibold shrink-0">
                         {colBugs.length}
                       </span>
                     </div>
 
-                    <div className="space-y-2.5 max-h-[560px] overflow-y-auto overflow-x-hidden pr-1">
+                    <div className="space-y-3 max-h-[560px] overflow-y-auto overflow-x-hidden pr-1">
                       {colBugs.length === 0 ? (
-                        <div className="text-center py-8 text-[10px] text-muted-foreground italic">No defects</div>
+                        <div className="text-center py-8 text-xs text-muted-foreground ">No defects</div>
                       ) : (
                         colBugs.map(bug => (
                           <div
@@ -2414,9 +2414,9 @@ export default function ProjectBugReportsPage() {
                               draggedBugId === bug.id ? "opacity-40" : ""
                             }`}
                           >
-                            <div className="flex items-center justify-between font-mono text-[9px] text-muted-foreground font-semibold">
+                            <div className="flex items-center justify-between font-mono text-xs text-muted-foreground font-semibold">
                               <span>{bug.bugKey || "BUG"}</span>
-                              <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase ${
+                              <span className={`px-2 py-0.5 rounded text-xs uppercase ${
                                 bug.severity === "Critical" ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground"
                               }`}>
                                 {bug.severity}
@@ -2428,19 +2428,19 @@ export default function ProjectBugReportsPage() {
                             </span>
 
                             {bug.suite && (
-                              <div className="text-[9px] text-sky-700 font-semibold truncate flex items-center gap-1">
+                              <div className="text-xs text-sky-700 font-semibold truncate flex items-center gap-1">
                                 <Layers className="h-3 w-3 shrink-0" />
                                 <span className="truncate">{bug.suite.name}</span>
                               </div>
                             )}
 
                             {bug.testCase && (
-                              <div className="text-[9px] text-muted-foreground font-semibold bg-muted/50 p-1.5 rounded truncate">
+                              <div className="text-xs text-muted-foreground font-semibold bg-muted/50 p-2 rounded truncate">
                                 Tc: {bug.testCase.title}
                               </div>
                             )}
 
-                            <div className="flex justify-between items-center text-[9px] text-muted-foreground pt-1 border-t">
+                            <div className="flex justify-between items-center text-xs text-muted-foreground pt-1 border-t">
                               <span>Env: {bug.environment}</span>
                               <span className="font-medium">{new Date(bug.createdAt).toLocaleDateString()}</span>
                             </div>
@@ -2457,20 +2457,20 @@ export default function ProjectBugReportsPage() {
                   rather than silently dropping them off the board. */}
               {mirrorActive && unplacedBugs.length > 0 && (
                 <div className="p-3 border border-amber-200 bg-amber-50/60 rounded-xl space-y-2">
-                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-800">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     {unplacedBugs.length} defect{unplacedBugs.length === 1 ? "" : "s"} not on the {trackerName || "tracker"} board
                   </div>
-                  <p className="text-[10px] text-amber-700">
+                  <p className="text-xs text-amber-700">
                     These have not been synced to {trackerName || "the tracker"} yet, or sit in a
                     status this board has no column for. Sync them to place them.
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {unplacedBugs.map((bug) => (
                       <button
                         key={bug.id}
                         onClick={() => handleOpenDetail(bug.id)}
-                        className="px-2 py-1 rounded-lg border border-amber-200 bg-background text-[10px] font-semibold hover:bg-amber-100/60 transition-colors max-w-[240px] truncate"
+                        className="px-2 py-1 rounded-lg border border-amber-200 bg-background text-xs font-semibold hover:bg-amber-100/60 transition-colors max-w-[240px] truncate"
                         dir="auto"
                       >
                         {bug.bugKey || "BUG"} · {bug.title}
@@ -2496,8 +2496,8 @@ export default function ProjectBugReportsPage() {
           >
 
             {/* ── Top bar: identity, status, and the one-click next step ── */}
-            <div className="flex shrink-0 items-center justify-between border-b bg-card/60 px-6 py-3.5 backdrop-blur-md">
-              <div className="flex items-center gap-2.5">
+            <div className="flex shrink-0 items-center justify-between border-b bg-card/60 px-6 py-3 backdrop-blur-md">
+              <div className="flex items-center gap-3">
                 <span className="flex h-6 w-6 items-center justify-center rounded bg-rose-50 text-rose-600">
                   <Bug className="h-4 w-4" />
                 </span>
@@ -2508,7 +2508,7 @@ export default function ProjectBugReportsPage() {
                     showToastMsg("Bug key copied")
                   }}
                   title="Copy bug key"
-                  className="flex items-center gap-1 rounded-md border border-border/50 bg-muted/60 px-2.5 py-1 font-mono text-xs font-semibold text-muted-foreground transition-all hover:text-foreground"
+                  className="flex items-center gap-1 rounded-md border border-border/50 bg-muted/60 px-3 py-1 font-mono text-xs font-semibold text-muted-foreground transition-all hover:text-foreground"
                 >
                   <span>{selectedBug.bugKey || "BUG-DETAIL"}</span>
                   <Copy className="h-3 w-3" />
@@ -2519,7 +2519,7 @@ export default function ProjectBugReportsPage() {
                   onChange={(s) => handleChangeBugStatus(selectedBug.id, s)}
                 />
 
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${SEVERITY_STYLES[selectedBug.severity] || SEVERITY_STYLES.Low}`}>
+                <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-semibold ${SEVERITY_STYLES[selectedBug.severity] || SEVERITY_STYLES.Low}`}>
                   {selectedBug.severity} severity
                 </span>
               </div>
@@ -2537,7 +2537,7 @@ export default function ProjectBugReportsPage() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-muted" title="More actions">
+                    <button className="rounded-lg p-2 text-muted-foreground transition-all hover:bg-muted" title="More actions">
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
                   </DropdownMenuTrigger>
@@ -2575,7 +2575,7 @@ export default function ProjectBugReportsPage() {
 
                 <button
                   onClick={() => setSelectedBugId(null)}
-                  className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
+                  className="rounded-lg p-2 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -2587,7 +2587,7 @@ export default function ProjectBugReportsPage() {
             <div className="flex min-w-0 flex-col overflow-hidden">
 
             {/* Title + provenance */}
-            <div className="px-6 pt-5 pb-4">
+            <div className="px-6 pt-6 pb-4">
               {isEditingTitle ? (
                 <div className="flex items-center gap-2">
                   <Input
@@ -2621,12 +2621,12 @@ export default function ProjectBugReportsPage() {
                   className="group -mx-1 flex cursor-text items-start justify-between rounded-lg px-1 py-0.5 text-2xl font-semibold leading-snug tracking-tight text-foreground transition-all hover:bg-muted/50"
                 >
                   <span dir="auto">{selectedBug.title}</span>
-                  <Pencil className="ml-2 mt-1.5 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  <Pencil className="ml-2 mt-2 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </h3>
               )}
 
               <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-medium text-primary">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-xs font-medium text-primary">
                   {(selectedBug.reporter?.name || selectedBug.reporter?.email || "?")[0]}
                 </span>
                 <span>
@@ -2641,7 +2641,7 @@ export default function ProjectBugReportsPage() {
             </div>
 
             {/* Tab switch row */}
-            <div className="flex border-b px-6 gap-5 overflow-x-auto">
+            <div className="flex border-b px-6 gap-6 overflow-x-auto">
               {[
                 { id: "overview", label: "Overview" },
                 { id: "evidence", label: "Evidence" },
@@ -2655,7 +2655,7 @@ export default function ProjectBugReportsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveDetailTab(tab.id as TabType)}
-                    className={`pb-2.5 pt-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                    className={`pb-3 pt-3 px-1 border-b-2 text-xs font-bold transition-all ${
                       isActive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -2666,7 +2666,7 @@ export default function ProjectBugReportsPage() {
             </div>
 
             {/* Tab contents scroll pane */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
               
               {/* Tab 1: OVERVIEW */}
               {activeDetailTab === "overview" && (
@@ -2700,7 +2700,7 @@ export default function ProjectBugReportsPage() {
                       <p
                         onClick={() => setIsEditingDesc(true)}
                         title="Click to edit"
-                        className={`cursor-text whitespace-pre-wrap rounded-xl border bg-muted/60 p-3.5 text-sm leading-relaxed hover:border-primary/25 hover:bg-primary/10 ${selectedBug.stepsToReproduce ? "text-foreground" : "italic text-muted-foreground"}`}
+                        className={`cursor-text whitespace-pre-wrap rounded-xl border bg-muted/60 p-3 text-sm leading-relaxed hover:border-primary/25 hover:bg-primary/10 ${selectedBug.stepsToReproduce ? "text-foreground" : " text-muted-foreground"}`}
                         dir="auto"
                       >
                         {selectedBug.stepsToReproduce || "No description provided. Click to add details."}
@@ -2710,7 +2710,7 @@ export default function ProjectBugReportsPage() {
 
                   {/* LinkedEntities renders its own "Linked items" heading —
                       wrapping it in a DrawerSection would show it twice. */}
-                  <div className="border-t border-border/60 pt-5">
+                  <div className="border-t border-border/60 pt-6">
                     <LinkedEntities
                       projectId={projectId}
                       entityId={selectedBug.id}
@@ -2719,7 +2719,7 @@ export default function ProjectBugReportsPage() {
                   </div>
 
                   {/* Duplicates + AI triage (professional-tester rules) */}
-                  <div className="border-t border-border/60 pt-5">
+                  <div className="border-t border-border/60 pt-6">
                     <BugTriagePanel
                       bugId={selectedBug.id}
                       projectId={projectId}
@@ -2742,8 +2742,8 @@ export default function ProjectBugReportsPage() {
                   {/* Screenshots preview */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-muted-foreground text-[11px]">Screenshot attachment</Label>
-                      <label className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border bg-primary/10 text-primary font-semibold text-[10px] cursor-pointer hover:bg-primary/15 transition-colors ${uploadingPhoto ? "opacity-60 pointer-events-none" : ""}`}>
+                      <Label className="text-muted-foreground text-xs">Screenshot attachment</Label>
+                      <label className={`inline-flex items-center gap-2 h-7 px-3 rounded-lg border bg-primary/10 text-primary font-semibold text-xs cursor-pointer hover:bg-primary/15 transition-colors ${uploadingPhoto ? "opacity-60 pointer-events-none" : ""}`}>
                         <Paperclip className="h-3.5 w-3.5" />
                         {uploadingPhoto ? "Uploading..." : "Upload Photo"}
                         <input
@@ -2769,7 +2769,7 @@ export default function ProjectBugReportsPage() {
                         />
                       </div>
                     ) : (
-                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground italic">
+                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
                         No screenshots attached to this defect.
                       </div>
                     )}
@@ -2777,7 +2777,7 @@ export default function ProjectBugReportsPage() {
 
                   {/* Video player for screen records */}
                   <div className="space-y-1 border-t pt-3">
-                    <Label className="text-muted-foreground text-[11px]">Web Video Recording (Session play)</Label>
+                    <Label className="text-muted-foreground text-xs">Web Video Recording (Session play)</Label>
                     {selectedBug.videoUrl ? (
                       <div className="border rounded-xl overflow-hidden shadow-sm bg-black">
                         <video
@@ -2787,7 +2787,7 @@ export default function ProjectBugReportsPage() {
                         />
                       </div>
                     ) : (
-                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground italic">
+                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
                         No video logs linked to this defect.
                       </div>
                     )}
@@ -2795,22 +2795,22 @@ export default function ProjectBugReportsPage() {
 
                   {/* Logs tabs */}
                   <div className="space-y-2 border-t pt-3">
-                    <span className="text-[11px] text-muted-foreground block">Console logs output</span>
+                    <span className="text-xs text-muted-foreground block">Console logs output</span>
                     {selectedBug.consoleLogs ? (
-                      <pre className="p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono text-[9px] overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
+                      <pre className="p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
                         {selectedBug.consoleLogs}
                       </pre>
                     ) : (
-                      <p className="text-[10px] italic text-muted-foreground pl-1">No console logs output recorded.</p>
+                      <p className="text-xs text-muted-foreground pl-1">No console logs output recorded.</p>
                     )}
 
-                    <span className="text-[11px] text-muted-foreground block mt-2">Network Errors Logs</span>
+                    <span className="text-xs text-muted-foreground block mt-2">Network Errors Logs</span>
                     {selectedBug.networkErrors ? (
-                      <pre className="p-3 rounded-xl bg-slate-900 text-rose-450 font-mono text-[9px] overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
+                      <pre className="p-3 rounded-xl bg-slate-900 text-rose-450 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
                         {selectedBug.networkErrors}
                       </pre>
                     ) : (
-                      <p className="text-[10px] italic text-muted-foreground pl-1">No network errors logs recorded.</p>
+                      <p className="text-xs text-muted-foreground pl-1">No network errors logs recorded.</p>
                     )}
                   </div>
                 </div>
@@ -2820,7 +2820,7 @@ export default function ProjectBugReportsPage() {
               {activeDetailTab === "steps" && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <span className="text-[11px] text-muted-foreground block">Expected Result</span>
+                    <span className="text-xs text-muted-foreground block">Expected Result</span>
                     <textarea
                       value={editExpectedValue}
                       onChange={(e) => setEditExpectedValue(e.target.value)}
@@ -2831,11 +2831,11 @@ export default function ProjectBugReportsPage() {
                       }}
                       rows={3}
                       placeholder="What should happen..."
-                      className="w-full p-2.5 rounded-lg border bg-muted/50 leading-relaxed font-semibold text-foreground outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full p-3 rounded-lg border bg-muted/50 leading-relaxed font-semibold text-foreground outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <div className="space-y-1 border-t pt-3">
-                    <span className="text-[11px] text-muted-foreground block">Actual Result</span>
+                    <span className="text-xs text-muted-foreground block">Actual Result</span>
                     <textarea
                       value={editActualValue}
                       onChange={(e) => setEditActualValue(e.target.value)}
@@ -2846,7 +2846,7 @@ export default function ProjectBugReportsPage() {
                       }}
                       rows={3}
                       placeholder="What happened instead..."
-                      className="w-full p-2.5 rounded-lg border border-rose-100 bg-rose-50/50 leading-relaxed font-semibold text-rose-700 outline-none focus:ring-1 focus:ring-rose-400"
+                      className="w-full p-3 rounded-lg border border-rose-100 bg-rose-50/50 leading-relaxed font-semibold text-rose-700 outline-none focus:ring-1 focus:ring-rose-400"
                     />
                   </div>
                 </div>
@@ -2856,10 +2856,10 @@ export default function ProjectBugReportsPage() {
               {activeDetailTab === "test" && (
                 <div className="space-y-4">
                   {selectedBug.testCase ? (
-                    <div className="p-4 border border-border bg-slate-500/[0.01] rounded-xl space-y-3.5 shadow-sm">
+                    <div className="p-4 border border-border bg-slate-500/[0.01] rounded-xl space-y-3 shadow-sm">
                       <div className="flex justify-between items-start">
                         <div className="space-y-0.5">
-                          <span className="text-[11px] font-medium text-muted-foreground/60">Linked TestCase</span>
+                          <span className="text-xs font-medium text-muted-foreground/60">Linked TestCase</span>
                           <h4 className="font-semibold text-foreground">{selectedBug.testCase.title}</h4>
                         </div>
                         <Button 
@@ -2873,13 +2873,13 @@ export default function ProjectBugReportsPage() {
 
                       {selectedBug.testRun && (
                         <div className="border-t pt-3 space-y-2">
-                          <div className="flex justify-between items-center text-[10px] text-slate-650 font-semibold">
+                          <div className="flex justify-between items-center text-xs text-slate-650 font-semibold">
                             <span>Test Run Reference</span>
-                            <span className="font-mono text-[9px] bg-muted px-2 py-0.5 rounded text-muted-foreground">RUN-{selectedBug.testRun.id.slice(0, 8)}</span>
+                            <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground">RUN-{selectedBug.testRun.id.slice(0, 8)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-[10px] text-slate-650 font-semibold">
+                          <div className="flex justify-between items-center text-xs text-slate-650 font-semibold">
                             <span>Status</span>
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-semibold uppercase ${
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
                               selectedBug.testRun.status === "Passed" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                             }`}>{selectedBug.testRun.status}</span>
                           </div>
@@ -2897,11 +2897,11 @@ export default function ProjectBugReportsPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground italic">
+                      <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
                         This defect report is not linked to any test cases.
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-muted-foreground text-[11px]">Link TestCase ID</Label>
+                        <Label className="text-muted-foreground text-xs">Link TestCase ID</Label>
                         <Input 
                           placeholder="Paste TestCase UUID..."
                           onKeyDown={(e) => {
@@ -2917,11 +2917,11 @@ export default function ProjectBugReportsPage() {
 
                   {/* Linked User Stories — optional, editable any time */}
                   <div className="p-4 border border-border rounded-xl space-y-3 shadow-sm">
-                    <span className="text-[11px] font-medium text-muted-foreground/60 block">
+                    <span className="text-xs font-medium text-muted-foreground/60 block">
                       Linked User Stories ({linkedStoryIds.length})
                     </span>
                     {(((selectedBug as any).requirements) || []).length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
+                      <div className="flex flex-wrap gap-2">
                         {((selectedBug as any).requirements as any[]).map((l) => l.requirement && (
                           <RequirementLink key={l.requirementId || l.requirement.id} projectId={projectId} requirementId={l.requirementId || l.requirement.id} requirementKey={l.requirement.requirementKey} />
                         ))}
@@ -2945,13 +2945,13 @@ export default function ProjectBugReportsPage() {
                   
                   {/* Mark as duplicate section */}
                   {selectedBug.status !== "Duplicate" && (
-                    <div className="p-3.5 border border-dashed rounded-xl bg-muted/50 space-y-2.5">
-                      <span className="font-medium text-[11px] text-muted-foreground block">Link as Duplicate defect</span>
+                    <div className="p-3 border border-dashed rounded-xl bg-muted/50 space-y-3">
+                      <span className="font-medium text-xs text-muted-foreground block">Link as Duplicate defect</span>
                       <div className="flex gap-2">
                         <select 
                           value={duplicateTargetId} 
                           onChange={(e) => setDuplicateTargetId(e.target.value)}
-                          className="h-8 flex-1 rounded border bg-background text-[11px] font-semibold px-2 outline-none"
+                          className="h-8 flex-1 rounded border bg-background text-xs font-semibold px-2 outline-none"
                         >
                           <option value="">Choose original bug...</option>
                           {bugs.filter(b => b.id !== selectedBug.id && b.status !== "Duplicate").map(b => (
@@ -2970,18 +2970,18 @@ export default function ProjectBugReportsPage() {
                     </div>
                   )}
 
-                  <span className="text-[11px] text-muted-foreground block select-none">Audit log activities ({selectedBug.activities?.length ?? 0})</span>
+                  <span className="text-xs text-muted-foreground block select-none">Audit log activities ({selectedBug.activities?.length ?? 0})</span>
                   {(selectedBug.activities?.length ?? 0) === 0 ? (
-                    <p className="text-[10px] italic text-muted-foreground">No activity logged.</p>
+                    <p className="text-xs text-muted-foreground">No activity logged.</p>
                   ) : (
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       {(selectedBug.activities ?? []).map((act) => (
-                        <div key={act.id} className="p-2.5 border rounded-xl bg-muted/50 space-y-1 text-[11px] font-medium leading-relaxed">
+                        <div key={act.id} className="p-3 border rounded-xl bg-muted/50 space-y-1 text-xs font-medium leading-relaxed">
                           <div className="flex justify-between items-center text-muted-foreground font-semibold">
                             <span className="text-primary">{act.action}</span>
-                            <span className="text-[9px] text-muted-foreground font-normal">{new Date(act.createdAt).toLocaleDateString()} {new Date(act.createdAt).toLocaleTimeString()}</span>
+                            <span className="text-xs text-muted-foreground font-normal">{new Date(act.createdAt).toLocaleDateString()} {new Date(act.createdAt).toLocaleTimeString()}</span>
                           </div>
-                          {act.details && <p className="text-muted-foreground text-[10px]">{act.details}</p>}
+                          {act.details && <p className="text-muted-foreground text-xs">{act.details}</p>}
                         </div>
                       ))}
                     </div>
@@ -2995,7 +2995,7 @@ export default function ProjectBugReportsPage() {
                   {/* Required custom fields on the bug type (e.g. Found in Build, Bug Componant) */}
                   {opBugFields.length > 0 && (
                     <div className="p-4 border rounded-xl bg-amber-50/40 border-amber-100 space-y-3">
-                      <span className="text-[11px] font-medium text-amber-700 block">
+                      <span className="text-xs font-medium text-amber-700 block">
                         Required Bug Fields ({trackerName})
                       </span>
                       {opBugFields.map(f => {
@@ -3003,7 +3003,7 @@ export default function ProjectBugReportsPage() {
                         const current = editCustomFields[f.key]?.value
                         return (
                           <div key={f.key} className="space-y-1">
-                            <Label className="text-muted-foreground text-[11px] block">
+                            <Label className="text-muted-foreground text-xs block">
                               {f.name}{f.required && <span className="text-rose-500"> *</span>}
                             </Label>
                             {f.isLink ? (
@@ -3035,8 +3035,8 @@ export default function ProjectBugReportsPage() {
                           </div>
                         )
                       })}
-                      <div className="space-y-1.5 pt-1">
-                        <p className="text-[9px] text-muted-foreground">
+                      <div className="space-y-2 pt-1">
+                        <p className="text-xs text-muted-foreground">
                           Required by the {trackerName} bug type — sent when you sync.
                           {Object.keys(bugFieldDefaults).length > 0
                             ? " Bugs with no value of their own fall back to the project defaults."
@@ -3048,7 +3048,7 @@ export default function ProjectBugReportsPage() {
                           variant="outline"
                           disabled={savingDefaults || Object.keys(editCustomFields).length === 0}
                           onClick={handleSaveFieldDefaults}
-                          className="h-7 text-[10px] font-semibold"
+                          className="h-7 text-xs font-semibold"
                         >
                           {savingDefaults ? "Saving…" : "Use these as project defaults"}
                         </Button>
@@ -3057,16 +3057,16 @@ export default function ProjectBugReportsPage() {
                   )}
 
                   {opSyncStatus ? (
-                    <div className="p-4 border rounded-xl bg-muted/50 space-y-3.5">
-                      <div className="flex justify-between items-center text-[11px]">
+                    <div className="p-4 border rounded-xl bg-muted/50 space-y-3">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Sync status</span>
-                        <span className={`px-2 py-0.5 rounded font-semibold uppercase text-[8px] ${
+                        <span className={`px-2 py-0.5 rounded font-semibold uppercase text-xs ${
                           opSyncStatus.status === "Synced" ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600"
                         }`}>{opSyncStatus.status}</span>
                       </div>
 
                       {opSyncStatus.externalId && (
-                        <div className="flex justify-between items-center text-[11px] font-semibold">
+                        <div className="flex justify-between items-center text-xs font-semibold">
                           <span className="text-muted-foreground">Work Package ID</span>
                           <span className="font-mono text-foreground">#{opSyncStatus.externalId}</span>
                         </div>
@@ -3085,7 +3085,7 @@ export default function ProjectBugReportsPage() {
                         </div>
                       )}
 
-                      <div className="pt-2 border-t space-y-1.5">
+                      <div className="pt-2 border-t space-y-2">
                         <Button
                           onClick={() => handleSyncToOpenProject(selectedBug.id, {
                             parentId: editParentValue,
@@ -3098,13 +3098,13 @@ export default function ProjectBugReportsPage() {
                         >
                           {syncingOP ? "Syncing..." : "Sync / Update Mapped Ticket"}
                         </Button>
-                        <p className="text-[9px] text-muted-foreground text-center">
+                        <p className="text-xs text-muted-foreground text-center">
                           Uses the Parent / Board / Column set in the sidebar.
                         </p>
                       </div>
                     </div>
                   ) : (
-                    <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground italic">
+                    <div className="p-8 border border-dashed rounded-xl text-center text-muted-foreground ">
                       {trackerName} integrations connection is disabled for active project. Check Settings.
                     </div>
                   )}
@@ -3115,11 +3115,11 @@ export default function ProjectBugReportsPage() {
             </div>{/* end left column */}
 
             {/* ── Right metadata sidebar ── */}
-            <div className="min-w-0 space-y-5 overflow-y-auto bg-muted/15 p-5">
+            <div className="min-w-0 space-y-6 overflow-y-auto bg-muted/15 p-6">
 
               <SideCard icon={Tag} title="Details &amp; Metadata">
                 <SideRow label="Type">
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold text-foreground">
                     <Bug className="h-3.5 w-3.5 text-rose-500" /> Bug
                   </span>
                 </SideRow>
@@ -3156,8 +3156,8 @@ export default function ProjectBugReportsPage() {
                 </SideRow>
 
                 <SideRow label="Reporter">
-                  <span className="flex items-center gap-1.5 truncate text-xs font-semibold text-foreground">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-[11px] font-medium text-primary">
+                  <span className="flex items-center gap-2 truncate text-xs font-semibold text-foreground">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-medium text-primary">
                       {(selectedBug.reporter?.name || selectedBug.reporter?.email || "?")[0]}
                     </span>
                     <span className="truncate">{selectedBug.reporter?.name || selectedBug.reporter?.email || "Unknown"}</span>
@@ -3256,9 +3256,9 @@ export default function ProjectBugReportsPage() {
                 )}
 
                 <SideRow label="Labels">
-                  <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border bg-background p-1.5">
+                  <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border bg-background p-2">
                     {(selectedBug.tags || []).map((t) => (
-                      <span key={t} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      <span key={t} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                         {t}
                         <button
                           type="button"
@@ -3377,16 +3377,16 @@ export default function ProjectBugReportsPage() {
 
             {/* Footer deletion */}
             <div className="flex items-center justify-between border-t bg-muted/60 px-6 py-3">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
                 Updated {new Date(selectedBug.updatedAt).toLocaleDateString()}
-                <button onClick={() => setShowShortcuts(true)} className="ml-3 hidden rounded border px-1.5 py-0.5 font-mono text-[10px] hover:bg-muted sm:inline" title="Keyboard shortcuts">
+                <button onClick={() => setShowShortcuts(true)} className="ml-3 hidden rounded border px-2 py-0.5 font-mono text-xs hover:bg-muted sm:inline" title="Keyboard shortcuts">
                   J/K · E · D · T · ?
                 </button>
               </span>
               <button
                 onClick={() => handleDeleteBug(selectedBug.id)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-card px-3 py-1.5 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-card px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
               >
                 <Trash2 className="h-3.5 w-3.5" /> Delete Defect
               </button>
@@ -3473,7 +3473,7 @@ export default function ProjectBugReportsPage() {
             className="w-full max-w-sm space-y-4 rounded-xl border bg-background p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <h3 className="text-base font-semibold">
                 Why is this moving to {resolutionPrompt.targetStatus}?
               </h3>
@@ -3482,7 +3482,7 @@ export default function ProjectBugReportsPage() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {(["Fixed", "WontFix", "CannotReproduce", "Duplicate", "ByDesign"] as const).map((r) => (
                 <button
                   key={r}

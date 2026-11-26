@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Apple, Download, Monitor } from "lucide-react"
+import { Apple, Download, Monitor } from "@/components/ui/icons"
 import { AppleLogo, DownloadSimple, WindowsLogo } from "@phosphor-icons/react"
 
 /**
@@ -47,8 +47,8 @@ export function DesktopDownloads() {
       download
       className={
         primary
-          ? "flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-violet-500"
-          : "flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-[12.5px] font-medium text-muted-foreground transition-colors hover:border-violet-400/50 hover:text-foreground"
+          ? "flex items-center justify-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-500"
+          : "flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-violet-400/50 hover:text-foreground"
       }
     >
       {icon}
@@ -59,17 +59,17 @@ export function DesktopDownloads() {
   const win = <Monitor className="h-3.5 w-3.5" />
 
   return (
-    <div id="download" className="space-y-2.5 rounded-xl border border-white/10 bg-white/[0.02] p-4">
-      <p className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+    <div id="download" className="space-y-3 rounded-xl border border-white/10 bg-white/[0.02] p-4">
+      <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
         <Download className="h-4 w-4 text-violet-400" /> Get the desktop app
       </p>
-      <p className="text-[12px] text-muted-foreground">Same account, its own window, signs you in to this server.</p>
+      <p className="text-xs text-muted-foreground">Same account, its own window, signs you in to this server.</p>
       <div className="grid gap-2 sm:grid-cols-3">
         {link(FILES.macArm, os === "mac", mac)}
         {link(FILES.macIntel, false, mac)}
         {link(FILES.windows, os === "windows", win)}
       </div>
-      <p className="text-[11px] leading-relaxed text-muted-foreground">
+      <p className="text-xs leading-relaxed text-muted-foreground">
         First launch: on Mac open System Settings → Privacy &amp; Security → Open Anyway. On Windows, if the browser holds the file, open
         Downloads (Ctrl+J) → ⋯ → Keep → Keep anyway; then More info → Run anyway.{" "}
         <a href="/downloads/QA-Engine-win.zip" download className="underline hover:text-foreground">

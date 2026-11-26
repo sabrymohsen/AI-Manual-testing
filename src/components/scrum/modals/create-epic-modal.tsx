@@ -7,7 +7,7 @@ import { DotLabel } from "@/components/scrum/shared"
 import { ComposerDialog, ComposerTitle, ComposerText, ChipRow, ChipButton, CreateMoreToggle } from "@/components/ui/issue-composer"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { Check, Pipette } from "lucide-react"
+import { Check, Pipette } from "@/components/ui/icons"
 
 const SWATCHES = [
   { hex: "#2563eb", name: "Blue" },
@@ -70,8 +70,8 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
       title="Create epic"
       description="A container for related stories. Its colour is how it reads on the board."
       crumbs={[
-        <span key="key" className="rounded border border-border px-1 font-mono text-[10px]">{project?.boardKey || "EPIC"}</span>,
-        <span key="t" className="inline-flex items-center gap-1.5 font-medium">
+        <span key="key" className="rounded border border-border px-1 font-mono text-xs">{project?.boardKey || "EPIC"}</span>,
+        <span key="t" className="inline-flex items-center gap-2 font-medium">
           <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
           New epic
         </span>,
@@ -109,7 +109,7 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
             </ChipButton>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-auto p-2">
-            <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Epic colour">
+            <div className="flex items-center gap-2" role="radiogroup" aria-label="Epic colour">
               {SWATCHES.map((sw) => (
                 <button
                   key={sw.hex}
@@ -130,7 +130,7 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
               ))}
               <label
                 title="Custom colour"
-                className="relative ml-1 flex h-6 cursor-pointer items-center gap-1 rounded-md border border-border px-1.5 text-[11px] text-muted-foreground hover:bg-accent"
+                className="relative ml-1 flex h-6 cursor-pointer items-center gap-1 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-accent"
               >
                 <Pipette className="h-3 w-3" /> Custom
                 <input
@@ -145,7 +145,7 @@ export function CreateEpicModal({ projectId }: { projectId: string }) {
           </PopoverContent>
         </Popover>
 
-        <span className="ml-auto inline-flex items-center gap-2 text-[11px] text-muted-foreground">
+        <span className="ml-auto inline-flex items-center gap-2 text-xs text-muted-foreground">
           On cards
           <DotLabel dotColor={color}>{title.trim() || "Epic name"}</DotLabel>
         </span>

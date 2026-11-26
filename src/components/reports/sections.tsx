@@ -78,7 +78,7 @@ function ProjectSection({ k, r }: { k: ProjectSectionKey; r: ProjectReport }) {
       return (
         <ChartCard title="Requirements coverage">
           <CoverageDonut covered={r.coverage.requirementsCovered} uncovered={r.coverage.requirementsUncovered} />
-          <div className="text-[11px] text-muted-foreground mt-2 text-center">
+          <div className="text-xs text-muted-foreground mt-2 text-center">
             {r.coverage.requirementsCovered}/{r.coverage.requirementsTotal} requirements covered · {r.coverage.automated} automated / {r.coverage.manual} manual cases
           </div>
         </ChartCard>

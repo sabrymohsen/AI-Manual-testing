@@ -66,7 +66,7 @@ import {
   Trash2,
   UserRound,
   Zap,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 /**
  * The case list.
@@ -315,7 +315,7 @@ export function CaseTable({
               The test library needs the <code className="rounded bg-muted px-1">TestSuite</code>{" "}
               table and the execution rollup columns. Run these, then reload:
             </p>
-            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 text-left text-[11px] leading-relaxed">
+            <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-3 text-left text-xs leading-relaxed">
 {`npx prisma generate
 npx prisma db push
 npx tsx scripts/backfill-test-suites.ts --apply`}
@@ -351,7 +351,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
     <div ref={ref} className="flex h-full flex-col">
       {/* Header — mirrors Row's column widths exactly. */}
       <div
-        className="flex shrink-0 items-center border-b bg-muted/30 px-4 py-2 text-[11px] font-medium text-muted-foreground"
+        className="flex shrink-0 items-center border-b bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground"
         style={{ gap: GAP }}
       >
         <div style={{ width: COL.select }} className="shrink-0">
@@ -399,7 +399,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
       </div>
 
       {showSelectAllBanner && (
-        <div className="flex shrink-0 items-center justify-center gap-2 border-b bg-primary/5 px-4 py-1.5 text-xs">
+        <div className="flex shrink-0 items-center justify-center gap-2 border-b bg-primary/5 px-4 py-2 text-xs">
           <span className="text-muted-foreground">All {rows.length} loaded cases are selected.</span>
           <button
             onClick={onSelectAllMatching}
@@ -412,7 +412,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
         </div>
       )}
       {selectedIds.length > rows.length && (
-        <div className="flex shrink-0 items-center justify-center gap-2 border-b bg-primary/5 px-4 py-1.5 text-xs">
+        <div className="flex shrink-0 items-center justify-center gap-2 border-b bg-primary/5 px-4 py-2 text-xs">
           <span className="text-muted-foreground">All {selectedIds.length} matching cases are selected.</span>
           <button onClick={() => onToggleAll([])} className="font-medium text-primary hover:underline">
             Clear selection
@@ -445,7 +445,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
               onClick={() =>
                 router.push(`/projects/${projectId}/test-cases/new?suite=${encodeURIComponent(filters.suite!)}`)
               }
-              className="mt-2 h-8 gap-1.5 text-xs font-semibold"
+              className="mt-2 h-8 gap-2 text-xs font-semibold"
             >
               <Plus className="h-3.5 w-3.5" /> Add test case in this suite
             </Button>
@@ -488,11 +488,11 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
           components={{
             Footer: () =>
               isFetchingNextPage ? (
-                <p className="py-3 text-center text-[11px] text-muted-foreground">Loading more…</p>
+                <p className="py-3 text-center text-xs text-muted-foreground">Loading more…</p>
               ) : hasNextPage ? (
                 <div className="h-4" />
               ) : (
-                <p className="py-3 text-center text-[11px] text-muted-foreground">
+                <p className="py-3 text-center text-xs text-muted-foreground">
                   {rows.length} {rows.length === 1 ? "case" : "cases"}
                 </p>
               ),
@@ -580,7 +580,7 @@ function Row({
         data-active={active || undefined}
         style={{ gap: GAP }}
         className={cn(
-          "group flex cursor-pointer items-center px-4 py-2.5 text-sm transition-colors",
+          "group flex cursor-pointer items-center px-4 py-3 text-sm transition-colors",
           !active && "hover:bg-accent/40",
           active && "shadow-[inset_2px_0_0_hsl(var(--primary))]"
         )}
@@ -595,7 +595,7 @@ function Row({
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           <button
             onClick={(e) => {
               stop(e)
@@ -629,7 +629,7 @@ function Row({
           </span>
 
           {/* Badges and tags give way before the title does. */}
-          <span className="flex min-w-0 shrink-[3] items-center gap-1.5 overflow-hidden">
+          <span className="flex min-w-0 shrink-[3] items-center gap-2 overflow-hidden">
 
           {row.reviewState !== "Ready" && (
             <DropdownMenu>
@@ -637,7 +637,7 @@ function Row({
                 onClick={stop}
                 title={REVIEW_META[row.reviewState].hint}
                 className={cn(
-                  "shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                  "shrink-0 rounded px-2 py-0.5 text-xs font-medium",
                   REVIEW_META[row.reviewState].chip
                 )}
               >
@@ -650,13 +650,13 @@ function Row({
           {row.tags.slice(0, 2).map((t) => (
             <span
               key={t}
-              className="hidden shrink-0 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground sm:inline"
+              className="hidden shrink-0 rounded border px-2 py-0.5 text-xs text-muted-foreground sm:inline"
             >
               {t}
             </span>
           ))}
           {row.tags.length > 2 && (
-            <span className="shrink-0 text-[10px] text-muted-foreground" title={row.tags.slice(2).join(", ")}>
+            <span className="shrink-0 text-xs text-muted-foreground" title={row.tags.slice(2).join(", ")}>
               +{row.tags.length - 2}
             </span>
           )}
@@ -682,7 +682,7 @@ function Row({
               <DropdownMenuTrigger
                 title="Change priority"
                 className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold transition-shadow hover:ring-1 hover:ring-border",
+                  "rounded-full px-2 py-0.5 text-xs font-semibold transition-shadow hover:ring-1 hover:ring-border",
                   PRIORITY_META[row.priority].chip
                 )}
               >
@@ -708,11 +708,11 @@ function Row({
             <DropdownMenu>
               <DropdownMenuTrigger
                 title="Change assignee"
-                className="inline-flex max-w-full items-center gap-1.5 rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="inline-flex max-w-full items-center gap-2 rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {assignee || row.assignee ? (
                   <>
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                       {initials(assignee?.name ?? row.assignee ?? "")}
                     </span>
                     <span className="truncate">{assignee?.name ?? row.assignee}</span>
@@ -737,14 +737,14 @@ function Row({
                       className={cn("gap-2 text-xs", m.id === row.assignee && "font-semibold")}
                       onClick={() => onPatch({ assignee: m.id })}
                     >
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                         {initials(m.name)}
                       </span>
                       <span className="truncate">{m.name}</span>
                     </DropdownMenuItem>
                   ))}
                 {members.length === 0 && (
-                  <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                  <p className="px-2 py-2 text-xs text-muted-foreground">
                     No team members yet — add them on the project&apos;s Team tab.
                   </p>
                 )}
@@ -754,7 +754,7 @@ function Row({
         )}
 
         {visible.type && (
-          <div style={{ width: COL.type }} className="shrink-0 truncate text-[11px] text-muted-foreground">
+          <div style={{ width: COL.type }} className="shrink-0 truncate text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               {row.executionType === "Automated" ? (
                 <Zap className="h-3 w-3 shrink-0 text-violet-500" />
@@ -770,14 +770,14 @@ function Row({
         )}
 
         <div style={{ width: COL.lastRun }} className="shrink-0 truncate text-xs">
-          <span className={cn("rounded px-1.5 py-0.5", status.chip)}>{status.label}</span>
+          <span className={cn("rounded px-2 py-0.5", status.chip)}>{status.label}</span>
           {row.lastRunAt && (
-            <span className="ml-1.5 tabular-nums text-muted-foreground">{relativeTime(row.lastRunAt)}</span>
+            <span className="ml-2 tabular-nums text-muted-foreground">{relativeTime(row.lastRunAt)}</span>
           )}
         </div>
 
         {visible.links && (
-          <div style={{ width: COL.links }} className="flex shrink-0 items-center gap-2 text-[11px] text-muted-foreground">
+          <div style={{ width: COL.links }} className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
             {row.requirementCount > 0 && (
               <span className="inline-flex items-center gap-0.5" title={`${row.requirementCount} linked story(s)`}>
                 <Link2 className="h-3 w-3" />
@@ -813,14 +813,14 @@ function Row({
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem onClick={onRun} className="gap-2 text-xs">
                 <Play className="h-3.5 w-3.5" /> Run
-                <span className="ml-auto text-[10px] text-muted-foreground">R</span>
+                <span className="ml-auto text-xs text-muted-foreground">R</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push(`/projects/${projectId}/test-cases/${row.id}/edit`)}
                 className="gap-2 text-xs"
               >
                 <Edit2 className="h-3.5 w-3.5" /> Edit
-                <span className="ml-auto text-[10px] text-muted-foreground">E</span>
+                <span className="ml-auto text-xs text-muted-foreground">E</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onDuplicate} className="gap-2 text-xs">
                 <Copy className="h-3.5 w-3.5" /> Duplicate
@@ -833,12 +833,12 @@ function Row({
                   <FolderInput className="h-3.5 w-3.5" /> Move to suite
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-64 w-52 overflow-y-auto">
-                  <DropdownMenuItem onClick={() => onMoveToSuite(null)} className="gap-1.5 text-xs font-medium">
+                  <DropdownMenuItem onClick={() => onMoveToSuite(null)} className="gap-2 text-xs font-medium">
                     <Folder className="h-3.5 w-3.5 text-muted-foreground" /> — Unfiled —
                   </DropdownMenuItem>
                   {projectModules.length > 0 && <DropdownMenuSeparator />}
                   {projectModules.map((m) => (
-                    <DropdownMenuItem key={m.id} onClick={() => onMoveToSuite(m.id)} className="gap-1.5 text-xs">
+                    <DropdownMenuItem key={m.id} onClick={() => onMoveToSuite(m.id)} className="gap-2 text-xs">
                       <Folder className="h-3.5 w-3.5 shrink-0 text-primary/70" />
                       <span className="truncate" title={m.path}>
                         {m.path}
@@ -854,7 +854,7 @@ function Row({
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-64 w-52 overflow-y-auto">
                   {plans.length === 0 && (
-                    <p className="px-2 py-1.5 text-[11px] text-muted-foreground">
+                    <p className="px-2 py-2 text-xs text-muted-foreground">
                       No plans yet — create one with + under Test plans.
                     </p>
                   )}
@@ -901,7 +901,7 @@ function Row({
 function ReviewMenu({ current, onPick }: { current: ReviewState; onPick: (r: ReviewState) => void }) {
   return (
     <DropdownMenuContent align="start" className="w-48" onClick={(e) => e.stopPropagation()}>
-      <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Review state</DropdownMenuLabel>
+      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Review state</DropdownMenuLabel>
       {REVIEW_ORDER.map((r) => (
         <DropdownMenuItem
           key={r}
@@ -909,7 +909,7 @@ function ReviewMenu({ current, onPick }: { current: ReviewState; onPick: (r: Rev
           className={cn("flex-col items-start gap-0 text-xs", r === current && "font-semibold")}
         >
           {REVIEW_META[r].label}
-          <span className="text-[10px] font-normal text-muted-foreground">{REVIEW_META[r].hint}</span>
+          <span className="text-xs font-normal text-muted-foreground">{REVIEW_META[r].hint}</span>
         </DropdownMenuItem>
       ))}
     </DropdownMenuContent>
@@ -923,10 +923,10 @@ function StepPreview({ projectId, testCaseId }: { projectId: string; testCaseId:
     data?.testCase?.steps ?? []
 
   return (
-    <div className="space-y-1 pb-3 pl-[76px] pr-4 text-xs">
+    <div className="space-y-1 pb-3 pl-20 pr-4 text-xs">
       {isLoading && <p className="text-muted-foreground">Loading steps…</p>}
       {!isLoading && data?.testCase?.preconditions && (
-        <p className="mb-1.5 whitespace-pre-wrap text-muted-foreground">
+        <p className="mb-2 whitespace-pre-wrap text-muted-foreground">
           <span className="font-medium text-foreground">Preconditions: </span>
           {data.testCase.preconditions}
         </p>

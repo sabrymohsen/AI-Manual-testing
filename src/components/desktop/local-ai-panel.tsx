@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { CheckCircle2, Cpu, Download, Loader2, RefreshCw, XCircle } from "lucide-react"
+import { CheckCircle2, Cpu, Download, Loader2, RefreshCw, XCircle } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { desktopBridge } from "@/lib/desktop"
 import { DesktopDownloads } from "@/components/auth/desktop-downloads"
@@ -87,12 +87,12 @@ export function LocalAiPanel() {
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <Cpu className="h-4 w-4" /> AI on your computer
         </h3>
-        <p className="text-[13px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Run AI for free on your own computer with Ollama. This works in the QA Engine desktop app, which connects your computer&apos;s AI to
           this site.
         </p>
         {saved?.model && (
-          <p className="text-[13px]">
+          <p className="text-xs">
             On: <b>{saved.model}</b> — used whenever your desktop app is open
             {saved.connected ? " (open now)." : " (not open right now)."}{" "}
             <button className="text-primary hover:underline" onClick={() => save(null)} disabled={busy}>
@@ -135,22 +135,22 @@ export function LocalAiPanel() {
 
         {/* Step 1 — Ollama */}
         {local === null ? (
-          <p className="flex items-center gap-2 text-[13px] text-muted-foreground">
+          <p className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3.5 w-3.5 animate-spin" /> Looking for Ollama…
           </p>
         ) : !local.running ? (
           <div className="space-y-2 rounded-lg border border-dashed p-3">
-            <p className="flex items-center gap-2 text-[13px] font-medium">
+            <p className="flex items-center gap-2 text-xs font-medium">
               <XCircle className="h-4 w-4 text-amber-500" /> Ollama isn&apos;t running on this computer
             </p>
-            <ol className="list-decimal space-y-0.5 ps-5 text-xs text-muted-foreground">
+            <ol className="list-decimal space-y-0.5 ps-6 text-xs text-muted-foreground">
               <li>Download and install Ollama (free).</li>
               <li>Open the Ollama app once so it runs in the background.</li>
               <li>Come back here and click Check again.</li>
             </ol>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => ai.openDownload()}>
-                <Download className="mr-1.5 h-3.5 w-3.5" /> Download Ollama
+                <Download className="mr-2 h-3.5 w-3.5" /> Download Ollama
               </Button>
               <Button size="sm" variant="outline" onClick={refresh}>
                 Check again
@@ -158,7 +158,7 @@ export function LocalAiPanel() {
             </div>
           </div>
         ) : (
-          <p className="flex items-center gap-2 text-[13px]">
+          <p className="flex items-center gap-2 text-xs">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Ollama is running · {models.length} model{models.length === 1 ? "" : "s"}
           </p>
         )}
@@ -167,7 +167,7 @@ export function LocalAiPanel() {
         {local?.running && (
           <div className="space-y-2">
             <p className="text-xs font-medium">{models.length ? "Download another model" : "Download a model to start"}</p>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {SUGGESTED.map((m) => {
                 const have = models.includes(m.name)
                 const active = pulling?.model === m.name
@@ -175,23 +175,23 @@ export function LocalAiPanel() {
                 return (
                   <div key={m.name} className="flex items-center gap-3 rounded-md border px-3 py-2">
                     <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-medium">
+                      <p className="text-xs font-medium">
                         {m.name} <span className="font-normal text-muted-foreground">· {m.size}</span>
                       </p>
-                      <p className="text-[11px] text-muted-foreground">{m.note}</p>
+                      <p className="text-xs text-muted-foreground">{m.note}</p>
                       {active && (
-                        <div className="mt-1.5 space-y-1">
+                        <div className="mt-2 space-y-1">
                           <div className="h-1.5 overflow-hidden rounded bg-muted">
                             <div className="h-full bg-primary transition-all" style={{ width: `${pct ?? 5}%` }} />
                           </div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {pulling?.status} {pct !== null ? `· ${pct}% (${gb(pulling?.completed)} of ${gb(pulling?.total)})` : ""}
                           </p>
                         </div>
                       )}
                     </div>
                     {have ? (
-                      <span className="text-[11px] font-medium text-emerald-600">Installed</span>
+                      <span className="text-xs font-medium text-emerald-600">Installed</span>
                     ) : (
                       <Button size="sm" variant="outline" disabled={!!pulling} onClick={() => download(m.name)}>
                         {active ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Download"}
@@ -215,7 +215,7 @@ export function LocalAiPanel() {
                 id="local-ai-model"
                 value={pick}
                 onChange={(e) => setPick(e.target.value)}
-                className="h-8 rounded-md border bg-background px-2 text-[13px]"
+                className="h-8 rounded-md border bg-background px-2 text-xs"
               >
                 {models.map((m) => (
                   <option key={m} value={m}>
@@ -247,7 +247,7 @@ export function LocalAiPanel() {
           Version {version || "…"}. The app checks for new versions on its own; you can also check now.
         </p>
         <Button size="sm" variant="outline" onClick={() => desktop?.checkForUpdate?.()}>
-          <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Check for updates
+          <RefreshCw className="mr-2 h-3.5 w-3.5" /> Check for updates
         </Button>
       </div>
     </div>

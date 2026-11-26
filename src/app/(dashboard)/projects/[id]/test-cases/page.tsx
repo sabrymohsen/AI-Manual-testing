@@ -64,7 +64,7 @@ import {
   Video,
   X,
   Zap,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 /**
  * Test library.
@@ -280,7 +280,7 @@ export default function TestLibraryPage() {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-muted/20">
       {/* Header */}
-      <header className="shrink-0 space-y-3 border-b bg-card px-5 py-4">
+      <header className="shrink-0 space-y-3 border-b bg-card px-6 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-0.5">
             <h1 className="flex items-center gap-2 text-lg font-semibold tracking-tight">
@@ -295,14 +295,14 @@ export default function TestLibraryPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-9 gap-1.5 text-xs">
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-9 gap-2 text-xs">
               <FileSpreadsheet className="h-3.5 w-3.5" /> Import
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => router.push(`/projects/${projectId}/recorder-studio`)}
-              className="h-9 gap-1.5 text-xs"
+              className="h-9 gap-2 text-xs"
             >
               <Video className="h-3.5 w-3.5 text-rose-500" /> Record
             </Button>
@@ -313,7 +313,7 @@ export default function TestLibraryPage() {
                   filters.suite && filters.suite !== "unfiled" ? `?suite=${encodeURIComponent(filters.suite)}` : ""
                 router.push(`/projects/${projectId}/test-cases/new${suiteParam}`)
               }}
-              className="h-9 gap-1.5 text-xs font-semibold"
+              className="h-9 gap-2 text-xs font-semibold"
             >
               <Plus className="h-4 w-4" /> New test case
             </Button>
@@ -349,11 +349,11 @@ export default function TestLibraryPage() {
         {/* Centre */}
         <main className="flex min-w-0 flex-1 flex-col bg-card">
           {activePlan && (
-            <div className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-primary/[0.03] px-4 py-2.5">
+            <div className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-primary/[0.03] px-4 py-3">
               <ClipboardCheck className="h-4 w-4 text-primary" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{activePlan.name}</p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {activePlan.caseCount} cases · est. {formatMinutes(activePlan.totalMinutes)}
                   {activePlan.unestimated > 0 && ` (+${activePlan.unestimated} without estimate)`}
                   {" · "}
@@ -361,7 +361,7 @@ export default function TestLibraryPage() {
                   {activePlan.byStatus.NotExecuted ?? 0} not run
                 </p>
               </div>
-              <Button size="sm" onClick={runPlan} disabled={activePlan.runnable === 0} className="ml-auto h-8 gap-1.5 text-xs">
+              <Button size="sm" onClick={runPlan} disabled={activePlan.runnable === 0} className="ml-auto h-8 gap-2 text-xs">
                 <Play className="h-3.5 w-3.5 fill-current" /> Run plan
               </Button>
               <button
@@ -375,7 +375,7 @@ export default function TestLibraryPage() {
             </div>
           )}
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-2.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -391,7 +391,7 @@ export default function TestLibraryPage() {
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={
-                  "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-medium transition-colors " +
+                  "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors " +
                   (filters.executionType ? "border-primary/50 bg-primary/10 text-primary" : "bg-background hover:bg-accent")
                 }
               >
@@ -424,19 +424,19 @@ export default function TestLibraryPage() {
                 <Keyboard className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 p-2">
-                <p className="mb-1.5 px-1 text-[11px] font-medium text-muted-foreground">Keyboard shortcuts</p>
+                <p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Keyboard shortcuts</p>
                 {KEYS.map((k) => (
                   <div key={k.key} className="flex items-center justify-between px-1 py-0.5 text-xs">
                     <span>{k.label}</span>
-                    <kbd className="rounded border bg-muted px-1.5 font-sans text-[10px]">{k.key}</kbd>
+                    <kbd className="rounded border bg-muted px-2 font-sans text-xs">{k.key}</kbd>
                   </div>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
             {selectedIds.length > 0 && (
-              <div className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card px-1.5 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-                <span className="px-1.5 text-xs font-medium text-foreground">{selectedIds.length} selected</span>
+              <div className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card px-2 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+                <span className="px-2 text-xs font-medium text-foreground">{selectedIds.length} selected</span>
                 <span className="h-4 w-px bg-border" aria-hidden="true" />
 
                 <button
@@ -473,13 +473,13 @@ export default function TestLibraryPage() {
                     <FolderInput className="h-3.5 w-3.5" /> Move
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="max-h-72 w-56 overflow-y-auto">
-                    <DropdownMenuLabel className="text-[11px] font-medium text-muted-foreground">Move to suite</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Move to suite</DropdownMenuLabel>
                     <DropdownMenuItem
                       onClick={() => {
                         moveCases.mutate({ testCaseIds: selectedIds, suiteId: null })
                         setSelectedIds([])
                       }}
-                      className="gap-1.5 text-xs"
+                      className="gap-2 text-xs"
                     >
                       <Folder className="h-3.5 w-3.5 text-muted-foreground" /> No suite (Unfiled)
                     </DropdownMenuItem>
@@ -491,7 +491,7 @@ export default function TestLibraryPage() {
                           moveCases.mutate({ testCaseIds: selectedIds, suiteId: m.id })
                           setSelectedIds([])
                         }}
-                        className="gap-1.5 text-xs"
+                        className="gap-2 text-xs"
                       >
                         <Folder className="h-3.5 w-3.5 shrink-0 text-primary/70" />
                         <span className="truncate" title={m.path}>

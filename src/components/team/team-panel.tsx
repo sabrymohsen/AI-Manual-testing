@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useProjectTeam } from "@/hooks/use-project-team"
-import { RefreshCw, Plus, Trash2, UserPlus, Link2, Users } from "lucide-react"
+import { RefreshCw, Plus, Trash2, UserPlus, Link2, Users } from "@/components/ui/icons"
 
 /**
  * Projects → Team tab. Syncs the assignee pool from the connected management
@@ -69,11 +69,11 @@ export function TeamPanel({
             {syncing ? "Syncing…" : `Sync from ${label}`}
           </button>
           {!connected && (
-            <span className="flex items-center gap-1 text-[10px] text-amber-600">
+            <span className="flex items-center gap-1 text-xs text-amber-600">
               <Link2 className="h-3 w-3" /> Connect an integration to sync users.
             </span>
           )}
-          {msg && <span className="text-[10px] text-muted-foreground">{msg}</span>}
+          {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
         </div>}
       </div>
 
@@ -84,15 +84,15 @@ export function TeamPanel({
         </h3>
         <div className="flex flex-wrap items-end gap-2">
           <div className="flex-1 min-w-[160px]">
-            <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Name *</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Name *</label>
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Jane Doe" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
           <div className="flex-1 min-w-[160px]">
-            <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Email</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
             <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="jane@team.com" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
           <div className="flex-1 min-w-[140px]">
-            <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Role</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Role</label>
             <input value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} placeholder="QA Lead" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
           </div>
           <button onClick={handleAdd} disabled={!form.name.trim()} className="inline-flex h-[38px] items-center gap-1 rounded-md bg-slate-800 px-3 text-xs font-semibold text-white hover:bg-slate-900 disabled:opacity-50">
@@ -106,23 +106,23 @@ export function TeamPanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-left text-sm">
             <thead>
-              <tr className="border-b bg-muted/50 text-[11px] text-muted-foreground">
-                <th className="px-4 py-2.5">Name</th>
-                <th className="px-4 py-2.5">Email</th>
-                <th className="px-4 py-2.5">Role</th>
-                <th className="px-4 py-2.5">Source</th>
-                <th className="px-4 py-2.5"></th>
+              <tr className="border-b bg-muted/50 text-xs text-muted-foreground">
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Role</th>
+                <th className="px-4 py-3">Source</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               {members.map((m) => (
                 <tr key={m.id} className={`border-b last:border-0 ${m.active ? "" : "opacity-50"}`}>
-                  <td className="px-4 py-2.5 font-medium text-foreground">
+                  <td className="px-4 py-3 font-medium text-foreground">
                     {m.name}
-                    {!m.active && <span className="ml-2 text-[10px] text-muted-foreground">(inactive)</span>}
+                    {!m.active && <span className="ml-2 text-xs text-muted-foreground">(inactive)</span>}
                   </td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{m.email || "—"}</td>
-                  <td className="px-4 py-2.5">
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{m.email || "—"}</td>
+                  <td className="px-4 py-3">
                     {canManage ? <input
                       defaultValue={m.role ?? ""}
                       onBlur={(e) => {
@@ -130,15 +130,15 @@ export function TeamPanel({
                         if (v !== (m.role ?? "")) updateMember(m.id, { role: v || null })
                       }}
                       placeholder="add role…"
-                      className="w-32 rounded border border-transparent bg-transparent px-1.5 py-1 text-xs hover:border-input focus:border-input focus:outline-none"
+                      className="w-32 rounded border border-transparent bg-transparent px-2 py-1 text-xs hover:border-input focus:border-input focus:outline-none"
                     /> : <span className="text-xs text-muted-foreground">{m.role || "—"}</span>}
                   </td>
-                  <td className="px-4 py-2.5">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${m.source === "manual" ? "bg-amber-100 text-amber-700" : "bg-primary/15 text-primary"}`}>
+                  <td className="px-4 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${m.source === "manual" ? "bg-amber-100 text-amber-700" : "bg-primary/15 text-primary"}`}>
                       {m.source === "manual" ? "manual" : m.provider || "synced"}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-right">
+                  <td className="px-4 py-3 text-right">
                     {canManage && (
                       <button onClick={() => removeMember(m.id)} className="text-muted-foreground hover:text-destructive" title="Remove">
                         <Trash2 className="h-4 w-4" />

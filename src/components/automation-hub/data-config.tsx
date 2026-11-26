@@ -24,7 +24,7 @@ import {
   XCircle,
   Pause,
   Play
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import TestDataManager from "@/components/automation-hub/test-data-manager"
 
@@ -122,19 +122,19 @@ export default function DataConfigSection() {
             <Settings size={18} className="text-primary" />
             Data &amp; Config
           </h2>
-          <p className="text-[11px] text-muted-foreground font-semibold">
+          <p className="text-xs text-muted-foreground font-semibold">
             Run settings, environment variables and secrets (available to tests as process.env), test data &amp; logs.
           </p>
         </div>
       </div>
 
       {/* SUB-TAB SELECTOR */}
-      <div className="flex items-center gap-1.5 overflow-x-auto bg-muted p-1 border rounded-xl select-none scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto bg-muted p-1 border rounded-xl select-none scrollbar-none">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-tight shrink-0 transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold tracking-tight shrink-0 transition-all ${
               subTab === t.id
                 ? "bg-card text-primary shadow-sm border border-primary/25"
                 : "text-muted-foreground hover:text-foreground hover:bg-white/50"
@@ -278,7 +278,7 @@ function PropertiesTab() {
   return (
     <div className="space-y-3">
       {/* TOOLBAR */}
-      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-2.5 shadow-sm">
+      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-3 shadow-sm">
         <div className="relative flex-1 min-w-[180px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -314,12 +314,12 @@ function PropertiesTab() {
         <Button
           variant="outline"
           onClick={() => fileInputRef.current?.click()}
-          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
+          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-2"
         >
           <Upload size={13} /> Import
         </Button>
         <a href="/api/hub/config/properties/export" download>
-          <Button variant="outline" className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5">
+          <Button variant="outline" className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-2">
             <Download size={13} /> Export
           </Button>
         </a>
@@ -329,21 +329,21 @@ function PropertiesTab() {
             setShowHistory((s) => !s)
             if (!showHistory) loadHistory()
           }}
-          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
+          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-2"
         >
           <History size={13} /> History
         </Button>
         <Button
           variant="outline"
           onClick={resetAll}
-          className="rounded-xl bg-card border-rose-200 text-rose-600 text-xs font-semibold gap-1.5"
+          className="rounded-xl bg-card border-rose-200 text-rose-600 text-xs font-semibold gap-2"
         >
           <ListRestart size={13} /> Reset all
         </Button>
         <Button
           onClick={save}
           disabled={saving || dirtyCount === 0}
-          className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-1.5 disabled:opacity-40"
+          className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-2 disabled:opacity-40"
         >
           {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           Save{dirtyCount > 0 ? ` (${dirtyCount})` : ""}
@@ -351,20 +351,20 @@ function PropertiesTab() {
       </div>
 
       {error && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-semibold p-3 rounded-xl">{error}</div>
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold p-3 rounded-xl">{error}</div>
       )}
 
       {showHistory && (
         <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
+          <div className="px-4 py-3 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
             <History size={13} /> Change History
           </div>
           <div className="max-h-56 overflow-auto divide-y">
             {history.length === 0 ? (
-              <div className="p-4 text-[11px] text-muted-foreground font-semibold">No changes recorded yet.</div>
+              <div className="p-4 text-xs text-muted-foreground font-semibold">No changes recorded yet.</div>
             ) : (
               history.map((h) => (
-                <div key={h.id} className="px-4 py-2 text-[11px] flex items-center gap-2 flex-wrap">
+                <div key={h.id} className="px-4 py-2 text-xs flex items-center gap-2 flex-wrap">
                   <span className="font-mono font-semibold text-foreground">{h.propertyName}</span>
                   <span className="text-rose-500 line-through font-mono">{h.oldValue || "∅"}</span>
                   <span className="text-muted-foreground">→</span>
@@ -381,7 +381,7 @@ function PropertiesTab() {
 
       {/* TABLE */}
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-2.5 border-b bg-muted/50 text-[11px] font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-3 border-b bg-muted/50 text-xs font-medium text-muted-foreground">
           <span>Property</span>
           <span>Value</span>
           <span className="text-right pr-1">Reset</span>
@@ -391,20 +391,20 @@ function PropertiesTab() {
             const val = effectiveValue(r)
             const changed = r.name in dirty && dirty[r.name] !== r.value
             return (
-              <div key={r.name} className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-2.5 items-center hover:bg-muted/60">
+              <div key={r.name} className="grid grid-cols-[1.4fr_1fr_auto] gap-2 px-4 py-3 items-center hover:bg-muted/60">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11.5px] font-semibold text-foreground truncate">{r.name}</span>
-                    <span className={`text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded border ${GROUP_STYLES[r.group] || GROUP_STYLES.Other}`}>
+                    <span className="font-mono text-xs font-semibold text-foreground truncate">{r.name}</span>
+                    <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded border ${GROUP_STYLES[r.group] || GROUP_STYLES.Other}`}>
                       {r.group}
                     </span>
                     {(r.isCustom || changed) && (
-                      <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">
+                      <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">
                         {changed ? "edited" : "custom"}
                       </span>
                     )}
                   </div>
-                  <p className="text-[10.5px] text-muted-foreground font-semibold truncate">{r.description}</p>
+                  <p className="text-xs text-muted-foreground font-semibold truncate">{r.description}</p>
                 </div>
                 <div>
                   <PropertyInput row={r} value={val} onChange={(v) => setValue(r.name, v)} />
@@ -424,7 +424,7 @@ function PropertiesTab() {
             )
           })}
           {filtered.length === 0 && (
-            <div className="p-8 text-center text-[11px] text-muted-foreground font-semibold">No properties match your filters.</div>
+            <div className="p-8 text-center text-xs text-muted-foreground font-semibold">No properties match your filters.</div>
           )}
         </div>
       </div>
@@ -449,7 +449,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-[11.5px] font-semibold border rounded-lg px-2.5 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
+        className="w-full text-xs font-semibold border rounded-lg px-3 py-2 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
       >
         {row.options.map((o) => (
           <option key={o} value={o}>
@@ -467,7 +467,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
         min={row.min ?? undefined}
         max={row.max ?? undefined}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full text-[11.5px] font-semibold font-mono border rounded-lg px-2.5 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
+        className="w-full text-xs font-semibold font-mono border rounded-lg px-3 py-2 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
       />
     )
   }
@@ -476,7 +476,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={row.default || "—"}
-      className="w-full text-[11.5px] font-mono border rounded-lg px-2.5 py-1.5 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
+      className="w-full text-xs font-mono border rounded-lg px-3 py-2 bg-card text-foreground outline-none focus:ring-2 focus:ring-indigo-100"
     />
   )
 }
@@ -558,7 +558,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-2.5 shadow-sm">
+      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-3 shadow-sm">
         <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
           {secretsMode ? <ShieldCheck size={15} className="text-fuchsia-600" /> : <Server size={15} className="text-primary" />}
           {secretsMode ? "Encrypted Secrets (AES-256-GCM)" : "Environment Variables"}
@@ -571,21 +571,21 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
                 setShowAudit((s) => !s)
                 if (!showAudit) loadAudit()
               }}
-              className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
+              className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-2"
             >
               <History size={13} /> Audit log
             </Button>
           )}
           <Button
             onClick={() => setAdding((a) => !a)}
-            className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-1.5"
+            className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-2"
           >
             <Plus size={13} /> Add {secretsMode ? "secret" : "variable"}
           </Button>
         </div>
       </div>
 
-      {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold p-3 rounded-xl">{error}</div>}
+      {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold p-3 rounded-xl">{error}</div>}
 
       {adding && (
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
@@ -625,15 +625,15 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
 
       {showAudit && secretsMode && (
         <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-          <div className="px-4 py-2.5 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
+          <div className="px-4 py-3 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
             <History size={13} /> Secret Access Audit
           </div>
           <div className="max-h-52 overflow-auto divide-y">
             {audit.length === 0 ? (
-              <div className="p-4 text-[11px] text-muted-foreground font-semibold">No access recorded yet.</div>
+              <div className="p-4 text-xs text-muted-foreground font-semibold">No access recorded yet.</div>
             ) : (
               audit.map((a) => (
-                <div key={a.id} className="px-4 py-2 text-[11px] flex items-center gap-2">
+                <div key={a.id} className="px-4 py-2 text-xs flex items-center gap-2">
                   <span className="font-mono font-semibold text-primary">{a.action}</span>
                   <span className="text-muted-foreground font-semibold truncate">{a.details}</span>
                   <span className="ml-auto text-muted-foreground font-semibold whitespace-nowrap">
@@ -647,7 +647,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
       )}
 
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-2.5 border-b bg-muted/50 text-[11px] font-medium text-muted-foreground">
+        <div className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-3 border-b bg-muted/50 text-xs font-medium text-muted-foreground">
           <span>Name</span>
           <span>Value</span>
           <span>Scope</span>
@@ -657,9 +657,9 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
           {rows.map((r) => {
             const shown = revealed[r.id]
             return (
-              <div key={r.id} className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-2.5 items-center hover:bg-muted/60">
+              <div key={r.id} className="grid grid-cols-[1.2fr_1.4fr_auto_auto] gap-2 px-4 py-3 items-center hover:bg-muted/60">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-[11.5px] font-semibold text-foreground truncate">{r.name}</span>
+                  <span className="font-mono text-xs font-semibold text-foreground truncate">{r.name}</span>
                   {r.liveInProcess ? (
                     <span title="Resolvable from process env" className="text-emerald-500">
                       <CheckCircle2 size={13} />
@@ -670,11 +670,11 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
                     </span>
                   )}
                 </div>
-                <div className="font-mono text-[11.5px] text-muted-foreground truncate">
+                <div className="font-mono text-xs text-muted-foreground truncate">
                   {r.isSecret ? (shown !== undefined ? shown : "••••••••••••") : r.value || <span className="text-slate-300">∅</span>}
                 </div>
                 <div>
-                  <span className="text-[8.5px] font-semibold uppercase px-1.5 py-0.5 rounded border bg-muted text-muted-foreground border-border">
+                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded border bg-muted text-muted-foreground border-border">
                     {r.scope}
                   </span>
                 </div>
@@ -692,7 +692,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
             )
           })}
           {rows.length === 0 && (
-            <div className="p-8 text-center text-[11px] text-muted-foreground font-semibold">
+            <div className="p-8 text-center text-xs text-muted-foreground font-semibold">
               No {secretsMode ? "secrets" : "variables"} yet. Click &ldquo;Add&rdquo; to create one.
             </div>
           )}
@@ -834,10 +834,10 @@ function LogsTab() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-2.5 shadow-sm">
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+      <div className="flex items-center gap-2 flex-wrap bg-card border rounded-xl p-3 shadow-sm">
+        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
           <ScrollText size={15} className="text-primary" /> log4j.log
-          <span className={`ml-1 inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded-full ${connected ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
+          <span className={`ml-1 inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${connected ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
             <span className={`h-1.5 w-1.5 rounded-full ${connected ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
             {connected ? "live" : "offline"}
           </span>
@@ -856,7 +856,7 @@ function LogsTab() {
             <button
               key={lv}
               onClick={() => setEnabled((e) => ({ ...e, [lv]: !e[lv] }))}
-              className={`text-[9px] font-semibold uppercase px-2 py-1.5 rounded-lg border transition-colors ${
+              className={`text-xs font-semibold uppercase px-2 py-2 rounded-lg border transition-colors ${
                 enabled[lv] ? `bg-card ${LEVEL_STYLES[lv]} border-border` : "bg-muted text-slate-300 border-transparent"
               }`}
             >
@@ -867,12 +867,12 @@ function LogsTab() {
         <Button
           variant="outline"
           onClick={() => setPaused((p) => !p)}
-          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5"
+          className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-2"
         >
           {paused ? <Play size={13} /> : <Pause size={13} />} {paused ? "Resume" : "Pause"}
         </Button>
         <a href="/api/hub/logs?download=1" download>
-          <Button variant="outline" className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-1.5">
+          <Button variant="outline" className="rounded-xl bg-card border-border text-muted-foreground text-xs font-semibold gap-2">
             <Download size={13} /> Download
           </Button>
         </a>
@@ -885,7 +885,7 @@ function LogsTab() {
           const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
           setAutoScroll(atBottom)
         }}
-        className="bg-slate-950 rounded-xl border border-slate-800 p-3 font-mono text-[11px] leading-relaxed h-[520px] overflow-auto"
+        className="bg-slate-950 rounded-xl border border-slate-800 p-3 font-mono text-xs leading-relaxed h-[520px] overflow-auto"
       >
         {filtered.length === 0 ? (
           <div className="text-muted-foreground font-semibold text-center py-20">No log lines match the current filters.</div>
@@ -908,7 +908,7 @@ function LoadingCard({ label }: { label: string }) {
   return (
     <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
       <Loader2 className="animate-spin text-primary" size={28} />
-      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-[9.5px]">{label}</span>
+      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-xs">{label}</span>
     </div>
   )
 }

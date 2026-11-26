@@ -14,7 +14,7 @@ import {
   Activity,
   CheckCircle2,
   XCircle
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 type WaitBucket = "navigation" | "elementSync" | "lazyLoad" | "validation" | "other"
 
@@ -85,8 +85,8 @@ export default function WaitAnalysisPanel() {
     return (
       <div className="py-16 text-center bg-card border rounded-xl space-y-2">
         <Timer size={26} className="text-slate-300 mx-auto" />
-        <p className="text-[11px] font-medium text-muted-foreground">No wait profiles yet</p>
-        <p className="text-[9.5px] text-muted-foreground font-medium max-w-md mx-auto">
+        <p className="text-xs font-medium text-muted-foreground">No wait profiles yet</p>
+        <p className="text-xs text-muted-foreground font-medium max-w-md mx-auto">
           The auto-wait profiler reads action timings from Playwright traces. Run a test in the Tests tab to generate a{" "}
           <span className="font-mono">shaft-trace.zip</span> and its wait breakdown appears here.
         </p>
@@ -97,44 +97,44 @@ export default function WaitAnalysisPanel() {
   return (
     <div className="space-y-4">
       {/* SUITE SUMMARY */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-card border rounded-xl p-3 shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             <Timer size={10} /> Total Suite Wait
           </span>
           <p className="text-xl font-semibold text-foreground mt-1">{fmtMs(data.suite.totalWaitMs)}</p>
-          <p className="text-[8px] text-muted-foreground font-semibold">{data.suite.testCount} tests · {data.suite.avgWaitMs}ms avg/action</p>
+          <p className="text-xs text-muted-foreground font-semibold">{data.suite.testCount} tests · {data.suite.avgWaitMs}ms avg/action</p>
         </div>
         <div className="bg-card border rounded-xl p-3 shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             <TrendingDown size={10} /> Potential Savings
           </span>
           <p className="text-xl font-semibold text-emerald-600 mt-1">{fmtMs(data.suite.potentialSavingsMs)}</p>
-          <p className="text-[8px] text-muted-foreground font-semibold">from reducible waits</p>
+          <p className="text-xs text-muted-foreground font-semibold">from reducible waits</p>
         </div>
         <div className="bg-card border rounded-xl p-3 shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             <AlertTriangle size={10} /> Flagged Tests
           </span>
           <p className="text-xl font-semibold text-amber-600 mt-1">{data.suite.flaggedTests}</p>
-          <p className="text-[8px] text-muted-foreground font-semibold">with reducible waits</p>
+          <p className="text-xs text-muted-foreground font-semibold">with reducible waits</p>
         </div>
         <div className="bg-card border rounded-xl p-3 shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             <Gauge size={10} /> Configured Timeouts
           </span>
-          <p className="text-sm font-semibold text-foreground mt-1.5">
-            {data.config.elementTimeoutSec}s <span className="text-muted-foreground font-semibold text-[9px]">element</span>
+          <p className="text-sm font-semibold text-foreground mt-2">
+            {data.config.elementTimeoutSec}s <span className="text-muted-foreground font-semibold text-xs">element</span>
           </p>
-          <p className="text-[8px] text-muted-foreground font-semibold">{data.config.lazyLoadTimeoutSec}s lazy-load · {data.config.networkIdleQuietMs}ms idle</p>
+          <p className="text-xs text-muted-foreground font-semibold">{data.config.lazyLoadTimeoutSec}s lazy-load · {data.config.networkIdleQuietMs}ms idle</p>
         </div>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 flex-wrap bg-card border rounded-xl px-3.5 py-2.5 shadow-sm">
-        <span className="text-[11px] font-medium text-muted-foreground">Wait types</span>
+      <div className="flex items-center gap-3 flex-wrap bg-card border rounded-xl px-3 py-3 shadow-sm">
+        <span className="text-xs font-medium text-muted-foreground">Wait types</span>
         {BUCKET_ORDER.map((b) => (
-          <span key={b} className="inline-flex items-center gap-1 text-[8.5px] font-semibold text-muted-foreground">
+          <span key={b} className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
             <span className={`h-2.5 w-2.5 rounded-sm ${BUCKET_META[b].color}`} /> {BUCKET_META[b].label}
           </span>
         ))}
@@ -147,7 +147,7 @@ export default function WaitAnalysisPanel() {
           const total = p.totalWaitMs || 1
           return (
             <div key={p.id} className="bg-card border rounded-xl shadow-sm overflow-hidden">
-              <div className="p-3.5 space-y-2.5">
+              <div className="p-3 space-y-3">
                 {/* Header */}
                 <div className="flex items-center gap-2 flex-wrap">
                   {p.status === "passed" ? (
@@ -155,15 +155,15 @@ export default function WaitAnalysisPanel() {
                   ) : (
                     <XCircle size={13} className="text-rose-500" />
                   )}
-                  <span className="font-mono text-[10.5px] font-semibold text-foreground">
+                  <span className="font-mono text-xs font-semibold text-foreground">
                     {p.testName}.{p.methodName}
                   </span>
                   {p.flakinessScore !== null && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 text-[11px] font-medium">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 text-xs font-medium">
                       <Activity size={8} /> {Math.round(p.flakinessScore * 100)}% flaky
                     </span>
                   )}
-                  <div className="ml-auto flex items-center gap-3 text-[9px] font-mono font-semibold text-muted-foreground">
+                  <div className="ml-auto flex items-center gap-3 text-xs font-mono font-semibold text-muted-foreground">
                     <span>
                       Σ <span className="text-foreground">{fmtMs(p.totalWaitMs)}</span>
                     </span>
@@ -177,7 +177,7 @@ export default function WaitAnalysisPanel() {
                 </div>
 
                 {/* Distribution bar */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex h-3.5 rounded-lg overflow-hidden border bg-muted/50">
                     {BUCKET_ORDER.map((b) => {
                       const ms = p.buckets[b]
@@ -201,7 +201,7 @@ export default function WaitAnalysisPanel() {
                       return (
                         <span
                           key={b}
-                          className={`inline-flex items-center gap-1 text-[8.5px] font-semibold ${flagged ? "text-rose-600" : BUCKET_META[b].text}`}
+                          className={`inline-flex items-center gap-1 text-xs font-semibold ${flagged ? "text-rose-600" : BUCKET_META[b].text}`}
                         >
                           <span className={`h-2 w-2 rounded-sm ${BUCKET_META[b].color}`} />
                           {fmtMs(p.buckets[b])}
@@ -218,13 +218,13 @@ export default function WaitAnalysisPanel() {
 
                 {/* Recommendations */}
                 {p.recommendations.length > 0 && (
-                  <div className="bg-primary/10 border border-primary/25 rounded-xl p-2.5 space-y-1">
-                    <span className="text-[11px] font-medium text-primary flex items-center gap-1">
+                  <div className="bg-primary/10 border border-primary/25 rounded-xl p-3 space-y-1">
+                    <span className="text-xs font-medium text-primary flex items-center gap-1">
                       <Lightbulb size={9} /> Recommendations
                     </span>
                     <ul className="space-y-0.5">
                       {p.recommendations.map((r, i) => (
-                        <li key={i} className="text-[9px] text-muted-foreground font-medium flex items-start gap-1.5">
+                        <li key={i} className="text-xs text-muted-foreground font-medium flex items-start gap-2">
                           <span className="text-indigo-400 mt-0.5">→</span> {r}
                         </li>
                       ))}
@@ -235,7 +235,7 @@ export default function WaitAnalysisPanel() {
                 {/* Expand per-action */}
                 <button
                   onClick={() => setExpanded(isOpen ? null : p.id)}
-                  className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
                 >
                   {isOpen ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                   {p.actionCount} actions
@@ -248,8 +248,8 @@ export default function WaitAnalysisPanel() {
                     const meta = BUCKET_META[a.bucket]
                     const pct = (a.durationMs / (p.maxWaitMs || 1)) * 100
                     return (
-                      <div key={i} className="flex items-center gap-2 text-[9px]">
-                        <span className="w-4 text-slate-300 font-semibold text-[8px]">#{i + 1}</span>
+                      <div key={i} className="flex items-center gap-2 text-xs">
+                        <span className="w-4 text-slate-300 font-semibold text-xs">#{i + 1}</span>
                         <span className={`h-2 w-2 rounded-sm shrink-0 ${meta.color}`} />
                         <span className="font-semibold text-foreground w-32 truncate">{a.name}</span>
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">

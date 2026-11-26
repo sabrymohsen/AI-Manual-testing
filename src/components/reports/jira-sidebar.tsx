@@ -16,7 +16,7 @@ import {
   Timer,
   Activity,
   TrendingUp,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface SidebarItem {
   id: string
@@ -112,7 +112,7 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
     <aside className="w-60 shrink-0 border-r border-border bg-card">
       <div className="px-4 py-3 border-b border-border">
         <h2 className="text-sm font-semibold text-foreground">{title}</h2>
-        <p className="text-[10px] text-muted-foreground mt-0.5">Analytics & insights</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Analytics & insights</p>
       </div>
       <nav className="py-2">
         {items.map((item) => {
@@ -128,7 +128,7 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
                   else onSelect(item.id)
                 }}
                 className={cn(
-                  "flex w-full items-center gap-2.5 px-4 py-2 text-xs font-semibold transition-colors",
+                  "flex w-full items-center gap-3 px-4 py-2 text-xs font-semibold transition-colors",
                   isActive
                     ? "bg-blue-50 text-blue-700 border-l-3 border-blue-600"
                     : "text-muted-foreground hover:bg-muted/50"
@@ -138,7 +138,7 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
                 <span className={cn("text-muted-foreground", isActive && "text-blue-600")}>{item.icon}</span>
                 <span className="flex-1 text-left">{item.label}</span>
                 {item.badge != null && (
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                     {item.badge}
                   </span>
                 )}
@@ -147,13 +147,13 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
                 )}
               </button>
               {hasChildren && isExpanded && (
-                <div className="pl-9 pr-2 py-1">
+                <div className="pl-8 pr-2 py-1">
                   {item.children!.map((child) => (
                     <button
                       key={child.id}
                       onClick={() => onSelect(child.id)}
                       className={cn(
-                        "flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-medium transition-colors",
+                        "flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-medium transition-colors",
                         activeId === child.id
                           ? "bg-blue-50 text-blue-700"
                           : "text-muted-foreground hover:bg-muted/50"
@@ -161,7 +161,7 @@ export function JiraSidebar({ activeId, onSelect, items = DEFAULT_ITEMS, title =
                     >
                       <span>{child.label}</span>
                       {child.badge != null && (
-                        <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                           {child.badge}
                         </span>
                       )}

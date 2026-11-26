@@ -20,7 +20,7 @@ import {
   Wrench,
   Smartphone,
   Laptop
-} from "lucide-react"
+} from "@/components/ui/icons"
 import Editor from "@monaco-editor/react"
 
 interface ActionStep {
@@ -216,7 +216,7 @@ public class RecordedFlowTest extends BaseTest {
             Upgraded recording studio to automatically translate browser GUI actions into standard Playwright TypeScript test codes.
           </p>
         </div>
-        <div className="flex items-center gap-2 text-muted-foreground font-mono text-[10px]">
+        <div className="flex items-center gap-2 text-muted-foreground font-mono text-xs">
           <span>Integrated with: Playwright codegen</span>
         </div>
       </div>
@@ -224,10 +224,10 @@ public class RecordedFlowTest extends BaseTest {
       {/* Recording settings panel */}
       {!recording && !sessionCompleted && (
         <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-          <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Launch Studio Options</span>
+          <span className="text-xs font-medium text-slate-450 block border-b pb-2">Launch Studio Options</span>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-[10px] font-semibold text-slate-450 block">Target Application URL</label>
+            <div className="space-y-2 md:col-span-2">
+              <label className="text-xs font-semibold text-slate-450 block">Target Application URL</label>
               <input
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
@@ -236,8 +236,8 @@ public class RecordedFlowTest extends BaseTest {
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold text-slate-450 block">Target Browser</label>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-slate-450 block">Target Browser</label>
               <select
                 value={selectedBrowser}
                 onChange={(e) => setSelectedBrowser(e.target.value)}
@@ -250,7 +250,7 @@ public class RecordedFlowTest extends BaseTest {
 
             <Button
               onClick={handleStartRecording}
-              className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5"
+              className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 text-xs font-semibold shadow-xs flex items-center justify-center gap-2"
             >
               <Play size={12} className="fill-current" /> Start Recording Studio
             </Button>
@@ -268,22 +268,22 @@ public class RecordedFlowTest extends BaseTest {
             {/* Mock Web Application Screen View */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
               <div className="flex justify-between items-center border-b pb-2 flex-wrap gap-2">
-                <span className="text-[11px] font-medium text-slate-450">Live Capture Screen View Mockup</span>
+                <span className="text-xs font-medium text-slate-450">Live Capture Screen View Mockup</span>
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-rose-500 animate-ping" />
-                  <span className="text-[11px] text-rose-500 font-medium">Recording...</span>
+                  <span className="text-xs text-rose-500 font-medium">Recording...</span>
                 </div>
               </div>
 
               {/* simulated application interactive canvas mockup */}
               <div className="border bg-muted rounded-xl overflow-hidden shadow-2xs min-h-[290px] flex flex-col justify-between">
                 <div className="bg-card border-b p-2 flex items-center gap-2">
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-rose-450 block" />
                     <span className="h-2.5 w-2.5 rounded-full bg-amber-450 block" />
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-450 block" />
                   </div>
-                  <div className="bg-muted/50 border rounded-lg px-3 py-1 flex-1 text-[10px] font-mono select-all truncate text-muted-foreground">
+                  <div className="bg-muted/50 border rounded-lg px-3 py-1 flex-1 text-xs font-mono select-all truncate text-muted-foreground">
                     {targetUrl}
                   </div>
                 </div>
@@ -293,22 +293,22 @@ public class RecordedFlowTest extends BaseTest {
                   <h3 className="text-center font-semibold text-foreground">Mock App Login Workspace</h3>
                   
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground block">Username email field</label>
+                    <label className="text-xs font-medium text-muted-foreground block">Username email field</label>
                     <button
                       onClick={() => handleMockAction("type", "Username field", "By.id(\"username\")", "tester@example.com")}
                       disabled={!recording}
-                      className="w-full text-left h-8.5 px-3 border border-border hover:border-primary/25 hover:bg-primary/10 rounded-xl text-slate-650 transition-colors block text-[10px] font-medium"
+                      className="w-full text-left h-8.5 px-3 border border-border hover:border-primary/25 hover:bg-primary/10 rounded-xl text-slate-650 transition-colors block text-xs font-medium"
                     >
                       Click to type "tester@example.com"
                     </button>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-medium text-muted-foreground block">Password credentials field</label>
+                    <label className="text-xs font-medium text-muted-foreground block">Password credentials field</label>
                     <button
                       onClick={() => handleMockAction("type", "Password field", "By.xpath(\"//input[@type='password']\")", "tester123")}
                       disabled={!recording}
-                      className="w-full text-left h-8.5 px-3 border border-border hover:border-primary/25 hover:bg-primary/10 rounded-xl text-slate-650 transition-colors block text-[10px] font-medium"
+                      className="w-full text-left h-8.5 px-3 border border-border hover:border-primary/25 hover:bg-primary/10 rounded-xl text-slate-650 transition-colors block text-xs font-medium"
                     >
                       Click to type "tester123"
                     </button>
@@ -317,13 +317,13 @@ public class RecordedFlowTest extends BaseTest {
                   <button
                     onClick={() => handleMockAction("click", "Submit Button", "By.xpath(\"//button[@type='submit']\")")}
                     disabled={!recording}
-                    className="w-full h-9 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white rounded-xl text-xs font-black shadow-xs block transition-colors"
+                    className="w-full h-9 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold shadow-xs block transition-colors"
                   >
                     Click to submit login form
                   </button>
                 </div>
 
-                <div className="bg-muted/50 p-2 text-center text-muted-foreground text-[9.5px]">
+                <div className="bg-muted/50 p-2 text-center text-muted-foreground text-xs">
                   Click the form buttons inside the mock app to record steps into SHAFT automation Java code.
                 </div>
               </div>
@@ -331,9 +331,9 @@ public class RecordedFlowTest extends BaseTest {
 
             {/* Monaco code preview block */}
             <div className="bg-slate-900 border border-slate-850 rounded-xl overflow-hidden flex flex-col shadow-md">
-              <div className="bg-slate-950 p-3.5 border-b border-slate-850 flex items-center justify-between text-xs flex-wrap gap-2 text-slate-300 font-mono">
+              <div className="bg-slate-950 p-3 border-b border-slate-850 flex items-center justify-between text-xs flex-wrap gap-2 text-slate-300 font-mono">
                 <span className="font-semibold text-slate-200">Generated Playwright Code Preview</span>
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                <span className="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-0.5 rounded-full font-semibold flex items-center gap-1">
                   <ShieldCheck size={11} className="fill-current" /> Privacy Redaction Active
                 </span>
               </div>
@@ -362,24 +362,24 @@ public class RecordedFlowTest extends BaseTest {
             
             {/* Live Recorded steps */}
             <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4 flex-1 flex flex-col justify-between">
-              <div className="space-y-3.5">
-                <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Recorded Action Log</span>
+              <div className="space-y-3">
+                <span className="text-xs font-medium text-slate-450 block border-b pb-2">Recorded Action Log</span>
                 
                 <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                   {actionsLog.map(act => (
-                    <div key={act.step} className="p-3 border rounded-xl space-y-1.5 bg-muted/50">
-                      <div className="flex justify-between items-center text-[10px] border-b pb-1">
+                    <div key={act.step} className="p-3 border rounded-xl space-y-2 bg-muted/50">
+                      <div className="flex justify-between items-center text-xs border-b pb-1">
                         <span className="font-semibold text-foreground">Step #{act.step}</span>
-                        <span className="text-[11px] bg-primary/10 border text-primary px-1.5 py-0.2 rounded font-medium">{act.action}</span>
+                        <span className="text-xs bg-primary/10 border text-primary px-2 py-0.2 rounded font-medium">{act.action}</span>
                       </div>
-                      <div className="space-y-1 text-[9.5px]">
+                      <div className="space-y-1 text-xs">
                         <div>
                           <span className="text-muted-foreground font-semibold block">Target Element</span>
                           <span className="text-foreground font-semibold">{act.element}</span>
                         </div>
                         <div>
                           <span className="text-muted-foreground font-semibold block">Smart Locator</span>
-                          <code className="font-mono text-[9px] text-muted-foreground select-all block break-all font-semibold">{act.locator}</code>
+                          <code className="font-mono text-xs text-muted-foreground select-all block break-all font-semibold">{act.locator}</code>
                         </div>
                         {act.value && (
                           <div>
@@ -393,27 +393,27 @@ public class RecordedFlowTest extends BaseTest {
                     </div>
                   ))}
                   {actionsLog.length === 0 && (
-                    <p className="text-muted-foreground italic text-center py-12">No steps recorded yet. Click buttons inside login form above to generate steps.</p>
+                    <p className="text-muted-foreground text-center py-12">No steps recorded yet. Click buttons inside login form above to generate steps.</p>
                   )}
                 </div>
               </div>
 
               {/* Live recording controller action buttons */}
-              <div className="pt-4 border-t space-y-2.5">
+              <div className="pt-4 border-t space-y-3">
                 {recording ? (
                   <Button
                     onClick={handleStopRecording}
-                    className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-10 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5"
+                    className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-10 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-2"
                   >
                     <Square size={12} className="fill-current" /> Stop Recording Studio
                   </Button>
                 ) : (
                   sessionCompleted && (
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       <Button
                         onClick={handleSaveToLibrary}
                         disabled={savingScript}
-                        className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-1.5"
+                        className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl h-9.5 w-full text-xs font-semibold shadow-xs flex items-center justify-center gap-2"
                       >
                         {savingScript ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                         Save to AutoTest Engine
@@ -423,14 +423,14 @@ public class RecordedFlowTest extends BaseTest {
                         <Button
                           variant="outline"
                           onClick={handleCopyCode}
-                          className="border-border text-foreground rounded-xl h-8.5 text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs bg-card"
+                          className="border-border text-foreground rounded-xl h-8.5 text-xs font-semibold flex items-center justify-center gap-1 shadow-2xs bg-card"
                         >
                           <Copy size={11} /> {copied ? "Copied!" : "Copy Code"}
                         </Button>
                         <Button
                           variant="outline"
                           onClick={handleDownloadJava}
-                          className="border-border text-foreground rounded-xl h-8.5 text-[10px] font-semibold flex items-center justify-center gap-1 shadow-2xs bg-card"
+                          className="border-border text-foreground rounded-xl h-8.5 text-xs font-semibold flex items-center justify-center gap-1 shadow-2xs bg-card"
                         >
                           <Download size={11} /> Download .java
                         </Button>
@@ -442,7 +442,7 @@ public class RecordedFlowTest extends BaseTest {
                           setSessionCompleted(false)
                           setActiveSessionId(null)
                         }}
-                        className="text-muted-foreground hover:text-muted-foreground rounded-xl w-full h-8 text-[10px] font-semibold"
+                        className="text-muted-foreground hover:text-muted-foreground rounded-xl w-full h-8 text-xs font-semibold"
                       >
                         Clear Session / Start New
                       </Button>

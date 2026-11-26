@@ -32,7 +32,7 @@ import {
   User,
   Monitor,
   Maximize2
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface FigmaFrame {
   id: string
@@ -697,7 +697,7 @@ ${selectedRunIssues.map((issue, idx) => `
   return (
     <div className="space-y-6">
       {/* Header Panel */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div>
           <div className="flex items-center gap-2 mb-2 text-xs font-medium text-primary">
             <Layers className="h-4 w-4" /> Design System Validation
@@ -721,7 +721,7 @@ ${selectedRunIssues.map((issue, idx) => `
               variant="outline"
               className="border-primary/25 hover:bg-primary/10 text-primary text-xs font-semibold h-9"
             >
-              <Play className="h-3.5 w-3.5 mr-1.5 animate-pulse" /> Run Bulk (Cached Baseline)
+              <Play className="h-3.5 w-3.5 mr-2 animate-pulse" /> Run Bulk (Cached Baseline)
             </Button>
           )}
           <Button
@@ -819,7 +819,7 @@ ${selectedRunIssues.map((issue, idx) => `
                         </div>
                       )}
                       {latestRun && (
-                        <div className={`absolute top-3 right-3 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm ${
+                        <div className={`absolute top-3 right-3 text-xs font-bold px-3 py-1 rounded-full shadow-sm ${
                           latestRun.status === "Passed" ? "bg-emerald-500 text-white" :
                           latestRun.status === "Failed" ? "bg-rose-500 text-white" :
                           latestRun.status === "NeedsReview" ? "bg-amber-500 text-foreground" :
@@ -831,7 +831,7 @@ ${selectedRunIssues.map((issue, idx) => `
                     </div>
 
                     {/* Mapping Details */}
-                    <div className="p-5 flex-grow space-y-4">
+                    <div className="p-6 flex-grow space-y-4">
                       <div>
                         <h3 className="font-semibold text-foreground text-lg line-clamp-1">{mapping.figmaFrame.name}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">{mapping.figmaFrame.pageName || "Main Page"}</p>
@@ -869,7 +869,7 @@ ${selectedRunIssues.map((issue, idx) => `
                     </div>
 
                     {/* Actions Panel */}
-                    <div className="px-5 py-3.5 border-t bg-muted/70 flex gap-2">
+                    <div className="px-6 py-3 border-t bg-muted/70 flex gap-2">
                       <Button
                         onClick={() => handleRunVisualCheck(mapping.id)}
                         className="flex-grow bg-primary hover:bg-primary/90 text-white font-semibold text-xs shadow-sm h-8 px-2"
@@ -914,12 +914,12 @@ ${selectedRunIssues.map((issue, idx) => `
       {activeTab === "sync" && (
         <div className="grid gap-6 md:grid-cols-3">
           {/* Config column */}
-          <div className="md:col-span-1 border rounded-xl p-5 bg-card shadow-sm space-y-5">
+          <div className="md:col-span-1 border rounded-xl p-6 bg-card shadow-sm space-y-6">
             <h3 className="font-semibold text-lg text-foreground flex items-center gap-2">
               <Settings className="h-4.5 w-4.5 text-muted-foreground" /> Connect Figma API
             </h3>
             <div className="space-y-4">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="figmaTokenInput">Figma Personal Token (Encrypted)</Label>
                 <Input
                   id="figmaTokenInput"
@@ -928,12 +928,12 @@ ${selectedRunIssues.map((issue, idx) => `
                   value={figmaToken}
                   onChange={(e) => setFigmaToken(e.target.value)}
                 />
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Saved tokens are encrypted using AES-256 and decrypted strictly on-demand in background workers.
                 </p>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="figmaUrlInput">Figma Design File URL</Label>
                 <Input
                   id="figmaUrlInput"
@@ -961,7 +961,7 @@ ${selectedRunIssues.map((issue, idx) => `
           </div>
 
           {/* Sync frames selection table */}
-          <div className="md:col-span-2 border rounded-xl p-5 bg-card shadow-sm flex flex-col min-h-[400px]">
+          <div className="md:col-span-2 border rounded-xl p-6 bg-card shadow-sm flex flex-col min-h-[400px]">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-4">
               <div>
                 <h3 className="font-semibold text-lg text-foreground">Figma Frame Selection</h3>
@@ -975,7 +975,7 @@ ${selectedRunIssues.map((issue, idx) => `
                 >
                   {syncingFrames ? (
                     <>
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Downloading...
+                      <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" /> Downloading...
                     </>
                   ) : (
                     `Download & Sync ${selectedFrameNodeIds.length} Frames`
@@ -996,7 +996,7 @@ ${selectedRunIssues.map((issue, idx) => `
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search frames by name or canvas page..."
-                    className="pl-9 h-9"
+                    className="pl-8 h-9"
                     value={frameSearch}
                     onChange={(e) => setFrameSearch(e.target.value)}
                   />
@@ -1045,7 +1045,7 @@ ${selectedRunIssues.map((issue, idx) => `
 
       {/* TAB C: Run History */}
       {activeTab === "history" && (
-        <div className="border rounded-xl p-5 bg-card shadow-sm overflow-hidden">
+        <div className="border rounded-xl p-6 bg-card shadow-sm overflow-hidden">
           <h3 className="font-semibold text-lg text-foreground mb-4">Visual Check History</h3>
           {runs.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
@@ -1108,7 +1108,7 @@ ${selectedRunIssues.map((issue, idx) => `
       {showMappingModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-lg overflow-hidden border">
-            <div className="flex items-center justify-between p-5 border-b bg-muted/50">
+            <div className="flex items-center justify-between p-6 border-b bg-muted/50">
               <h3 className="font-semibold text-lg text-foreground">New Visual Check Mapping</h3>
               <button onClick={() => setShowMappingModal(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
@@ -1117,7 +1117,7 @@ ${selectedRunIssues.map((issue, idx) => `
 
             <div className="p-6 space-y-4 overflow-y-auto max-h-[500px]">
               {/* Target Figma Frame */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="mappingFigmaFrame">Select Synced Figma Frame</Label>
                 <select
                   id="mappingFigmaFrame"
@@ -1132,13 +1132,13 @@ ${selectedRunIssues.map((issue, idx) => `
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Frames must be synced using the &quot;Figma Frame Syncer&quot; tab first before they appear here.
                 </p>
               </div>
 
               {/* URL */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="mappingAppUrl">Target Application URL</Label>
                 <Input
                   id="mappingAppUrl"
@@ -1150,7 +1150,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </div>
 
               {/* Viewport Preset */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="mappingViewport">Viewport Size Preset</Label>
                 <select
                   id="mappingViewport"
@@ -1167,7 +1167,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </div>
 
               {/* Login role selector */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="mappingCredential">Auto-login Credentials (Optional)</Label>
                 <select
                   id="mappingCredential"
@@ -1186,7 +1186,7 @@ ${selectedRunIssues.map((issue, idx) => `
 
               <div className="grid grid-cols-2 gap-4">
                 {/* Wait Strategy */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="mappingWait">Stabilization Wait Strategy</Label>
                   <select
                     id="mappingWait"
@@ -1202,7 +1202,7 @@ ${selectedRunIssues.map((issue, idx) => `
                 </div>
 
                 {/* Browser Type */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="mappingBrowser">Browser Engine</Label>
                   <select
                     id="mappingBrowser"
@@ -1218,7 +1218,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </div>
 
               {mappingForm.waitStrategy === "custom_selector" && (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="mappingSelector">Custom Selector to Wait For</Label>
                   <Input
                     id="mappingSelector"
@@ -1230,7 +1230,7 @@ ${selectedRunIssues.map((issue, idx) => `
               )}
 
               {mappingForm.waitStrategy === "delay" && (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="mappingDelay">Wait Delay (ms)</Label>
                   <Input
                     id="mappingDelay"
@@ -1242,14 +1242,14 @@ ${selectedRunIssues.map((issue, idx) => `
               )}
             </div>
 
-            <div className="p-5 border-t bg-muted/50 flex justify-end gap-3">
+            <div className="p-6 border-t bg-muted/50 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowMappingModal(false)}>
                 Cancel
               </Button>
               <Button
                 disabled={!mappingForm.figmaFrameId || !mappingForm.appUrl}
                 onClick={handleCreateMapping}
-                className="bg-primary text-white font-medium px-5"
+                className="bg-primary text-white font-medium px-6"
               >
                 Create Mapping
               </Button>
@@ -1279,7 +1279,7 @@ ${selectedRunIssues.map((issue, idx) => `
             <div className="flex items-center gap-2 border border-slate-700 rounded-lg p-0.5 bg-slate-800 text-xs">
               <button
                 onClick={() => setViewMode("side-by-side")}
-                className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                className={`px-3 py-2 rounded-md font-semibold transition-all ${
                   viewMode === "side-by-side" ? "bg-slate-700 text-white shadow-sm" : "text-muted-foreground hover:text-white"
                 }`}
               >
@@ -1287,7 +1287,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </button>
               <button
                 onClick={() => setViewMode("slider")}
-                className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                className={`px-3 py-2 rounded-md font-semibold transition-all ${
                   viewMode === "slider" ? "bg-slate-700 text-white shadow-sm" : "text-muted-foreground hover:text-white"
                 }`}
               >
@@ -1295,7 +1295,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </button>
               <button
                 onClick={() => setViewMode("overlay")}
-                className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                className={`px-3 py-2 rounded-md font-semibold transition-all ${
                   viewMode === "overlay" ? "bg-slate-700 text-white shadow-sm" : "text-muted-foreground hover:text-white"
                 }`}
               >
@@ -1303,7 +1303,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </button>
               <button
                 onClick={() => setViewMode("diff-heatmap")}
-                className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                className={`px-3 py-2 rounded-md font-semibold transition-all ${
                   viewMode === "diff-heatmap" ? "bg-slate-700 text-white shadow-sm" : "text-muted-foreground hover:text-white"
                 }`}
               >
@@ -1315,7 +1315,7 @@ ${selectedRunIssues.map((issue, idx) => `
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsDrawingMode(!isDrawingMode)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
+                className={`px-3 py-2 rounded-md text-xs font-semibold border transition-all ${
                   isDrawingMode
                     ? "bg-amber-600 border-amber-600 text-white shadow-sm"
                     : "border-slate-700 hover:bg-slate-800 text-slate-300"
@@ -1324,7 +1324,7 @@ ${selectedRunIssues.map((issue, idx) => `
                 {isDrawingMode ? "Drawing Ignored Area..." : "Draw Ignored Zone"}
               </button>
               <Button variant="ghost" className="text-slate-300 hover:text-white" onClick={handleExportMarkdown}>
-                <Download className="h-4 w-4 mr-1.5" /> Export MD
+                <Download className="h-4 w-4 mr-2" /> Export MD
               </Button>
               <button onClick={() => setShowWorkspace(false)} className="text-muted-foreground hover:text-white">
                 <X className="h-6 w-6" />
@@ -1369,7 +1369,7 @@ ${selectedRunIssues.map((issue, idx) => `
                   {viewMode === "side-by-side" && (
                     <div className="grid grid-cols-2 divide-x divide-slate-800">
                       <div className="relative">
-                        <div className="absolute top-2 left-2 bg-slate-900/80 text-[11px] font-medium text-white px-2 py-0.5 rounded">Figma Expected</div>
+                        <div className="absolute top-2 left-2 bg-slate-900/80 text-xs font-medium text-white px-2 py-0.5 rounded">Figma Expected</div>
                         <img
                           src={`/api/files/${selectedRun.figmaImagePath}`}
                           alt="Figma Expected"
@@ -1377,7 +1377,7 @@ ${selectedRunIssues.map((issue, idx) => `
                         />
                       </div>
                       <div className="relative">
-                        <div className="absolute top-2 left-2 bg-slate-900/80 text-[11px] font-medium text-white px-2 py-0.5 rounded">Web Actual</div>
+                        <div className="absolute top-2 left-2 bg-slate-900/80 text-xs font-medium text-white px-2 py-0.5 rounded">Web Actual</div>
                         <img
                           src={`/api/files/${selectedRun.actualImagePath}`}
                           alt="Web Actual"
@@ -1480,7 +1480,7 @@ ${selectedRunIssues.map((issue, idx) => `
               <div className="w-full md:w-[420px] bg-slate-900 border-t md:border-t-0 md:border-l border-slate-800 text-white flex flex-col overflow-hidden">
                 <div className="p-4 border-b border-slate-800 bg-slate-900/50 flex justify-between items-center">
                   <h4 className="font-semibold text-sm">Discrepancy Details</h4>
-                  <span className="text-[11px] font-medium text-muted-foreground">
+                  <span className="text-xs font-medium text-muted-foreground">
                     {selectedRunIssues.length} issues found
                   </span>
                 </div>
@@ -1490,10 +1490,10 @@ ${selectedRunIssues.map((issue, idx) => `
                   {(selectedRun.mapping as any).ignoredRegions?.length > 0 && (
                     <div className="border border-slate-800 rounded-lg p-3 space-y-2 bg-slate-950/40">
                       <span className="text-xs font-semibold text-muted-foreground">Ignored Regions ({ (selectedRun.mapping as any).ignoredRegions.length })</span>
-                      <div className="space-y-1.5 max-h-28 overflow-auto">
+                      <div className="space-y-2 max-h-28 overflow-auto">
                         {(selectedRun.mapping as any).ignoredRegions.map((region: any) => (
-                          <div key={region.id} className="flex justify-between items-center text-xs p-1.5 border border-slate-800 rounded bg-slate-900">
-                            <div className="flex items-center gap-1.5 truncate">
+                          <div key={region.id} className="flex justify-between items-center text-xs p-2 border border-slate-800 rounded bg-slate-900">
+                            <div className="flex items-center gap-2 truncate">
                               <Info className="h-3.5 w-3.5 text-amber-500" />
                               <span className="font-semibold text-slate-300">[{region.x},{region.y}]</span>
                               <span className="text-muted-foreground truncate max-w-[120px]">{region.reason}</span>
@@ -1527,11 +1527,11 @@ ${selectedRunIssues.map((issue, idx) => `
                         <div className="flex items-start justify-between gap-2 border-b border-slate-800 pb-2">
                           <div>
                             <span className="text-xs font-semibold text-indigo-400">Discrepancy #{idx + 1}</span>
-                            <div className="text-[10px] text-muted-foreground font-medium mt-0.5">
+                            <div className="text-xs text-muted-foreground font-medium mt-0.5">
                               Size: {issue.width}x{issue.height}px at x:{issue.x}, y:{issue.y}
                             </div>
                           </div>
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                          <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
                             issue.status === "Bug" ? "bg-rose-500/20 text-rose-400" :
                             issue.status === "Accepted" ? "bg-emerald-500/20 text-emerald-400" :
                             issue.status === "Ignored" ? "bg-slate-500/20 text-muted-foreground" :
@@ -1544,7 +1544,7 @@ ${selectedRunIssues.map((issue, idx) => `
                         {/* Crops Side-by-Side Review */}
                         <div className="grid grid-cols-3 gap-2">
                           <div className="space-y-1">
-                            <span className="text-[11px] text-muted-foreground font-medium">Figma</span>
+                            <span className="text-xs text-muted-foreground font-medium">Figma</span>
                             <div className="aspect-square bg-slate-900 rounded border border-slate-800 overflow-hidden">
                               {issue.expectedCropPath && (
                                 <img src={`/api/files/${issue.expectedCropPath}`} alt="Figma expected crop" className="w-full h-full object-contain" />
@@ -1552,7 +1552,7 @@ ${selectedRunIssues.map((issue, idx) => `
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <span className="text-[11px] text-muted-foreground font-medium">Web Actual</span>
+                            <span className="text-xs text-muted-foreground font-medium">Web Actual</span>
                             <div className="aspect-square bg-slate-900 rounded border border-slate-800 overflow-hidden">
                               {issue.actualCropPath && (
                                 <img src={`/api/files/${issue.actualCropPath}`} alt="Web actual crop" className="w-full h-full object-contain" />
@@ -1560,7 +1560,7 @@ ${selectedRunIssues.map((issue, idx) => `
                             </div>
                           </div>
                           <div className="space-y-1">
-                            <span className="text-[11px] text-muted-foreground font-medium">Diff Heatmap</span>
+                            <span className="text-xs text-muted-foreground font-medium">Diff Heatmap</span>
                             <div className="aspect-square bg-slate-900 rounded border border-slate-800 overflow-hidden">
                               {issue.diffCropPath && (
                                 <img src={`/api/files/${issue.diffCropPath}`} alt="Pixel diff crop" className="w-full h-full object-contain" />
@@ -1572,11 +1572,11 @@ ${selectedRunIssues.map((issue, idx) => `
                         {/* Selectors config */}
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           <div className="space-y-1">
-                            <label className="text-[11px] text-muted-foreground font-medium">Category</label>
+                            <label className="text-xs text-muted-foreground font-medium">Category</label>
                             <select
                               value={issue.category}
                               onChange={(e) => handleUpdateIssue(issue.id, { category: e.target.value })}
-                              className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-slate-300 text-xs focus:ring-1 focus:ring-indigo-500"
+                              className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1 text-slate-300 text-xs focus:ring-1 focus:ring-indigo-500"
                             >
                               <option value="Unknown">Unknown</option>
                               <option value="LayoutMismatch">Layout</option>
@@ -1592,11 +1592,11 @@ ${selectedRunIssues.map((issue, idx) => `
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-[11px] text-muted-foreground font-medium">Severity</label>
+                            <label className="text-xs text-muted-foreground font-medium">Severity</label>
                             <select
                               value={issue.severity}
                               onChange={(e) => handleUpdateIssue(issue.id, { severity: e.target.value })}
-                              className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-slate-300 text-xs focus:ring-1 focus:ring-indigo-500"
+                              className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1 text-slate-300 text-xs focus:ring-1 focus:ring-indigo-500"
                             >
                               <option value="Critical">Critical</option>
                               <option value="High">High</option>
@@ -1609,13 +1609,13 @@ ${selectedRunIssues.map((issue, idx) => `
 
                         {/* Notes input */}
                         <div className="space-y-1">
-                          <label className="text-[11px] text-muted-foreground font-medium">Discrepancy Notes</label>
+                          <label className="text-xs text-muted-foreground font-medium">Discrepancy Notes</label>
                           <input
                             type="text"
                             placeholder="Add spacing discrepancy detail..."
                             value={issue.notes || ""}
                             onChange={(e) => handleUpdateIssue(issue.id, { notes: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-300 focus:outline-none focus:border-slate-700"
+                            className="w-full bg-slate-900 border border-slate-800 rounded px-3 py-1 text-xs text-slate-300 focus:outline-none focus:border-slate-700"
                           />
                         </div>
 
@@ -1623,21 +1623,21 @@ ${selectedRunIssues.map((issue, idx) => `
                         <div className="flex gap-2 pt-1">
                           <button
                             onClick={() => handleUpdateIssue(issue.id, { status: "Accepted" })}
-                            className="flex-1 py-1.5 border border-slate-850 hover:bg-slate-800 text-[11px] font-semibold rounded flex items-center justify-center gap-1.5 text-slate-300 transition-all"
+                            className="flex-1 py-2 border border-slate-850 hover:bg-slate-800 text-xs font-semibold rounded flex items-center justify-center gap-2 text-slate-300 transition-all"
                           >
                             <Check className="h-3.5 w-3.5 text-emerald-500" /> Accept
                           </button>
                           {issue.bugReportId ? (
                             <button
                               disabled
-                              className="flex-1 py-1.5 bg-rose-950/20 text-rose-450 border border-rose-900/30 text-[11px] font-semibold rounded flex items-center justify-center gap-1.5"
+                              className="flex-1 py-2 bg-rose-950/20 text-rose-450 border border-rose-900/30 text-xs font-semibold rounded flex items-center justify-center gap-2"
                             >
                               Filed as Bug
                             </button>
                           ) : (
                             <button
                               onClick={() => handleOpenBugDialog(issue)}
-                              className="flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-[11px] font-semibold text-white rounded flex items-center justify-center gap-1.5 shadow-sm transition-all"
+                              className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-xs font-semibold text-white rounded flex items-center justify-center gap-2 shadow-sm transition-all"
                             >
                               <AlertTriangle className="h-3.5 w-3.5" /> File Bug
                             </button>
@@ -1657,19 +1657,19 @@ ${selectedRunIssues.map((issue, idx) => `
       {showIgnoreReasonModal && pendingRegion && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-slate-900 text-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-sm overflow-hidden border border-slate-800">
-            <div className="p-5 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
+            <div className="p-6 border-b border-slate-800 bg-slate-950/50 flex justify-between items-center">
               <h3 className="font-semibold text-sm">Add Ignored Zone</h3>
               <button onClick={() => { setShowIgnoreReasonModal(false); setPendingRegion(null); }} className="text-muted-foreground hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-6 space-y-4">
               <p className="text-xs text-muted-foreground">
                 You drew a coordinates box of size {pendingRegion.w}x{pendingRegion.h}px at [{pendingRegion.x},{pendingRegion.y}].
                 This zone will be excluded from mismatch calculation in future visual checks.
               </p>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="ignoreReasonInput" className="text-slate-300">Exclude Reason (e.g. Dynamic User Name)</Label>
                 <Input
                   id="ignoreReasonInput"
@@ -1681,7 +1681,7 @@ ${selectedRunIssues.map((issue, idx) => `
               </div>
             </div>
 
-            <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-2.5">
+            <div className="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end gap-3">
               <Button variant="ghost" className="text-muted-foreground hover:text-white" onClick={() => { setShowIgnoreReasonModal(false); setPendingRegion(null); }}>
                 Cancel
               </Button>
@@ -1697,15 +1697,15 @@ ${selectedRunIssues.map((issue, idx) => `
       {showBugModal && selectedIssueForBug && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-card text-foreground rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-md overflow-hidden border">
-            <div className="p-5 border-b bg-muted/50 flex justify-between items-center">
+            <div className="p-6 border-b bg-muted/50 flex justify-between items-center">
               <h3 className="font-semibold text-foreground text-sm">File Design Defect</h3>
               <button onClick={() => setShowBugModal(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="p-5 space-y-4 overflow-y-auto max-h-[400px]">
-              <div className="space-y-1.5">
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[400px]">
+              <div className="space-y-2">
                 <Label htmlFor="bugTitleInput">Defect Title</Label>
                 <Input
                   id="bugTitleInput"
@@ -1715,13 +1715,13 @@ ${selectedRunIssues.map((issue, idx) => `
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="bugSeverityInput">Severity</Label>
                   <select
                     id="bugSeverityInput"
                     value={bugSeverity}
                     onChange={(e) => setBugSeverity(e.target.value)}
-                    className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm"
+                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm"
                   >
                     <option value="Critical">Critical</option>
                     <option value="High">High</option>
@@ -1731,13 +1731,13 @@ ${selectedRunIssues.map((issue, idx) => `
                   </select>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label htmlFor="bugPriorityInput">Priority</Label>
                   <select
                     id="bugPriorityInput"
                     value={bugPriority}
                     onChange={(e) => setBugPriority(e.target.value)}
-                    className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm"
+                    className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm"
                   >
                     <option value="High">High</option>
                     <option value="Medium">Medium</option>
@@ -1746,20 +1746,20 @@ ${selectedRunIssues.map((issue, idx) => `
                 </div>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label htmlFor="bugNotesInput">Additional Description Notes</Label>
                 <textarea
                   id="bugNotesInput"
                   rows={3}
                   value={bugNotes}
                   onChange={(e) => setBugNotes(e.target.value)}
-                  className="w-full rounded-md border border-input bg-transparent px-3 py-1.5 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none"
+                  className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none"
                   placeholder="Provide details for frontend developers (e.g. submit button shifted 18px right and font size is 12px instead of 14px)..."
                 />
               </div>
             </div>
 
-            <div className="p-5 border-t bg-muted/50 flex justify-end gap-3">
+            <div className="p-6 border-t bg-muted/50 flex justify-end gap-3">
               <Button variant="outline" onClick={() => setShowBugModal(false)}>
                 Cancel
               </Button>

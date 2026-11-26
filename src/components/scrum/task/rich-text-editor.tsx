@@ -19,7 +19,7 @@ import {
   Link2Off,
   Type,
   Eraser,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 /** Font-size presets exposed in the toolbar (value is the CSS font-size). */
@@ -97,7 +97,7 @@ function Toolbar({ editor }: { editor: Editor }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/30 px-1.5 py-1">
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-input bg-muted/30 px-2 py-1">
       {/* Font size */}
       <div className="mr-1 flex items-center gap-1" title="Font size">
         <Type className="h-3.5 w-3.5 text-muted-foreground" />
@@ -108,7 +108,7 @@ function Toolbar({ editor }: { editor: Editor }) {
             if (v) editor.chain().focus().setFontSize(v).run()
             else editor.chain().focus().unsetFontSize().run()
           }}
-          className="h-6 rounded border border-input bg-background px-1 text-[11px] focus:outline-none"
+          className="h-6 rounded border border-input bg-background px-1 text-xs focus:outline-none"
         >
           <option value="">Size</option>
           {FONT_SIZES.map((s) => (

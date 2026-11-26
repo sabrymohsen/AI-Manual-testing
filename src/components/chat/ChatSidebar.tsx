@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ChatChannel, useChatStore } from "@/stores/chatStore";
-import { Plus, Hash, Lock, Circle, ChevronDown, ChevronRight, MessageSquare, Users } from "lucide-react";
+import { Plus, Hash, Lock, Circle, ChevronDown, ChevronRight, MessageSquare, Users } from "@/components/ui/icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -122,7 +122,7 @@ export function ChatSidebar({
     <div className="w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex flex-col h-full select-none">
       {/* Header */}
       <div className="h-14 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 justify-between bg-white dark:bg-slate-900">
-        <h2 className="font-semibold text-foreground dark:text-slate-200 text-sm flex items-center gap-1.5">
+        <h2 className="font-semibold text-foreground dark:text-slate-200 text-sm flex items-center gap-2">
           <MessageSquare className="h-4 w-4 text-primary" />
           <span>Team Channels</span>
         </h2>
@@ -131,7 +131,7 @@ export function ChatSidebar({
       <div className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-4">
         {/* CHANNELS SECTION */}
         <div>
-          <div className="flex items-center justify-between px-2 text-xs font-medium text-muted-foreground mb-1.5">
+          <div className="flex items-center justify-between px-2 text-xs font-medium text-muted-foreground mb-2">
             <button
               onClick={() => setChannelsCollapsed(!channelsCollapsed)}
               className="flex items-center gap-1 hover:text-muted-foreground dark:hover:text-slate-200"
@@ -225,13 +225,13 @@ export function ChatSidebar({
                     key={ch.id}
                     onClick={() => setActiveChannel(ch.id)}
                     className={cn(
-                      "flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors w-full text-left group",
+                      "flex items-center justify-between px-2 py-2 rounded-md text-sm transition-colors w-full text-left group",
                       isActive
                         ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold"
                         : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-slate-200"
                     )}
                   >
-                    <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
                       {ch.type === "PRIVATE" ? (
                         <Lock className="h-3.5 w-3.5 flex-shrink-0" />
                       ) : (
@@ -241,7 +241,7 @@ export function ChatSidebar({
                     </div>
 
                     {unread > 0 && (
-                      <span className="bg-primary text-white text-[10px] font-semibold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
+                      <span className="bg-primary text-white text-xs font-semibold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
                         {unread}
                       </span>
                     )}
@@ -249,7 +249,7 @@ export function ChatSidebar({
                 );
               })}
               {channels.length === 0 && (
-                <span className="text-[11px] text-muted-foreground italic px-2">No channels created</span>
+                <span className="text-xs text-muted-foreground px-2">No channels created</span>
               )}
             </div>
           )}
@@ -259,7 +259,7 @@ export function ChatSidebar({
         <div>
           <button
             onClick={() => setDMsCollapsed(!dmsCollapsed)}
-            className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-1.5 hover:text-muted-foreground dark:hover:text-slate-200"
+            className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-2 hover:text-muted-foreground dark:hover:text-slate-200"
           >
             {dmsCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             <span>Direct Messages</span>
@@ -280,7 +280,7 @@ export function ChatSidebar({
                     key={dm.id}
                     onClick={() => setActiveChannel(dm.id)}
                     className={cn(
-                      "flex items-center justify-between px-2 py-1.5 rounded-md text-sm transition-colors w-full text-left",
+                      "flex items-center justify-between px-2 py-2 rounded-md text-sm transition-colors w-full text-left",
                       isActive
                         ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 font-semibold"
                         : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-slate-200"
@@ -288,7 +288,7 @@ export function ChatSidebar({
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="relative">
-                        <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[11px] font-medium text-slate-600 dark:text-slate-400">
+                        <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-600 dark:text-slate-400">
                           {(memberInfo.name || memberInfo.email).slice(0, 2)}
                         </div>
                         <Circle
@@ -302,7 +302,7 @@ export function ChatSidebar({
                     </div>
 
                     {unread > 0 && (
-                      <span className="bg-primary text-white text-[10px] font-semibold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
+                      <span className="bg-primary text-white text-xs font-semibold h-4 min-w-4 px-1 rounded-full flex items-center justify-center">
                         {unread}
                       </span>
                     )}
@@ -310,7 +310,7 @@ export function ChatSidebar({
                 );
               })}
               {dms.length === 0 && (
-                <span className="text-[11px] text-muted-foreground italic px-2">No active conversations</span>
+                <span className="text-xs text-muted-foreground px-2">No active conversations</span>
               )}
             </div>
           )}
@@ -320,7 +320,7 @@ export function ChatSidebar({
         <div>
           <button
             onClick={() => setMembersCollapsed(!membersCollapsed)}
-            className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-1.5 hover:text-muted-foreground dark:hover:text-slate-200"
+            className="flex items-center gap-1 px-2 text-xs font-medium text-muted-foreground mb-2 hover:text-muted-foreground dark:hover:text-slate-200"
           >
             {membersCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             <Users className="h-3.5 w-3.5 text-slate-450" />
@@ -338,10 +338,10 @@ export function ChatSidebar({
                     <button
                       key={member.id}
                       onClick={() => handleStartDM(member.id)}
-                      className="flex items-center justify-between px-2 py-1.5 rounded-md text-sm text-slate-600 hover:bg-slate-200/50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-slate-200 transition-colors w-full text-left"
+                      className="flex items-center justify-between px-2 py-2 rounded-md text-sm text-slate-600 hover:bg-slate-200/50 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-900/60 dark:hover:text-slate-200 transition-colors w-full text-left"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-[10px] font-semibold text-slate-700 dark:text-slate-350">
+                        <div className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs font-semibold text-slate-700 dark:text-slate-350">
                           {(member.name || member.email).slice(0, 2).toUpperCase()}
                         </div>
                         <span className="truncate">{member.name || member.email}</span>
@@ -357,7 +357,7 @@ export function ChatSidebar({
                   );
                 })}
               {projectMembers.length <= 1 && (
-                <span className="text-[11px] text-muted-foreground italic px-2">No other members in project</span>
+                <span className="text-xs text-muted-foreground px-2">No other members in project</span>
               )}
             </div>
           )}

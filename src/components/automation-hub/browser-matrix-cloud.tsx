@@ -21,7 +21,7 @@ import {
   Radio,
   KeyRound,
   Film
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 // ---------- Types ----------
 
@@ -181,15 +181,15 @@ export default function BrowserMatrixCloudPanel() {
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-4">
           <div className="flex items-center gap-2 border-b pb-2">
             <Zap size={15} className="text-primary" />
-            <span className="text-[11px] font-medium text-muted-foreground">Cross-Browser Parallel Mode</span>
+            <span className="text-xs font-medium text-muted-foreground">Cross-Browser Parallel Mode</span>
             {saving && <Loader2 size={12} className="animate-spin text-indigo-400 ml-auto" />}
           </div>
 
           {/* Parallel toggle */}
           <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
             <div>
-              <span className="text-[10.5px] font-semibold text-foreground block">Parallel Execution</span>
-              <span className="text-[8.5px] text-muted-foreground font-medium">
+              <span className="text-xs font-semibold text-foreground block">Parallel Execution</span>
+              <span className="text-xs text-muted-foreground font-medium">
                 {isParallel ? "All browsers run simultaneously" : "Browsers run sequentially"}
               </span>
             </div>
@@ -202,8 +202,8 @@ export default function BrowserMatrixCloudPanel() {
           </div>
 
           {/* Thread count */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[9.5px] font-semibold">
+          <div className="space-y-2">
+            <div className="flex justify-between text-xs font-semibold">
               <span className="text-muted-foreground">Thread count</span>
               <span className="text-primary font-semibold font-mono">{parallel?.threadCount}</span>
             </div>
@@ -220,11 +220,11 @@ export default function BrowserMatrixCloudPanel() {
           </div>
 
           {/* Docker */}
-          <div className="p-3 border rounded-xl bg-muted/50 space-y-2.5">
+          <div className="p-3 border rounded-xl bg-muted/50 space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <Boxes size={13} className="text-muted-foreground" />
-                <span className="text-[10.5px] font-semibold text-foreground">Run on Docker</span>
+                <span className="text-xs font-semibold text-foreground">Run on Docker</span>
               </div>
               <button
                 onClick={() => patchParallel({ onDocker: !parallel?.onDocker })}
@@ -233,12 +233,12 @@ export default function BrowserMatrixCloudPanel() {
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${parallel?.onDocker ? "left-[22px]" : "left-0.5"}`} />
               </button>
             </div>
-            <p className="text-[8.5px] text-muted-foreground font-medium leading-relaxed">
+            <p className="text-xs text-muted-foreground font-medium leading-relaxed">
               Writes <span className="font-mono">executionAddress=dockerized</span> — the runner attaches to a containerised browser
               images and manages containers at run time.
             </p>
             {/* Real docker daemon status */}
-            <div className="flex items-center gap-2 text-[8.5px] font-semibold">
+            <div className="flex items-center gap-2 text-xs font-semibold">
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 border ${
                   docker?.running
@@ -258,7 +258,7 @@ export default function BrowserMatrixCloudPanel() {
             {docker?.running && docker.containers.length > 0 && (
               <div className="space-y-1">
                 {docker.containers.map((c) => (
-                  <div key={c.name} className="flex items-center gap-2 text-[8px] font-mono text-muted-foreground bg-card border rounded px-2 py-1">
+                  <div key={c.name} className="flex items-center gap-2 text-xs font-mono text-muted-foreground bg-card border rounded px-2 py-1">
                     <span className="font-semibold text-foreground truncate">{c.name}</span>
                     <span className="truncate text-muted-foreground">{c.image}</span>
                     <span className="ml-auto text-emerald-600">{c.status}</span>
@@ -271,37 +271,37 @@ export default function BrowserMatrixCloudPanel() {
 
         {/* Execution summary */}
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
             <Gauge size={13} className="text-primary" /> Execution Summary
           </span>
           {savings && savings.testCount > 0 ? (
             <>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div>
-                  <p className="text-[11px] font-medium text-muted-foreground">Sequential</p>
+                  <p className="text-xs font-medium text-muted-foreground">Sequential</p>
                   <p className="text-sm font-semibold text-foreground mt-0.5">{fmtMs(savings.sequentialMs)}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium text-muted-foreground">Parallel</p>
+                  <p className="text-xs font-medium text-muted-foreground">Parallel</p>
                   <p className="text-sm font-semibold text-primary mt-0.5">{fmtMs(savings.parallelMs)}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] font-medium text-muted-foreground">Saved</p>
+                  <p className="text-xs font-medium text-muted-foreground">Saved</p>
                   <p className="text-sm font-semibold text-emerald-600 mt-0.5">
-                    {fmtMs(savings.savedMs)} <span className="text-[9px]">({savings.savedPct}%)</span>
+                    {fmtMs(savings.savedMs)} <span className="text-xs">({savings.savedPct}%)</span>
                   </p>
                 </div>
               </div>
               {/* comparison bars */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-[8px] font-semibold text-muted-foreground w-16">Sequential</span>
+                  <span className="text-xs font-semibold text-muted-foreground w-16">Sequential</span>
                   <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
                     <div className="h-full bg-slate-400" style={{ width: "100%" }} />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[8px] font-semibold text-muted-foreground w-16">Parallel</span>
+                  <span className="text-xs font-semibold text-muted-foreground w-16">Parallel</span>
                   <div className="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
                     <div
                       className="h-full bg-primary"
@@ -310,7 +310,7 @@ export default function BrowserMatrixCloudPanel() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-[9px] font-semibold text-muted-foreground pt-1 border-t">
+              <div className="flex items-center gap-3 text-xs font-semibold text-muted-foreground pt-1 border-t">
                 <span className="inline-flex items-center gap-1">
                   <Boxes size={11} className="text-muted-foreground" /> ~{savings.estimatedContainers} containers
                 </span>
@@ -321,7 +321,7 @@ export default function BrowserMatrixCloudPanel() {
               </div>
             </>
           ) : (
-            <p className="text-[9.5px] text-muted-foreground italic text-center py-6">
+            <p className="text-xs text-muted-foreground text-center py-6">
               No cross-browser results yet — run the Browser Matrix to compute time savings.
             </p>
           )}
@@ -333,9 +333,9 @@ export default function BrowserMatrixCloudPanel() {
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2 border-b pb-2">
             <Cloud size={15} className="text-primary" />
-            <span className="text-[11px] font-medium text-muted-foreground">BrowserStack Cloud</span>
+            <span className="text-xs font-medium text-muted-foreground">BrowserStack Cloud</span>
             <span
-              className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-[8px] font-semibold uppercase ${
+              className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-xs font-semibold uppercase ${
                 bs?.configured ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-muted text-muted-foreground border-border"
               }`}
             >
@@ -348,25 +348,25 @@ export default function BrowserMatrixCloudPanel() {
               href={bs?.dashboardUrl || "https://automate.browserstack.com"}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-[9.5px] font-semibold"
+              className="inline-flex items-center gap-2 h-8 px-3 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-xs font-semibold"
             >
               <ExternalLink size={11} /> Automate Dashboard
             </a>
             {bs?.targetName && (
-              <span className="text-[9px] font-mono font-semibold text-muted-foreground">target: {bs.targetName}</span>
+              <span className="text-xs font-mono font-semibold text-muted-foreground">target: {bs.targetName}</span>
             )}
           </div>
 
           {/* browserstack.yml editor */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-[8.5px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
+              <span className="text-xs uppercase font-semibold text-muted-foreground flex items-center gap-1">
                 <Server size={10} /> browserstack.yml
               </span>
               <button
                 onClick={saveYml}
                 disabled={!ymlDirty || ymlSaving}
-                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-[9px] font-semibold"
+                className="inline-flex items-center gap-1 h-7 px-3 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold"
               >
                 {ymlSaving ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Save{ymlDirty ? " *" : ""}
               </button>
@@ -378,16 +378,16 @@ export default function BrowserMatrixCloudPanel() {
                 setYmlDirty(true)
               }}
               spellCheck={false}
-              className="w-full h-44 rounded-xl border bg-slate-950 text-slate-200 font-mono text-[9px] leading-relaxed p-3 resize-y"
+              className="w-full h-44 rounded-xl border bg-slate-950 text-slate-200 font-mono text-xs leading-relaxed p-3 resize-y"
             />
           </div>
 
           {/* Quick platform add */}
-          <div className="bg-muted/50 border rounded-xl p-2.5 space-y-2">
-            <span className="text-[8.5px] uppercase font-semibold text-muted-foreground">Add platform</span>
-            <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="bg-muted/50 border rounded-xl p-3 space-y-2">
+            <span className="text-xs uppercase font-semibold text-muted-foreground">Add platform</span>
+            <div className="flex items-center gap-2 flex-wrap">
               {!pf.realMobile ? (
-                <select value={pf.os} onChange={(e) => setPf({ ...pf, os: e.target.value })} className="h-7 rounded-lg border px-1.5 text-[9px] font-semibold bg-card cursor-pointer">
+                <select value={pf.os} onChange={(e) => setPf({ ...pf, os: e.target.value })} className="h-7 rounded-lg border px-2 text-xs font-semibold bg-card cursor-pointer">
                   {["Windows", "OS X"].map((o) => (
                     <option key={o} value={o}>{o}</option>
                   ))}
@@ -397,16 +397,16 @@ export default function BrowserMatrixCloudPanel() {
                   value={pf.device}
                   onChange={(e) => setPf({ ...pf, device: e.target.value })}
                   placeholder="Device (e.g. iPhone 15)"
-                  className="h-7 rounded-lg border px-2 text-[9px] font-semibold bg-card w-32"
+                  className="h-7 rounded-lg border px-2 text-xs font-semibold bg-card w-32"
                 />
               )}
-              <select value={pf.browser} onChange={(e) => setPf({ ...pf, browser: e.target.value })} className="h-7 rounded-lg border px-1.5 text-[9px] font-semibold bg-card cursor-pointer">
+              <select value={pf.browser} onChange={(e) => setPf({ ...pf, browser: e.target.value })} className="h-7 rounded-lg border px-2 text-xs font-semibold bg-card cursor-pointer">
                 {["chrome", "firefox", "edge", "safari", "samsung"].map((b) => (
                   <option key={b} value={b}>{b}</option>
                 ))}
               </select>
               {!pf.realMobile && (
-                <select value={pf.version} onChange={(e) => setPf({ ...pf, version: e.target.value })} className="h-7 rounded-lg border px-1.5 text-[9px] font-semibold bg-card cursor-pointer">
+                <select value={pf.version} onChange={(e) => setPf({ ...pf, version: e.target.value })} className="h-7 rounded-lg border px-2 text-xs font-semibold bg-card cursor-pointer">
                   {["latest", "latest-1", "latest-2"].map((v) => (
                     <option key={v} value={v}>{v}</option>
                   ))}
@@ -414,7 +414,7 @@ export default function BrowserMatrixCloudPanel() {
               )}
               <button
                 onClick={() => setPf({ ...pf, realMobile: !pf.realMobile })}
-                className={`inline-flex items-center gap-1 h-7 px-2 rounded-lg border text-[8.5px] font-semibold uppercase ${
+                className={`inline-flex items-center gap-1 h-7 px-2 rounded-lg border text-xs font-semibold uppercase ${
                   pf.realMobile ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground"
                 }`}
               >
@@ -422,7 +422,7 @@ export default function BrowserMatrixCloudPanel() {
               </button>
               <button
                 onClick={addPlatform}
-                className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted/50 text-[9px] font-semibold ml-auto"
+                className="inline-flex items-center gap-1 h-7 px-3 rounded-lg border border-border bg-card text-muted-foreground hover:bg-muted/50 text-xs font-semibold ml-auto"
               >
                 <Plus size={11} /> Add
               </button>
@@ -432,30 +432,30 @@ export default function BrowserMatrixCloudPanel() {
 
         {/* Cost + usage */}
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
             <DollarSign size={13} className="text-primary" /> Cost Estimation & Usage
           </span>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-muted/50 border rounded-xl p-2">
-              <p className="text-[7.5px] uppercase font-semibold text-muted-foreground">Sessions / run</p>
+              <p className="text-xs uppercase font-semibold text-muted-foreground">Sessions / run</p>
               <p className="text-base font-semibold text-foreground mt-0.5">{bs?.costEstimate.sessionsPerRun}</p>
             </div>
             <div className="bg-muted/50 border rounded-xl p-2">
-              <p className="text-[7.5px] uppercase font-semibold text-muted-foreground">Est. min / run</p>
+              <p className="text-xs uppercase font-semibold text-muted-foreground">Est. min / run</p>
               <p className="text-base font-semibold text-foreground mt-0.5">{bs?.costEstimate.estMinutesPerRun}</p>
             </div>
             <div className="bg-muted/50 border rounded-xl p-2">
-              <p className="text-[7.5px] uppercase font-semibold text-muted-foreground">Est. $ / run</p>
+              <p className="text-xs uppercase font-semibold text-muted-foreground">Est. $ / run</p>
               <p className="text-base font-semibold text-emerald-600 mt-0.5">${bs?.costEstimate.estCostPerRun}</p>
             </div>
           </div>
-          <div className="flex items-center justify-between text-[9px] font-semibold text-muted-foreground pt-1 border-t">
+          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground pt-1 border-t">
             <span className="inline-flex items-center gap-1">
               <Clock size={11} className="text-muted-foreground" /> Used this month
             </span>
             <span className="font-mono font-semibold text-foreground">{bs?.usage.minutesThisMonth ?? 0} min</span>
           </div>
-          <p className="text-[7.5px] text-muted-foreground font-medium leading-relaxed">
+          <p className="text-xs text-muted-foreground font-medium leading-relaxed">
             Estimate = platforms × parallels × avg run minutes × ${bs?.usage.ratePerMinute}/min. Usage is tracked from your
             BrowserStack-targeted executions.
           </p>
@@ -463,13 +463,13 @@ export default function BrowserMatrixCloudPanel() {
 
         {/* Sessions */}
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-2">
-          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1.5 border-b pb-2">
+          <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
             <Film size={13} className="text-primary" /> Cloud Sessions
           </span>
           {bs && bs.sessions.length > 0 ? (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {bs.sessions.map((s) => (
-                <div key={s.id} className="flex items-center gap-2 p-2 border rounded-xl text-[9px]">
+                <div key={s.id} className="flex items-center gap-2 p-2 border rounded-xl text-xs">
                   {s.status === "Passed" ? (
                     <CheckCircle2 size={12} className="text-emerald-500" />
                   ) : s.status === "Failed" ? (
@@ -478,13 +478,13 @@ export default function BrowserMatrixCloudPanel() {
                     <AlertTriangle size={12} className="text-amber-500" />
                   )}
                   <span className="font-semibold text-foreground truncate">{s.testName}</span>
-                  <span className="font-mono text-[8px] text-muted-foreground truncate">{s.id.slice(0, 8)}</span>
+                  <span className="font-mono text-xs text-muted-foreground truncate">{s.id.slice(0, 8)}</span>
                   <span className="ml-auto font-mono text-muted-foreground">{s.durationMs ? fmtMs(s.durationMs) : "—"}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[9px] text-muted-foreground italic text-center py-4 leading-relaxed">
+            <p className="text-xs text-muted-foreground text-center py-4 leading-relaxed">
               No BrowserStack sessions yet. Sessions, IDs and video playback appear here after a cloud run against a{" "}
               <span className="font-mono">browserstack</span> execution target.
             </p>

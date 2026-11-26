@@ -6,11 +6,11 @@ import { useCommentMutations, useScrumMembers } from "@/hooks/scrum/use-scrum"
 import { mentionsToPlain, plainToMentions, splitMentions } from "@/lib/scrum/mentions"
 import { initials } from "@/components/scrum/shared"
 import { formatDistanceToNow } from "date-fns"
-import { Pencil, Trash2, Check, X } from "lucide-react"
+import { Pencil, Trash2, Check, X } from "@/components/ui/icons"
 
 function Avatar({ name, email, url }: { name: string | null; email: string; url: string | null }) {
   return (
-    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-bold text-primary">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={name || email} className="h-full w-full object-cover" />
@@ -134,7 +134,7 @@ function MentionInput({
               <button
                 type="button"
                 onMouseDown={(e) => { e.preventDefault(); choose(m) }}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${i === active ? "bg-accent" : "hover:bg-accent"}`}
+                className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${i === active ? "bg-accent" : "hover:bg-accent"}`}
               >
                 <Avatar name={m.name} email={m.email} url={m.avatarUrl} />
                 <span className="truncate">
@@ -194,7 +194,7 @@ export function CommentList({
               <div className="mb-0.5 flex items-center justify-between">
                 <span className="text-xs font-semibold">{c.author.name || c.author.email}</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formatDistanceToNow(new Date(c.createdAt), { addSuffix: true })}
                   </span>
                   <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">

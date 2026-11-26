@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, Layers, Upload, MoreHorizontal } from "lucide-react"
+import { Columns3, List, GanttChartSquare, Plus, Zap, ChevronRight, Layers, Upload, MoreHorizontal } from "@/components/ui/icons"
 
 type View = "board" | "backlog" | "list" | "timeline"
 
@@ -149,7 +149,7 @@ export default function ScrumBoardPage() {
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Row 1 — where you are, which view, and the actions. */}
       <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card px-4">
-        <nav aria-label="Breadcrumb" className="flex min-w-0 shrink items-center gap-1.5 text-[13px] text-muted-foreground">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 shrink items-center gap-2 text-xs text-muted-foreground">
           <Link href={`/projects/${projectId}`} className="hidden max-w-[10rem] truncate rounded-sm transition-colors hover:text-foreground 2xl:inline">
             {project?.name ?? "…"}
           </Link>
@@ -165,7 +165,7 @@ export default function ScrumBoardPage() {
           {project?.boardKey && (
             <span
               title="Board key — the prefix on every issue ID in this project"
-              className="shrink-0 rounded border border-border px-1 font-mono text-[10px] text-muted-foreground"
+              className="shrink-0 rounded border border-border px-1 font-mono text-xs text-muted-foreground"
             >
               {project.boardKey}
             </span>
@@ -183,7 +183,7 @@ export default function ScrumBoardPage() {
                 aria-selected={active}
                 aria-label={t.label}
                 onClick={() => setView(t.id)}
-                className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                className={`inline-flex h-7 items-center gap-2 rounded-md px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   active
                     ? "bg-muted text-foreground ring-1 ring-inset ring-border"
                     : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
@@ -195,7 +195,7 @@ export default function ScrumBoardPage() {
           })}
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
           <SearchBar ref={searchRef} value={filters.search ?? ""} onChange={setSearch} boardKey={project?.boardKey} />
           {view === "board" && <DisplayMenu projectId={projectId} />}
           <FilterPanel projectId={projectId} filters={filters} onChange={setFilters} />
@@ -230,9 +230,9 @@ export default function ScrumBoardPage() {
           {canCreateIssues && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md bg-primary pl-2.5 pr-2 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <button className="inline-flex h-7 shrink-0 items-center gap-2 rounded-md bg-primary pl-3 pr-2 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   <Plus className="h-3.5 w-3.5" /> New issue
-                  <kbd className="rounded bg-primary-foreground/20 px-1 font-sans text-[10px]">C</kbd>
+                  <kbd className="rounded bg-primary-foreground/20 px-1 font-sans text-xs">C</kbd>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -263,14 +263,14 @@ export default function ScrumBoardPage() {
       </header>
 
       {/* Small screens: the view tabs drop to their own row. */}
-      <div role="tablist" aria-label="Board views" className="flex shrink-0 gap-0.5 border-b border-border bg-card px-3 py-1.5 md:hidden">
+      <div role="tablist" aria-label="Board views" className="flex shrink-0 gap-0.5 border-b border-border bg-card px-3 py-2 md:hidden">
         {tabs.map((t) => (
           <button
             key={t.id}
             role="tab"
             aria-selected={view === t.id}
             onClick={() => setView(t.id)}
-            className={`h-7 rounded-md px-2.5 text-xs font-medium ${view === t.id ? "bg-muted text-foreground" : "text-muted-foreground"}`}
+            className={`h-7 rounded-md px-3 text-xs font-medium ${view === t.id ? "bg-muted text-foreground" : "text-muted-foreground"}`}
           >
             {t.label}
           </button>

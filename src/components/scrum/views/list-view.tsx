@@ -14,7 +14,7 @@ import { PriorityBadge, STATUS_META, STATUS_ORDER, AvatarStack, overdueDays, Sta
 import { Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
-import { ArrowUpDown, ChevronDown, Download, Loader2, Trash2, X } from "lucide-react"
+import { ArrowUpDown, ChevronDown, Download, Loader2, Trash2, X } from "@/components/ui/icons"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
@@ -107,7 +107,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
 
   if (isLoading) return <Skeleton className="h-96 w-full rounded-xl" />
 
-  const menuBtn = "inline-flex items-center gap-1 rounded-md border bg-background px-2.5 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
+  const menuBtn = "inline-flex items-center gap-1 rounded-md border bg-background px-3 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
 
   return (
     <div className="space-y-2">
@@ -118,7 +118,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
         </span>
         {chosen.length > 0 && (
           <PermissionGate permission="canCreateStories">
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger className={menuBtn} disabled={bulk.isPending}>Status <ChevronDown className="h-3 w-3" /></DropdownMenuTrigger>
                 <DropdownMenuContent>
@@ -162,7 +162,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                 <DropdownMenuContent className="max-h-72 overflow-y-auto">
                   <DropdownMenuItem onClick={() => bulk.mutate({ action: "update", assigneeIds: [] })} className="text-sm text-muted-foreground">Unassigned</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-[11px] uppercase text-muted-foreground">Assign to</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">Assign to</DropdownMenuLabel>
                   {(members ?? []).map((m) => (
                     <DropdownMenuItem key={m.id} onClick={() => bulk.mutate({ action: "update", assigneeIds: [m.id] })} className="text-sm">{m.name || m.email}</DropdownMenuItem>
                   ))}
@@ -194,7 +194,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
           <table className="w-full min-w-[1080px] whitespace-nowrap text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs font-medium text-muted-foreground">
-                <th className="w-8 px-3 py-2.5">
+                <th className="w-8 px-3 py-3">
                   <input
                     type="checkbox"
                     aria-label="Select all"
@@ -202,16 +202,16 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                     onChange={() => setSelected(allChosen ? new Set() : new Set(visibleIds))}
                   />
                 </th>
-                <th className="px-3 py-2.5">Key</th>
-                <th className="px-3 py-2.5"><Header field="title" label="Title" /></th>
-                <th className="px-3 py-2.5">Type</th>
-                <th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5"><Header field="priority" label="Priority" /></th>
-                <th className="px-3 py-2.5 text-right">Points</th>
-                <th className="px-3 py-2.5">Sprint</th>
-                <th className="px-3 py-2.5">Epic</th>
-                <th className="px-3 py-2.5">Assignees</th>
-                <th className="px-3 py-2.5"><Header field="dueDate" label="Due" /></th>
+                <th className="px-3 py-3">Key</th>
+                <th className="px-3 py-3"><Header field="title" label="Title" /></th>
+                <th className="px-3 py-3">Type</th>
+                <th className="px-3 py-3">Status</th>
+                <th className="px-3 py-3"><Header field="priority" label="Priority" /></th>
+                <th className="px-3 py-3 text-right">Points</th>
+                <th className="px-3 py-3">Sprint</th>
+                <th className="px-3 py-3">Epic</th>
+                <th className="px-3 py-3">Assignees</th>
+                <th className="px-3 py-3"><Header field="dueDate" label="Due" /></th>
               </tr>
             </thead>
             <tbody>
@@ -220,34 +220,34 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                 const isSel = selected.has(t.id)
                 return (
                   <tr key={t.id} onClick={() => openTask(t.id)} className={`h-9 cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50 ${isSel ? "bg-primary/5" : ""}`}>
-                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" aria-label={`Select ${t.key}`} checked={isSel} onChange={() => toggle(t.id)} />
                     </td>
-                    <td className="px-3 py-2 font-mono text-[11px] tabular-nums text-muted-foreground">{t.key}</td>
-                    <td className="max-w-[320px] truncate px-3 py-2 text-[13px] font-medium text-foreground">{t.title}</td>
+                    <td className="px-3 py-2 font-mono text-xs tabular-nums text-muted-foreground">{t.key}</td>
+                    <td className="max-w-[320px] truncate px-3 py-2 text-xs font-medium text-foreground">{t.title}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-2">
                         <span className={`h-[7px] w-[7px] rounded-full ${TYPE_DOT[t.type] ?? "bg-muted-foreground"}`} />
                         {TYPE_LABEL[t.type] || t.type}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-foreground">
+                      <span className="inline-flex items-center gap-2 text-xs text-foreground">
                         <StatusIcon status={t.status} />
                         {STATUS_META[t.status].label}
                       </span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
                         <PriorityIcon priority={t.priority} />
                         {t.priority.charAt(0) + t.priority.slice(1).toLowerCase()}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 text-right text-xs">{t.storyPoints ?? <span className="text-muted-foreground">—</span>}</td>
-                    <td className="max-w-[140px] truncate px-3 py-2.5 text-xs text-muted-foreground">{t.sprintId ? sprintName.get(t.sprintId) || "—" : "Backlog"}</td>
-                    <td className="max-w-[160px] px-3 py-2.5 text-xs">
+                    <td className="px-3 py-3 text-right text-xs">{t.storyPoints ?? <span className="text-muted-foreground">—</span>}</td>
+                    <td className="max-w-[140px] truncate px-3 py-3 text-xs text-muted-foreground">{t.sprintId ? sprintName.get(t.sprintId) || "—" : "Backlog"}</td>
+                    <td className="max-w-[160px] px-3 py-3 text-xs">
                       {t.epic ? (
-                        <span className="inline-flex max-w-full items-center gap-1.5 truncate">
+                        <span className="inline-flex max-w-full items-center gap-2 truncate">
                           <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: t.epic.color }} />
                           <span className="truncate">{t.epic.title}</span>
                         </span>
@@ -255,10 +255,10 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-3 py-3">
                       {t.assignees.length ? <AvatarStack members={t.assignees} size="sm" /> : <span className="text-xs text-muted-foreground">—</span>}
                     </td>
-                    <td className="px-3 py-2.5 text-xs">
+                    <td className="px-3 py-3 text-xs">
                       {t.dueDate ? (
                         <span className={overdue ? "font-semibold text-red-600" : "text-muted-foreground"}>
                           {format(new Date(t.dueDate), "MMM d")}

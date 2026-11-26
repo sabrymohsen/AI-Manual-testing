@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { FileText, FileType2, Plus, Loader2, X, ExternalLink } from "lucide-react"
+import { FileText, FileType2, Plus, Loader2, X, ExternalLink } from "@/components/ui/icons"
 
 interface LinkedBrd {
   linkId: string
@@ -79,11 +79,11 @@ export function TaskLinkedBrds({ projectId, taskId }: { projectId: string; taskI
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400">
+        <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
           <FileText className="h-3.5 w-3.5" /> Linked BRD Documents
         </h4>
         {canManage && (
-          <button onClick={() => setAdding((v) => !v)} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold hover:bg-muted">
+          <button onClick={() => setAdding((v) => !v)} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold hover:bg-muted">
             <Plus className="h-3 w-3" /> Link BRD
           </button>
         )}
@@ -96,7 +96,7 @@ export function TaskLinkedBrds({ projectId, taskId }: { projectId: string; taskI
             onChange={(e) => setQ(e.target.value)}
             autoFocus
             placeholder="Search BRDs in this project…"
-            className="h-8 w-full rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
+            className="h-8 w-full rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-indigo-200"
           />
           {ql && (
             <div className="mt-1 divide-y rounded-lg border">
@@ -104,7 +104,7 @@ export function TaskLinkedBrds({ projectId, taskId }: { projectId: string; taskI
                 <p className="px-3 py-2 text-xs text-muted-foreground">No matches</p>
               ) : (
                 matches.map((b) => (
-                  <button key={b.id} onClick={() => linkBrd(b.id)} className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-slate-50">
+                  <button key={b.id} onClick={() => linkBrd(b.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50">
                     {b.fileType === "pdf" ? <FileType2 className="h-4 w-4 text-rose-500" /> : <FileText className="h-4 w-4 text-blue-500" />}
                     <span className="truncate">{b.name}</span>
                     <Plus className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
@@ -119,14 +119,14 @@ export function TaskLinkedBrds({ projectId, taskId }: { projectId: string; taskI
       {brds.length === 0 ? (
         <p className="text-xs text-muted-foreground">No BRDs linked to this story.</p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {brds.map((b) => (
-            <div key={b.linkId} className="group flex items-center gap-2 rounded-lg border bg-card px-2.5 py-1.5 text-sm">
+            <div key={b.linkId} className="group flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
               {b.fileType === "pdf" ? <FileType2 className="h-4 w-4 shrink-0 text-rose-500" /> : <FileText className="h-4 w-4 shrink-0 text-blue-500" />}
               <Link href={`/projects/${projectId}/brds/${b.id}`} className="min-w-0 flex-1 truncate font-medium hover:text-indigo-600 hover:underline">
                 {b.name}
               </Link>
-              <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${STATUS_STYLES[b.status] || STATUS_STYLES.Draft}`}>{b.status}</span>
+              <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[b.status] || STATUS_STYLES.Draft}`}>{b.status}</span>
               <Link href={`/projects/${projectId}/brds/${b.id}`} className="rounded p-1 text-slate-400 hover:bg-slate-100" title="Open">
                 <ExternalLink className="h-3.5 w-3.5" />
               </Link>

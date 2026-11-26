@@ -36,7 +36,7 @@ import {
   FileSpreadsheet,
   PanelLeftClose,
   PanelLeftOpen
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { BackButton } from "@/components/ui/back-button"
 import { usePermissionStore } from "@/stores/permissionStore"
 import { PermissionGate, GlobalAdminGate } from "@/components/permissions/PermissionGate"
@@ -54,7 +54,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { UserCircle2 } from "lucide-react"
+import { UserCircle2 } from "@/components/ui/icons"
 import type { ProjectPermission } from "@/lib/permissions"
 
 interface ProjectOption {
@@ -368,7 +368,7 @@ export default function DashboardLayout({
       >
         <div className={`flex h-12 shrink-0 items-center ${navCollapsed ? "justify-center px-2" : "justify-between pl-4 pr-2"}`}>
           {!navCollapsed && (
-            <Link href="/dashboard" className="flex items-center gap-2 rounded-md text-[13px] font-semibold tracking-tight text-foreground">
+            <Link href="/dashboard" className="flex items-center gap-2 rounded-md text-xs font-semibold tracking-tight text-foreground">
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-sm">
                 <Zap className="h-3.5 w-3.5 fill-current" />
               </span>
@@ -379,7 +379,7 @@ export default function DashboardLayout({
             {!navCollapsed && (
               <button
                 onClick={() => setShowSearch(true)}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 title="Open command bar (Ctrl + K)"
                 aria-label="Open command bar"
               >
@@ -388,7 +388,7 @@ export default function DashboardLayout({
             )}
             <button
               onClick={toggleNav}
-              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title={navCollapsed ? "Expand sidebar" : "Collapse sidebar (more room for the board)"}
               aria-label={navCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
@@ -477,7 +477,7 @@ export default function DashboardLayout({
             <button
               type="submit"
               title={navCollapsed ? "Sign Out" : undefined}
-              className={`flex h-8 w-full items-center rounded-md text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${navCollapsed ? "justify-center" : "gap-2.5 px-2.5"}`}
+              className={`flex h-8 w-full items-center rounded-md text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${navCollapsed ? "justify-center" : "gap-3 px-3"}`}
             >
               <LogOut className="h-4 w-4 shrink-0" />
               {!navCollapsed && "Sign Out"}
@@ -497,7 +497,7 @@ export default function DashboardLayout({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-1.5 rounded-md p-1 transition-colors hover:bg-accent"
+                className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-accent"
                 title="Account"
                 aria-label="Account"
               >
@@ -505,7 +505,7 @@ export default function DashboardLayout({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.avatarUrl} alt="" className="h-6 w-6 rounded-full object-cover" />
                 ) : (
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-[11px] font-medium text-primary">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
                     {(user?.name || user?.email || "?")[0]}
                   </span>
                 )}
@@ -554,8 +554,8 @@ export default function DashboardLayout({
 
       {/* ── COMMAND BAR SEARCH OVERLAY ────────────────────────────────── */}
       {showSearch && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh] backdrop-blur-[2px] animate-in fade-in duration-150" onClick={() => setShowSearch(false)}>
-          <div onClick={(e) => e.stopPropagation()} className="flex max-h-[400px] w-[560px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_16px_48px_rgba(0,0,0,0.18)] animate-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 pt-[15vh] backdrop-blur-[2px] animate-in fade-in duration-200" onClick={() => setShowSearch(false)}>
+          <div onClick={(e) => e.stopPropagation()} className="flex max-h-[400px] w-[560px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-[0_16px_48px_rgba(0,0,0,0.18)] animate-in zoom-in-95 duration-200">
             <div className="flex select-none items-center justify-between gap-3 border-b border-border px-3 py-2">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -563,7 +563,7 @@ export default function DashboardLayout({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Command Search: test cases, bugs, projects..." 
-                  className="h-9 w-full bg-transparent pl-9 text-sm outline-none placeholder:text-muted-foreground"
+                  className="h-9 w-full bg-transparent pl-8 text-sm outline-none placeholder:text-muted-foreground"
                   autoFocus
                 />
               </div>
@@ -572,8 +572,8 @@ export default function DashboardLayout({
               </button>
             </div>
 
-            <div className="flex-1 space-y-2 overflow-y-auto p-2 text-[13px]">
-              <span className="block px-2 pt-1 text-[11px] font-medium text-muted-foreground">Quick actions</span>
+            <div className="flex-1 space-y-2 overflow-y-auto p-2 text-xs">
+              <span className="block px-2 pt-1 text-xs font-medium text-muted-foreground">Quick actions</span>
               <div className="space-y-px">
                 <div 
                   onClick={() => { setShowSearch(false); router.push(getHref("/live-qa-session")) }}
@@ -603,7 +603,7 @@ export default function DashboardLayout({
 
 function NavSection({ label, collapsed, first }: { label: string; collapsed: boolean; first?: boolean }) {
   if (collapsed) return first ? null : <div className="mx-2 my-2 border-t border-border" />
-  return <span className={`px-2.5 pb-1 text-[11px] font-medium text-muted-foreground ${first ? "pt-1" : "pt-4"}`}>{label}</span>
+  return <span className={`px-3 pb-1 text-xs font-medium text-muted-foreground ${first ? "pt-1" : "pt-4"}`}>{label}</span>
 }
 
 function NavItem({
@@ -624,7 +624,7 @@ function NavItem({
       href={href}
       title={collapsed ? label : undefined}
       aria-current={active ? "page" : undefined}
-      className={`flex h-8 items-center rounded-md text-[13px] font-medium transition-colors ${collapsed ? "justify-center px-0" : "gap-2.5 px-2.5"} ${
+      className={`flex h-8 items-center rounded-md text-xs font-medium transition-colors ${collapsed ? "justify-center px-0" : "gap-3 px-3"} ${
         active
           ? "bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.05)] ring-1 ring-border"
           : "text-muted-foreground hover:bg-accent hover:text-foreground"

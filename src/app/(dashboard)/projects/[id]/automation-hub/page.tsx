@@ -45,7 +45,7 @@ import {
   ListRestart,
   Route,
   Video
-} from "lucide-react"
+} from "@/components/ui/icons"
 import HubTestsSection from "@/components/automation-hub/hub-tests"
 import HubRunsSection from "@/components/automation-hub/hub-runs"
 import { BrowserAgentSection } from "@/components/automation-hub/browser-agent/browser-agent"
@@ -439,7 +439,7 @@ export default function AutomationHubPage() {
   }
 
   return (
-    <div className="flex-1 space-y-5 text-xs font-semibold text-foreground">
+    <div className="flex-1 space-y-6 text-xs font-semibold text-foreground">
       
       {/* HUB HEADER */}
       <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
@@ -581,7 +581,7 @@ export default function AutomationHubPage() {
                   <button
                     key={v.id}
                     onClick={() => setHealView(v.id as "recoveries" | "locators")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                       healView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -596,18 +596,18 @@ export default function AutomationHubPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Self-healing recovery events queue</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Self-healing recovery events queue</span>
                   
                   {activeHeals.length > 0 ? (
                     <div className="space-y-3">
                       {activeHeals.map(event => (
-                        <div key={event.id} className="p-4 border rounded-xl bg-card space-y-3.5 shadow-3xs text-left">
+                        <div key={event.id} className="p-4 border rounded-xl bg-card space-y-3 shadow-3xs text-left">
                           <div className="flex justify-between items-center border-b pb-2 flex-wrap gap-2">
                             <div>
-                              <span className="text-[10.5px] font-semibold text-foreground block">{event.locatorName}</span>
-                              <span className="text-[9px] text-muted-foreground block font-mono mt-0.5">{event.className}.{event.methodName}</span>
+                              <span className="text-xs font-semibold text-foreground block">{event.locatorName}</span>
+                              <span className="text-xs text-muted-foreground block font-mono mt-0.5">{event.className}.{event.methodName}</span>
                             </div>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] border font-semibold uppercase ${
+                            <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs border font-semibold uppercase ${
                               event.confidence >= healingThreshold 
                                 ? "bg-emerald-50 text-emerald-700 border-emerald-250 animate-pulse" 
                                 : "bg-amber-50 text-amber-700 border-amber-250"
@@ -616,13 +616,13 @@ export default function AutomationHubPage() {
                             </span>
                           </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[10px] font-mono leading-relaxed">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono leading-relaxed">
                             <div className="bg-muted/50 border p-3 rounded-xl">
-                              <span className="text-muted-foreground font-semibold block uppercase text-[8.5px]">Old broken selector</span>
+                              <span className="text-muted-foreground font-semibold block uppercase text-xs">Old broken selector</span>
                               <span className="text-foreground block truncate select-all">{event.oldSelector}</span>
                             </div>
                             <div className="bg-primary/10 border border-primary/25 p-3 rounded-xl">
-                              <span className="text-indigo-650 font-semibold block uppercase text-[8.5px]">Healed recovery selector</span>
+                              <span className="text-indigo-650 font-semibold block uppercase text-xs">Healed recovery selector</span>
                               <span className="text-primary block truncate select-all">{event.newSelector}</span>
                             </div>
                           </div>
@@ -650,7 +650,7 @@ export default function AutomationHubPage() {
                       ))}
                     </div>
                   ) : (
-                    <p className="text-slate-450 italic text-center py-12">No healing events registered for {selectedTestName}. HTML document structure matches locators!</p>
+                    <p className="text-slate-450 text-center py-12">No healing events registered for {selectedTestName}. HTML document structure matches locators!</p>
                   )}
                 </div>
               </div>
@@ -658,10 +658,10 @@ export default function AutomationHubPage() {
               {/* Sidebar threshold configurators */}
               <div className="lg:col-span-4 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4 text-left">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Heal Settings</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Heal Settings</span>
                   
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-semibold">
+                    <div className="flex justify-between items-center text-xs font-semibold">
                       <span className="text-muted-foreground">Auto-Apply Confidence Threshold</span>
                       <span className="text-indigo-650 font-semibold">{healingThreshold}%</span>
                     </div>
@@ -673,7 +673,7 @@ export default function AutomationHubPage() {
                       onChange={(e) => setHealingThreshold(Number(e.target.value))}
                       className="w-full h-1 bg-muted rounded-lg cursor-pointer accent-indigo-650"
                     />
-                    <span className="text-[8.5px] text-muted-foreground leading-relaxed block font-medium">
+                    <span className="text-xs text-muted-foreground leading-relaxed block font-medium">
                       Recoveries with scores below this limit will wait in the manual review queue before modifying Page Objects.
                     </span>
                   </div>
@@ -696,7 +696,7 @@ export default function AutomationHubPage() {
                   <button
                     key={v.id}
                     onClick={() => setFlakeView(v.id as "timing" | "waits")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                       flakeView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -711,18 +711,18 @@ export default function AutomationHubPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Timing performance breakdowns</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Timing performance breakdowns</span>
                   
                   {activeFlakes.length > 0 ? (
                     <div className="space-y-4 text-left">
                       <div className="p-4 border rounded-xl bg-muted/50 space-y-3">
-                        <div className="flex justify-between items-center text-[10px] font-semibold border-b pb-1">
+                        <div className="flex justify-between items-center text-xs font-semibold border-b pb-1">
                           <span className="text-foreground">{activeFlakes[0].testName} Stability</span>
                           <span className="text-amber-600 font-semibold">Stability Index: {100 - activeFlakes[0].flakinessScore}%</span>
                         </div>
 
                         {/* Timing distribution bars */}
-                        <div className="space-y-3 pt-2 font-mono text-[9.5px]">
+                        <div className="space-y-3 pt-2 font-mono text-xs">
                           <div className="space-y-1">
                             <div className="flex justify-between font-semibold text-muted-foreground">
                               <span>Element wait time</span>
@@ -755,10 +755,10 @@ export default function AutomationHubPage() {
                         </div>
                       </div>
 
-                      <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl space-y-1.5">
+                      <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl space-y-2">
                         <div className="flex items-center gap-1 text-amber-700">
                           <AlertTriangle size={13} />
-                          <span className="text-[11px] font-medium">Root cause diagnosis recommendation</span>
+                          <span className="text-xs font-medium">Root cause diagnosis recommendation</span>
                         </div>
                         <p className="text-slate-650 leading-relaxed font-semibold">
                           {activeFlakes[0].rootCause === "sync"
@@ -769,7 +769,7 @@ export default function AutomationHubPage() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-slate-450 italic text-center py-12">No timing profiling recorded for {selectedTestName}. The test runs with 100% stability index.</p>
+                    <p className="text-slate-450 text-center py-12">No timing profiling recorded for {selectedTestName}. The test runs with 100% stability index.</p>
                   )}
                 </div>
               </div>
@@ -777,9 +777,9 @@ export default function AutomationHubPage() {
               {/* Sidebar stabilization config */}
               <div className="lg:col-span-4 space-y-6 text-left">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Profiler config Controls</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Profiler config Controls</span>
                   <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
-                    <span className="font-semibold text-foreground text-[10px]">Enable Flake Profiler</span>
+                    <span className="font-semibold text-foreground text-xs">Enable Flake Profiler</span>
                     <input
                       type="checkbox"
                       checked={stabilizeConfig}
@@ -787,7 +787,7 @@ export default function AutomationHubPage() {
                       className="h-4 w-4 rounded border-slate-350 text-indigo-650 focus:ring-primary cursor-pointer"
                     />
                   </div>
-                  <span className="text-[8.5px] text-muted-foreground block font-medium mt-1 leading-relaxed">
+                  <span className="text-xs text-muted-foreground block font-medium mt-1 leading-relaxed">
                     Builds the timing profile from each run's Playwright trace.
                   </span>
                 </div>
@@ -809,7 +809,7 @@ export default function AutomationHubPage() {
                   <button
                     key={v.id}
                     onClick={() => setMatrixView(v.id as "local" | "cloud")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                       matrixView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -824,21 +824,21 @@ export default function AutomationHubPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Matrix Results Grid</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Matrix Results Grid</span>
                   <div className="overflow-x-auto">
                     <table className="w-full text-center border-collapse">
                       <thead>
-                        <tr className="bg-muted/50 border-b text-[9.5px] font-semibold text-slate-450 uppercase tracking-wider text-left">
-                          <th className="p-3.5 text-left w-48">Test Class</th>
+                        <tr className="bg-muted/50 border-b text-xs font-semibold text-slate-450 uppercase tracking-wider text-left">
+                          <th className="p-3 text-left w-48">Test Class</th>
                           {["Chrome", "Firefox", "Edge", "Safari"].map(b => (
-                            <th key={b} className="p-3.5 text-center">{b}</th>
+                            <th key={b} className="p-3 text-center">{b}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y text-slate-650 text-left">
                         {["LoginFlowTest", "ApiCrudTest", "DbQueryTest", "SearchFlowTest"].map(t => (
                           <tr key={t} className="hover:bg-muted/50 transition-colors">
-                            <td className="p-3.5 font-semibold text-foreground text-left truncate w-48">{t}</td>
+                            <td className="p-3 font-semibold text-foreground text-left truncate w-48">{t}</td>
                             {["Chrome", "Firefox", "Edge", "Safari"].map(b => {
                               const cell = matrixMap[t][b]
                               let iconColor = "text-slate-300"
@@ -856,7 +856,7 @@ export default function AutomationHubPage() {
                               }
 
                               return (
-                                <td key={b} className="p-3.5 text-center">
+                                <td key={b} className="p-3 text-center">
                                   <button
                                     onClick={() => cell.status !== "not_run" && setSelectedMatrixCell(cell)}
                                     disabled={cell.status === "not_run"}
@@ -865,7 +865,7 @@ export default function AutomationHubPage() {
                                     }`}
                                   >
                                     <Icon className={`h-5.5 w-5.5 ${iconColor}`} />
-                                    <span className="text-[7.5px] text-muted-foreground font-mono font-medium block">
+                                    <span className="text-xs text-muted-foreground font-mono font-medium block">
                                       {cell.status !== "not_run"
                                         ? new Date(cell.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                         : "Not Run"
@@ -884,11 +884,11 @@ export default function AutomationHubPage() {
 
                 {matrixRecommendation && (
                   <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-3 text-left">
-                    <div className="flex items-center gap-1.5 border-b pb-1.5 text-primary">
+                    <div className="flex items-center gap-2 border-b pb-2 text-primary">
                       <Sparkles size={13} />
-                      <span className="text-[11px] font-medium">Cross-Browser Advice</span>
+                      <span className="text-xs font-medium">Cross-Browser Advice</span>
                     </div>
-                    <div className="flex items-start gap-2.5 bg-primary/10 border border-primary/25 p-3 rounded-xl">
+                    <div className="flex items-start gap-3 bg-primary/10 border border-primary/25 p-3 rounded-xl">
                       <Info className="text-primary shrink-0 mt-0.5" size={14} />
                       <p className="text-slate-650 leading-relaxed font-semibold">
                         {matrixRecommendation}
@@ -901,10 +901,10 @@ export default function AutomationHubPage() {
               {/* Sidebar matrix batch controls */}
               <div className="lg:col-span-4 space-y-6 text-left">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Batch Run Controls</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Batch Run Controls</span>
                   <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-medium text-slate-450 block">1. Select Suite Classes</label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-slate-450 block">1. Select Suite Classes</label>
                       <div className="space-y-1">
                         {["LoginFlowTest", "ApiCrudTest", "DbQueryTest", "SearchFlowTest"].map(t => (
                           <div key={t} className="flex items-center gap-2">
@@ -914,14 +914,14 @@ export default function AutomationHubPage() {
                               onChange={() => setBatchTests(prev => prev.includes(t) ? prev.filter(item => item !== t) : [...prev, t])}
                               className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
                             />
-                            <span className="text-foreground font-semibold font-mono text-[9.5px]">{t}</span>
+                            <span className="text-foreground font-semibold font-mono text-xs">{t}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[11px] font-medium text-slate-450 block">2. Target Browsers</label>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-slate-450 block">2. Target Browsers</label>
                       <div className="space-y-1">
                         {["Chrome", "Firefox", "Edge", "Safari"].map(b => (
                           <div key={b} className="flex items-center gap-2">
@@ -931,7 +931,7 @@ export default function AutomationHubPage() {
                               onChange={() => setBatchBrowsers(prev => prev.includes(b) ? prev.filter(item => item !== b) : [...prev, b])}
                               className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
                             />
-                            <span className="text-foreground font-semibold font-mono text-[9.5px]">{b}</span>
+                            <span className="text-foreground font-semibold font-mono text-xs">{b}</span>
                           </div>
                         ))}
                       </div>
@@ -940,7 +940,7 @@ export default function AutomationHubPage() {
                     {runningMatrixBatch ? (
                       <div className="space-y-2 text-center py-2">
                         <Loader2 size={16} className="animate-spin text-indigo-650 mx-auto" />
-                        <span className="text-[10px] text-primary font-semibold">
+                        <span className="text-xs text-primary font-semibold">
                           Executing {matrixProgress} of {matrixTotal} combinations...
                         </span>
                         <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
@@ -1000,7 +1000,7 @@ export default function AutomationHubPage() {
               <h3 className="text-base font-semibold text-foreground">Diagnostics Matrix Cell Details</h3>
               <button onClick={() => setSelectedMatrixCell(null)} className="text-muted-foreground hover:text-muted-foreground font-semibold">Close</button>
             </div>
-            <div className="space-y-2.5 text-[10.5px]">
+            <div className="space-y-3 text-xs">
               <div>
                 <span className="text-muted-foreground font-semibold block">Test Class</span>
                 <span className="font-mono font-semibold">{selectedMatrixCell.testId}</span>
@@ -1018,7 +1018,7 @@ export default function AutomationHubPage() {
               {selectedMatrixCell.errorMessage && (
                 <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl">
                   <span className="text-rose-700 font-semibold block">Error trace logs</span>
-                  <code className="text-rose-800 font-mono text-[9px] block select-all break-all mt-1">{selectedMatrixCell.errorMessage}</code>
+                  <code className="text-rose-800 font-mono text-xs block select-all break-all mt-1">{selectedMatrixCell.errorMessage}</code>
                 </div>
               )}
             </div>

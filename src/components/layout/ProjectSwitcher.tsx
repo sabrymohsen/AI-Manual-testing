@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { FolderKanban, ChevronDown, Plus, FolderOpen, Check } from "lucide-react"
+import { FolderKanban, ChevronDown, Plus, FolderOpen, Check } from "@/components/ui/icons"
 
 interface SwitcherProject {
   id: string
@@ -53,7 +53,7 @@ export function ProjectSwitcher({
       <div className="relative">
         <button
           onClick={() => setOpen((o) => !o)}
-          className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-border bg-card px-3 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="flex items-center gap-2 truncate">
             <FolderKanban className="h-4 w-4 shrink-0 text-primary" />
@@ -66,7 +66,7 @@ export function ProjectSwitcher({
 
         {open && (
           <div className="absolute left-0 right-0 top-9 z-50 max-h-80 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
-            <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+            <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
               Your Projects
             </div>
             {projects.length === 0 && (
@@ -79,11 +79,11 @@ export function ProjectSwitcher({
                   onSelect(p.id)
                   setOpen(false)
                 }}
-                className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] hover:bg-accent ${
+                className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-accent ${
                   p.id === activeProjectId ? "bg-primary/10" : ""
                 }`}
               >
-                <span className="flex items-center gap-1.5 truncate">
+                <span className="flex items-center gap-2 truncate">
                   {p.id === activeProjectId ? (
                     <Check className="h-3 w-3 shrink-0 text-primary" />
                   ) : (
@@ -91,7 +91,7 @@ export function ProjectSwitcher({
                   )}
                   <span className="truncate font-medium">{p.name}</span>
                 </span>
-                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${ROLE_BADGE[p.role] || ROLE_BADGE.Member}`}>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${ROLE_BADGE[p.role] || ROLE_BADGE.Member}`}>
                   {p.role}
                 </span>
               </button>
@@ -103,7 +103,7 @@ export function ProjectSwitcher({
                 router.push("/projects")
                 setOpen(false)
               }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent/40"
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-muted-foreground hover:bg-accent/40"
             >
               <FolderOpen className="h-3.5 w-3.5" /> Manage Projects
             </button>
@@ -113,7 +113,7 @@ export function ProjectSwitcher({
                   router.push("/projects/new")
                   setOpen(false)
                 }}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-primary hover:bg-accent/40"
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-primary hover:bg-accent/40"
               >
                 <Plus className="h-3.5 w-3.5" /> Create New Project
               </button>

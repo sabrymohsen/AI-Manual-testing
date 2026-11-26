@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Kanban, X, ExternalLink, CheckCircle2, AlertTriangle } from "lucide-react"
+import { Kanban, X, ExternalLink, CheckCircle2, AlertTriangle } from "@/components/ui/icons"
 
 /**
  * Create the bug board in the connected tracker.
@@ -111,8 +111,8 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="w-[520px] bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 text-xs font-semibold">
-        <div className="p-5 border-b flex items-center justify-between bg-accent/10">
-          <h3 className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
+        <div className="p-6 border-b flex items-center justify-between bg-accent/10">
+          <h3 className="font-semibold text-sm flex items-center gap-2 text-foreground">
             <Kanban className="h-4 w-4 text-primary" /> Create bug board in {providerName}
           </h3>
           <button
@@ -124,9 +124,9 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {error && (
-            <div className="p-2.5 rounded-lg border border-red-200 bg-red-50 text-red-700 font-semibold text-[11px]">
+            <div className="p-3 rounded-lg border border-red-200 bg-red-50 text-red-700 font-semibold text-xs">
               {error}
             </div>
           )}
@@ -139,17 +139,17 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
 
           {result ? (
             <div className="space-y-3">
-              <div className="flex items-center gap-2 text-emerald-700 font-semibold text-[13px]">
+              <div className="flex items-center gap-2 text-emerald-700 font-semibold text-xs">
                 <CheckCircle2 className="h-4 w-4" /> Board created
               </div>
-              <p className="text-[11px] text-foreground leading-relaxed">
+              <p className="text-xs text-foreground leading-relaxed">
                 {result.columns.length} column(s):{" "}
                 <span className="font-semibold">{result.columns.map((c) => c.name).join(" · ")}</span>
                 {result.bugTypeName && `, each showing only ${result.bugTypeName} items`}
                 {result.setAsDefault && " — and this project's bugs now sync onto it."}
               </p>
               {result.excluded.length > 0 && (
-                <p className="text-[10px] text-amber-700 font-medium">
+                <p className="text-xs text-amber-700 font-medium">
                   No column for {result.excluded.join(", ")} — a bug reaching one of those statuses
                   will not show on this board.
                 </p>
@@ -158,15 +158,15 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                 href={result.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-primary hover:text-primary font-semibold text-[11px]"
+                className="inline-flex items-center gap-2 text-primary hover:text-primary font-semibold text-xs"
               >
                 <ExternalLink className="h-3.5 w-3.5" /> Open the board in OpenProject
               </a>
             </div>
           ) : plan ? (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-[11px] text-muted-foreground font-medium">Board name</label>
+              <div className="space-y-2">
+                <label className="text-xs text-muted-foreground font-medium">Board name</label>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -176,9 +176,9 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                 />
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-[11px] text-muted-foreground font-medium">
+                  <p className="text-xs text-muted-foreground font-medium">
                     Columns — one per {providerName} status
                   </p>
                   <button
@@ -190,19 +190,19 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                           : new Set(plan.map((c) => c.statusId))
                       )
                     }
-                    className="text-[10px] font-semibold text-primary hover:text-primary"
+                    className="text-xs font-semibold text-primary hover:text-primary"
                   >
                     {selected.size === plan.length ? "Clear all" : "Select all"}
                   </button>
                 </div>
 
-                <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border p-1.5">
+                <div className="max-h-56 space-y-1 overflow-y-auto rounded-lg border p-2">
                   {plan.map((col) => {
                     const on = selected.has(col.statusId)
                     return (
                       <label
                         key={col.statusId}
-                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 text-[11px] font-bold transition-colors ${
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-2 text-xs font-bold transition-colors ${
                           on
                             ? "border-primary/25 bg-primary/10 text-primary"
                             : "border-transparent text-muted-foreground hover:bg-accent"
@@ -221,7 +221,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                   })}
                 </div>
 
-                <p className="text-[10px] text-muted-foreground font-medium leading-relaxed">
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                   Column names come from {providerName} itself.
                   {bugTypeName
                     ? ` Each shows only ${bugTypeName} items holding that status`
@@ -231,12 +231,12 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
               </div>
 
               {skipped.length > 0 && (
-                <div className="p-2.5 rounded-lg border border-amber-200 bg-amber-50">
-                  <p className="flex items-center gap-1.5 font-semibold text-amber-800 text-[10px]">
+                <div className="p-3 rounded-lg border border-amber-200 bg-amber-50">
+                  <p className="flex items-center gap-2 font-semibold text-amber-800 text-xs">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     No column for {skipped.map((c) => c.name).join(", ")}
                   </p>
-                  <p className="text-[10px] text-amber-800/90 font-medium mt-0.5 leading-relaxed">
+                  <p className="text-xs text-amber-800/90 font-medium mt-0.5 leading-relaxed">
                     A bug that reaches one of these statuses will not appear on the board at all —
                     it is not lost, just not shown. Tick them above unless you mean to hide them.
                   </p>

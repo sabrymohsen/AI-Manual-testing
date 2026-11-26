@@ -37,7 +37,7 @@ import {
   Pencil,
   FolderKanban,
   X
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ImportRequirementsModal } from "@/components/requirements/import-modal"
 import { EpicFeatureSelector } from "@/components/hierarchy/epic-feature-selector"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -646,7 +646,7 @@ export default function RequirementsDashboard() {
           <td className={`p-4 font-semibold text-foreground ${viewMode === "tree" ? "pl-8" : ""}`}>
             <button
               onClick={() => toggleExpanded(req.id)}
-              className="inline-flex items-center gap-1.5 hover:text-blue-600 transition-colors"
+              className="inline-flex items-center gap-2 hover:text-blue-600 transition-colors"
               title="Show traceability (test cases & bugs)"
             >
               <ChevronRight
@@ -658,9 +658,9 @@ export default function RequirementsDashboard() {
           </td>
           <td className="p-4 max-w-xs truncate" title={req.title}>{req.title}</td>
           {viewMode === "flat" && (
-            <td className="p-4 text-[11px]">
+            <td className="p-4 text-xs">
               {req.epic ? (
-                <span className="bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-violet-100">
+                <span className="bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-violet-100">
                   {req.epic.epicKey}
                 </span>
               ) : (
@@ -668,9 +668,9 @@ export default function RequirementsDashboard() {
               )}
             </td>
           )}
-          <td className="p-4 text-[11px]">
+          <td className="p-4 text-xs">
             {req.feature ? (
-              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-[10px] font-semibold border border-primary/25 whitespace-nowrap">
+              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs font-semibold border border-primary/25 whitespace-nowrap">
                 {req.feature.featureKey} {req.feature.name}
               </span>
             ) : (
@@ -680,14 +680,14 @@ export default function RequirementsDashboard() {
           <td className="p-4">{getPriorityBadge(req.priority)}</td>
           <td className="p-4">{getStatusBadge(req.status)}</td>
           <td className="p-4">
-            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-blue-100">
+            <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-blue-100">
               {req.testCases.length} case{req.testCases.length !== 1 && "s"}
             </span>
           </td>
           <td className="p-4">{getCoverageBadge(req.computedCoverage)}</td>
           <td className="p-4">
             {req.openBugsCount > 0 ? (
-              <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-red-100">
+              <span className="bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-red-100">
                 {req.openBugsCount} active
               </span>
             ) : (
@@ -695,7 +695,7 @@ export default function RequirementsDashboard() {
             )}
           </td>
           <td className="p-4 text-muted-foreground">{req.source}</td>
-          <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
+          <td className="p-4 text-right space-x-2 whitespace-nowrap">
             <Link href={`/projects/${projectId}/requirements/${req.id}`}>
               <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted text-muted-foreground rounded-lg">
                 <Eye size={14} />
@@ -748,20 +748,20 @@ export default function RequirementsDashboard() {
 
         {isOpen && (
           <tr className="bg-muted/60">
-            <td colSpan={colCount} className="px-6 pb-5 pt-1">
+            <td colSpan={colCount} className="px-6 pb-6 pt-1">
               <div className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-center gap-2 mb-3 text-[11px] font-medium text-muted-foreground">
+                <div className="flex items-center gap-2 mb-3 text-xs font-medium text-muted-foreground">
                   <Compass size={13} /> Traceability — Story → Test Cases → Bugs
                 </div>
 
                 {linkedCases.length === 0 ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 border border-dashed border-border px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 border border-dashed border-border px-3 py-3">
                     <span className="text-xs text-muted-foreground">No test cases linked to this user story yet.</span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => openLinkTestCasesModal(req)}
-                      className="h-7 border-blue-200 text-blue-700 hover:bg-blue-50 text-[11px] font-semibold"
+                      className="h-7 border-blue-200 text-blue-700 hover:bg-blue-50 text-xs font-semibold"
                     >
                       <LinkIcon size={12} className="mr-1" /> Link Test Cases
                     </Button>
@@ -782,31 +782,31 @@ export default function RequirementsDashboard() {
                               <span className="truncate">{c.testCase.title}</span>
                             </Link>
                             {bugs.length > 0 ? (
-                              <span className="shrink-0 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-red-100">
+                              <span className="shrink-0 bg-red-50 text-red-700 px-2 py-0.5 rounded-full text-xs font-semibold border border-red-100">
                                 {bugs.length} bug{bugs.length !== 1 && "s"}
                               </span>
                             ) : (
-                              <span className="shrink-0 text-[10px] font-semibold text-emerald-600">No bugs</span>
+                              <span className="shrink-0 text-xs font-semibold text-emerald-600">No bugs</span>
                             )}
                           </div>
                           {bugs.length > 0 && (
-                            <div className="border-t border-border px-3 py-2 space-y-1.5">
+                            <div className="border-t border-border px-3 py-2 space-y-2">
                               {bugs.map((bug) => (
                                 <Link
                                   key={bug.id}
                                   href={`/projects/${projectId}/bug-reports?bugId=${bug.id}`}
-                                  className="flex items-center gap-2 text-[11px] text-muted-foreground hover:text-red-600"
+                                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-red-600"
                                 >
                                   <AlertTriangle size={11} className="text-red-400 shrink-0" />
                                   <span className="font-semibold text-muted-foreground">{bug.bugKey || "BUG"}</span>
                                   <span className="truncate flex-1" title={bug.title}>{bug.title}</span>
-                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
                                     bug.severity === "Critical" ? "bg-red-100 text-red-700" :
                                     bug.severity === "High" ? "bg-orange-100 text-orange-700" :
                                     bug.severity === "Medium" ? "bg-amber-100 text-amber-700" :
                                     "bg-muted text-muted-foreground"
                                   }`}>{bug.severity}</span>
-                                  <span className="text-[9px] font-semibold text-muted-foreground w-16 text-right">{bug.status}</span>
+                                  <span className="text-xs font-semibold text-muted-foreground w-16 text-right">{bug.status}</span>
                                 </Link>
                               ))}
                             </div>
@@ -814,13 +814,13 @@ export default function RequirementsDashboard() {
                         </div>
                       )
                     })}
-                    <div className="flex items-center justify-between pt-1 text-[10px] text-muted-foreground">
+                    <div className="flex items-center justify-between pt-1 text-xs text-muted-foreground">
                       <span>{linkedCases.length} case{linkedCases.length !== 1 && "s"} · {traceBugs.length} bug{traceBugs.length !== 1 && "s"} traced</span>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => openLinkTestCasesModal(req)}
-                        className="h-6 text-blue-600 hover:bg-blue-50 text-[10px] font-semibold"
+                        className="h-6 text-blue-600 hover:bg-blue-50 text-xs font-semibold"
                       >
                         <LinkIcon size={11} className="mr-1" /> Manage links
                       </Button>
@@ -857,9 +857,9 @@ export default function RequirementsDashboard() {
             <tr className="bg-primary/10 border-y border-primary/25">
               <td className="p-2 w-8"></td>
               <td colSpan={colCount - 1} className="p-2 pl-10">
-                <span className="inline-flex items-center gap-2 text-[11px] font-semibold text-primary">
+                <span className="inline-flex items-center gap-2 text-xs font-semibold text-primary">
                   {feature.featureKey} — {feature.name}
-                  <span className="text-[10px] font-semibold text-indigo-400">
+                  <span className="text-xs font-semibold text-indigo-400">
                     {items.length} stor{items.length === 1 ? "y" : "ies"}
                   </span>
                 </span>
@@ -878,13 +878,13 @@ export default function RequirementsDashboard() {
     const { covered, cases } = epicRollup(stories)
     const pct = stories.length > 0 ? Math.round((covered / stories.length) * 100) : 0
     return (
-      <tr key={`epic-${epic.id}`} className="bg-gradient-to-r from-violet-50/90 to-violet-50/30 border-y border-violet-100/80 shadow-[inset_2px_0_0_theme(colors.violet.400)]">
+      <tr key={`epic-${epic.id}`} className=" bg-violet-50/90 border-y border-violet-100/80 shadow-[inset_2px_0_0_theme(colors.violet.400)]">
         <td className="p-3 w-8"></td>
         <td colSpan={colCount - 2} className="p-3">
           <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => toggleEpicCollapsed(epic.id)}
-              className="inline-flex items-center gap-1.5 font-semibold text-violet-900 hover:text-violet-600 transition-colors"
+              className="inline-flex items-center gap-2 font-semibold text-violet-900 hover:text-violet-600 transition-colors"
             >
               <ChevronRight
                 size={15}
@@ -894,30 +894,30 @@ export default function RequirementsDashboard() {
               {epic.epicKey}
               <span className="font-semibold text-violet-800 max-w-md truncate" title={epic.title}>— {epic.title}</span>
             </button>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+            <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${
               epic.status === "Active" ? "bg-emerald-50 text-emerald-700 border-emerald-100" :
               epic.status === "Completed" ? "bg-blue-50 text-blue-700 border-blue-100" :
               epic.status === "Archived" ? "bg-muted text-muted-foreground border-border" :
               "bg-amber-50 text-amber-700 border-amber-100"
             }`}>{epic.status}</span>
             {getPriorityBadge(epic.priority)}
-            <span className="text-[10px] font-semibold text-violet-500 whitespace-nowrap">
+            <span className="text-xs font-semibold text-violet-500 whitespace-nowrap">
               {stories.length} stor{stories.length === 1 ? "y" : "ies"} · {cases} case{cases !== 1 && "s"}
             </span>
             <span className="inline-flex items-center gap-2">
               <span className="h-1.5 w-24 rounded-full bg-violet-100 overflow-hidden">
                 <span className="block h-full rounded-full bg-violet-500 transition-all" style={{ width: `${pct}%` }} />
               </span>
-              <span className="text-[10px] font-semibold text-violet-600 tabular-nums">{covered}/{stories.length} covered</span>
+              <span className="text-xs font-semibold text-violet-600 tabular-nums">{covered}/{stories.length} covered</span>
             </span>
           </div>
         </td>
-        <td className="p-3 text-right whitespace-nowrap space-x-1.5">
+        <td className="p-3 text-right whitespace-nowrap space-x-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => { setNewEpicId(epic.id); setShowCreateModal(true) }}
-            className="h-7 px-2 hover:bg-violet-100 text-violet-700 rounded-lg text-[10px] font-semibold"
+            className="h-7 px-2 hover:bg-violet-100 text-violet-700 rounded-lg text-xs font-semibold"
             title="Add a user story under this epic"
           >
             <Plus size={12} className="mr-0.5" /> Story
@@ -949,11 +949,11 @@ export default function RequirementsDashboard() {
     <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-foreground">
       
       {/* Header breadcrumb & actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-5 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-6 gap-4">
         <div className="flex items-center gap-3">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight text-blue-600 ">
               Requirements Traceability
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Directly trace requirement user stories, test cases, and active bugs.</p>
@@ -963,36 +963,36 @@ export default function RequirementsDashboard() {
         {/* One accent-filled primary action; everything else is a uniform
             outline secondary so the hierarchy reads at a glance. */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs shadow-sm">
+          <Button onClick={() => setShowCreateModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-2 h-9 px-4 rounded-xl text-xs shadow-sm">
             <Plus size={15} /> Create Story
           </Button>
-          <Button onClick={openCreateEpicModal} variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+          <Button onClick={openCreateEpicModal} variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs">
             <FolderKanban size={15} className="text-violet-500" /> New Epic
           </Button>
-          <Button onClick={() => setShowImportModal(true)} variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+          <Button onClick={() => setShowImportModal(true)} variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs">
             <FileSpreadsheet size={15} className="text-blue-500" /> Import Excel
           </Button>
           <Button
             onClick={handleImportStories}
             disabled={importingStories}
             variant="outline"
-            className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs"
+            className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs"
           >
             {importingStories ? <Loader2 size={15} className="animate-spin" /> : <CloudDownload size={15} className="text-teal-500" />}
             {trackerName}
           </Button>
           <Link href={`/projects/${projectId}/scrum`}>
-            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs">
               <ListOrdered size={15} className="text-muted-foreground" /> Scrum Board
             </Button>
           </Link>
           <Link href={`/projects/${projectId}/generate-from-file`}>
-            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs">
               <Sparkles size={15} className="text-violet-500" /> Generate
             </Button>
           </Link>
           <Link href={`/projects/${projectId}/coverage-matrix`}>
-            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs">
+            <Button variant="outline" className="border-border hover:bg-muted/50 text-muted-foreground hover:text-foreground font-medium flex items-center gap-2 h-9 px-3 rounded-xl text-xs">
               <Layers size={15} className="text-primary" /> Matrix
             </Button>
           </Link>
@@ -1010,8 +1010,8 @@ export default function RequirementsDashboard() {
             { label: "Uncovered", value: stats.uncovered, color: "text-muted-foreground" },
             { label: "Coverage", value: `${stats.coveragePercentage}%`, color: "text-primary" }
           ].map((s) => (
-            <div key={s.label} className="px-5 py-4">
-              <span className="text-[11px] font-medium text-muted-foreground block">{s.label}</span>
+            <div key={s.label} className="px-6 py-4">
+              <span className="text-xs font-medium text-muted-foreground block">{s.label}</span>
               <span className={`text-2xl font-semibold mt-0.5 block tabular-nums ${s.color}`}>{s.value}</span>
             </div>
           ))}
@@ -1028,7 +1028,7 @@ export default function RequirementsDashboard() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by key, title, description..."
-              className="w-full bg-muted/50 border border-border pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
+              className="w-full bg-muted/50 border border-border pl-8 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
             />
           </div>
           
@@ -1094,7 +1094,7 @@ export default function RequirementsDashboard() {
             <button
               type="button"
               onClick={() => setViewMode("tree")}
-              className={`px-3 py-1.5 flex items-center gap-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+              className={`px-3 py-2 flex items-center gap-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === "tree" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
               title="Group stories under their epics"
@@ -1104,7 +1104,7 @@ export default function RequirementsDashboard() {
             <button
               type="button"
               onClick={() => setViewMode("flat")}
-              className={`px-3 py-1.5 flex items-center gap-1.5 rounded-[10px] text-xs font-semibold transition-all ${
+              className={`px-3 py-2 flex items-center gap-2 rounded-lg text-xs font-semibold transition-all ${
                 viewMode === "flat" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
               }`}
               title="Flat list of all stories"
@@ -1115,7 +1115,7 @@ export default function RequirementsDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted-foreground pt-3 border-t border-border">
-          <span className="text-[11px] text-muted-foreground mr-1">Quick filters</span>
+          <span className="text-xs text-muted-foreground mr-1">Quick filters</span>
 
           <button
             type="button"
@@ -1153,7 +1153,7 @@ export default function RequirementsDashboard() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground">
+              <thead className="bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
                 <tr>
                   <th className="p-4 w-8">
                     <input
@@ -1192,7 +1192,7 @@ export default function RequirementsDashboard() {
                             {!collapsedEpicIds.has(epic.id) && renderGroupedStories(stories)}
                             {!collapsedEpicIds.has(epic.id) && stories.length === 0 && (
                               <tr>
-                                <td colSpan={colCount} className="px-10 py-3 text-[11px] text-muted-foreground italic">
+                                <td colSpan={colCount} className="px-10 py-3 text-xs text-muted-foreground ">
                                   No user stories in this epic yet — use &quot;+ Story&quot; to add one, or move existing stories here.
                                 </td>
                               </tr>
@@ -1202,13 +1202,13 @@ export default function RequirementsDashboard() {
                       })}
                     {(epicFilter === "ALL" || epicFilter === "NONE") && noEpicStories.length > 0 && (
                       <Fragment key="no-epic">
-                        <tr className="bg-gradient-to-r from-slate-100/90 to-slate-50/40 border-y border-border/70 shadow-[inset_2px_0_0_theme(colors.slate.300)]">
+                        <tr className=" bg-slate-100/90 border-y border-border/70 shadow-[inset_2px_0_0_theme(colors.slate.300)]">
                           <td className="p-3 w-8"></td>
                           <td colSpan={colCount - 1} className="p-3">
                             <div className="flex items-center gap-3 flex-wrap">
                               <button
                                 onClick={() => toggleEpicCollapsed("__none__")}
-                                className="inline-flex items-center gap-1.5 font-semibold text-muted-foreground hover:text-foreground transition-colors"
+                                className="inline-flex items-center gap-2 font-semibold text-muted-foreground hover:text-foreground transition-colors"
                               >
                                 <ChevronRight
                                   size={15}
@@ -1217,7 +1217,7 @@ export default function RequirementsDashboard() {
                                 <FolderKanban size={14} className="text-muted-foreground" />
                                 No Epic
                               </button>
-                              <span className="text-[10px] font-semibold text-muted-foreground whitespace-nowrap">
+                              <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
                                 {noEpicStories.length} stor{noEpicStories.length === 1 ? "y" : "ies"} awaiting assignment
                               </span>
                               <span className="inline-flex items-center gap-2">
@@ -1227,7 +1227,7 @@ export default function RequirementsDashboard() {
                                     style={{ width: `${noEpicStories.length > 0 ? Math.round((epicRollup(noEpicStories).covered / noEpicStories.length) * 100) : 0}%` }}
                                   />
                                 </span>
-                                <span className="text-[10px] font-semibold text-muted-foreground tabular-nums">
+                                <span className="text-xs font-semibold text-muted-foreground tabular-nums">
                                   {epicRollup(noEpicStories).covered}/{noEpicStories.length} covered
                                 </span>
                               </span>
@@ -1257,7 +1257,7 @@ export default function RequirementsDashboard() {
             <div className="flex-grow p-6 overflow-y-auto space-y-4 text-foreground">
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Req Key *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Req Key *</label>
                   <input
                     type="text"
                     required
@@ -1268,7 +1268,7 @@ export default function RequirementsDashboard() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Title *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Title *</label>
                   <input
                     type="text"
                     required
@@ -1281,7 +1281,7 @@ export default function RequirementsDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Description (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">Description (Optional)</label>
                 <textarea
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
@@ -1291,7 +1291,7 @@ export default function RequirementsDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Acceptance Criteria (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">Acceptance Criteria (Optional)</label>
                 <textarea
                   value={newCriteria}
                   onChange={(e) => setNewCriteria(e.target.value)}
@@ -1314,7 +1314,7 @@ export default function RequirementsDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Priority</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Priority</label>
                   <select
                     value={newPriority}
                     onChange={(e) => setNewPriority(e.target.value)}
@@ -1327,7 +1327,7 @@ export default function RequirementsDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Status</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Status</label>
                   <select
                     value={newStatus}
                     onChange={(e) => setNewStatus(e.target.value)}
@@ -1343,7 +1343,7 @@ export default function RequirementsDashboard() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">External System</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">External System</label>
                   <select
                     value={newExternalSystem}
                     onChange={(e) => setNewExternalSystem(e.target.value)}
@@ -1357,7 +1357,7 @@ export default function RequirementsDashboard() {
                   </select>
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">External URL</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">External URL</label>
                   <input
                     type="url"
                     value={newExternalUrl}
@@ -1369,7 +1369,7 @@ export default function RequirementsDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Figma URL (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">Figma URL (Optional)</label>
                 <input
                   type="url"
                   value={newFigmaUrl}
@@ -1413,13 +1413,13 @@ export default function RequirementsDashboard() {
                   value={linkSearch}
                   onChange={(e) => setLinkSearch(e.target.value)}
                   placeholder="Search test cases by title..."
-                  className="w-full bg-muted/50 border border-border pl-8 pr-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  className="w-full bg-muted/50 border border-border pl-8 pr-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20"
                 />
               </div>
               <select
                 value={linkPriorityFilter}
                 onChange={(e) => setLinkPriorityFilter(e.target.value)}
-                className="px-2 py-1.5 border border-border bg-card rounded-lg text-[11px] focus:outline-none text-foreground"
+                className="px-2 py-2 border border-border bg-card rounded-lg text-xs focus:outline-none text-foreground"
               >
                 <option value="ALL">All Priorities</option>
                 <option value="Low">Low</option>
@@ -1430,7 +1430,7 @@ export default function RequirementsDashboard() {
               <select
                 value={linkExecFilter}
                 onChange={(e) => setLinkExecFilter(e.target.value)}
-                className="px-2 py-1.5 border border-border bg-card rounded-lg text-[11px] focus:outline-none text-foreground"
+                className="px-2 py-2 border border-border bg-card rounded-lg text-xs focus:outline-none text-foreground"
               >
                 <option value="ALL">Manual & Automated</option>
                 <option value="Manual">Manual</option>
@@ -1439,7 +1439,7 @@ export default function RequirementsDashboard() {
               <button
                 type="button"
                 onClick={() => setLinkUnlinkedOnly(v => !v)}
-                className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
+                className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-colors ${
                   linkUnlinkedOnly ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-card border-border hover:bg-muted/50 text-muted-foreground"
                 }`}
                 title="Show only test cases not linked to any user story"
@@ -1449,7 +1449,7 @@ export default function RequirementsDashboard() {
             </div>
 
             {/* Select-all row */}
-            <div className="px-6 py-2 border-b border-border flex items-center justify-between text-[11px] text-muted-foreground shrink-0">
+            <div className="px-6 py-2 border-b border-border flex items-center justify-between text-xs text-muted-foreground shrink-0">
               <button
                 type="button"
                 onClick={togglePickerSelectAll}
@@ -1492,27 +1492,27 @@ export default function RequirementsDashboard() {
                       <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all shrink-0 ${
                         isChecked ? "border-blue-600 bg-blue-600 text-white" : "border-slate-350 bg-card"
                       }`}>
-                        {isChecked && <span className="text-[9px] font-semibold">✓</span>}
+                        {isChecked && <span className="text-xs font-semibold">✓</span>}
                       </div>
                       <div className="flex-grow min-w-0">
                         <span className="text-xs font-semibold text-foreground block truncate" title={tc.title}>{tc.title}</span>
-                        <span className="text-[10px] text-muted-foreground block mt-0.5 truncate">
+                        <span className="text-xs text-muted-foreground block mt-0.5 truncate">
                           {pathParts.length > 0 ? pathParts.join(" / ") : "Unlinked"}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         {getPriorityBadge(tc.priority)}
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-muted/50 text-muted-foreground border border-border">
+                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-muted/50 text-muted-foreground border border-border">
                           {tc.executionType}
                         </span>
                         {linkedToThis && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                          <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">
                             Linked
                           </span>
                         )}
                         {otherLinks > 0 && (
                           <span
-                            className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-violet-50 text-violet-600 border border-violet-100"
+                            className="px-2 py-0.5 rounded text-xs font-semibold bg-violet-50 text-violet-600 border border-violet-100"
                             title={`Also linked to ${otherLinks} other stor${otherLinks === 1 ? "y" : "ies"}`}
                           >
                             +{otherLinks} stor{otherLinks === 1 ? "y" : "ies"}
@@ -1579,7 +1579,7 @@ export default function RequirementsDashboard() {
             <div className="p-6 space-y-4 text-foreground">
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-1">
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Epic Key</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Epic Key</label>
                   <input
                     type="text"
                     value={epicForm.epicKey}
@@ -1589,7 +1589,7 @@ export default function RequirementsDashboard() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Title *</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Title *</label>
                   <input
                     type="text"
                     required
@@ -1602,7 +1602,7 @@ export default function RequirementsDashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Description (Optional)</label>
+                <label className="block text-xs font-semibold text-muted-foreground mb-2">Description (Optional)</label>
                 <textarea
                   value={epicForm.description}
                   onChange={(e) => setEpicForm({ ...epicForm, description: e.target.value })}
@@ -1613,7 +1613,7 @@ export default function RequirementsDashboard() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Priority</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Priority</label>
                   <select
                     value={epicForm.priority}
                     onChange={(e) => setEpicForm({ ...epicForm, priority: e.target.value })}
@@ -1626,7 +1626,7 @@ export default function RequirementsDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Status</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2">Status</label>
                   <select
                     value={epicForm.status}
                     onChange={(e) => setEpicForm({ ...epicForm, status: e.target.value })}
@@ -1679,7 +1679,7 @@ export default function RequirementsDashboard() {
                       </p>
                       <div className="max-h-32 overflow-y-auto rounded-lg border border-border bg-muted/60 p-2 space-y-1">
                         {affected.map((r) => (
-                          <div key={r.id} className="text-[11px] text-muted-foreground truncate">
+                          <div key={r.id} className="text-xs text-muted-foreground truncate">
                             <span className="font-semibold text-muted-foreground">{r.requirementKey}</span> — {r.title}
                           </div>
                         ))}
@@ -1687,7 +1687,7 @@ export default function RequirementsDashboard() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                         epicDeleteMode === "unlink" ? "border-blue-300 bg-blue-50/40" : "border-border hover:bg-muted/50"
                       }`}>
                         <input
@@ -1702,7 +1702,7 @@ export default function RequirementsDashboard() {
                           <span className="text-muted-foreground">Stories move to the &quot;No Epic&quot; bucket. Nothing else changes.</span>
                         </span>
                       </label>
-                      <label className={`flex items-start gap-2.5 p-3 rounded-xl border cursor-pointer transition-colors ${
+                      <label className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
                         epicDeleteMode === "delete" ? "border-red-300 bg-red-50/40" : "border-border hover:bg-muted/50"
                       }`}>
                         <input
@@ -1744,7 +1744,7 @@ export default function RequirementsDashboard() {
 
       {/* Bulk actions bar */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-slate-700 px-4 py-2.5 flex items-center gap-3 flex-wrap">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] border border-slate-700 px-4 py-3 flex items-center gap-3 flex-wrap">
           <span className="text-xs font-semibold whitespace-nowrap">
             {selectedIds.length} stor{selectedIds.length === 1 ? "y" : "ies"} selected
           </span>
@@ -1753,7 +1753,7 @@ export default function RequirementsDashboard() {
             value=""
             disabled={bulkWorking}
             onChange={(e) => { if (e.target.value) handleBulkStatus(e.target.value) }}
-            className="bg-slate-800 border border-slate-600 rounded-lg text-[11px] px-2 py-1.5 focus:outline-none cursor-pointer"
+            className="bg-slate-800 border border-slate-600 rounded-lg text-xs px-2 py-2 focus:outline-none cursor-pointer"
           >
             <option value="" disabled>Set Status…</option>
             <option value="Draft">Draft</option>
@@ -1767,7 +1767,7 @@ export default function RequirementsDashboard() {
             value=""
             disabled={bulkWorking}
             onChange={(e) => { if (e.target.value) handleBulkPriority(e.target.value) }}
-            className="bg-slate-800 border border-slate-600 rounded-lg text-[11px] px-2 py-1.5 focus:outline-none cursor-pointer"
+            className="bg-slate-800 border border-slate-600 rounded-lg text-xs px-2 py-2 focus:outline-none cursor-pointer"
           >
             <option value="" disabled>Set Priority…</option>
             <option value="Low">Low</option>
@@ -1783,7 +1783,7 @@ export default function RequirementsDashboard() {
               if (e.target.value === "__none__") handleBulkMoveToEpic(null)
               else if (e.target.value) handleBulkMoveToEpic(e.target.value)
             }}
-            className="bg-slate-800 border border-slate-600 rounded-lg text-[11px] px-2 py-1.5 focus:outline-none cursor-pointer"
+            className="bg-slate-800 border border-slate-600 rounded-lg text-xs px-2 py-2 focus:outline-none cursor-pointer"
           >
             <option value="" disabled>Move to Epic…</option>
             <option value="__none__">No Epic (unassign)</option>
@@ -1793,7 +1793,7 @@ export default function RequirementsDashboard() {
           <Button
             onClick={() => setBulkDeleteConfirmOpen(true)}
             disabled={bulkWorking}
-            className="bg-red-600 hover:bg-red-700 text-white text-[11px] font-semibold h-7 px-3 rounded-lg"
+            className="bg-red-600 hover:bg-red-700 text-white text-xs font-semibold h-7 px-3 rounded-lg"
           >
             {bulkWorking ? <Loader2 className="animate-spin h-3 w-3 mr-1" /> : <Trash2 size={12} className="mr-1" />}
             Delete

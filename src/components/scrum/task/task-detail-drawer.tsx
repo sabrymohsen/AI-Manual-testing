@@ -51,7 +51,7 @@ import {
   Link as LinkIcon,
   Trash2,
   CopyPlus,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { format, formatDistanceToNow } from "date-fns"
 import { cn } from "@/lib/utils"
 
@@ -180,13 +180,13 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
   return (
     <TooltipProvider delayDuration={200}>
       {/* ── Top Bar Header (Theme Unified) ── */}
-      <div className="flex items-center justify-between border-b border-border px-6 py-3.5 bg-card/60 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-center justify-between border-b border-border px-6 py-3 bg-card/60 backdrop-blur-md shrink-0">
+        <div className="flex items-center gap-3">
           <TypeGlyph task={task} />
           
           <button
             onClick={copyKey}
-            className="flex items-center gap-1 font-mono text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/50 transition-all"
+            className="flex items-center gap-1 font-mono text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/60 px-3 py-1 rounded-md border border-border/50 transition-all"
           >
             <span>{task.key}</span>
             <Copy className="h-3 w-3" />
@@ -202,13 +202,13 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
             </Button>
           )}
 
-          <Button size="sm" variant="outline" onClick={assignToMe} disabled={assignedToMe} className="h-8 text-xs rounded-lg font-semibold px-2.5">
-            <UserPlus className="mr-1.5 h-3.5 w-3.5" /> {assignedToMe ? "Assigned" : "Assign me"}
+          <Button size="sm" variant="outline" onClick={assignToMe} disabled={assignedToMe} className="h-8 text-xs rounded-lg font-semibold px-3">
+            <UserPlus className="mr-2 h-3.5 w-3.5" /> {assignedToMe ? "Assigned" : "Assign me"}
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="rounded-lg p-1.5 hover:bg-muted text-muted-foreground transition-all" title="More Actions">
+              <button className="rounded-lg p-2 hover:bg-muted text-muted-foreground transition-all" title="More Actions">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
@@ -279,38 +279,38 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
 
           <DescriptionBlock task={task} onSave={save} />
           
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <SubtaskList projectId={projectId} taskId={task.id} subtasks={task.subtasks} />
           </div>
 
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <TaskLinkedIssues projectId={projectId} task={task} />
           </div>
 
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <TraceabilityLinks projectId={projectId} taskId={task.id} testCases={task.testCases ?? []} bugs={task.bugs ?? []} />
           </div>
 
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <TaskLinkedBrds projectId={projectId} taskId={task.id} />
           </div>
 
           {/* Generic links: anything the purpose-built sections above don't cover. */}
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <LinkedEntities projectId={projectId} entityId={task.id} entityType="TASK" />
           </div>
 
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <CommentList projectId={projectId} taskId={task.id} comments={task.comments ?? []} />
           </div>
 
-          <div className="border-t border-border/60 pt-5">
+          <div className="border-t border-border/60 pt-6">
             <TaskActivity activities={task.activities ?? []} />
           </div>
         </div>
 
         {/* Right Property Sidebar */}
-        <div className="overflow-y-auto p-5 bg-muted/15 space-y-6 min-w-0">
+        <div className="overflow-y-auto p-6 bg-muted/15 space-y-6 min-w-0">
           <TaskDetailsSidebar
             projectId={projectId}
             task={task}
@@ -335,14 +335,14 @@ function formatDescriptionHtml(text: string): string {
   html = html.replace(/<p>\s*(#{1,3}\s+.*?)\s*<\/p>/gi, "$1")
 
   // 2. Convert markdown headers to styled HTML with accent badges
-  html = html.replace(/(?:^|<p>)\s*###\s+(.*?)\s*(?:<\/p>|$)/gim, '<h3 class="text-sm font-extrabold tracking-tight text-foreground mt-5 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>$1</h3>')
-  html = html.replace(/(?:^|<p>)\s*##\s+(.*?)\s*(?:<\/p>|$)/gim, '<h2 class="text-base font-extrabold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span>$1</h2>')
-  html = html.replace(/(?:^|<p>)\s*#\s+(.*?)\s*(?:<\/p>|$)/gim, '<h1 class="text-lg font-black tracking-tight text-foreground mt-6 mb-3 pb-1 border-b border-border flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-indigo-600"></span>$1</h1>')
+  html = html.replace(/(?:^|<p>)\s*###\s+(.*?)\s*(?:<\/p>|$)/gim, '<h3 class="text-sm font-bold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>$1</h3>')
+  html = html.replace(/(?:^|<p>)\s*##\s+(.*?)\s*(?:<\/p>|$)/gim, '<h2 class="text-base font-bold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span>$1</h2>')
+  html = html.replace(/(?:^|<p>)\s*#\s+(.*?)\s*(?:<\/p>|$)/gim, '<h1 class="text-lg font-bold tracking-tight text-foreground mt-6 mb-3 pb-1 border-b border-border flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-indigo-600"></span>$1</h1>')
 
   // 3. Convert inline markdown bold, italic, code
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-foreground">$1</strong>')
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-foreground">$1</strong>')
   html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-  html = html.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 rounded bg-muted font-mono text-[11px] text-indigo-500 dark:text-indigo-400 font-bold">$1</code>')
+  html = html.replace(/`([^`]+)`/g, '<code class="px-2 py-0.5 rounded bg-muted font-mono text-xs text-indigo-500 dark:text-indigo-400 font-bold">$1</code>')
 
   // 4. Convert bullet lists
   html = html.replace(/-\s+\[ \]\s+(.*$)/gim, '<div class="flex items-center gap-2 text-xs py-1"><input type="checkbox" disabled class="rounded" /> <span>$1</span></div>')
@@ -380,7 +380,7 @@ function StatusPill({ status, onChange }: { status: TaskStatus; onChange: (s: Ta
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1 text-xs font-extrabold transition-all hover:scale-105 shadow-2xs",
+            "inline-flex items-center gap-2 rounded-xl border px-3 py-1 text-xs font-bold transition-all hover:scale-105 shadow-2xs",
             sc.bg,
             sc.text,
             sc.border
@@ -438,7 +438,7 @@ function TitleEditor({ initial, onSave, onCancel }: { initial: string; onSave: (
           onCancel()
         }
       }}
-      className="w-full resize-none rounded-xl border border-input px-3 py-2 text-xl font-extrabold leading-snug focus:outline-none focus:ring-2 focus:ring-ring"
+      className="w-full resize-none rounded-xl border border-input px-3 py-2 text-xl font-bold leading-snug focus:outline-none focus:ring-2 focus:ring-ring"
     />
   )
 }
@@ -480,14 +480,14 @@ function DescriptionBlock({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+        <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
           <FileText className="h-4 w-4 text-indigo-500" /> Description
         </h4>
         {!editing && (
           <button
             type="button"
             onClick={() => { setDraft(formatDescriptionHtml(task.description ?? "")); setEditing(true) }}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground transition-all"
           >
             <Pencil className="h-3 w-3" /> Edit
           </button>
@@ -504,7 +504,7 @@ function DescriptionBlock({
             <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={saving} className="rounded-xl font-semibold">
               Cancel
             </Button>
-            <span className="text-[11px] text-muted-foreground">Tip: Toolbar formats bold, lists, headers &amp; code.</span>
+            <span className="text-xs text-muted-foreground">Tip: Toolbar formats bold, lists, headers &amp; code.</span>
           </div>
         </div>
       ) : task.description && task.description.replace(/<[^>]*>/g, "").trim() ? (
@@ -529,7 +529,7 @@ function DescriptionBlock({
 function MiniAvatar({ member }: { member: ScrumMember | null }) {
   if (!member) return null
   return (
-    <span className="inline-flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-[9px] font-bold text-primary">
+    <span className="inline-flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-bold text-primary">
       {member.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={member.avatarUrl} alt={member.name || member.email} className="h-full w-full object-cover" />

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { X, Loader2, CheckCircle2, ExternalLink, AlertCircle } from "lucide-react"
+import { X, Loader2, CheckCircle2, ExternalLink, AlertCircle } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -71,18 +71,18 @@ export function OpenProjectMapParentModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-card border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b bg-accent/10">
+        <div className="flex items-center justify-between p-6 border-b bg-accent/10">
           <div>
             <h2 className="font-semibold text-lg">Map OpenProject Parent</h2>
             <p className="text-sm text-muted-foreground mt-0.5 font-medium" dir="auto">{groupName}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground">
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="p-5 space-y-4">
+        <div className="p-6 space-y-4">
           {currentParentId && !success && (
             <div className="rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/20 dark:border-blue-800 p-3 text-sm text-blue-800 dark:text-blue-300">
               <span className="font-semibold">Current parent:</span> #{currentParentId}
@@ -136,7 +136,7 @@ export function OpenProjectMapParentModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 p-5 pt-0">
+        <div className="flex items-center justify-between gap-3 p-6 pt-0">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
@@ -147,7 +147,7 @@ export function OpenProjectMapParentModal({
               disabled={saving || !parentId.trim()}
               className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-700 dark:hover:bg-blue-950/20"
             >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save Parent Mapping
             </Button>
             {onSavedAndSync && (
@@ -156,7 +156,7 @@ export function OpenProjectMapParentModal({
                 disabled={saving || !parentId.trim()}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Save & Sync Group
               </Button>
             )}

@@ -4,7 +4,7 @@ import { useParams } from "next/navigation"
 import { AppPageHeader } from "@/components/ui/app-page-header"
 import { ActiveProjectContextBar } from "@/components/ui/active-project-context-bar"
 import { OpenProjectModuleGroupsSection } from "@/components/integrations/openproject-module-groups-section"
-import { Globe, RefreshCw, AlertTriangle, ShieldCheck } from "lucide-react"
+import { Globe, RefreshCw, AlertTriangle, ShieldCheck } from "@/components/ui/icons"
 import { useState, useEffect } from "react"
 
 export default function ScopedOpenProjectSyncPage() {
@@ -77,7 +77,7 @@ export default function ScopedOpenProjectSyncPage() {
       {/* Sync Status Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="p-4 border rounded-xl bg-card space-y-2 border-border shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground/60 block">Connection Health</span>
+          <span className="text-xs font-medium text-muted-foreground/60 block">Connection Health</span>
           <div className="flex items-center gap-2">
             {status?.hasToken ? (
               <span className="text-emerald-600 font-semibold text-sm flex items-center gap-1">
@@ -89,27 +89,27 @@ export default function ScopedOpenProjectSyncPage() {
               </span>
             )}
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             Status checks base URL endpoint and verified auth token validation.
           </p>
         </div>
 
         <div className="p-4 border rounded-xl bg-card space-y-2 border-border shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground/60 block">Project Key mapping</span>
+          <span className="text-xs font-medium text-muted-foreground/60 block">Project Key mapping</span>
           <span className="font-semibold text-foreground text-sm block">
             {status?.openprojectProjectId || "Not Mapped"}
           </span>
-          <p className="text-[10px] text-muted-foreground font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             Defects and test runs will target this remote project reference.
           </p>
         </div>
 
         <div className="p-4 border rounded-xl bg-card space-y-2 border-border shadow-sm">
-          <span className="text-[11px] font-medium text-muted-foreground/60 block">Target Server</span>
+          <span className="text-xs font-medium text-muted-foreground/60 block">Target Server</span>
           <span className="font-semibold text-foreground text-sm block truncate">
             {status?.hostUrl ? status.hostUrl.replace(/^https?:\/\//, "") : "N/A"}
           </span>
-          <p className="text-[10px] text-muted-foreground font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             OpenProject host server configured in project integrations.
           </p>
         </div>

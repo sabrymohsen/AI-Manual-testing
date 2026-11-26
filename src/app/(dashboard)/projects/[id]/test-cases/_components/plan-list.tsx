@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { ClipboardCheck, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { ClipboardCheck, MoreHorizontal, Pencil, Plus, Trash2 } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 import { formatMinutes } from "./config"
 
@@ -44,8 +44,8 @@ export function PlanList({
 
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="flex items-center gap-1.5 border-b border-t px-3 py-2">
-        <span className="text-[11px] font-medium text-muted-foreground">Test plans</span>
+      <div className="flex items-center gap-2 border-b border-t px-3 py-2">
+        <span className="text-xs font-medium text-muted-foreground">Test plans</span>
         <button
           onClick={() => {
             setAdding(true)
@@ -83,7 +83,7 @@ export function PlanList({
         {isLoading && <div className="h-6 animate-pulse rounded bg-muted" />}
 
         {!isLoading && plans.length === 0 && !adding && (
-          <p className="px-2 py-2 text-[11px] leading-relaxed text-muted-foreground">
+          <p className="px-2 py-2 text-xs leading-relaxed text-muted-foreground">
             Save a set of cases you run again and again — select cases, then More → Add to plan.
           </p>
         )}
@@ -132,7 +132,7 @@ export function PlanList({
               }}
               title={`${p.caseCount} cases · est. ${formatMinutes(p.totalMinutes)}${p.unestimated ? ` (+${p.unestimated} unestimated)` : ""}`}
               className={cn(
-                "group cursor-pointer rounded-md px-2 py-1.5 text-sm transition-colors",
+                "group cursor-pointer rounded-md px-2 py-2 text-sm transition-colors",
                 isSelected ? "bg-primary/10 font-medium text-primary" : "hover:bg-accent/60",
                 isDrop && "ring-2 ring-primary ring-offset-1 ring-offset-background"
               )}
@@ -140,7 +140,7 @@ export function PlanList({
               <div className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4 shrink-0 text-primary/70" />
                 <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                <span className="text-[11px] tabular-nums text-muted-foreground">{p.caseCount}</span>
+                <span className="text-xs tabular-nums text-muted-foreground">{p.caseCount}</span>
                 <DropdownMenu>
                   <DropdownMenuTrigger
                     onClick={(e) => e.stopPropagation()}

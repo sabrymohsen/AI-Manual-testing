@@ -15,7 +15,7 @@ import { AssigneeSelect } from "@/components/team/assignee-select"
 import { ModuleSelect } from "@/components/bug-reports/module-select"
 import { ComposerText } from "@/components/ui/issue-composer"
 import { cn } from "@/lib/utils"
-import { AlertCircle, ChevronRight, FlaskConical, Hand, Loader2, X, Zap } from "lucide-react"
+import { AlertCircle, ChevronRight, FlaskConical, Hand, Loader2, X, Zap } from "@/components/ui/icons"
 
 const REVIEW_STATES: { value: TestCaseDraft["reviewState"]; hint: string }[] = [
   { value: "Draft", hint: "Still being written" },
@@ -133,29 +133,29 @@ export function TestCaseEditor({
     >
       {/* Top bar */}
       <div className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b border-border bg-card/95 px-4 backdrop-blur md:px-6">
-        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
-          <Link href={`/projects/${projectId}/test-cases`} className="flex items-center gap-1.5 hover:text-foreground">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
+          <Link href={`/projects/${projectId}/test-cases`} className="flex items-center gap-2 hover:text-foreground">
             <FlaskConical className="h-3.5 w-3.5" /> Test library
           </Link>
           <ChevronRight className="h-3.5 w-3.5 opacity-50" />
           <span aria-current="page" className="truncate font-medium text-foreground">{heading}</span>
         </nav>
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-2">
           <button
             type="button"
             onClick={onCancel}
-            className="h-8 rounded-md px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="h-8 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60"
+            className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-60"
           >
             {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {submitLabel}
-            <kbd className="hidden rounded bg-primary-foreground/20 px-1 font-sans text-[10px] sm:inline">⌘↵</kbd>
+            <kbd className="hidden rounded bg-primary-foreground/20 px-1 font-sans text-xs sm:inline">⌘↵</kbd>
           </button>
         </div>
       </div>
@@ -199,7 +199,7 @@ export function TestCaseEditor({
           </section>
 
           <section className="mt-6 border-t border-border pt-4">
-            <h2 className="mb-2 text-[13px] font-medium text-foreground">Covers user stories</h2>
+            <h2 className="mb-2 text-xs font-medium text-foreground">Covers user stories</h2>
             <LinkedRequirementsSelector
               projectId={projectId}
               selectedIds={draft.requirementIds}
@@ -209,7 +209,7 @@ export function TestCaseEditor({
         </div>
 
         {/* Properties */}
-        <aside className="space-y-5 lg:sticky lg:top-16 lg:self-start">
+        <aside className="space-y-6 lg:sticky lg:top-16 lg:self-start">
           <Property label="How it runs">
             <div className="grid grid-cols-2 gap-1 rounded-md bg-muted p-0.5" role="radiogroup" aria-label="Execution type">
               {(
@@ -226,7 +226,7 @@ export function TestCaseEditor({
                   title={o.hint}
                   onClick={() => set("executionType", o.value)}
                   className={cn(
-                    "inline-flex h-7 items-center justify-center gap-1.5 rounded-[5px] text-xs font-medium transition-colors",
+                    "inline-flex h-7 items-center justify-center gap-2 rounded text-xs font-medium transition-colors",
                     draft.executionType === o.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
@@ -234,7 +234,7 @@ export function TestCaseEditor({
                 </button>
               ))}
             </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
               {draft.executionType === "Manual"
                 ? "A tester follows the steps in a manual run."
                 : "Playwright runs the steps; they need actions it understands."}
@@ -247,7 +247,7 @@ export function TestCaseEditor({
               value={draft.suiteId}
               onChange={(v) => set("suiteId", v)}
               placeholder="No suite (Unfiled)"
-              className="h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+              className="h-8 w-full rounded-md border border-input bg-card px-3 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
             />
           </Property>
 
@@ -261,7 +261,7 @@ export function TestCaseEditor({
                   aria-checked={draft.priority === p.value}
                   onClick={() => set("priority", p.value)}
                   className={cn(
-                    "flex h-8 flex-col items-center justify-center gap-0.5 rounded-md border text-[11px] transition-colors",
+                    "flex h-8 flex-col items-center justify-center gap-0.5 rounded-md border text-xs transition-colors",
                     draft.priority === p.value
                       ? "border-primary/40 bg-primary/5 font-medium text-foreground"
                       : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -279,7 +279,7 @@ export function TestCaseEditor({
               id="tc-review"
               value={draft.reviewState}
               onChange={(e) => set("reviewState", e.target.value as TestCaseDraft["reviewState"])}
-              className="h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+              className="h-8 w-full rounded-md border border-input bg-card px-3 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
             >
               {REVIEW_STATES.map((r) => (
                 <option key={r.value} value={r.value}>
@@ -302,9 +302,9 @@ export function TestCaseEditor({
                 set("estimatedMinutes", v === "" ? "" : Math.max(0, Math.min(10000, Math.round(Number(v)) || 0)))
               }}
               placeholder="e.g. 10"
-              className="h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+              className="h-8 w-full rounded-md border border-input bg-card px-3 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
             />
-            <p className="mt-1 text-[11px] text-muted-foreground">How long one manual execution takes — used to size runs and plans.</p>
+            <p className="mt-1 text-xs text-muted-foreground">How long one manual execution takes — used to size runs and plans.</p>
           </Property>
 
           <Property label="Tags" htmlFor="tc-tags">
@@ -317,7 +317,7 @@ export function TestCaseEditor({
               projectId={projectId}
               value={draft.assignee}
               onChange={(v) => set("assignee", v)}
-              className="h-8 w-full rounded-md border border-input bg-card px-2.5 text-[13px] shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+              className="h-8 w-full rounded-md border border-input bg-card px-3 text-xs shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
             />
           </Property>
         </aside>
@@ -329,7 +329,7 @@ export function TestCaseEditor({
 function Property({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={htmlFor} className="mb-1.5 block text-[11px] font-medium text-muted-foreground">
+      <label htmlFor={htmlFor} className="mb-2 block text-xs font-medium text-muted-foreground">
         {label}
       </label>
       {children}
@@ -346,9 +346,9 @@ function TagInput({ id, value, onChange }: { id?: string; value: string[]; onCha
     setText("")
   }
   return (
-    <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-card px-1.5 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)] focus-within:ring-2 focus-within:ring-primary/30">
+    <div className="flex min-h-8 flex-wrap items-center gap-1 rounded-md border border-input bg-card px-2 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.03)] focus-within:ring-2 focus-within:ring-primary/30">
       {value.map((t) => (
-        <span key={t} className="inline-flex items-center gap-0.5 rounded bg-muted px-1.5 py-0.5 text-[11px]">
+        <span key={t} className="inline-flex items-center gap-0.5 rounded bg-muted px-2 py-0.5 text-xs">
           {t}
           <button
             type="button"
@@ -379,7 +379,7 @@ function TagInput({ id, value, onChange }: { id?: string; value: string[]; onCha
         }}
         onBlur={() => text.trim() && commit(text)}
         placeholder={value.length ? "" : "smoke, regression…"}
-        className="h-6 min-w-[80px] flex-1 bg-transparent px-1 text-[13px] outline-none placeholder:text-muted-foreground/60"
+        className="h-6 min-w-[80px] flex-1 bg-transparent px-1 text-xs outline-none placeholder:text-muted-foreground/60"
       />
     </div>
   )

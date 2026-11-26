@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { CheckCircle2, Clock, Loader2, MessageSquareWarning, Send, UserCheck } from "lucide-react"
+import { CheckCircle2, Clock, Loader2, MessageSquareWarning, Send, UserCheck } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 /**
@@ -133,15 +133,15 @@ export function BrdReviews({
 
       {canRequest && (
         <aside className="h-fit space-y-2 rounded-lg border bg-card p-3">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+          <h3 className="flex items-center gap-2 text-sm font-semibold">
             <UserCheck className="h-4 w-4 text-primary" /> Request a review
           </h3>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Reviewers approve or request changes on v{currentVersionNumber}. When all approve, the BRD becomes Reviewed.
           </p>
           <div className="max-h-48 space-y-0.5 overflow-y-auto">
             {members.map((m) => (
-              <label key={m.id} className={cn("flex cursor-pointer items-center gap-2 rounded px-1.5 py-1 text-xs hover:bg-accent", pendingIds.has(m.id) && "opacity-50")}>
+              <label key={m.id} className={cn("flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-accent", pendingIds.has(m.id) && "opacity-50")}>
                 <input
                   type="checkbox"
                   disabled={pendingIds.has(m.id)}
@@ -150,7 +150,7 @@ export function BrdReviews({
                   className="accent-[hsl(var(--primary))]"
                 />
                 <span className="truncate">{m.name}</span>
-                {pendingIds.has(m.id) && <span className="ml-auto text-[10px] text-muted-foreground">asked</span>}
+                {pendingIds.has(m.id) && <span className="ml-auto text-xs text-muted-foreground">asked</span>}
               </label>
             ))}
           </div>
@@ -164,7 +164,7 @@ export function BrdReviews({
           <button
             onClick={request}
             disabled={!picked.length || sending}
-            className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-md bg-primary text-xs font-medium text-primary-foreground disabled:opacity-60"
+            className="inline-flex h-8 w-full items-center justify-center gap-2 rounded-md bg-primary text-xs font-medium text-primary-foreground disabled:opacity-60"
           >
             {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
             Ask {picked.length || ""} to review
@@ -208,16 +208,16 @@ function ReviewRow({ r, mine, brdId, onDone }: { r: Review; mine: boolean; brdId
     <div className={cn("rounded-lg border p-3 text-xs", mine && r.decision === "Pending" && "border-primary/40 bg-primary/[0.03]")}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium">{r.reviewerName}</span>
-        <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium", meta.chip)}>
+        <span className={cn("inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium", meta.chip)}>
           <Icon className="h-3 w-3" /> {meta.label}
         </span>
         <span className="text-muted-foreground">v{r.versionNumber}</span>
-        <span className="ml-auto text-[11px] text-muted-foreground">
+        <span className="ml-auto text-xs text-muted-foreground">
           {r.requestedByName ? `asked by ${r.requestedByName} · ` : ""}
           {new Date(r.decidedAt ?? r.createdAt).toLocaleDateString()}
         </span>
       </div>
-      {r.comment && <p className="mt-1.5 whitespace-pre-wrap text-foreground">{r.comment}</p>}
+      {r.comment && <p className="mt-2 whitespace-pre-wrap text-foreground">{r.comment}</p>}
 
       {mine && r.decision === "Pending" && (
         <div className="mt-2 space-y-2">
@@ -232,14 +232,14 @@ function ReviewRow({ r, mine, brdId, onDone }: { r: Review; mine: boolean; brdId
             <button
               onClick={() => decide("Approved")}
               disabled={busy}
-              className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-600 px-3 text-[11px] font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 rounded-md bg-emerald-600 px-3 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
             >
               <CheckCircle2 className="h-3.5 w-3.5" /> Approve
             </button>
             <button
               onClick={() => decide("ChangesRequested")}
               disabled={busy}
-              className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-[11px] font-medium hover:bg-accent disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 rounded-md border px-3 text-xs font-medium hover:bg-accent disabled:opacity-60"
             >
               <MessageSquareWarning className="h-3.5 w-3.5" /> Request changes
             </button>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, usePathname } from "next/navigation"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 export function BackButton() {
@@ -19,7 +19,7 @@ export function BackButton() {
         variant="ghost"
         size="sm"
         onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground -ml-2"
+        className="flex items-center gap-2 text-muted-foreground hover:text-foreground -ml-2"
       >
         <ArrowLeft className="h-4 w-4" />
         Back

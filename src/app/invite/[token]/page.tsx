@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { Loader2, Check, X, Users } from "lucide-react"
+import { Loader2, Check, X, Users } from "@/components/ui/icons"
 
 interface Preview {
   email: string
@@ -105,11 +105,11 @@ export default function InviteAcceptPage() {
             {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
 
             {loggedIn ? (
-              <div className="flex gap-2 mt-5">
+              <div className="flex gap-2 mt-6">
                 <button
                   onClick={accept}
                   disabled={working}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
                 >
                   {working && <Loader2 className="h-4 w-4 animate-spin" />} Accept & Join
                 </button>
@@ -118,7 +118,7 @@ export default function InviteAcceptPage() {
                 </button>
               </div>
             ) : (
-              <div className="mt-5 space-y-2">
+              <div className="mt-6 space-y-2">
                 <p className="text-xs text-muted-foreground">Sign in or create an account to accept this invitation.</p>
                 <div className="flex gap-2">
                   <Link

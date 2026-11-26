@@ -16,7 +16,7 @@ import {
   Rocket,
   MessageCircle,
   Inbox,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { useNotificationStore, AppNotification } from "@/stores/notificationStore"
 
 const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string }>; accent: string; iconBg: string }> = {
@@ -157,7 +157,7 @@ export function NotificationBell({ token }: { token: string }) {
       >
         <Bell className="h-[18px] w-[18px]" />
         {unreadCount > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-semibold text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -173,7 +173,7 @@ export function NotificationBell({ token }: { token: string }) {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
                 >
                   <CheckCheck className="h-3.5 w-3.5" /> Mark all as read
                 </button>
@@ -188,12 +188,12 @@ export function NotificationBell({ token }: { token: string }) {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b px-3 pt-1.5">
+          <div className="flex gap-1 border-b px-3 pt-2">
             {(["all", "unread"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`-mb-px border-b-2 px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                className={`-mb-px border-b-2 px-3 py-2 text-xs font-semibold capitalize transition-colors ${
                   filter === f
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground"
@@ -201,7 +201,7 @@ export function NotificationBell({ token }: { token: string }) {
               >
                 {f}
                 {f === "unread" && unreadCount > 0 && (
-                  <span className="ml-1.5 rounded-full bg-red-100 px-1.5 text-[10px] font-semibold text-red-600">
+                  <span className="ml-2 rounded-full bg-red-100 px-2 text-xs font-semibold text-red-600">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
@@ -237,14 +237,14 @@ export function NotificationBell({ token }: { token: string }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-baseline justify-between gap-2">
-                          <p className={`truncate text-[13px] ${!n.read ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
+                          <p className={`truncate text-xs ${!n.read ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
                             {n.title}
                           </p>
-                          <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo(n.createdAt)}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
                         </div>
                         <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>
                         {n.project && (
-                          <span className="mt-1.5 inline-block rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                          <span className="mt-2 inline-block rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                             {n.project.name}
                           </span>
                         )}
@@ -274,7 +274,7 @@ export function NotificationBell({ token }: { token: string }) {
                   <button
                     onClick={() => loadPage(page + 1, false, filter)}
                     disabled={loadingMore}
-                    className="w-full py-2.5 text-center text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+                    className="w-full py-3 text-center text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
                   >
                     {loadingMore ? "Loading…" : "Load more"}
                   </button>

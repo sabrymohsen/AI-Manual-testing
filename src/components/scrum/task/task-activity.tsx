@@ -15,7 +15,7 @@ import {
   CheckCircle2,
   ChevronDown,
   History,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   created: Plus,
@@ -60,7 +60,7 @@ export function TaskActivity({ activities }: { activities: ScrumActivity[] }) {
     <div className="space-y-3">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        className="flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
       >
         <History className="h-3.5 w-3.5" /> Activity
         {activities.length > 0 && <span className="text-foreground">({activities.length})</span>}
@@ -74,7 +74,7 @@ export function TaskActivity({ activities }: { activities: ScrumActivity[] }) {
           <div className="space-y-4">
             {groups.map(([label, items]) => (
               <div key={label} className="space-y-2">
-                <p className="text-[11px] font-semibold text-foreground">{label}</p>
+                <p className="text-xs font-semibold text-foreground">{label}</p>
                 <ol className="space-y-2 border-l border-border pl-4">
                   {items.map((a) => {
                     const Icon = ICONS[a.action] ?? Pencil
@@ -89,7 +89,7 @@ export function TaskActivity({ activities }: { activities: ScrumActivity[] }) {
                           <span className="capitalize text-muted-foreground">{a.action.replace(/_/g, " ")}</span>
                           {a.details && <span className="text-muted-foreground"> — {a.details}</span>}
                         </div>
-                        <div className="text-[10px] text-muted-foreground/70" title={format(when, "PPpp")}>
+                        <div className="text-xs text-muted-foreground/70" title={format(when, "PPpp")}>
                           {format(when, "MMM d, yyyy · h:mm a")} · {formatDistanceToNow(when, { addSuffix: true })}
                         </div>
                       </li>

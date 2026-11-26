@@ -1,6 +1,6 @@
 "use client"
 
-import { CheckCircle2, CircleDashed, AlertTriangle, XCircle, Clock, Loader2, MinusCircle, Sparkles, Ban } from "lucide-react"
+import { CheckCircle2, CircleDashed, AlertTriangle, XCircle, Clock, Loader2, MinusCircle, Sparkles, Ban } from "@/components/ui/icons"
 import type { VisualEnvironment } from "@/lib/visual-tests/environments"
 
 export type ScreenStatus = "New" | "Passed" | "Unresolved" | "Accepted" | "Rejected" | "Error" | "Removed"
@@ -33,7 +33,7 @@ export function ScreenStatusBadge({ status, auto }: { status: ScreenStatus; auto
   const meta = SCREEN_STATUS_META[status] ?? SCREEN_STATUS_META.Unresolved
   const Icon = meta.icon
   return (
-    <span title={meta.hint} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${meta.className}`}>
+    <span title={meta.hint} className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${meta.className}`}>
       <Icon className="h-3 w-3" />
       {meta.label}
       {auto && <span className="font-normal opacity-80">· auto</span>}
@@ -56,32 +56,32 @@ export function RunStatusBadge({
 }) {
   if (status === "Queued")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
         <Clock className="h-3 w-3" /> Waiting to start
       </span>
     )
   if (status === "Running")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+      <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
         <Loader2 className="h-3 w-3 animate-spin" /> Capturing
       </span>
     )
   if (status === "Cancelled")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+      <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-semibold text-muted-foreground">
         <Ban className="h-3 w-3" /> Stopped
       </span>
     )
   if (status === "Failed" && !outcome)
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+      <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">
         <AlertTriangle className="h-3 w-3" /> Could not run
       </span>
     )
   if (outcome === "Passed" && newCount && newCount === passedCount)
     return (
       <span
-        className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700"
+        className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700"
         title="First screenshots of these pages were saved as the approved images. The next run compares against them."
       >
         <CheckCircle2 className="h-3 w-3" /> Baseline saved
@@ -90,7 +90,7 @@ export function RunStatusBadge({
   if (outcome === "Passed") return <ScreenStatusBadge status="Passed" />
   if (outcome === "Failed")
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+      <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">
         <XCircle className="h-3 w-3" /> Failed
       </span>
     )
@@ -124,11 +124,11 @@ export function EnvChips({ environments, max = 3 }: { environments: VisualEnviro
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
       {environments.slice(0, max).map(e => (
-        <span key={e.key} className="rounded border bg-card px-1.5 py-0.5 text-[11px] text-muted-foreground">
+        <span key={e.key} className="rounded border bg-card px-2 py-0.5 text-xs text-muted-foreground">
           {e.name} <span className="text-muted-foreground">{e.width}×{e.height}</span>
         </span>
       ))}
-      {environments.length > max && <span className="text-[11px] text-muted-foreground">+{environments.length - max}</span>}
+      {environments.length > max && <span className="text-xs text-muted-foreground">+{environments.length - max}</span>}
     </span>
   )
 }

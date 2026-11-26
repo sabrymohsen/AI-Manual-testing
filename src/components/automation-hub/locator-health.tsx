@@ -14,7 +14,7 @@ import {
   GitBranch,
   Target,
   Flame
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface LocatorHealth {
   locator: string
@@ -57,7 +57,7 @@ function ScoreDot({ score, band }: { score: number; band: string }) {
       <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
         <div className={`h-full ${meta.bg}`} style={{ width: `${score}%` }} />
       </div>
-      <span className={`font-mono font-semibold text-[10px] ${meta.text}`}>{score}</span>
+      <span className={`font-mono font-semibold text-xs ${meta.text}`}>{score}</span>
     </div>
   )
 }
@@ -118,8 +118,8 @@ export default function LocatorHealthPanel() {
     return (
       <div className="py-16 text-center bg-card border rounded-xl space-y-2">
         <ShieldCheck size={26} className="text-emerald-400 mx-auto" />
-        <p className="text-[11px] font-medium text-muted-foreground">No locator health signal yet</p>
-        <p className="text-[9.5px] text-muted-foreground font-medium max-w-md mx-auto">
+        <p className="text-xs font-medium text-muted-foreground">No locator health signal yet</p>
+        <p className="text-xs text-muted-foreground font-medium max-w-md mx-auto">
           Locator health is derived from self-healing history. Once a broken locator is recovered, it appears here with a
           stability score and recommendations.
         </p>
@@ -131,7 +131,7 @@ export default function LocatorHealthPanel() {
     <div className="space-y-4">
       {/* SUMMARY BAND */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           <div className="bg-card border rounded-xl p-3 shadow-sm col-span-2 md:col-span-2 flex items-center gap-3">
             <div className="relative h-12 w-12 shrink-0">
               <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
@@ -147,20 +147,20 @@ export default function LocatorHealthPanel() {
                   strokeLinecap="round"
                 />
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-foreground">
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-foreground">
                 {summary.avgScore}
               </span>
             </div>
             <div>
-              <p className="text-[11px] font-medium text-muted-foreground">Avg Stability</p>
-              <p className="text-[10px] font-semibold text-muted-foreground">{summary.total} tracked locators</p>
+              <p className="text-xs font-medium text-muted-foreground">Avg Stability</p>
+              <p className="text-xs font-semibold text-muted-foreground">{summary.total} tracked locators</p>
             </div>
           </div>
           {(["green", "yellow", "orange", "red"] as const).map((b) => (
             <div key={b} className="bg-card border rounded-xl p-3 shadow-sm">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <span className={`h-2.5 w-2.5 rounded-full ${BAND_META[b].bg}`} />
-                <span className="text-[11px] font-medium text-muted-foreground">{BAND_META[b].label}</span>
+                <span className="text-xs font-medium text-muted-foreground">{BAND_META[b].label}</span>
               </div>
               <p className="text-xl font-semibold text-foreground mt-1">{summary[b]}</p>
             </div>
@@ -173,12 +173,12 @@ export default function LocatorHealthPanel() {
         <div className="lg:col-span-2 bg-card border rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 flex-wrap p-3 border-b">
             <Target size={14} className="text-primary" />
-            <span className="text-[11px] font-medium text-muted-foreground">Locator Health</span>
-            <div className="ml-auto flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs font-medium text-muted-foreground">Locator Health</span>
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
               <select
                 value={pageFilter}
                 onChange={(e) => setPageFilter(e.target.value)}
-                className="h-8 rounded-lg border px-2 text-[9px] bg-muted/50 font-semibold cursor-pointer max-w-[150px]"
+                className="h-8 rounded-lg border px-2 text-xs bg-muted/50 font-semibold cursor-pointer max-w-[150px]"
               >
                 <option value="all">All Pages</option>
                 {pages.map((p) => (
@@ -196,7 +196,7 @@ export default function LocatorHealthPanel() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="h-8 rounded-lg border px-2 text-[9px] bg-muted/50 font-semibold cursor-pointer"
+                className="h-8 rounded-lg border px-2 text-xs bg-muted/50 font-semibold cursor-pointer"
               >
                 <option value="all">All Types</option>
                 {strategies.map((s) => (
@@ -208,7 +208,7 @@ export default function LocatorHealthPanel() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="h-8 rounded-lg border px-2 text-[9px] bg-muted/50 font-semibold cursor-pointer"
+                className="h-8 rounded-lg border px-2 text-xs bg-muted/50 font-semibold cursor-pointer"
               >
                 <option value="stability">Sort: Stability ↑</option>
                 <option value="resolution">Sort: Resolution ↓</option>
@@ -217,9 +217,9 @@ export default function LocatorHealthPanel() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-[9.5px]">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="bg-muted/50 text-muted-foreground text-[11px] font-medium">
+                <tr className="bg-muted/50 text-muted-foreground text-xs font-medium">
                   <th className="text-left px-3 py-2">Locator</th>
                   <th className="text-left px-2 py-2">Page</th>
                   <th className="text-right px-2 py-2">Resolution (est.)</th>
@@ -242,9 +242,9 @@ export default function LocatorHealthPanel() {
                         className="border-t hover:bg-primary/10 cursor-pointer"
                       >
                         <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             {isOpen ? <ChevronDown size={11} className="text-muted-foreground shrink-0" /> : <ChevronRight size={11} className="text-muted-foreground shrink-0" />}
-                            <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-[7.5px] font-semibold uppercase shrink-0">
+                            <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-xs font-semibold uppercase shrink-0">
                               {l.strategy}
                             </span>
                             <span className="font-mono text-foreground truncate max-w-[200px]">{l.locator}</span>
@@ -261,13 +261,13 @@ export default function LocatorHealthPanel() {
                       </tr>
                       {isOpen && (
                         <tr className="border-t bg-muted/60">
-                          <td colSpan={6} className="px-4 py-3 space-y-2.5">
+                          <td colSpan={6} className="px-4 py-3 space-y-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <div className="space-y-1">
-                                <span className="text-[11px] font-medium text-muted-foreground">Latest recovered candidate</span>
-                                <p className="font-mono text-[9px] text-primary break-all bg-card border rounded-lg p-2">{l.latestRecovered}</p>
+                                <span className="text-xs font-medium text-muted-foreground">Latest recovered candidate</span>
+                                <p className="font-mono text-xs text-primary break-all bg-card border rounded-lg p-2">{l.latestRecovered}</p>
                               </div>
-                              <div className="space-y-1 text-[9px] font-semibold text-muted-foreground">
+                              <div className="space-y-1 text-xs font-semibold text-muted-foreground">
                                 <div className="flex justify-between">
                                   <span className="text-muted-foreground">Recovery confidence</span>
                                   <span className="font-mono">{Math.round(l.avgConfidence * 100)}%</span>
@@ -283,12 +283,12 @@ export default function LocatorHealthPanel() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                              <span className="text-[11px] font-medium text-primary flex items-center gap-1">
+                              <span className="text-xs font-medium text-primary flex items-center gap-1">
                                 <Lightbulb size={10} /> Recommendations
                               </span>
                               <ul className="space-y-1">
                                 {l.recommendations.map((r, i) => (
-                                  <li key={i} className="text-[9px] text-muted-foreground font-medium flex items-start gap-1.5">
+                                  <li key={i} className="text-xs text-muted-foreground font-medium flex items-start gap-2">
                                     <span className="text-indigo-400 mt-0.5">→</span> {r}
                                   </li>
                                 ))}
@@ -309,26 +309,26 @@ export default function LocatorHealthPanel() {
         <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 p-3 border-b bg-rose-50/40">
             <Flame size={14} className="text-rose-500" />
-            <span className="text-[11px] font-medium text-rose-600">At-Risk Locators</span>
+            <span className="text-xs font-medium text-rose-600">At-Risk Locators</span>
           </div>
-          <div className="p-2 space-y-1.5 max-h-[520px] overflow-y-auto">
+          <div className="p-2 space-y-2 max-h-[520px] overflow-y-auto">
             {atRisk.map((l, i) => {
               const meta = BAND_META[l.band]
               return (
                 <button
                   key={l.locator}
                   onClick={() => setExpanded(l.locator)}
-                  className="w-full text-left p-2.5 rounded-xl border hover:border-border bg-card transition-all"
+                  className="w-full text-left p-3 rounded-xl border hover:border-border bg-card transition-all"
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] font-semibold text-slate-300 w-4">#{i + 1}</span>
-                    <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-[7px] font-semibold uppercase">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-slate-300 w-4">#{i + 1}</span>
+                    <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-xs font-semibold uppercase">
                       {l.strategy}
                     </span>
-                    <span className={`ml-auto font-mono font-semibold text-[10px] ${meta.text}`}>{l.stabilityScore}</span>
+                    <span className={`ml-auto font-mono font-semibold text-xs ${meta.text}`}>{l.stabilityScore}</span>
                   </div>
-                  <p className="font-mono text-[9px] text-foreground truncate mt-1">{l.locator}</p>
-                  <div className="flex items-center gap-2 mt-1 text-[8px] font-semibold text-muted-foreground">
+                  <p className="font-mono text-xs text-foreground truncate mt-1">{l.locator}</p>
+                  <div className="flex items-center gap-2 mt-1 text-xs font-semibold text-muted-foreground">
                     <span className="inline-flex items-center gap-0.5">
                       <Clock size={8} /> ~{l.estResolutionMs}ms
                     </span>
@@ -345,7 +345,7 @@ export default function LocatorHealthPanel() {
               )
             })}
             {atRisk.length === 0 && (
-              <p className="text-[9px] text-muted-foreground italic text-center py-8">No at-risk locators — all stable.</p>
+              <p className="text-xs text-muted-foreground text-center py-8">No at-risk locators — all stable.</p>
             )}
           </div>
         </div>

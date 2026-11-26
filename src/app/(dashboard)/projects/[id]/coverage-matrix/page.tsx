@@ -18,7 +18,7 @@ import {
   Bug,
   Search,
   ArrowRight
-} from "lucide-react"
+} from "@/components/ui/icons"
 import * as XLSX from "xlsx"
 
 interface MatrixRow {
@@ -141,30 +141,30 @@ export default function CoverageMatrixPage() {
   const getRiskBadge = (risk: string) => {
     switch (risk) {
       case "High":
-        return <span className="text-[10px] font-semibold bg-red-100 text-red-750 px-2 py-0.5 rounded border border-red-200">High Risk</span>
+        return <span className="text-xs font-semibold bg-red-100 text-red-750 px-2 py-0.5 rounded border border-red-200">High Risk</span>
       case "Medium":
-        return <span className="text-[10px] font-semibold bg-amber-100 text-amber-750 px-2 py-0.5 rounded border border-amber-255">Medium Risk</span>
+        return <span className="text-xs font-semibold bg-amber-100 text-amber-750 px-2 py-0.5 rounded border border-amber-255">Medium Risk</span>
       default:
-        return <span className="text-[10px] font-semibold bg-green-100 text-green-750 px-2 py-0.5 rounded border border-green-200">Low Risk</span>
+        return <span className="text-xs font-semibold bg-green-100 text-green-750 px-2 py-0.5 rounded border border-green-200">Low Risk</span>
     }
   }
 
   const getCoverageBadge = (cov: string) => {
     switch (cov) {
       case "Covered":
-        return <span className="text-[11px] font-medium bg-green-95 text-green-700 px-2 py-0.5 rounded-full">Covered</span>
+        return <span className="text-xs font-medium bg-green-95 text-green-700 px-2 py-0.5 rounded-full">Covered</span>
       case "PartiallyCovered":
-        return <span className="text-[11px] font-medium bg-yellow-95 text-yellow-750 px-2 py-0.5 rounded-full">Partial</span>
+        return <span className="text-xs font-medium bg-yellow-95 text-yellow-750 px-2 py-0.5 rounded-full">Partial</span>
       case "Uncovered":
-        return <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Uncovered</span>
+        return <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">Uncovered</span>
       case "Failed":
-        return <span className="text-[11px] font-medium bg-red-95 text-red-700 px-2 py-0.5 rounded-full">Failed</span>
+        return <span className="text-xs font-medium bg-red-95 text-red-700 px-2 py-0.5 rounded-full">Failed</span>
       case "Blocked":
-        return <span className="text-[11px] font-medium bg-orange-95 text-orange-700 px-2 py-0.5 rounded-full">Blocked</span>
+        return <span className="text-xs font-medium bg-orange-95 text-orange-700 px-2 py-0.5 rounded-full">Blocked</span>
       case "NotExecuted":
-        return <span className="text-[11px] font-medium bg-blue-95 text-blue-700 px-2 py-0.5 rounded-full">Not Executed</span>
+        return <span className="text-xs font-medium bg-blue-95 text-blue-700 px-2 py-0.5 rounded-full">Not Executed</span>
       default:
-        return <span className="text-[11px] font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{cov}</span>
+        return <span className="text-xs font-medium bg-muted text-muted-foreground px-2 py-0.5 rounded-full">{cov}</span>
     }
   }
 
@@ -172,11 +172,11 @@ export default function CoverageMatrixPage() {
     <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-7xl text-foreground">
       
       {/* Header breadcrumbs & actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-5 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-6 gap-4">
         <div className="flex items-center gap-3">
           <BackButton />
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-semibold tracking-tight text-blue-600 ">
               Traceability Matrix
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Multi-dimensional verification mapping (Requirement → Test Cases → Execution Result → Open Bugs).</p>
@@ -184,13 +184,13 @@ export default function CoverageMatrixPage() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs shadow-md">
+          <Button onClick={handleExportExcel} className="bg-green-600 hover:bg-green-700 text-white font-medium flex items-center gap-2 h-9 px-4 rounded-xl text-xs shadow-md">
             <Download size={14} /> Export Excel
           </Button>
-          <Button onClick={handleExportMarkdown} variant="outline" className="border-border hover:bg-muted/50 text-foreground font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
+          <Button onClick={handleExportMarkdown} variant="outline" className="border-border hover:bg-muted/50 text-foreground font-medium flex items-center gap-2 h-9 px-4 rounded-xl text-xs">
             <Layers size={14} /> Export Markdown
           </Button>
-          <Button onClick={handleExportJson} variant="outline" className="border-border hover:bg-muted/50 text-foreground font-medium flex items-center gap-1.5 h-9 px-4 rounded-xl text-xs">
+          <Button onClick={handleExportJson} variant="outline" className="border-border hover:bg-muted/50 text-foreground font-medium flex items-center gap-2 h-9 px-4 rounded-xl text-xs">
             <Download size={14} /> Export JSON
           </Button>
         </div>
@@ -205,7 +205,7 @@ export default function CoverageMatrixPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by key, title, module..."
-            className="w-full bg-muted/50 border border-border pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
+            className="w-full bg-muted/50 border border-border pl-8 pr-4 py-2 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-foreground"
           />
         </div>
 
@@ -254,11 +254,11 @@ export default function CoverageMatrixPage() {
             <p className="text-muted-foreground text-sm">Compiling project traceability records...</p>
           </div>
         ) : filteredMatrix.length === 0 ? (
-          <div className="p-16 text-center text-muted-foreground italic">No matrix records matched.</div>
+          <div className="p-16 text-center text-muted-foreground ">No matrix records matched.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
-              <thead className="bg-muted/50 border-b border-border text-[11px] font-medium text-muted-foreground">
+              <thead className="bg-muted/50 border-b border-border text-xs font-medium text-muted-foreground">
                 <tr>
                   <th className="p-4 w-24">Req Key</th>
                   <th className="p-4 w-48">Requirement Title</th>
@@ -288,11 +288,11 @@ export default function CoverageMatrixPage() {
                         const covered = group.rows.filter((r) => r.coverageStatus === "Covered").length
                         return [
                           <tr key={`epic-${key}`} className={key === "__none__" ? "bg-muted/50 border-y border-border" : "bg-violet-50/60 border-y border-violet-100/80"}>
-                            <td colSpan={7} className="px-4 py-2.5">
+                            <td colSpan={7} className="px-4 py-3">
                               <span className={`text-xs font-semibold ${key === "__none__" ? "text-muted-foreground" : "text-violet-900"}`}>
                                 {group.label}
                               </span>
-                              <span className={`ml-3 text-[10px] font-semibold ${key === "__none__" ? "text-muted-foreground" : "text-violet-500"}`}>
+                              <span className={`ml-3 text-xs font-semibold ${key === "__none__" ? "text-muted-foreground" : "text-violet-500"}`}>
                                 {group.rows.length} stor{group.rows.length === 1 ? "y" : "ies"} · {covered}/{group.rows.length} covered
                               </span>
                             </td>
@@ -329,14 +329,14 @@ export default function CoverageMatrixPage() {
                     {/* Linked Cases Checklist */}
                     <td className="p-4 space-y-2">
                       {row.linkedTestCases.length === 0 ? (
-                        <span className="text-slate-450 italic text-[11px]">No test cases linked</span>
+                        <span className="text-slate-450 text-xs">No test cases linked</span>
                       ) : (
                         row.linkedTestCases.map((tc) => (
                           <div key={tc.id} className="bg-muted/50 border border-border p-2 rounded-lg flex items-center justify-between gap-2">
                             <Link href={`/projects/${projectId}/test-cases/${tc.id}/edit`} className="font-semibold text-foreground hover:text-blue-600 truncate max-w-[200px]">
                               {tc.title}
                             </Link>
-                            <span className="text-[10px] text-muted-foreground font-mono">({tc.priority})</span>
+                            <span className="text-xs text-muted-foreground font-mono">({tc.priority})</span>
                           </div>
                         ))
                       )}
@@ -345,14 +345,14 @@ export default function CoverageMatrixPage() {
                     {/* Related Bugs list */}
                     <td className="p-4 space-y-2">
                       {row.openBugs.length === 0 ? (
-                        <span className="text-muted-foreground italic text-[11px]">-</span>
+                        <span className="text-muted-foreground text-xs">-</span>
                       ) : (
                         row.openBugs.map((bug) => (
-                          <div key={bug.id} className="bg-red-50/20 border border-red-100 p-2 rounded-lg flex items-center justify-between gap-1.5 text-[11px]">
+                          <div key={bug.id} className="bg-red-50/20 border border-red-100 p-2 rounded-lg flex items-center justify-between gap-2 text-xs">
                             <span className="font-semibold text-red-800 truncate max-w-[120px]" title={bug.title}>
                               {bug.title}
                             </span>
-                            <span className="text-[9px] bg-red-100 text-red-700 font-semibold px-1 rounded">
+                            <span className="text-xs bg-red-100 text-red-700 font-semibold px-1 rounded">
                               {bug.severity}
                             </span>
                           </div>

@@ -19,7 +19,7 @@ import {
 import { CompleteSprintModal } from "@/components/scrum/modals/complete-sprint-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X, FolderKanban, Filter } from "lucide-react"
+import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X, FolderKanban, Filter } from "@/components/ui/icons"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -232,7 +232,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
               {activeFilters.map((f) => (
                 <span
                   key={f.key}
-                  className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium"
+                  className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-xs font-medium"
                 >
                   <span className="text-muted-foreground">{f.label}:</span>
                   {f.value}
@@ -247,7 +247,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
               ))}
               <button
                 onClick={clearAllFilters}
-                className="ml-auto text-[11px] font-semibold text-primary underline-offset-2 hover:underline"
+                className="ml-auto text-xs font-semibold text-primary underline-offset-2 hover:underline"
               >
                 Clear all
               </button>
@@ -271,13 +271,13 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                 </button>
                 <FolderKanban className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold">Epics</span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
                   {epics.length}
                 </span>
                 {epicFilter && (
                   <button
                     onClick={() => clearFilter("epic")}
-                    className="ml-auto text-[11px] font-semibold text-primary underline-offset-2 hover:underline"
+                    className="ml-auto text-xs font-semibold text-primary underline-offset-2 hover:underline"
                   >
                     Show all
                   </button>
@@ -285,7 +285,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
               </div>
 
               {!epicsCollapsed && (
-                <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto border-t bg-muted/20 px-3 py-2.5">
+                <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto border-t bg-muted/20 px-3 py-3">
                   {epics.map((epic) => {
                     const epicTasks = (tasks ?? []).filter((t) => t.epicId === epic.id)
                     const epicPoints = epicTasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0)
@@ -297,7 +297,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                         aria-pressed={on}
                         title={`${epic.title} — ${epicTasks.length} issue(s)${epicPoints ? `, ${epicPoints} pts` : ""}`}
                         className={cn(
-                          "inline-flex max-w-[15rem] items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
+                          "inline-flex max-w-[15rem] items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
                           on
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-input bg-background text-foreground hover:bg-accent"
@@ -310,7 +310,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                         <span className="truncate">{epic.title}</span>
                         <span
                           className={cn(
-                            "shrink-0 rounded-full px-1.5 text-[10px] font-bold",
+                            "shrink-0 rounded-full px-2 text-xs font-bold",
                             epicTasks.length === 0
                               ? "bg-muted text-muted-foreground"
                               : "bg-primary/15 text-primary"
@@ -387,7 +387,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                   <DropdownMenuTrigger asChild>
                     <button
                       disabled={bulk.isPending}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input px-2.5 text-xs font-semibold hover:bg-muted disabled:opacity-60"
+                      className="inline-flex h-8 items-center gap-2 rounded-lg border border-input px-3 text-xs font-semibold hover:bg-muted disabled:opacity-60"
                     >
                       {bulk.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
                       Move to
@@ -411,7 +411,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                 <button
                   onClick={bulkDelete}
                   disabled={bulk.isPending}
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-destructive/30 px-2.5 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                  className="inline-flex h-8 items-center gap-2 rounded-lg border border-destructive/30 px-3 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-60"
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Delete
                 </button>
@@ -501,7 +501,7 @@ function Section({
   const allSelected = tasks.length > 0 && tasks.every((t) => selected.has(t.id))
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
-      <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-2.5">
+      <div className="flex items-center gap-2 border-b bg-muted/30 px-3 py-3">
         <button onClick={onToggle} className="rounded p-0.5 text-muted-foreground hover:bg-muted">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
@@ -517,30 +517,30 @@ function Section({
         )}
         {icon}
         <span className="text-sm font-semibold">{title}</span>
-        {badge && <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", badge.cls)}>{badge.label}</span>}
-        {subtitle && <span className="hidden text-[11px] text-muted-foreground sm:inline">· {subtitle}</span>}
+        {badge && <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", badge.cls)}>{badge.label}</span>}
+        {subtitle && <span className="hidden text-xs text-muted-foreground sm:inline">· {subtitle}</span>}
         <div className="ml-auto flex items-center gap-2">
           {points > 0 && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary" title="Total story points">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary" title="Total story points">
               {points} pts
             </span>
           )}
           {velocity ? (
             <span
-              className={cn("rounded-full px-2 py-0.5 text-[10px] font-semibold", over ? "bg-amber-100 text-amber-800" : "bg-muted text-muted-foreground")}
+              className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", over ? "bg-amber-100 text-amber-800" : "bg-muted text-muted-foreground")}
               title={`The team finishes about ${velocity} points per sprint (average of completed sprints)`}
             >
               {over ? `Over capacity · usual ${velocity} pts` : `Capacity ~${velocity} pts`}
             </span>
           ) : null}
-          <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+          <span className="rounded-full bg-background px-2 py-0.5 text-xs font-bold text-muted-foreground">
             {tasks.length}
           </span>
           {onStart && (
             <button
               onClick={onStart}
               disabled={sprintBusy}
-              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
               title="Start this sprint"
             >
               {sprintBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
@@ -551,7 +551,7 @@ function Section({
             <button
               onClick={onComplete}
               disabled={sprintBusy}
-              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-2.5 py-1 text-[11px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
+              className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
               title="Complete this sprint"
             >
               {sprintBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
@@ -600,7 +600,7 @@ function Section({
               ))}
               {provided.placeholder}
               {tasks.length === 0 && !snapshot.isDraggingOver && (
-                <div className="px-4 py-5 text-center text-xs text-muted-foreground">{emptyText}</div>
+                <div className="px-4 py-6 text-center text-xs text-muted-foreground">{emptyText}</div>
               )}
             </div>
           )}
@@ -624,7 +624,7 @@ function BacklogRow({
   return (
     <div
       onClick={onClick}
-      className={cn("flex h-9 cursor-pointer items-center gap-2.5 px-3 transition-colors hover:bg-muted/50", checked && "bg-primary/5")}
+      className={cn("flex h-9 cursor-pointer items-center gap-3 px-3 transition-colors hover:bg-muted/50", checked && "bg-primary/5")}
     >
       {onToggleSelect && (
         <input
@@ -638,16 +638,16 @@ function BacklogRow({
       <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center" title={`Priority: ${task.priority.toLowerCase()}`}>
         <PriorityIcon priority={task.priority} />
       </span>
-      <span className="w-16 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{task.key}</span>
+      <span className="w-16 shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{task.key}</span>
       <StatusIcon status={task.status} />
-      <span className="flex-1 truncate text-[13px] text-foreground">{task.title}</span>
+      <span className="flex-1 truncate text-xs text-foreground">{task.title}</span>
       {task.epic && (
         <DotLabel dotColor={task.epic.color} className="hidden md:inline-flex">
           {task.epic.title}
         </DotLabel>
       )}
       {task.storyPoints != null && (
-        <span className="hidden h-5 min-w-5 items-center justify-center rounded-[5px] border border-border px-1.5 text-[11px] tabular-nums text-muted-foreground sm:inline-flex">
+        <span className="hidden h-5 min-w-5 items-center justify-center rounded border border-border px-2 text-xs tabular-nums text-muted-foreground sm:inline-flex">
           {task.storyPoints}
         </span>
       )}

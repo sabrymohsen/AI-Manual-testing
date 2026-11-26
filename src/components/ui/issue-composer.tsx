@@ -15,7 +15,7 @@
 import * as React from "react"
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
-import { ChevronRight, Loader2, AlertCircle } from "lucide-react"
+import { ChevronRight, Loader2, AlertCircle } from "@/components/ui/icons"
 
 export function ComposerDialog({
   open,
@@ -73,11 +73,11 @@ export function ComposerDialog({
             if (canSubmit && !submitting) onSubmit()
           }}
         >
-          <div className="flex h-11 shrink-0 items-center gap-1.5 px-4 pr-12 text-xs text-muted-foreground">
+          <div className="flex h-11 shrink-0 items-center gap-2 px-4 pr-12 text-xs text-muted-foreground">
             {crumbs.map((c, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <ChevronRight className="h-3 w-3 shrink-0 opacity-50" />}
-                <span className={cn("flex min-w-0 items-center gap-1.5", i === crumbs.length - 1 && "text-foreground")}>{c}</span>
+                <span className={cn("flex min-w-0 items-center gap-2", i === crumbs.length - 1 && "text-foreground")}>{c}</span>
               </React.Fragment>
             ))}
           </div>
@@ -94,23 +94,23 @@ export function ComposerDialog({
             </p>
           )}
 
-          <div className="flex shrink-0 items-center gap-2 border-t border-border px-4 py-2.5">
+          <div className="flex shrink-0 items-center gap-2 border-t border-border px-4 py-3">
             <div className="flex min-w-0 flex-1 items-center gap-3 text-xs text-muted-foreground">{footerLeft}</div>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
-              className="h-8 rounded-md px-3 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="h-8 rounded-md px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!canSubmit || submitting}
-              className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-[13px] font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-8 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               {submitLabel}
-              <kbd className="hidden rounded bg-primary-foreground/20 px-1 font-sans text-[10px] sm:inline">⌘↵</kbd>
+              <kbd className="hidden rounded bg-primary-foreground/20 px-1 font-sans text-xs sm:inline">⌘↵</kbd>
             </button>
           </div>
         </form>
@@ -163,7 +163,7 @@ export function ComposerText({
   return (
     <div className="group/text mt-2">
       {label && (
-        <label htmlFor={id} className="mb-0.5 block text-[11px] font-medium text-muted-foreground">
+        <label htmlFor={id} className="mb-0.5 block text-xs font-medium text-muted-foreground">
           {label}
         </label>
       )}
@@ -174,16 +174,16 @@ export function ComposerText({
         rows={minRows}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full resize-none bg-transparent text-[13px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60"
+        className="w-full resize-none bg-transparent text-xs leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/60"
       />
-      {hint && <p className="text-[11px] text-muted-foreground/80 opacity-0 transition-opacity group-focus-within/text:opacity-100">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground/80 opacity-0 transition-opacity group-focus-within/text:opacity-100">{hint}</p>}
     </div>
   )
 }
 
 /** Row that holds the property chips. */
 export function ChipRow({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("mt-3 flex flex-wrap items-center gap-1.5", className)}>{children}</div>
+  return <div className={cn("mt-3 flex flex-wrap items-center gap-2", className)}>{children}</div>
 }
 
 /** The trigger look for a property chip (use with asChild on menu/popover triggers). */
@@ -197,7 +197,7 @@ export const ChipButton = React.forwardRef<
       type="button"
       {...props}
       className={cn(
-        "inline-flex h-7 max-w-[14rem] items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex h-7 max-w-[14rem] items-center gap-2 rounded-md border px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         active
           ? "border-border bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent"
           : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -259,7 +259,7 @@ export function ChipSelect({
   return (
     <label
       className={cn(
-        "relative inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-within:ring-2 focus-within:ring-ring",
+        "relative inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-2 rounded-md border px-2 text-xs transition-colors focus-within:ring-2 focus-within:ring-ring",
         active
           ? "border-border bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent"
           : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -289,8 +289,8 @@ export function ChipSelect({
 export function ComposerSection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="mt-4 border-t border-border pt-3">
-      <div className="mb-1.5 flex items-center justify-between">
-        <h4 className="text-[11px] font-medium text-muted-foreground">{title}</h4>
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-xs font-medium text-muted-foreground">{title}</h4>
         {action}
       </div>
       {children}

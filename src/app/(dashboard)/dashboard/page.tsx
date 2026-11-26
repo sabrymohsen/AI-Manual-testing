@@ -14,7 +14,7 @@ import {
   Activity,
   FolderOpen,
   Layers
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { AssignedToMeWidget } from "@/components/dashboard/assigned-to-me-widget"
 import { ActivityStream } from "@/components/dashboard/activity-stream"
 import { SprintHealthCard } from "@/components/dashboard/sprint-health-card"
@@ -81,7 +81,7 @@ export default function DashboardPage() {
     return (
       <div className="max-w-4xl mx-auto space-y-8 select-none text-xs font-semibold py-8">
         <div className="space-y-2 text-center md:text-left">
-          <h1 className="text-3xl font-semibold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center justify-center md:justify-start gap-2">
+          <h1 className="text-3xl font-semibold tracking-tight text-indigo-600 flex items-center justify-center md:justify-start gap-2">
             <Zap className="h-8 w-8 text-primary fill-current" /> Dashboard
           </h1>
           <p className="text-sm text-muted-foreground font-medium">
@@ -106,18 +106,18 @@ export default function DashboardPage() {
               <div 
                 key={p.id}
                 onClick={() => selectProject(p.id)}
-                className="p-5 border border-border hover:border-border hover:shadow-md cursor-pointer transition-all rounded-xl space-y-4 flex flex-col justify-between group bg-card"
+                className="p-6 border border-border hover:border-border hover:shadow-md cursor-pointer transition-all rounded-xl space-y-4 flex flex-col justify-between group bg-card"
               >
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors">{p.name}</span>
-                    <span className="text-[11px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">{p.environment}</span>
+                    <span className="text-xs font-medium px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">{p.environment}</span>
                   </div>
-                  <p className="text-[10px] text-muted-foreground font-medium leading-relaxed truncate">
+                  <p className="text-xs text-muted-foreground font-medium leading-relaxed truncate">
                     {p.baseUrl || "No target application URL set"}
                   </p>
                 </div>
-                <div className="flex items-center justify-between text-[10px] border-t pt-3 font-semibold text-primary">
+                <div className="flex items-center justify-between text-xs border-t pt-3 font-semibold text-primary">
                   <span>Enter Workspace Scope</span>
                   <Zap className="h-3.5 w-3.5 fill-current opacity-70 group-hover:scale-110 transition-transform" />
                 </div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         {/* Pass rate card */}
         <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-medium text-muted-foreground/60">Pass Rate</span>
+            <span className="text-xs font-medium text-muted-foreground/60">Pass Rate</span>
             <TrendingUp className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="space-y-1">
@@ -156,7 +156,7 @@ export default function DashboardPage() {
               />
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium">Based on latest test execution outputs.</p>
+          <p className="text-xs text-muted-foreground font-medium">Based on latest test execution outputs.</p>
         </div>
 
         {/* User stories by board column. The dashboard previously reported test
@@ -164,14 +164,14 @@ export default function DashboardPage() {
             much is still to do, and how much is sitting in Testing. */}
         <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-medium text-muted-foreground/60">User Stories</span>
+            <span className="text-xs font-medium text-muted-foreground/60">User Stories</span>
             <Layers className="h-4 w-4 text-violet-500" />
           </div>
           <div className="space-y-1">
             <span className="text-2xl font-semibold text-foreground">
               {scrum.metrics?.stories.total ?? 0} total
             </span>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-muted-foreground font-semibold">
                 {scrum.metrics?.stories.byStatus.TODO ?? 0} to do
               </span>
@@ -188,7 +188,7 @@ export default function DashboardPage() {
 
           {/* Full column breakdown, so nothing is hidden behind the headline. */}
           {(scrum.metrics?.stories.total ?? 0) > 0 && (
-            <div className="space-y-1.5 pt-0.5">
+            <div className="space-y-2 pt-0.5">
               <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
                 {([
                   ["TODO", "bg-slate-400"],
@@ -210,7 +210,7 @@ export default function DashboardPage() {
                   )
                 })}
               </div>
-              <p className="text-[10px] text-muted-foreground font-medium">
+              <p className="text-xs text-muted-foreground font-medium">
                 {scrum.metrics!.stories.completionPct}% complete
                 {scrum.metrics!.stories.totalPoints > 0 && ` · ${scrum.metrics!.stories.totalPoints} pts`}
                 {scrum.metrics!.activeSprint && ` · ${scrum.metrics!.activeSprint.name}`}
@@ -219,7 +219,7 @@ export default function DashboardPage() {
           )}
 
           {(scrum.metrics?.stories.total ?? 0) === 0 && (
-            <p className="text-[10px] text-muted-foreground font-medium">
+            <p className="text-xs text-muted-foreground font-medium">
               No stories on the board yet.
             </p>
           )}
@@ -228,52 +228,52 @@ export default function DashboardPage() {
         {/* Test Case Breakdown */}
         <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-medium text-muted-foreground/60">Test Cases</span>
+            <span className="text-xs font-medium text-muted-foreground/60">Test Cases</span>
             <FileText className="h-4 w-4 text-primary" />
           </div>
           <div className="space-y-1">
             <span className="text-2xl font-semibold text-foreground">{caseMetrics.total} total</span>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-primary font-semibold">{caseMetrics.manual} manual</span>
               <span>•</span>
               <span className="text-emerald-600 font-semibold">{caseMetrics.automated} auto</span>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium">Suites configured in Cockpit.</p>
+          <p className="text-xs text-muted-foreground font-medium">Suites configured in Cockpit.</p>
         </div>
 
         {/* Open Bugs card */}
         <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-medium text-muted-foreground/60">Open Defects</span>
+            <span className="text-xs font-medium text-muted-foreground/60">Open Defects</span>
             <Bug className="h-4 w-4 text-rose-500" />
           </div>
           <div className="space-y-1">
             <span className="text-2xl font-semibold text-rose-600">{bugMetrics.open} bugs</span>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-amber-600 font-semibold">{bugMetrics.fixed} fixed</span>
               <span>•</span>
               <span className="text-muted-foreground font-semibold">{bugMetrics.closed} closed</span>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium">Defects awaiting sync maps.</p>
+          <p className="text-xs text-muted-foreground font-medium">Defects awaiting sync maps.</p>
         </div>
 
         {/* Test Runs status */}
         <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-[11px] font-medium text-muted-foreground/60">Total runs</span>
+            <span className="text-xs font-medium text-muted-foreground/60">Total runs</span>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="space-y-1">
             <span className="text-2xl font-semibold text-foreground">{runMetrics.total} runs</span>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium">
               <span className="text-emerald-600 font-semibold">{runMetrics.passed} passed</span>
               <span>•</span>
               <span className="text-rose-600 font-semibold">{runMetrics.failed} failed</span>
             </div>
           </div>
-          <p className="text-[10px] text-muted-foreground font-medium">Playwright + manual test runs.</p>
+          <p className="text-xs text-muted-foreground font-medium">Playwright + manual test runs.</p>
         </div>
       </div>
 
@@ -296,10 +296,10 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Defects */}
-      <div className="p-5 border border-border shadow-sm space-y-4 rounded-xl bg-card">
-        <span className="text-[11px] font-medium text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>
+      <div className="p-6 border border-border shadow-sm space-y-4 rounded-xl bg-card">
+        <span className="text-xs font-medium text-muted-foreground/60 block border-b pb-2">Recent Defect Logs</span>
         {recentBugs.length === 0 ? (
-          <p className="text-muted-foreground italic text-center py-8">No defects recorded in this workspace scope yet.</p>
+          <p className="text-muted-foreground text-center py-8">No defects recorded in this workspace scope yet.</p>
         ) : (
           <div className="space-y-2">
             {recentBugs.map((bug) => (
@@ -310,9 +310,9 @@ export default function DashboardPage() {
               >
                 <div className="space-y-0.5 min-w-0">
                   <span className="font-semibold text-foreground block truncate">{bug.title}</span>
-                  <span className="text-[10px] text-muted-foreground block">{bug.bugKey || "Not synced"} • Severity: {bug.severity}</span>
+                  <span className="text-xs text-muted-foreground block">{bug.bugKey || "Not synced"} • Severity: {bug.severity}</span>
                 </div>
-                <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded shrink-0 ${
                   bug.status === "Open" ? "bg-red-50 text-rose-600 border border-red-100" :
                   bug.status === "Fixed" ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-muted text-muted-foreground"
                 }`}>

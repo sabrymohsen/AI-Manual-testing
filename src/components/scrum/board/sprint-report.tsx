@@ -6,7 +6,7 @@
  * same functions as the Reports page, built from each task's status history.
  */
 import { useQuery } from "@tanstack/react-query"
-import { BarChart3, Loader2 } from "lucide-react"
+import { BarChart3, Loader2 } from "@/components/ui/icons"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -57,7 +57,7 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
         ) : error ? (
           <p className="py-8 text-sm text-destructive">{(error as Error).message}</p>
         ) : data ? (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="Committed" value={`${data.burndown.totalPoints} ${unit}`} />
               <Stat label="Remaining" value={`${remaining} ${unit}`} tone={behind ? "warn" : undefined} hint={idealNow !== undefined ? `ideal today: ${idealNow}` : undefined} />
@@ -119,9 +119,9 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "warn" }) {
   return (
     <div className="rounded-lg border bg-card p-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className={`mt-0.5 text-lg font-semibold ${tone === "warn" ? "text-amber-600" : "text-foreground"}`}>{value}</p>
-      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   )
 }

@@ -3,7 +3,7 @@
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Upload, ChevronRight, Check, AlertCircle, FileSpreadsheet, Settings2, Eye, Loader2, ArrowLeft, Download } from "lucide-react"
+import { Upload, ChevronRight, Check, AlertCircle, FileSpreadsheet, Settings2, Eye, Loader2, ArrowLeft, Download } from "@/components/ui/icons"
 import * as XLSX from "xlsx"
 
 interface ImportModalProps {
@@ -471,7 +471,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-background border rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      <div className="bg-background border rounded-xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-[0_8px_24px_rgba(0,0,0,0.08)] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="px-6 py-4 border-b flex items-center justify-between bg-accent/20">
@@ -486,11 +486,11 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
           
           {/* Progress Indicators */}
           <div className="flex items-center gap-2 text-xs font-semibold">
-            <span className={`px-2.5 py-1 rounded-full ${step === 1 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>1. Upload</span>
+            <span className={`px-3 py-1 rounded-full ${step === 1 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>1. Upload</span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className={`px-2.5 py-1 rounded-full ${step === 2 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>2. Map Columns</span>
+            <span className={`px-3 py-1 rounded-full ${step === 2 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>2. Map Columns</span>
             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className={`px-2.5 py-1 rounded-full ${step === 3 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>3. Preview</span>
+            <span className={`px-3 py-1 rounded-full ${step === 3 ? "bg-primary text-primary-foreground" : "bg-accent text-muted-foreground"}`}>3. Preview</span>
           </div>
         </div>
 
@@ -517,16 +517,16 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                   <Upload className="h-7 w-7 text-primary" />
                 </div>
                 <h4 className="font-semibold text-lg">Drag & Drop Excel File here</h4>
-                <p className="text-sm text-muted-foreground mt-1.5 max-w-sm">
+                <p className="text-sm text-muted-foreground mt-2 max-w-sm">
                   Support formats: .xlsx or .xls files. Make sure the first row contains column headings.
                 </p>
-                <Button variant="outline" size="sm" className="mt-5 bg-background">
+                <Button variant="outline" size="sm" className="mt-6 bg-background">
                   Browse Files
                 </Button>
               </div>
 
               {errorMsg && (
-                <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-center gap-2.5 animate-shake">
+                <div className="p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-sm text-red-600 dark:text-red-400 flex items-center gap-3 animate-shake">
                   <AlertCircle className="h-5 w-5 shrink-0" />
                   <span>{errorMsg}</span>
                 </div>
@@ -550,7 +550,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                   download="test-cases-template.xlsx"
                   className="shrink-0"
                 >
-                  <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap">
+                  <Button variant="outline" size="sm" className="gap-2 whitespace-nowrap">
                     <Download className="h-4 w-4" />
                     Download Template
                   </Button>
@@ -571,22 +571,22 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
 
               <div className="grid gap-4 md:grid-cols-2">
                 {SCHEMA_FIELDS.map((field) => (
-                  <div key={field.key} className="p-4 border rounded-xl bg-card space-y-2.5 shadow-sm">
+                  <div key={field.key} className="p-4 border rounded-xl bg-card space-y-3 shadow-sm">
                     <div className="flex items-center justify-between">
-                      <Label className="font-semibold text-sm flex items-center gap-1.5">
+                      <Label className="font-semibold text-sm flex items-center gap-2">
                         {field.label}
                       </Label>
                       {mapping[field.key as keyof ColumnMapping] && (
-                        <span className="text-[10px] text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-1.5 py-0.5 rounded font-semibold flex items-center gap-0.5">
+                        <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-2 py-0.5 rounded font-semibold flex items-center gap-0.5">
                           <Check className="h-3 w-3" /> Auto-Mapped
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-muted-foreground leading-normal">{field.desc}</p>
+                    <p className="text-xs text-muted-foreground leading-normal">{field.desc}</p>
                     <select
                       value={mapping[field.key as keyof ColumnMapping]}
                       onChange={(e) => setMapping({ ...mapping, [field.key]: e.target.value })}
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                       <option value="">-- Do Not Map --</option>
                       {headers.map((h, i) => (
@@ -625,7 +625,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                           </span> · Steps Count: <span className="font-medium text-foreground">{tc.steps.length}</span>
                         </p>
                       </div>
-                      <span className={`text-xs px-2.5 py-0.5 rounded font-bold uppercase shrink-0 ml-2 ${
+                      <span className={`text-xs px-3 py-0.5 rounded font-bold uppercase shrink-0 ml-2 ${
                         tc.priority === "Critical" ? "bg-red-100 text-red-700" :
                         tc.priority === "High" ? "bg-orange-100 text-orange-700" :
                         tc.priority === "Medium" ? "bg-blue-100 text-blue-700" :
@@ -636,24 +636,24 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                     </div>
 
                     {tc.preconditions && (
-                      <div className="text-xs text-muted-foreground bg-accent/20 p-2.5 rounded-lg border" dir="auto">
+                      <div className="text-xs text-muted-foreground bg-accent/20 p-3 rounded-lg border" dir="auto">
                         <strong className="text-foreground">Preconditions:</strong> {tc.preconditions}
                       </div>
                     )}
 
-                    <div className="space-y-2.5">
+                    <div className="space-y-3">
                       <div className="text-xs font-medium text-muted-foreground">Steps Checklist</div>
                       <ol className="list-decimal list-inside divide-y border rounded-lg bg-background/50 overflow-hidden">
                         {tc.steps.map((step: any, stepIdx: number) => (
                           <li key={stepIdx} className="p-3 text-xs flex flex-col md:flex-row gap-2 items-start justify-between hover:bg-accent/10 transition-colors">
                             <div className="space-y-1 flex-1 min-w-0">
                               <div className="font-medium text-foreground break-words" dir="auto">{step.actionDescription}</div>
-                              <div className="text-[11px] text-muted-foreground break-words" dir="auto"><strong className="font-semibold">Expected:</strong> {step.expectedResult}</div>
+                              <div className="text-xs text-muted-foreground break-words" dir="auto"><strong className="font-semibold">Expected:</strong> {step.expectedResult}</div>
                             </div>
-                            <div className="flex flex-wrap gap-1.5 mt-2 md:mt-0 items-center justify-end shrink-0">
-                              <span className="text-[11px] px-1.5 py-0.5 rounded bg-secondary border font-medium">{step.actionType}</span>
+                            <div className="flex flex-wrap gap-2 mt-2 md:mt-0 items-center justify-end shrink-0">
+                              <span className="text-xs px-2 py-0.5 rounded bg-secondary border font-medium">{step.actionType}</span>
                               {step.targetValue && (
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/5 border font-mono truncate max-w-[150px]" title={`${step.targetType}: ${step.targetValue}`}>
+                                <span className="text-xs px-2 py-0.5 rounded bg-primary/5 border font-mono truncate max-w-[150px]" title={`${step.targetType}: ${step.targetValue}`}>
                                   {step.targetType}: {step.targetValue}
                                 </span>
                               )}
@@ -680,7 +680,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
                 onClick={() => setStep((prev) => (prev - 1) as any)}
                 disabled={isImporting}
               >
-                <ArrowLeft className="h-4 w-4 mr-1.5" /> Back
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back
               </Button>
             )}
           </div>
@@ -693,7 +693,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
             {step === 2 && (
               <Button 
                 onClick={handleGeneratePreview}
-                className="bg-primary hover:bg-primary/95 flex items-center gap-1.5"
+                className="bg-primary hover:bg-primary/95 flex items-center gap-2"
               >
                 Preview & Verify <ChevronRight className="h-4 w-4" />
               </Button>
@@ -703,7 +703,7 @@ export function ImportModal({ projectId, isOpen, onClose, onImportSuccess }: Imp
               <Button 
                 onClick={handleConfirmImport}
                 disabled={isImporting}
-                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1.5"
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
               >
                 {isImporting ? (
                   <>

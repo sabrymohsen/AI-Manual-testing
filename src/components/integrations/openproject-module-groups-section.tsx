@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import {
   ChevronDown, ChevronRight, CheckCircle2, XCircle, Clock,
   Loader2, RefreshCw, AlertCircle,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { OpenProjectGroupSyncPanel } from "./openproject-group-sync-panel"
 
@@ -163,10 +163,10 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                     {/* ── Zone 2: Execution progress ─────────────────── */}
                     <div className="px-4 py-3">
                       {group.totalCases === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">No test cases yet</p>
+                        <p className="text-xs text-muted-foreground ">No test cases yet</p>
                       ) : !hasRuns ? (
                         /* Untested — never show a red/0% bar */
-                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground" dir="ltr">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground" dir="ltr">
                           <Clock className="h-3 w-3 shrink-0 text-muted-foreground" />
                           <span>
                             {group.totalCases} case{group.totalCases !== 1 ? "s" : ""} · not run yet
@@ -174,7 +174,7 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                         </div>
                       ) : (
                         /* Some runs recorded */
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           <div className="flex items-center gap-2" dir="ltr">
                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
@@ -188,12 +188,12 @@ export function OpenProjectModuleGroupsSection({ projectId }: Props) {
                                 }}
                               />
                             </div>
-                            <span className="text-[10px] font-semibold text-muted-foreground w-8 shrink-0 text-right">
+                            <span className="text-xs font-semibold text-muted-foreground w-8 shrink-0 text-right">
                               {passRate}%
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground" dir="ltr">
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground" dir="ltr">
                             {group.passed > 0 && (
                               <span className="flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400 font-semibold">
                                 <CheckCircle2 className="h-2.5 w-2.5" /> {group.passed} passed

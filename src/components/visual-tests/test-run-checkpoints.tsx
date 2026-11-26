@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ScanEye } from "lucide-react"
+import { ScanEye } from "@/components/ui/icons"
 
 /** Banner on a test run page when its "Visually check this screen" steps took screenshots. */
 export function TestRunCheckpoints({ projectId, testRunId, live }: { projectId: string; testRunId: string; live: boolean }) {

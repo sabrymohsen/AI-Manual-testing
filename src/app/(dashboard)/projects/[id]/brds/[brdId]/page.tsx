@@ -24,7 +24,7 @@ import {
   UserCheck,
   Users,
   AlertTriangle,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { BrdRequirements } from "@/components/brd/brd-requirements"
 import { BrdQuestions } from "@/components/brd/brd-questions"
@@ -162,7 +162,7 @@ export default function BrdDetailPage() {
       {/* Header */}
       <button
         onClick={() => router.push(`/projects/${projectId}/brds`)}
-        className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        className="mb-3 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> BRD Hub
       </button>
@@ -182,19 +182,19 @@ export default function BrdDetailPage() {
             <select
               value={brd.status}
               onChange={(e) => changeStatus(e.target.value)}
-              className={`h-9 cursor-pointer rounded-lg border px-2.5 text-sm font-semibold ${STATUS_STYLES[brd.status]}`}
+              className={`h-9 cursor-pointer rounded-lg border px-3 text-sm font-semibold ${STATUS_STYLES[brd.status]}`}
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
           ) : (
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${STATUS_STYLES[brd.status]}`}>{brd.status}</span>
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_STYLES[brd.status]}`}>{brd.status}</span>
           )}
           {canManage && !isFinal && (
             <button
               onClick={() => setUploadOpen(true)}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-semibold hover:bg-muted"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm font-semibold hover:bg-muted"
               title="Upload a new version (PDF or Word)"
             >
               <Upload className="h-4 w-4" /> New version
@@ -204,7 +204,7 @@ export default function BrdDetailPage() {
             <a
               href={brd.currentFileUrl}
               download={brd.filename}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-background px-3 text-sm font-semibold hover:bg-muted"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-input bg-background px-3 text-sm font-semibold hover:bg-muted"
             >
               <Download className="h-4 w-4" /> Download
             </a>
@@ -214,7 +214,7 @@ export default function BrdDetailPage() {
               onClick={() => setPendingDelete(true)}
               title="Delete (recoverable from the trash for 30 days)"
               aria-label="Delete BRD"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-card px-3 text-sm font-semibold text-red-600 hover:bg-red-50"
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-red-200 bg-card px-3 text-sm font-semibold text-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -241,7 +241,7 @@ export default function BrdDetailPage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+              className={`-mb-px inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold transition-colors ${
                 tab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -251,7 +251,7 @@ export default function BrdDetailPage() {
         })}
       </div>
 
-      <div className="py-5">
+      <div className="py-6">
         {tab === "preview" && <PreviewTab brd={brd} projectId={projectId} currentUserId={currentUserId} onEdit={editable ? () => setTab("edit") : undefined} />}
         {tab === "edit" && editable && (
           <>
@@ -371,13 +371,13 @@ function UploadVersionDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-labelledby="upload-version-title">
-      <div className="w-full max-w-md space-y-3 rounded-xl border bg-card p-5 shadow-lg">
+      <div className="w-full max-w-md space-y-3 rounded-xl border bg-card p-6 shadow-lg">
         <h2 id="upload-version-title" className="text-base font-semibold">Upload v{nextVersion}</h2>
         <p className="text-xs text-muted-foreground">
           Replaces the current file with a new version. Earlier versions stay in the history, and requirements that changed are flagged for the testers.
         </p>
         <label className="block space-y-1">
-          <span className="text-[11px] font-medium text-muted-foreground">File (PDF or Word .docx, up to 25MB)</span>
+          <span className="text-xs font-medium text-muted-foreground">File (PDF or Word .docx, up to 25MB)</span>
           <input
             type="file"
             accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -386,7 +386,7 @@ function UploadVersionDialog({
           />
         </label>
         <label className="block space-y-1">
-          <span className="text-[11px] font-medium text-muted-foreground">What changed?</span>
+          <span className="text-xs font-medium text-muted-foreground">What changed?</span>
           <input
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
@@ -401,7 +401,7 @@ function UploadVersionDialog({
           <button
             onClick={submit}
             disabled={!file || !summary.trim() || busy}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-white disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-sm font-semibold text-white disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Upload
           </button>
@@ -515,12 +515,12 @@ function PreviewTab({ brd, projectId, currentUserId, onEdit }: { brd: any; proje
           </span>
           <div className="flex items-center gap-2">
             {!isWord && (
-              <a href={brd.currentFileUrl} download={brd.filename} className="inline-flex items-center gap-1.5 rounded-md border bg-card px-3 py-1.5 text-xs font-semibold hover:bg-muted">
+              <a href={brd.currentFileUrl} download={brd.filename} className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-xs font-semibold hover:bg-muted">
                 <Download className="h-3.5 w-3.5" /> Download
               </a>
             )}
             {onEdit && (
-              <button onClick={onEdit} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90">
+              <button onClick={onEdit} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs font-semibold text-white hover:bg-primary/90">
                 <Pencil className="h-3.5 w-3.5" /> Edit document
               </button>
             )}
@@ -591,18 +591,18 @@ function VersionsTab({ brd, canManage, onChanged }: { brd: any; canManage: boole
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">v{v.versionNumber}</span>
-                  {isCurrent && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Current</span>}
+                  {isCurrent && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Current</span>}
                 </div>
-                <span className="text-[11px] text-muted-foreground">{timeAgo(v.createdAt)}</span>
+                <span className="text-xs text-muted-foreground">{timeAgo(v.createdAt)}</span>
               </div>
               <p className="mt-1 text-sm text-foreground">{v.changeSummary || "—"}</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{v.editorName} · {fmtBytes(v.fileSize)}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{v.editorName} · {fmtBytes(v.fileSize)}</p>
               <div className="mt-2 flex gap-2">
-                <a href={v.fileUrl} download className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold hover:bg-muted">
+                <a href={v.fileUrl} download className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold hover:bg-muted">
                   <Download className="h-3 w-3" /> Download
                 </a>
                 {canManage && !isCurrent && (
-                  <button onClick={() => setPendingRestore(v)} disabled={busy === v.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold hover:bg-muted disabled:opacity-60">
+                  <button onClick={() => setPendingRestore(v)} disabled={busy === v.id} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold hover:bg-muted disabled:opacity-60">
                     {busy === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Restore
                   </button>
                 )}
@@ -682,14 +682,14 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
               )}
               {epicMatches.map((e) => (
                 <button key={e.id} onClick={() => addLink({ linkType: "epic", epicId: e.id })} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50">
-                  <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-semibold text-purple-700">EPIC</span>
+                  <span className="rounded bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">EPIC</span>
                   <span className="truncate">{e.title}</span>
                   <Plus className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               ))}
               {storyMatches.map((s) => (
                 <button key={s.id} onClick={() => addLink({ linkType: "story", taskId: s.id })} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-muted/50">
-                  <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-700">{s.key}</span>
+                  <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">{s.key}</span>
                   <span className="truncate">{s.title}</span>
                   <Plus className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
                 </button>
@@ -705,13 +705,13 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
         {brd.links.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nothing linked yet.</p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {brd.links.map((l: any) => (
               <div key={l.id} className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
-                <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${l.linkType === "epic" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
+                <span className={`rounded px-2 py-0.5 text-xs font-semibold ${l.linkType === "epic" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
                   {l.linkType === "epic" ? "EPIC" : l.task?.key || "STORY"}
                 </span>
-                <span className={`truncate ${l.deleted ? "italic text-muted-foreground" : ""}`}>
+                <span className={`truncate ${l.deleted ? " text-muted-foreground" : ""}`}>
                   {l.deleted ? `Deleted item · ${l.label}` : l.label}
                 </span>
                 {canManage && (
@@ -726,7 +726,7 @@ function LinksTab({ brd, projectId, canManage, onChanged }: { brd: any; projectI
 
         {/* Generic links to anything else in the project (tasks, bugs, test
             cases…). The epic/story links above stay on their own BrdLink model. */}
-        <div className="mt-5 border-t pt-4">
+        <div className="mt-6 border-t pt-4">
           <LinkedEntities
             projectId={brd.projectId}
             entityId={brd.id}
@@ -764,13 +764,13 @@ const AUDIT_LABEL: Record<string, string> = {
 }
 function AuditTab({ brd }: { brd: any }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       {brd.auditLogs.map((a: any) => (
         <div key={a.id} className="flex items-start gap-3 rounded-lg border bg-card px-3 py-2 text-sm">
-          <span className="mt-0.5 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{AUDIT_LABEL[a.action] || a.action}</span>
+          <span className="mt-0.5 rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{AUDIT_LABEL[a.action] || a.action}</span>
           <div className="min-w-0 flex-1">
             <p className="text-foreground">{a.detail}</p>
-            <p className="text-[11px] text-muted-foreground">{a.actorName || "System"} · {new Date(a.createdAt).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">{a.actorName || "System"} · {new Date(a.createdAt).toLocaleString()}</p>
           </div>
         </div>
       ))}

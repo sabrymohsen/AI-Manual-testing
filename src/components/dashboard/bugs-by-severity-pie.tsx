@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Bug } from "lucide-react"
+import { Bug } from "@/components/ui/icons"
 import { CHART_COLORS } from "@/lib/reports/colors"
 
 const SEVERITY_COLORS: Record<string, string> = {
@@ -45,7 +45,7 @@ export function BugsBySeverityPie({ projectId }: { projectId: string }) {
   return (
     <div className="p-4 border border-border shadow-sm rounded-xl bg-card space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-muted-foreground/60">Bugs by Severity</span>
+        <span className="text-xs font-medium text-muted-foreground/60">Bugs by Severity</span>
         <Bug className="h-4 w-4 text-rose-500" />
       </div>
       <div className="h-48 w-full">

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { ArrowLeft, Copy, Globe, Loader2, Play, RefreshCw, Save, Search, Trash2, X } from "lucide-react"
+import { ArrowLeft, Copy, Globe, Loader2, Play, RefreshCw, Save, Search, Trash2, X } from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { AgentBrowser, fillData, parseTestData } from "@/lib/browser-agent/client"
 import { actionsFor, asUser, listedElements, parseSnapshot, rememberPlan, roleLocator, stepSentence, type RecordAction, type SnapElement } from "@/lib/browser-agent/snapshot"
@@ -117,23 +117,23 @@ export function ElementList({ elements, selected, onSelect }: { elements: SnapEl
     <div>
       <div className="relative mb-2">
         <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${elements.length} elements`} className="h-8 w-full rounded-md border bg-card pl-7 pr-2 text-[13px] font-normal" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${elements.length} elements`} className="h-8 w-full rounded-md border bg-card pl-8 pr-2 text-xs font-normal" />
       </div>
       <div className="max-h-[420px] overflow-auto rounded-md border">
         {shown.map((e) => (
           <button
             key={e.ref}
             onClick={() => onSelect(e)}
-            className={`flex w-full items-center gap-2 border-b px-2.5 py-1.5 text-left last:border-b-0 ${selected === e.ref ? "bg-primary/10" : "hover:bg-muted/50"}`}
+            className={`flex w-full items-center gap-2 border-b px-3 py-2 text-left last:border-b-0 ${selected === e.ref ? "bg-primary/10" : "hover:bg-muted/50"}`}
           >
-            <span className="w-20 shrink-0 truncate rounded bg-muted px-1.5 py-0.5 text-center text-[11px] font-medium text-muted-foreground">{e.role}</span>
-            <span className="min-w-0 flex-1 truncate text-[13px] font-normal text-foreground" dir="auto">
-              {e.name || e.value || <span className="italic text-muted-foreground">no name</span>}
+            <span className="w-20 shrink-0 truncate rounded bg-muted px-2 py-0.5 text-center text-xs font-medium text-muted-foreground">{e.role}</span>
+            <span className="min-w-0 flex-1 truncate text-xs font-normal text-foreground" dir="auto">
+              {e.name || e.value || <span className=" text-muted-foreground">no name</span>}
             </span>
-            {e.disabled && <span className="text-[11px] text-muted-foreground">disabled</span>}
+            {e.disabled && <span className="text-xs text-muted-foreground">disabled</span>}
           </button>
         ))}
-        {!shown.length && <p className="p-3 text-[13px] font-normal text-muted-foreground">Nothing matches.</p>}
+        {!shown.length && <p className="p-3 text-xs font-normal text-muted-foreground">Nothing matches.</p>}
       </div>
     </div>
   )
@@ -254,8 +254,8 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
   return (
     <div className="grid gap-4 xl:grid-cols-[minmax(0,380px)_1fr_minmax(0,360px)]">
       {/* Users */}
-      <div className="flex flex-wrap items-center gap-1.5 rounded-xl border bg-card p-2.5 xl:col-span-3">
-        <span className="mr-1 text-[13px] font-medium text-foreground">Recording as</span>
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-card p-3 xl:col-span-3">
+        <span className="mr-1 text-xs font-medium text-foreground">Recording as</span>
         {["", ...users].map((u) => (
           <button
             key={u || "one"}
@@ -304,8 +304,8 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
           <>
             <ElementList elements={elements} selected={sel?.ref} onSelect={(e) => (setSel(e), setValue(""))} />
             {sel && (
-              <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-2.5">
-                <p className="truncate text-[13px] font-medium text-foreground" dir="auto">
+              <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <p className="truncate text-xs font-medium text-foreground" dir="auto">
                   {sel.role} “{sel.name || sel.value}”
                 </p>
                 {actionsFor(sel).some((a) => a === "fill" || a === "select") && (
@@ -313,7 +313,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     placeholder="Text to type / option to select — or {name} from test data"
-                    className="h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal"
+                    className="h-8 w-full rounded-md border bg-card px-2 text-xs font-normal"
                     dir="auto"
                   />
                 )}
@@ -322,11 +322,11 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
                     value={saveAs}
                     onChange={(e) => setSaveAs(e.target.value)}
                     placeholder="To remember its text: a name, like request_id"
-                    className="h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal"
+                    className="h-8 w-full rounded-md border bg-card px-2 text-xs font-normal"
                     dir="ltr"
                   />
                 )}
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-2">
                   {actionsFor(sel).map((a) => (
                     <Button key={a} size="sm" variant={a === actionsFor(sel)[0] ? "default" : "outline"} onClick={() => act(a)} disabled={ap.busy}>
                       {ACTION_LABEL[a]}
@@ -335,7 +335,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
                 </div>
               </div>
             )}
-            <div className="flex flex-wrap items-center gap-1.5 border-t pt-2">
+            <div className="flex flex-wrap items-center gap-2 border-t pt-2">
               <span className="text-xs font-normal text-muted-foreground">Press</span>
               {["Enter", "Tab", "Escape"].map((k) => (
                 <Button key={k} size="sm" variant="outline" onClick={() => pressKey(k)} disabled={ap.busy}>
@@ -343,13 +343,13 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
                 </Button>
               ))}
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <input
                 value={pageText}
                 onChange={(e) => setPageText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && checkText()}
                 placeholder="Check the page shows this text"
-                className="h-8 min-w-0 flex-1 rounded-md border bg-card px-2 text-[13px] font-normal"
+                className="h-8 min-w-0 flex-1 rounded-md border bg-card px-2 text-xs font-normal"
                 dir="auto"
               />
               <Button size="sm" variant="outline" onClick={checkText}>
@@ -358,7 +358,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
             </div>
           </>
         ) : (
-          <p className="text-[13px] font-normal text-muted-foreground">Open the start page, then pick elements to act on. Each action becomes a step.</p>
+          <p className="text-xs font-normal text-muted-foreground">Open the start page, then pick elements to act on. Each action becomes a step.</p>
         )}
       </div>
 
@@ -367,10 +367,10 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
 
       {/* Steps */}
       <div className="space-y-3 rounded-xl border bg-card p-3">
-        <p className="text-[13px] font-semibold text-foreground">Recorded steps ({steps.length})</p>
+        <p className="text-xs font-semibold text-foreground">Recorded steps ({steps.length})</p>
         <ol className="max-h-72 space-y-1 overflow-auto">
           {steps.map((s, i) => (
-            <li key={i} className="group flex items-start gap-2 text-[13px]">
+            <li key={i} className="group flex items-start gap-2 text-xs">
               <span className="w-5 shrink-0 text-right text-xs tabular-nums text-muted-foreground">{i + 1}</span>
               <span className="min-w-0 flex-1 break-words font-normal text-foreground" dir="auto">
                 {s.sentence}
@@ -380,11 +380,11 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
               </button>
             </li>
           ))}
-          {!steps.length && <li className="text-[13px] font-normal text-muted-foreground">No steps yet.</li>}
+          {!steps.length && <li className="text-xs font-normal text-muted-foreground">No steps yet.</li>}
         </ol>
         <div className="space-y-2 border-t pt-3">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Test name" className="h-8 w-full rounded-md border bg-card px-2 text-[13px] font-normal" dir="auto" />
-          <div className="flex flex-wrap gap-1.5">
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Test name" className="h-8 w-full rounded-md border bg-card px-2 text-xs font-normal" dir="auto" />
+          <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={save} disabled={saving || !steps.length}>
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save as no-code test
             </Button>

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { exportPdf, exportDocx, exportXlsx } from "@/lib/reports/export"
 import type { ProjectReport } from "@/lib/reports/types"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Download, FileText, FileSpreadsheet, FileType, Loader2, ChevronDown } from "lucide-react"
+import { Download, FileText, FileSpreadsheet, FileType, Loader2, ChevronDown } from "@/components/ui/icons"
 
 /**
  * Export the dashboard using the existing exporters. PDF/Word capture the live
@@ -42,7 +42,7 @@ export function ExportMenu({
       <DropdownMenuTrigger asChild>
         <button
           disabled={!report || !!busy}
-          className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+          className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Export
           <ChevronDown className="h-3 w-3 opacity-80" />

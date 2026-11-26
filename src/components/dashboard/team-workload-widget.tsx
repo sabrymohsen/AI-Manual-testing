@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Users, AlertTriangle } from "lucide-react"
+import { Users, AlertTriangle } from "@/components/ui/icons"
 import { cn } from "@/lib/utils"
 
 interface MemberWorkload {
@@ -75,7 +75,7 @@ export function TeamWorkloadWidget({ projectId }: { projectId: string }) {
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex items-center gap-2 border-b px-5 py-3">
+      <div className="flex items-center gap-2 border-b px-6 py-3">
         <Users className="h-4 w-4 text-primary" />
         <span className="text-xs font-medium text-foreground">Team Workload</span>
       </div>
@@ -106,7 +106,7 @@ export function TeamWorkloadWidget({ projectId }: { projectId: string }) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={member.avatarUrl} alt="" className="h-7 w-7 rounded-full object-cover" />
                     ) : (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-[9px] font-semibold text-primary">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
                         {(member.name || member.email || "?")[0]?.toUpperCase()}
                       </span>
                     )}
@@ -117,7 +117,7 @@ export function TeamWorkloadWidget({ projectId }: { projectId: string }) {
                         {member.name || member.email}
                         {isOverloaded && <AlertTriangle className="inline h-3 w-3 ml-1 text-amber-500" />}
                       </span>
-                      <span className="text-[10px] font-semibold text-muted-foreground">
+                      <span className="text-xs font-semibold text-muted-foreground">
                         {member.openTasks} open
                         {member.inProgressTasks > 0 && (
                           <span className="text-blue-500"> · {member.inProgressTasks} in prog</span>

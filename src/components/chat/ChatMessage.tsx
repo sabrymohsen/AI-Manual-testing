@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { ChatMessage as MessageType, useChatStore } from "@/stores/chatStore";
-import { MoreHorizontal, MessageSquare, Edit2, Trash2, Link, Reply, Paperclip } from "lucide-react";
+import { MoreHorizontal, MessageSquare, Edit2, Trash2, Link, Reply, Paperclip } from "@/components/ui/icons";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format, formatDistanceToNow } from "date-fns";
@@ -157,7 +157,7 @@ export function ChatMessage({
           )}
         </Avatar>
       ) : (
-        <div className="w-9 flex-shrink-0 text-center opacity-0 group-hover:opacity-100 text-[10px] text-muted-foreground select-none pt-0.5">
+        <div className="w-9 flex-shrink-0 text-center opacity-0 group-hover:opacity-100 text-xs text-muted-foreground select-none pt-0.5">
           {timeFormatted.split(" ")[0]}
         </div>
       )}
@@ -173,7 +173,7 @@ export function ChatMessage({
               {message.sender.name || message.sender.email}
             </span>
             <span 
-              className="text-[10px] text-muted-foreground select-none"
+              className="text-xs text-muted-foreground select-none"
               title={fullDateTime}
             >
               {timeFormatted}
@@ -183,7 +183,7 @@ export function ChatMessage({
 
         {/* Message Content */}
         {isEditing ? (
-          <div className="mt-1 flex flex-col gap-1.5">
+          <div className="mt-1 flex flex-col gap-2">
             <input
               type="text"
               value={editValue}
@@ -213,7 +213,7 @@ export function ChatMessage({
         ) : (
           <div className="text-sm text-foreground dark:text-slate-300 break-words leading-relaxed select-text">
             {isDeleted ? (
-              <span className="italic text-muted-foreground dark:text-muted-foreground">This message was deleted</span>
+              <span className=" text-muted-foreground dark:text-muted-foreground">This message was deleted</span>
             ) : message.htmlContent ? (
               <div 
                 className="prose dark:prose-invert max-w-none text-foreground dark:text-slate-300 text-sm leading-relaxed" 
@@ -228,13 +228,13 @@ export function ChatMessage({
                 htmlContent — that path is dangerouslySetInnerHTML, so building
                 markup out of user-supplied labels there would be an XSS hole. */}
             {!isDeleted && Array.isArray(message.entityMentions) && message.entityMentions.length > 0 && (
-              <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-2 flex flex-wrap gap-1">
                 {message.entityMentions.map((e: any) => (
                   <NextLink
                     key={`${e.type}:${e.id}`}
                     href={e.url || "#"}
                     className={cn(
-                      "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] font-semibold transition-colors hover:brightness-95",
+                      "inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs font-semibold transition-colors hover:brightness-95",
                       ENTITY_CHIP[e.type] || "border-border bg-muted text-muted-foreground"
                     )}
                     title={e.label}
@@ -277,7 +277,7 @@ export function ChatMessage({
                       <Paperclip className="h-4 w-4 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-foreground dark:text-slate-200 truncate">{file.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{formatSize(file.size)}</p>
+                        <p className="text-xs text-muted-foreground">{formatSize(file.size)}</p>
                       </div>
                     </a>
                   )}
@@ -289,7 +289,7 @@ export function ChatMessage({
 
         {/* Reactions List */}
         {!isDeleted && Object.keys(reactionsGrouped).length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             {Object.entries(reactionsGrouped).map(([emoji, reacts]) => {
               const hasReacted = reacts.some((r) => r.userId === currentUserId);
               const reactorsNames = reacts.map((r) => r.user.name || "Someone").join(", ");
@@ -306,7 +306,7 @@ export function ChatMessage({
                   )}
                 >
                   <span>{emoji}</span>
-                  <span className="text-[10px] font-semibold">{reacts.length}</span>
+                  <span className="text-xs font-semibold">{reacts.length}</span>
                 </button>
               );
             })}
@@ -317,7 +317,7 @@ export function ChatMessage({
         {!isDeleted && !message.parentId && message._count?.replies && message._count.replies > 0 ? (
           <button
             onClick={() => setActiveThread(message.id, message)}
-            className="flex items-center gap-1.5 mt-2 rounded bg-indigo-50/50 hover:bg-indigo-50 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 px-2 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 transition-colors"
+            className="flex items-center gap-2 mt-2 rounded bg-indigo-50/50 hover:bg-indigo-50 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 px-2 py-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 transition-colors"
           >
             <MessageSquare className="h-3.5 w-3.5" />
             <span>{message._count.replies} {message._count.replies === 1 ? "reply" : "replies"}</span>

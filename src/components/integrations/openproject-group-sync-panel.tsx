@@ -5,7 +5,7 @@ import {
   CloudUpload, Link2, ChevronDown, Loader2, CheckCircle2, XCircle,
   ExternalLink, AlertCircle, LayoutGrid, RefreshCw, Eye,
   Settings, Clock, MoreHorizontal,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 import { OpenProjectMapParentModal } from "./openproject-map-parent-modal"
 import { OpenProjectSyncedItemsDrawer } from "./openproject-synced-items-drawer"
@@ -246,25 +246,25 @@ export function OpenProjectGroupSyncPanel({
     switch (opState) {
       case "not-configured":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+          <span className="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <Settings className="h-2.5 w-2.5" /> Not configured
           </span>
         )
       case "ready":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
+          <span className="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">
             <CloudUpload className="h-2.5 w-2.5" /> Ready to sync
           </span>
         )
       case "partial":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
+          <span className="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
             <CloudUpload className="h-2.5 w-2.5" /> {syncedCount}/{totalCases} synced
           </span>
         )
       case "synced":
         return (
-          <span className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
+          <span className="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
             <CheckCircle2 className="h-2.5 w-2.5" /> Synced
             {relativeTime && <span className="font-normal ml-0.5 opacity-80">· {relativeTime}</span>}
           </span>
@@ -272,7 +272,7 @@ export function OpenProjectGroupSyncPanel({
       case "failed":
         return (
           <span
-            className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 max-w-[160px]"
+            className="inline-flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400 max-w-[160px]"
             title={localModCfg.lastSyncError || undefined}
           >
             <XCircle className="h-2.5 w-2.5 shrink-0" />
@@ -286,11 +286,11 @@ export function OpenProjectGroupSyncPanel({
 
   return (
     <>
-      <div className="space-y-2.5">
+      <div className="space-y-3">
 
         {/* ── Header row: label + canonical badge ───────────────────── */}
         <div className="flex items-center justify-between gap-2" dir="ltr">
-          <span className="text-[11px] font-medium text-muted-foreground/50 flex items-center gap-1">
+          <span className="text-xs font-medium text-muted-foreground/50 flex items-center gap-1">
             <CloudUpload className="h-3 w-3" /> OpenProject
             {localModCfg.hasOwnConfig && (
               <span className="normal-case font-normal tracking-normal text-muted-foreground/40">(own config)</span>
@@ -307,7 +307,7 @@ export function OpenProjectGroupSyncPanel({
             onClick={() => setShowModuleConfig(true)}
             className="w-full h-8 text-xs font-semibold border-dashed text-muted-foreground hover:text-foreground hover:border-solid"
           >
-            <Settings className="h-3 w-3 mr-1.5" />
+            <Settings className="h-3 w-3 mr-2" />
             Configure OpenProject
           </Button>
         )}
@@ -322,7 +322,7 @@ export function OpenProjectGroupSyncPanel({
                   href={localStatus.parentUrl || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400 hover:bg-blue-100 max-w-full font-medium group"
+                  className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400 hover:bg-blue-100 max-w-full font-medium group"
                 >
                   <Link2 className="h-2.5 w-2.5 shrink-0" />
                   <span className="font-semibold shrink-0">#{localStatus.parentId}</span>
@@ -337,7 +337,7 @@ export function OpenProjectGroupSyncPanel({
                   <ExternalLink className="h-2.5 w-2.5 shrink-0 ml-0.5 opacity-60 group-hover:opacity-100" />
                 </a>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400 font-medium">
+                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded border border-amber-200 bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400 font-medium">
                   <AlertCircle className="h-2.5 w-2.5 shrink-0" /> No parent mapped
                 </span>
               )}
@@ -345,7 +345,7 @@ export function OpenProjectGroupSyncPanel({
 
             {/* Sync count sub-line (only show for partial/failed to add context) */}
             {(opState === "partial" || failedCount > 0) && (
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground" dir="ltr">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground" dir="ltr">
                 {syncedCount > 0 && (
                   <span className={syncedCount === totalCases ? "text-emerald-600 dark:text-emerald-400 font-semibold" : "text-amber-600 dark:text-amber-400 font-semibold"}>
                     {syncedCount}/{totalCases} synced
@@ -360,7 +360,7 @@ export function OpenProjectGroupSyncPanel({
             )}
 
             {/* ── Action row ─────────────────────────────────────────── */}
-            <div className="flex items-center gap-1.5" dir="ltr">
+            <div className="flex items-center gap-2" dir="ltr">
 
               {/* Map Parent — amber warning, only when missing */}
               {!localStatus.parentMapped && (
@@ -368,7 +368,7 @@ export function OpenProjectGroupSyncPanel({
                   size="sm"
                   variant="outline"
                   onClick={() => setShowMapParent(true)}
-                  className="h-7 px-2.5 text-xs font-semibold border-amber-300 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/20 shrink-0"
+                  className="h-7 px-3 text-xs font-semibold border-amber-300 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950/20 shrink-0"
                 >
                   <Link2 className="h-3 w-3 mr-1" /> Map Parent
                 </Button>
@@ -414,10 +414,10 @@ export function OpenProjectGroupSyncPanel({
                 </Button>
 
                 {showMoreMenu && (
-                  <div className="absolute right-0 top-full mt-1 z-50 bg-popover border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-popover border rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-1 min-w-[200px] animate-in fade-in zoom-in-95 duration-200">
                     <button
                       onClick={() => { setShowModuleConfig(true); setShowMoreMenu(false) }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left"
                     >
                       <Settings className="h-3.5 w-3.5 text-muted-foreground" />
                       Feature Settings
@@ -427,7 +427,7 @@ export function OpenProjectGroupSyncPanel({
 
                     <button
                       onClick={() => { setShowMapParent(true); setShowMoreMenu(false) }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left"
+                      className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left"
                     >
                       <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
                       {localStatus.parentMapped ? "Change Parent" : "Map Parent"}
@@ -437,7 +437,7 @@ export function OpenProjectGroupSyncPanel({
                       <button
                         onClick={handleApplyParent}
                         disabled={isApplyingParent}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
                       >
                         {isApplyingParent
                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -451,7 +451,7 @@ export function OpenProjectGroupSyncPanel({
                         <button
                           onClick={handleSyncToBoard}
                           disabled={isSyncingBoard}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
                         >
                           {isSyncingBoard
                             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -462,7 +462,7 @@ export function OpenProjectGroupSyncPanel({
                         <button
                           onClick={handleCheckBoard}
                           disabled={isCheckingBoard}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left disabled:opacity-50"
                         >
                           {isCheckingBoard
                             ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -472,7 +472,7 @@ export function OpenProjectGroupSyncPanel({
 
                         <button
                           onClick={() => { setShowSyncedItems(true); setShowMoreMenu(false) }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left"
                         >
                           <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                           View Synced Items
@@ -488,7 +488,7 @@ export function OpenProjectGroupSyncPanel({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={() => setShowMoreMenu(false)}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left"
                         >
                           <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                           View Parent in OpenProject
@@ -501,7 +501,7 @@ export function OpenProjectGroupSyncPanel({
                         <div className="border-t my-1" />
                         <button
                           onClick={() => { handleSync(); setShowMoreMenu(false) }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-accent text-left text-red-600 dark:text-red-400"
+                          className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-accent text-left text-red-600 dark:text-red-400"
                         >
                           <RefreshCw className="h-3.5 w-3.5" />
                           Retry Failed ({failedCount})
@@ -520,13 +520,13 @@ export function OpenProjectGroupSyncPanel({
                   ? "bg-red-50 border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-800 dark:text-red-300"
                   : "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-300"
               }`}>
-                <div className="flex items-start gap-1.5">
+                <div className="flex items-start gap-2">
                   {lastSyncResult.failed === 0
                     ? <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                     : <XCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />}
                   <div>
                     <span className="font-semibold">{lastSyncResult.message}</span>
-                    <span className="text-[10px] ml-2 opacity-70">({lastSyncResult.total} total)</span>
+                    <span className="text-xs ml-2 opacity-70">({lastSyncResult.total} total)</span>
                   </div>
                 </div>
               </div>
@@ -539,7 +539,7 @@ export function OpenProjectGroupSyncPanel({
                   : "bg-amber-50 border-amber-200 text-amber-800 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-300"
               }`}>
                 <div className="font-semibold mb-1">Board Visibility</div>
-                <div className="flex flex-wrap gap-2 text-[10px]">
+                <div className="flex flex-wrap gap-2 text-xs">
                   <span>Ready: <b>{boardResult.boardReady}</b></span>
                   {boardResult.notSynced > 0     && <span>Not synced: <b>{boardResult.notSynced}</b></span>}
                   {boardResult.missingParent > 0  && <span>Missing parent: <b>{boardResult.missingParent}</b></span>}
@@ -552,7 +552,7 @@ export function OpenProjectGroupSyncPanel({
 
         {/* ── Toast ─────────────────────────────────────────────────── */}
         {toast && (
-          <div className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium flex items-center gap-1.5 ${
+          <div className={`text-xs px-3 py-2 rounded-lg border font-medium flex items-center gap-2 ${
             toast.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-800 dark:text-emerald-300"
               : toast.type === "error"

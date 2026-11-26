@@ -21,7 +21,7 @@ import {
   ExternalLink,
   DownloadCloud,
   RefreshCw,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 /**
  * Manage the project's modules.
@@ -420,32 +420,32 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
     row.caseCount > 0 ? Math.round((row.passedCount / row.caseCount) * 100) : null
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <Layers className="h-4 w-4 text-primary" /> Modules
           </h2>
-          <p className="text-[10px] text-muted-foreground font-medium max-w-xl leading-relaxed">
+          <p className="text-xs text-muted-foreground font-medium max-w-xl leading-relaxed">
             The modules test cases are filed under and defects are reported against. Renaming one
             here renames it in the test library, the bug list and the QA report — there is only one
             of each.
           </p>
         </div>
         <div className="flex items-center gap-3 text-center">
-          {canEdit && <div className="flex flex-col gap-1.5">
-            <Button size="sm" variant="outline" className="h-8 text-[11px]" onClick={openImport}>
-              <DownloadCloud className="h-3.5 w-3.5 mr-1.5" />
+          {canEdit && <div className="flex flex-col gap-2">
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={openImport}>
+              <DownloadCloud className="h-3.5 w-3.5 mr-2" />
               Import from tracker
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-[10px] text-muted-foreground"
+              className="h-7 text-xs text-muted-foreground"
               onClick={() => refreshLinked()}
               title="Re-read the names and nesting of modules linked to the tracker"
             >
-              <RefreshCw className="h-3 w-3 mr-1.5" />
+              <RefreshCw className="h-3 w-3 mr-2" />
               Refresh linked
             </Button>
           </div>}
@@ -456,7 +456,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
             { label: "Open bugs", value: totals.openBugs },
           ].map(c => (
             <div key={c.label} className="px-3 py-2 rounded-xl border border-border bg-muted/60 min-w-[76px]">
-              <div className="text-[11px] font-medium text-muted-foreground/60">
+              <div className="text-xs font-medium text-muted-foreground/60">
                 {c.label}
               </div>
               <div className="text-base font-semibold text-foreground">{c.value}</div>
@@ -466,13 +466,13 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-50 border border-rose-100 text-[11px] text-rose-700 font-semibold">
+        <div className="flex items-start gap-2 p-3 rounded-xl bg-rose-50 border border-rose-100 text-xs text-rose-700 font-semibold">
           <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {error}
         </div>
       )}
 
       {importNote && (
-        <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-primary/10 border border-primary/25 text-[11px] text-primary font-semibold">
+        <div className="flex items-start justify-between gap-2 p-3 rounded-xl bg-primary/10 border border-primary/25 text-xs text-primary font-semibold">
           <span className="flex items-start gap-2">
             <Link2 className="h-3.5 w-3.5 mt-0.5 shrink-0" /> {importNote}
           </span>
@@ -486,7 +486,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
       {canEdit ? (
       <div className="flex flex-wrap items-end gap-2 p-3 rounded-xl border border-border bg-muted/40">
         <div className="space-y-1 flex-1 min-w-[180px]">
-          <label className="text-[11px] font-medium text-muted-foreground/60">
+          <label className="text-xs font-medium text-muted-foreground/60">
             New module
           </label>
           <Input
@@ -500,7 +500,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[11px] font-medium text-muted-foreground/60">
+          <label className="text-xs font-medium text-muted-foreground/60">
             Inside
           </label>
           <select
@@ -521,13 +521,13 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
           onClick={createModule}
           disabled={creating || !newName.trim()}
           size="sm"
-          className="h-9 text-[11px] font-semibold"
+          className="h-9 text-xs font-semibold"
         >
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> Add module
+          <Plus className="h-3.5 w-3.5 mr-2" /> Add module
         </Button>
       </div>
       ) : (
-        <p className="text-[11px] text-muted-foreground">You can view modules. Ask a project admin to add or change them.</p>
+        <p className="text-xs text-muted-foreground">You can view modules. Ask a project admin to add or change them.</p>
       )}
 
       {/* Table */}
@@ -538,19 +538,19 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
       ) : ordered.length === 0 ? (
         <div className="p-10 border border-dashed rounded-xl text-center space-y-1">
           <p className="text-xs font-semibold text-foreground">No modules yet</p>
-          <p className="text-[10px] text-muted-foreground font-medium">
+          <p className="text-xs text-muted-foreground font-medium">
             Add one above, and it becomes available when filing test cases and bugs.
           </p>
         </div>
       ) : (
         <div className="border rounded-xl overflow-x-auto">
-          <table className="w-full text-[11px]">
+          <table className="w-full text-xs">
             <thead className="bg-muted/50">
               <tr className="text-left">
                 {["Module", "Test cases", "Pass %", "Bugs", "Open", "Order", ""].map(h => (
                   <th
                     key={h}
-                    className="px-3 py-2 font-medium text-[11px] text-muted-foreground/70 whitespace-nowrap"
+                    className="px-3 py-2 font-medium text-xs text-muted-foreground/70 whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -577,7 +577,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                               if (e.key === "Escape") setEditingId(null)
                             }}
                             autoFocus
-                            className="h-7 text-[11px]"
+                            className="h-7 text-xs"
                           />
                           <Button
                             size="sm"
@@ -602,7 +602,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                         </div>
                       ) : (
                         <div
-                          className="flex items-center gap-1.5 font-semibold text-foreground"
+                          className="flex items-center gap-2 font-semibold text-foreground"
                           style={{ paddingInlineStart: row.depth * 16 }}
                         >
                           {row.depth > 0 && <span className="text-slate-300">└</span>}
@@ -614,7 +614,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                               rel="noopener noreferrer"
                               onClick={e => { if (!row.externalUrl) e.preventDefault() }}
                               title={`${row.externalType || "Linked"} ${row.externalId} in ${row.externalProvider} — name and nesting follow the tracker`}
-                              className="shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border border-primary/25 bg-primary/10 text-[9px] font-semibold text-primary hover:bg-primary/15"
+                              className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-primary/25 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/15"
                             >
                               <Link2 className="h-2.5 w-2.5" />
                               {row.externalType || "Linked"}
@@ -718,7 +718,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                           value={row.parentId || ""}
                           disabled={isBusy}
                           onChange={e => patchModule(row.id, { parentId: e.target.value || null })}
-                          className="h-7 px-2 rounded-md border text-[10px] bg-background outline-none max-w-[150px]"
+                          className="h-7 px-2 rounded-md border text-xs bg-background outline-none max-w-[150px]"
                           title="Move this module inside another"
                         >
                           <option value="">Top level</option>
@@ -750,7 +750,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
       )}
 
       {unfiledCount > 0 && (
-        <p className="text-[10px] text-muted-foreground font-medium">
+        <p className="text-xs text-muted-foreground font-medium">
           {unfiledCount} test case{unfiledCount === 1 ? "" : "s"} in this project {unfiledCount === 1 ? "is" : "are"}{" "}
           not filed under any module. They show as “Unfiled” in the test library and the QA report.
         </p>
@@ -765,7 +765,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 <DownloadCloud className="h-4 w-4 text-primary" />
                 Import modules{provider ? ` from ${provider}` : ""}
               </h3>
-              <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+              <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                 Only <strong>Epics</strong> and <strong>Features</strong> are offered — a module is
                 a part of the system under test, so Stories and Tasks are the wrong grain. An
                 imported module keeps its name and nesting in step with the tracker; its test cases
@@ -774,16 +774,16 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
             </div>
 
             {loadingImportable ? (
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground py-8 justify-center">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground py-8 justify-center">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" /> Reading the tracker…
               </div>
             ) : importUnavailable ? (
-              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3 font-medium">
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl p-3 font-medium">
                 {importUnavailable}
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+                <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
                   <span>
                     {importableCount} available · {importable.length - importableCount} already
                     imported
@@ -811,7 +811,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                     return (
                       <label
                         key={item.externalId}
-                        className={`flex items-start gap-3 p-2.5 text-[11px] ${
+                        className={`flex items-start gap-3 p-3 text-xs ${
                           already ? "opacity-60" : "hover:bg-muted/70 cursor-pointer"
                         }`}
                       >
@@ -833,12 +833,12 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                               {item.title}
                             </span>
                             {item.type && (
-                              <span className="shrink-0 px-1.5 py-0.5 rounded-md bg-muted text-[9px] font-semibold text-muted-foreground">
+                              <span className="shrink-0 px-2 py-0.5 rounded-md bg-muted text-xs font-semibold text-muted-foreground">
                                 {item.type}
                               </span>
                             )}
                           </div>
-                          <div className="text-[10px] text-muted-foreground font-medium">
+                          <div className="text-xs text-muted-foreground font-medium">
                             {item.externalId}
                             {item.parentExternalId && ` · under ${item.parentExternalId}`}
                             {already && ` · already imported as “${item.linkedSuiteName}”`}
@@ -857,7 +857,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 variant="outline"
                 onClick={() => setImportOpen(false)}
                 disabled={importing}
-                className="h-8 text-[11px] font-semibold"
+                className="h-8 text-xs font-semibold"
               >
                 Cancel
               </Button>
@@ -865,7 +865,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 size="sm"
                 onClick={runImport}
                 disabled={importing || picked.size === 0}
-                className="h-8 text-[11px] font-semibold"
+                className="h-8 text-xs font-semibold"
               >
                 {importing ? "Importing…" : `Import ${picked.size || ""}`.trim()}
               </Button>
@@ -886,7 +886,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 <h3 className="text-sm font-semibold text-foreground">
                   Delete “{deleteTarget.name}”?
                 </h3>
-                <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">
+                <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                   Nothing is deleted except the module itself. Its test cases and bugs survive and
                   become <strong>Unfiled</strong> — you can file them again afterwards.
                 </p>
@@ -900,8 +900,8 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 { label: "Bugs unfiled", value: deleteTarget.bugsUnfiled },
                 ...(deleteTarget.visualTestsUnfiled ? [{ label: "Visual tests unfiled", value: deleteTarget.visualTestsUnfiled }] : []),
               ].map(c => (
-                <div key={c.label} className="p-2.5 rounded-xl border border-border bg-muted/60">
-                  <div className="text-[11px] font-medium text-muted-foreground/60">
+                <div key={c.label} className="p-3 rounded-xl border border-border bg-muted/60">
+                  <div className="text-xs font-medium text-muted-foreground/60">
                     {c.label}
                   </div>
                   <div className="text-lg font-semibold text-foreground">{c.value}</div>
@@ -910,7 +910,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
             </div>
 
             {deleteTarget.suitesRemoved > 1 && (
-              <p className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              <p className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
                 This includes {deleteTarget.suitesRemoved - 1} sub-module
                 {deleteTarget.suitesRemoved - 1 === 1 ? "" : "s"} nested inside it.
               </p>
@@ -922,7 +922,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 size="sm"
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
-                className="h-8 text-[11px] font-semibold"
+                className="h-8 text-xs font-semibold"
               >
                 Cancel
               </Button>
@@ -930,7 +930,7 @@ export function ModulesPanel({ projectId, canEdit = true, canDelete = true }: Pr
                 size="sm"
                 onClick={confirmDelete}
                 disabled={deleting}
-                className="h-8 text-[11px] font-semibold bg-rose-600 hover:bg-rose-700 text-white"
+                className="h-8 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white"
               >
                 {deleting ? "Deleting…" : "Delete module"}
               </Button>

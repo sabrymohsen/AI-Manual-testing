@@ -26,7 +26,7 @@ import {
   Plus,
   Compass,
   Check
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface Project {
   id: string
@@ -195,21 +195,21 @@ export default function AgentBrainDashboardPage() {
   function getStatusBadge(status: string) {
     switch (status) {
       case "Queued":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Queued</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">Queued</span>
       case "Understanding":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Understanding Layer</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400">Understanding Layer</span>
       case "Planning":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 dark:bg-amber-955/20 dark:text-amber-400">Planning Layer</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 dark:bg-amber-955/20 dark:text-amber-400">Planning Layer</span>
       case "Executing":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400">Playwright Executing</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400">Playwright Executing</span>
       case "Reporting":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-violet-50 text-violet-700 dark:bg-violet-955/20 dark:text-violet-400">Reporting Layer</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-violet-50 text-violet-700 dark:bg-violet-955/20 dark:text-violet-400">Reporting Layer</span>
       case "Completed":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-450">Completed</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-450">Completed</span>
       case "Failed":
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-455">Failed</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-rose-50 text-rose-700 dark:bg-rose-955/20 dark:text-rose-455">Failed</span>
       default:
-        return <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground">{status}</span>
+        return <span className="px-3 py-1 text-xs font-semibold rounded-full bg-muted text-muted-foreground">{status}</span>
     }
   }
 
@@ -234,7 +234,7 @@ export default function AgentBrainDashboardPage() {
   return (
     <div className="space-y-8 max-w-7xl mx-auto p-4 md:p-6 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border dark:border-slate-800 pb-5">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border dark:border-slate-800 pb-6">
         <div className="flex items-center gap-3">
           <Link href={`/projects/${project.id}`}>
             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-border dark:border-slate-800 bg-background hover:bg-muted/50">
@@ -244,14 +244,14 @@ export default function AgentBrainDashboardPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl font-semibold tracking-tight text-foreground dark:text-slate-50">Agent Brain</h1>
-              <span className="px-2.5 py-0.5 text-[11px] font-medium bg-primary text-white rounded-md">Cognitive Mode</span>
+              <span className="px-3 py-0.5 text-xs font-medium bg-primary text-white rounded-md">Cognitive Mode</span>
             </div>
             <p className="text-sm text-muted-foreground font-semibold mt-1">
               Persistent Memory-driven testing for: <span className="text-foreground dark:text-slate-200 font-semibold">{project.name}</span>
             </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchProjectRunsAndMemory} className="flex items-center gap-1.5 rounded-xl text-xs font-semibold h-9">
+        <Button variant="outline" size="sm" onClick={fetchProjectRunsAndMemory} className="flex items-center gap-2 rounded-xl text-xs font-semibold h-9">
           <RefreshCw className="h-3.5 w-3.5" /> Refresh Dashboard
         </Button>
       </div>
@@ -260,7 +260,7 @@ export default function AgentBrainDashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-6">
-            <div className="flex items-center gap-2 border-b pb-3.5">
+            <div className="flex items-center gap-2 border-b pb-3">
               <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
                 <Gauge className="h-5 w-5" />
               </div>
@@ -294,9 +294,9 @@ export default function AgentBrainDashboardPage() {
                         <span className="text-xs font-semibold uppercase text-indigo-650 dark:text-indigo-400">{modeItem.title}</span>
                         {selectedMode === modeItem.id && <div className="h-2 w-2 rounded-full bg-primary dark:bg-indigo-400" />}
                       </div>
-                      <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">{modeItem.desc}</p>
+                      <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{modeItem.desc}</p>
                     </div>
-                    <div className="mt-3 text-[9px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30 px-2 py-0.5 rounded w-fit">
+                    <div className="mt-3 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/30 px-2 py-0.5 rounded w-fit">
                       {modeItem.time}
                     </div>
                   </div>
@@ -305,7 +305,7 @@ export default function AgentBrainDashboardPage() {
             </div>
 
             {/* Prompt instruction input */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">Focus Instruction (Optional)</label>
               <Input
                 value={userInstruction}
@@ -318,7 +318,7 @@ export default function AgentBrainDashboardPage() {
             {/* Run Button */}
             <div className="pt-2 border-t">
               <Button
-                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-850 text-white font-semibold h-11 rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2"
+                className="w-full bg-indigo-600 text-white font-semibold h-11 rounded-xl shadow-md transition-all active:scale-[0.99] flex items-center justify-center gap-2"
                 onClick={handleTriggerRun}
                 disabled={triggering}
               >
@@ -338,23 +338,23 @@ export default function AgentBrainDashboardPage() {
 
         {/* Safety Block Guard Panel (Right Card) */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-5">
-            <div className="flex items-center gap-2 border-b pb-3.5">
+          <div className="p-6 border border-slate-200/80 dark:border-slate-800/80 rounded-xl bg-white dark:bg-slate-900 shadow-md space-y-6">
+            <div className="flex items-center gap-2 border-b pb-3">
               <div className="p-2 bg-rose-50 dark:bg-rose-950/40 text-rose-650 rounded-xl">
                 <ShieldAlert className="h-5 w-5 animate-pulse" />
               </div>
               <div>
                 <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Decision Sandbox</h3>
-                <p className="text-[11px] text-muted-foreground">Guard configuration profiles</p>
+                <p className="text-xs text-muted-foreground">Guard configuration profiles</p>
               </div>
             </div>
 
             <div className="flex items-start justify-between gap-4 p-3 rounded-xl border bg-muted/40 dark:bg-slate-850/40">
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground dark:text-slate-200">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground dark:text-slate-200">
                   <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Do Not Delete Data
                 </div>
-                <p className="text-[10px] text-muted-foreground leading-normal">
+                <p className="text-xs text-muted-foreground leading-normal">
                   Skipping steps matching delete patterns (e.g. delete, cancel_account) in E2E runs.
                 </p>
               </div>
@@ -368,10 +368,10 @@ export default function AgentBrainDashboardPage() {
 
             <div className="flex items-start justify-between gap-4 p-3 rounded-xl border bg-muted/40 dark:bg-slate-850/40">
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground dark:text-slate-200">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground dark:text-slate-200">
                   <ShieldAlert className="h-3.5 w-3.5 text-amber-500" /> Do Not Modify Settings
                 </div>
-                <p className="text-[10px] text-muted-foreground leading-normal">
+                <p className="text-xs text-muted-foreground leading-normal">
                   Skipping steps editing user configuration profiles or invoking checkout checkout.
                 </p>
               </div>
@@ -427,11 +427,11 @@ export default function AgentBrainDashboardPage() {
             </div>
 
             {/* Tab content panel */}
-            <div className="p-5 min-h-[180px] max-h-96 overflow-y-auto">
+            <div className="p-6 min-h-[180px] max-h-96 overflow-y-auto">
               {activeMemoryTab === "successful" && (
                 <div className="space-y-2">
                   {Object.keys(memory.successfulLocators).length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No selectors recorded in memory yet. Runs will learn them dynamically.</p>
+                    <p className="text-xs text-muted-foreground ">No selectors recorded in memory yet. Runs will learn them dynamically.</p>
                   ) : (
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
@@ -458,7 +458,7 @@ export default function AgentBrainDashboardPage() {
               {activeMemoryTab === "stable" && (
                 <div className="flex flex-wrap gap-2">
                   {memory.stableComponents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No component selectors marked stable yet. (Requires 3+ successful hits).</p>
+                    <p className="text-xs text-muted-foreground ">No component selectors marked stable yet. (Requires 3+ successful hits).</p>
                   ) : (
                     memory.stableComponents.map((sel, idx) => (
                       <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-250 dark:bg-emerald-950/20 dark:text-emerald-400 font-mono">
@@ -472,10 +472,10 @@ export default function AgentBrainDashboardPage() {
               {activeMemoryTab === "flaky" && (
                 <div className="flex flex-wrap gap-2">
                   {memory.flakyComponents.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No selectors marked flaky. Excellent locator health!</p>
+                    <p className="text-xs text-muted-foreground ">No selectors marked flaky. Excellent locator health!</p>
                   ) : (
                     memory.flakyComponents.map((sel, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 font-mono">
+                      <span key={idx} className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-400 font-mono">
                         <AlertTriangle className="h-3.5 w-3.5" /> {sel}
                       </span>
                     ))
@@ -486,11 +486,11 @@ export default function AgentBrainDashboardPage() {
               {activeMemoryTab === "patterns" && (
                 <div className="space-y-2">
                   {memory.failedLocatorPatterns.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No failed class or ID patterns registered.</p>
+                    <p className="text-xs text-muted-foreground ">No failed class or ID patterns registered.</p>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {memory.failedLocatorPatterns.map((pat, idx) => (
-                        <div key={idx} className="p-2.5 rounded-lg border bg-rose-50/20 dark:bg-rose-955/10 text-xs font-mono text-rose-700 dark:text-rose-455">
+                        <div key={idx} className="p-3 rounded-lg border bg-rose-50/20 dark:bg-rose-955/10 text-xs font-mono text-rose-700 dark:text-rose-455">
                           {pat}
                         </div>
                       ))}
@@ -502,7 +502,7 @@ export default function AgentBrainDashboardPage() {
               {activeMemoryTab === "corrections" && (
                 <div className="space-y-2">
                   {Object.keys(memory.userCorrections).length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">No user corrections defined. Add corrections to bypass flaky automatic locators.</p>
+                    <p className="text-xs text-muted-foreground ">No user corrections defined. Add corrections to bypass flaky automatic locators.</p>
                   ) : (
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
@@ -539,7 +539,7 @@ export default function AgentBrainDashboardPage() {
               <h3 className="text-lg font-semibold text-foreground">Add Manual Override Selector</h3>
             </div>
             <form onSubmit={handleAddCorrection} className="space-y-4">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Target Description / Value *</label>
                 <Input
                   required
@@ -548,10 +548,10 @@ export default function AgentBrainDashboardPage() {
                   placeholder="e.g. button.submit or Click Login"
                   className="rounded-xl"
                 />
-                <p className="text-[10px] text-muted-foreground">Target selector name as generated by planner steps</p>
+                <p className="text-xs text-muted-foreground">Target selector name as generated by planner steps</p>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">Manual Override Selector (CSS/XPath) *</label>
                 <Input
                   required
@@ -560,7 +560,7 @@ export default function AgentBrainDashboardPage() {
                   placeholder="e.g. [data-testid='submit-login'] or #submit-button"
                   className="rounded-xl font-mono"
                 />
-                <p className="text-[10px] text-muted-foreground">Stable locator string to always use in browser runs</p>
+                <p className="text-xs text-muted-foreground">Stable locator string to always use in browser runs</p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t">
@@ -590,7 +590,7 @@ export default function AgentBrainDashboardPage() {
           <div className="text-center border rounded-xl py-12 bg-white dark:bg-slate-900 shadow-sm">
             <History className="h-10 w-10 text-slate-300 mx-auto mb-3" />
             <h4 className="font-semibold text-sm text-foreground dark:text-slate-300">No agent sessions triggered</h4>
-            <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-1.5">
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-2">
               Launch a cognitive Agent run to crawl paths, generate test suites, and execute scans.
             </p>
           </div>
@@ -613,12 +613,12 @@ export default function AgentBrainDashboardPage() {
                     <tr key={run.id} className="hover:bg-muted/50 dark:hover:bg-slate-850/40 transition-colors">
                       <td className="p-4">
                         <div className="font-semibold text-foreground dark:text-slate-200 font-mono text-xs">{run.id.substring(0, 8)}...</div>
-                        <div className="text-[10px] text-muted-foreground font-semibold mt-1">
+                        <div className="text-xs text-muted-foreground font-semibold mt-1">
                           {new Date(run.createdAt).toLocaleString()}
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                        <span className={`inline-block text-xs px-3 py-0.5 rounded-full font-bold ${
                           run.mode === "Exploration" ? "bg-cyan-50 text-cyan-600 dark:bg-cyan-950/20 dark:text-cyan-400" :
                           run.mode === "Planning" ? "bg-amber-50 text-amber-600 dark:bg-amber-955/20 dark:text-amber-400" :
                           run.mode === "Execution" ? "bg-indigo-50 text-indigo-650 dark:bg-indigo-950/20 dark:text-indigo-400" :
@@ -633,7 +633,7 @@ export default function AgentBrainDashboardPage() {
                       </td>
                       <td className="p-4">
                         {run.metrics ? (
-                          <div className="space-y-0.5 text-[10px] font-semibold text-muted-foreground">
+                          <div className="space-y-0.5 text-xs font-semibold text-muted-foreground">
                             <div>Plan: {formatDuration(run.metrics.planningDurationMs)}</div>
                             {run.metrics.averageStepDurationMs ? (
                               <div>Avg Step: {formatDuration(run.metrics.averageStepDurationMs)}</div>

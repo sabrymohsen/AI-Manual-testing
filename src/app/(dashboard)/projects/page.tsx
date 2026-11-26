@@ -36,7 +36,7 @@ import {
   HelpCircle,
   ArchiveRestore,
   RefreshCw
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface ProjectMetrics {
   testCases: number
@@ -311,7 +311,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/edit`)}
-          className="flex-1 text-[11px] bg-slate-105 hover:bg-slate-200 text-slate-800 font-extrabold shadow-sm dark:bg-slate-800 dark:text-slate-100"
+          className="flex-1 text-xs bg-slate-105 hover:bg-slate-200 text-slate-800 font-bold shadow-sm dark:bg-slate-800 dark:text-slate-100"
         >
           Add Credentials
         </Button>
@@ -322,7 +322,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/test-cases`)}
-          className="flex-1 text-[11px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-md shadow-indigo-600/10"
+          className="flex-1 text-xs bg-primary hover:bg-primary/90 text-white font-semibold shadow-md shadow-indigo-600/10"
         >
           Create Test Case
         </Button>
@@ -333,7 +333,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/manual-sessions/new`)}
-          className="flex-1 text-[11px] bg-primary hover:bg-primary/90 text-white font-semibold shadow-md shadow-indigo-600/10"
+          className="flex-1 text-xs bg-primary hover:bg-primary/90 text-white font-semibold shadow-md shadow-indigo-600/10"
         >
           Start Testing
         </Button>
@@ -344,7 +344,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/test-cases`)} // Redirect to cases list to filter failures
-          className="flex-1 text-[11px] bg-rose-600 hover:bg-rose-700 text-white font-semibold"
+          className="flex-1 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold"
         >
           Review Failures
         </Button>
@@ -355,7 +355,7 @@ export default function ProjectsPage() {
         <Button
           size="sm"
           onClick={() => router.push(`/projects/${project.id}/bug-reports`)}
-          className="flex-1 text-[11px] bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+          className="flex-1 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold"
         >
           Review Open Bugs
         </Button>
@@ -366,7 +366,7 @@ export default function ProjectsPage() {
       <Button
         size="sm"
         onClick={() => router.push(`/projects/${project.id}`)}
-        className="flex-1 text-[11px] bg-slate-900 hover:bg-slate-800 text-white font-extrabold dark:bg-slate-950 dark:hover:bg-slate-900"
+        className="flex-1 text-xs bg-slate-900 hover:bg-slate-800 text-white font-bold dark:bg-slate-950 dark:hover:bg-slate-900"
       >
         Open Workspace
       </Button>
@@ -376,7 +376,7 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-8 pb-12">
       {/* 1. Header Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-5 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-6 shadow-sm">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground dark:text-slate-50 flex items-center gap-2">
             <Folder className="h-6 w-6 text-indigo-650" /> Projects Hub
@@ -384,7 +384,7 @@ export default function ProjectsPage() {
           <p className="text-xs text-muted-foreground mt-1">Manage QA configurations, testing runs, defect reports, and system requirement details.</p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           {canCreateProject && (
             <Button
               onClick={() => router.push("/projects/new")}
@@ -409,33 +409,33 @@ export default function ProjectsPage() {
       {summary && (
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[11px] font-medium text-muted-foreground">Total Projects</span>
+            <span className="text-xs font-medium text-muted-foreground">Total Projects</span>
             <h2 className="text-xl font-semibold text-foreground dark:text-slate-100">{summary.totalProjects}</h2>
           </div>
           <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[11px] font-medium text-muted-foreground">Active Workspace</span>
+            <span className="text-xs font-medium text-muted-foreground">Active Workspace</span>
             <h2 className="text-xl font-semibold text-foreground dark:text-slate-100 text-indigo-650">{summary.activeProjects}</h2>
           </div>
           <div
             onClick={() => setHasFailedTests(true)}
             className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm hover:border-rose-200 hover:shadow-md transition-all cursor-pointer group"
           >
-            <span className="text-[11px] font-medium text-muted-foreground group-hover:text-rose-500">Failed Runs</span>
+            <span className="text-xs font-medium text-muted-foreground group-hover:text-rose-500">Failed Runs</span>
             <h2 className="text-xl font-semibold text-rose-500">{summary.projectsWithFailures}</h2>
           </div>
           <div
             onClick={() => setHasOpenBugs(true)}
             className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm hover:border-amber-200 hover:shadow-md transition-all cursor-pointer group"
           >
-            <span className="text-[11px] font-medium text-muted-foreground group-hover:text-amber-500">Open Bugs</span>
+            <span className="text-xs font-medium text-muted-foreground group-hover:text-amber-500">Open Bugs</span>
             <h2 className="text-xl font-semibold text-amber-500">{summary.projectsWithOpenBugs}</h2>
           </div>
           <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[11px] font-medium text-muted-foreground">Avg Pass Rate</span>
+            <span className="text-xs font-medium text-muted-foreground">Avg Pass Rate</span>
             <h2 className="text-xl font-semibold text-emerald-500">{summary.averagePassRate}%</h2>
           </div>
           <div className="border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 bg-white dark:bg-slate-900 space-y-1 shadow-sm">
-            <span className="text-[11px] font-medium text-muted-foreground">Avg Coverage</span>
+            <span className="text-xs font-medium text-muted-foreground">Avg Coverage</span>
             <h2 className="text-xl font-semibold text-indigo-650">{summary.averageCoverage}%</h2>
           </div>
         </div>
@@ -577,7 +577,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Toggles bar & Clear filter */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pt-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
           <div className="flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-605">
             {/* Failed runs toggle */}
             <label className="flex items-center gap-2 cursor-pointer">
@@ -651,7 +651,7 @@ export default function ProjectsPage() {
           {items.map((project) => (
             <div
               key={project.id}
-              className={`relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-5 shadow-sm group ${
+              className={`relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-6 shadow-sm group ${
                 project.status === "Archived" ? "opacity-60" : ""
               }`}
             >
@@ -667,20 +667,20 @@ export default function ProjectsPage() {
                       href={project.webAppUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-indigo-650 hover:underline truncate block max-w-[190px]"
+                      className="text-xs text-indigo-650 hover:underline truncate block max-w-[190px]"
                     >
                       {project.webAppUrl}
                     </a>
                   </div>
                   
                   {/* Health score badge */}
-                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${getHealthStyle(project.metrics.healthStatus)}`}>
+                  <span className={`text-xs px-3 py-0.5 rounded-full font-semibold border ${getHealthStyle(project.metrics.healthStatus)}`}>
                     {project.metrics.healthStatus}
                   </span>
                 </div>
 
                 {/* Env / Browser type Badges */}
-                <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                   <span className="bg-slate-100 dark:bg-slate-800 text-slate-550 dark:text-slate-350 px-2 py-0.5 rounded">
                     {project.environment}
                   </span>
@@ -699,32 +699,32 @@ export default function ProjectsPage() {
               </div>
 
               {/* Core metrics overview counts grid */}
-              <div className="grid gap-2 grid-cols-5 text-center bg-muted/50 dark:bg-slate-850/20 p-2.5 rounded-xl border border-border dark:border-slate-850">
+              <div className="grid gap-2 grid-cols-5 text-center bg-muted/50 dark:bg-slate-850/20 p-3 rounded-xl border border-border dark:border-slate-850">
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium text-muted-foreground">Cases</span>
+                  <span className="text-xs font-medium text-muted-foreground">Cases</span>
                   <span className="font-semibold text-foreground dark:text-slate-100 text-xs mt-0.5">{project.metrics.testCases}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium text-muted-foreground">Runs</span>
+                  <span className="text-xs font-medium text-muted-foreground">Runs</span>
                   <span className="font-semibold text-foreground dark:text-slate-100 text-xs mt-0.5">{project.metrics.testRuns}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium text-muted-foreground">Pass%</span>
+                  <span className="text-xs font-medium text-muted-foreground">Pass%</span>
                   <span className="font-semibold text-emerald-500 text-xs mt-0.5">{project.metrics.passRate}%</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium text-muted-foreground">Bugs</span>
+                  <span className="text-xs font-medium text-muted-foreground">Bugs</span>
                   <span className="font-semibold text-rose-500 text-xs mt-0.5">{project.metrics.openBugs}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[11px] font-medium text-muted-foreground">Cov%</span>
+                  <span className="text-xs font-medium text-muted-foreground">Cov%</span>
                   <span className="font-semibold text-indigo-650 text-xs mt-0.5">{project.metrics.requirementsCoverage}%</span>
                 </div>
               </div>
 
               {/* Project Setup progress tracker */}
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between items-center text-[11px] font-medium text-slate-450">
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between items-center text-xs font-medium text-slate-450">
                   <span>Setup Completeness</span>
                   <span>{project.metrics.setupCompleted} / {project.metrics.setupTotal}</span>
                 </div>
@@ -759,7 +759,7 @@ export default function ProjectsPage() {
                   {openDropdownId === project.id && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setOpenDropdownId(null)} />
-                      <div className="absolute right-0 bottom-full mb-2 w-48 rounded-xl border border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-2 z-20 animate-in fade-in duration-100 text-left">
+                      <div className="absolute right-0 bottom-full mb-2 w-48 rounded-xl border border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.08)] py-2 z-20 animate-in fade-in duration-200 text-left">
                         <button
                           onClick={() => {
                             setOpenDropdownId(null)
@@ -818,19 +818,19 @@ export default function ProjectsPage() {
         <div className="overflow-x-auto bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 rounded-xl p-4 shadow-sm min-h-[300px]">
           <table className="w-full text-xs text-left text-muted-foreground dark:text-slate-300">
             <thead>
-              <tr className="border-b dark:border-slate-850 text-muted-foreground text-[11px] font-medium">
-                <th className="py-2.5">Project</th>
-                <th className="py-2.5">Environment</th>
-                <th className="py-2.5">Test Type</th>
-                <th className="py-2.5">Browser</th>
-                <th className="py-2.5">Cases</th>
-                <th className="py-2.5">Runs</th>
-                <th className="py-2.5">Pass Rate</th>
-                <th className="py-2.5">Open Bugs</th>
-                <th className="py-2.5">Coverage</th>
-                <th className="py-2.5">Health</th>
-                <th className="py-2.5">Last updated</th>
-                <th className="py-2.5 text-right">Actions</th>
+              <tr className="border-b dark:border-slate-850 text-muted-foreground text-xs font-medium">
+                <th className="py-3">Project</th>
+                <th className="py-3">Environment</th>
+                <th className="py-3">Test Type</th>
+                <th className="py-3">Browser</th>
+                <th className="py-3">Cases</th>
+                <th className="py-3">Runs</th>
+                <th className="py-3">Pass Rate</th>
+                <th className="py-3">Open Bugs</th>
+                <th className="py-3">Coverage</th>
+                <th className="py-3">Health</th>
+                <th className="py-3">Last updated</th>
+                <th className="py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -855,7 +855,7 @@ export default function ProjectsPage() {
                   <td className="py-3 font-semibold text-rose-500">{project.metrics.openBugs}</td>
                   <td className="py-3 font-semibold">{project.metrics.requirementsCoverage}%</td>
                   <td className="py-3">
-                    <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-semibold border ${getHealthStyle(project.metrics.healthStatus)}`}>
+                    <span className={`text-xs px-3 py-0.5 rounded-full font-semibold border ${getHealthStyle(project.metrics.healthStatus)}`}>
                       {project.metrics.healthStatus}
                     </span>
                   </td>
@@ -863,7 +863,7 @@ export default function ProjectsPage() {
                     {new Date(project.lastActivity.lastUpdatedAt).toLocaleDateString()}
                   </td>
                   <td className="py-3 text-right">
-                    <div className="flex justify-end gap-1.5">
+                    <div className="flex justify-end gap-2">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -897,7 +897,7 @@ export default function ProjectsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="fixed inset-0" onClick={() => setDuplicateProject(null)} />
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-md shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 z-10 animate-in zoom-in-95 duration-200 space-y-4">
-            <div className="flex justify-between items-center border-b dark:border-slate-800 pb-2.5">
+            <div className="flex justify-between items-center border-b dark:border-slate-800 pb-3">
               <h3 className="text-base font-semibold text-foreground dark:text-slate-50 flex items-center gap-2">
                 <Copy className="h-5 w-5 text-indigo-650" /> Duplicate: {duplicateProject.name}
               </h3>
@@ -910,7 +910,7 @@ export default function ProjectsPage() {
             </div>
 
             <div className="space-y-4 text-xs">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <label className="font-semibold text-slate-550 block">Duplicate Project Name *</label>
                 <input
                   type="text"
@@ -922,10 +922,10 @@ export default function ProjectsPage() {
               </div>
 
               {/* Duplicate options */}
-              <div className="space-y-3.5 border border-border dark:border-slate-850 p-4 rounded-xl bg-muted/30">
-                <span className="font-medium text-[11px] text-muted-foreground">Cloning settings</span>
+              <div className="space-y-3 border border-border dark:border-slate-850 p-4 rounded-xl bg-muted/30">
+                <span className="font-medium text-xs text-muted-foreground">Cloning settings</span>
                 
-                <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+                <label className="flex items-start gap-3 cursor-pointer pt-1">
                   <input
                     type="checkbox"
                     checked={cloneTestCases}
@@ -934,11 +934,11 @@ export default function ProjectsPage() {
                   />
                   <div>
                     <span className="font-semibold text-foreground dark:text-slate-200 block">Copy Test Cases & Steps</span>
-                    <span className="text-[10px] text-muted-foreground leading-normal">Copies all manual/automated test definitions and step logs.</span>
+                    <span className="text-xs text-muted-foreground leading-normal">Copies all manual/automated test definitions and step logs.</span>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-2.5 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={cloneRequirements}
@@ -947,11 +947,11 @@ export default function ProjectsPage() {
                   />
                   <div>
                     <span className="font-semibold text-foreground dark:text-slate-200 block">Copy Requirements</span>
-                    <span className="text-[10px] text-muted-foreground leading-normal">Copies the functional backlog requirements and links them to cases.</span>
+                    <span className="text-xs text-muted-foreground leading-normal">Copies the functional backlog requirements and links them to cases.</span>
                   </div>
                 </label>
 
-                <label className="flex items-start gap-2.5 cursor-pointer">
+                <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={cloneLocators}
@@ -960,7 +960,7 @@ export default function ProjectsPage() {
                   />
                   <div>
                     <span className="font-semibold text-foreground dark:text-slate-200 block">Copy Element Locators</span>
-                    <span className="text-[10px] text-muted-foreground leading-normal">Copies target XPath/CSS selector paths stored for locator picking.</span>
+                    <span className="text-xs text-muted-foreground leading-normal">Copies target XPath/CSS selector paths stored for locator picking.</span>
                   </div>
                 </label>
               </div>

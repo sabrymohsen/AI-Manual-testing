@@ -26,7 +26,7 @@ import {
   Loader2,
   Bot,
   Code
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 interface DiagnosisItem {
   id: string
@@ -234,7 +234,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
     return (
       <div className="py-24 text-center text-slate-450 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-3xs">
         <Loader2 className="animate-spin text-indigo-650" size={28} />
-        <span className="font-medium text-[11px]">Loading Doctor failure diagnostics...</span>
+        <span className="font-medium text-xs">Loading Doctor failure diagnostics...</span>
       </div>
     )
   }
@@ -243,7 +243,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
     <div className="space-y-6 relative">
       
       {/* SECTION TABS SUB-NAVIGATION */}
-      <div className="flex items-center justify-between border-b pb-1.5 flex-wrap gap-3">
+      <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-3">
         <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border select-none">
           {[
             { id: "Report", label: "Triage Diagnostics", icon: Sparkles },
@@ -252,7 +252,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
             <button
               key={tab.id}
               onClick={() => setActiveSubTab(tab.id as any)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                 activeSubTab === tab.id
                   ? "bg-card text-primary shadow-3xs border"
                   : "text-muted-foreground hover:text-foreground"
@@ -273,7 +273,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
             <div className="flex items-center justify-between border-b pb-2 select-none">
               <div className="flex items-center gap-2">
                 <Inbox size={15} className="text-indigo-650 animate-pulse" />
-                <span className="text-[11px] font-medium text-slate-450">Failure Inbox Logs</span>
+                <span className="text-xs font-medium text-slate-450">Failure Inbox Logs</span>
               </div>
               <button
                 onClick={() => setInboxCollapsed(!inboxCollapsed)}
@@ -286,8 +286,8 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
             {!inboxCollapsed && (
               <div className="space-y-4">
                 {/* Filters Row */}
-                <div className="flex items-center gap-4 flex-wrap text-[10px] font-semibold text-muted-foreground select-none">
-                  <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-4 flex-wrap text-xs font-semibold text-muted-foreground select-none">
+                  <div className="flex items-center gap-2">
                     <Filter size={12} className="text-muted-foreground" />
                     <span>Status:</span>
                     <div className="flex bg-muted p-0.5 rounded-lg border">
@@ -295,7 +295,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                         <button
                           key={st}
                           onClick={() => setFilterStatus(st)}
-                          className={`px-2 py-0.5 rounded-md uppercase text-[9px] font-semibold ${
+                          className={`px-2 py-0.5 rounded-md uppercase text-xs font-semibold ${
                             filterStatus === st ? "bg-card text-primary shadow-3xs" : "text-slate-450 hover:text-foreground"
                           }`}
                         >
@@ -305,14 +305,14 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span>Date:</span>
                     <div className="flex bg-muted p-0.5 rounded-lg border">
                       {(["All", "Today", "Week"] as const).map(dt => (
                         <button
                           key={dt}
                           onClick={() => setFilterDate(dt)}
-                          className={`px-2 py-0.5 rounded-md uppercase text-[9px] font-semibold ${
+                          className={`px-2 py-0.5 rounded-md uppercase text-xs font-semibold ${
                             filterDate === dt ? "bg-card text-primary shadow-3xs" : "text-slate-450 hover:text-foreground"
                           }`}
                         >
@@ -322,12 +322,12 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <span>Sort:</span>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as any)}
-                      className="bg-muted/50 border rounded-lg px-2 py-0.5 text-[9.5px] cursor-pointer"
+                      className="bg-muted/50 border rounded-lg px-2 py-0.5 text-xs cursor-pointer"
                     >
                       <option value="Newest">Newest Date</option>
                       <option value="Confidence">Confidence Score</option>
@@ -340,7 +340,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                 <div className="overflow-x-auto border rounded-xl bg-muted/50">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-muted/50 border-b text-[9.5px] font-semibold text-slate-450 uppercase tracking-wider">
+                      <tr className="bg-muted/50 border-b text-xs font-semibold text-slate-450 uppercase tracking-wider">
                         <th className="p-3">Test Name & Method</th>
                         <th className="p-3">Error Type</th>
                         <th className="p-3">Primary Diagnosis Cause</th>
@@ -362,12 +362,12 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                         >
                           <td className="p-3">
                             <span className="text-foreground block truncate max-w-[200px]">{item.testName}</span>
-                            <span className="text-[9.5px] text-muted-foreground font-mono font-medium block mt-0.5">
+                            <span className="text-xs text-muted-foreground font-mono font-medium block mt-0.5">
                               {new Date(item.createdAt).toLocaleString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </td>
                           <td className="p-3">
-                            <span className="font-mono text-[10px] text-primary bg-primary/10 border border-primary/25 px-2 py-0.5 rounded">
+                            <span className="font-mono text-xs text-primary bg-primary/10 border border-primary/25 px-2 py-0.5 rounded">
                               {item.errorType}
                             </span>
                           </td>
@@ -378,7 +378,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                             {Math.round(item.confidence * 100)}%
                           </td>
                           <td className="p-3 text-right">
-                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] border font-semibold uppercase ${
+                            <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs border font-semibold uppercase ${
                               item.status === "new"
                                 ? "bg-rose-50 text-rose-700 border-rose-200"
                                 : item.status === "diagnosing"
@@ -392,7 +392,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                       ))}
                       {filteredDiagnoses.length === 0 && (
                         <tr>
-                          <td colSpan={5} className="p-8 text-center text-muted-foreground italic font-medium">
+                          <td colSpan={5} className="p-8 text-center text-muted-foreground font-medium">
                             No failure records matching the active filter criteria.
                           </td>
                         </tr>
@@ -417,12 +417,12 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                   <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground leading-tight">{selectedItem.testName}</h3>
-                      <span className="text-[9.5px] text-muted-foreground font-mono font-medium block mt-0.5">
+                      <span className="text-xs text-muted-foreground font-mono font-medium block mt-0.5">
                         Run Date: {new Date(selectedItem.createdAt).toLocaleString()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] border font-semibold uppercase ${
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border font-semibold uppercase ${
                         selectedItem.status === "new"
                           ? "bg-rose-50 text-rose-700 border-rose-250 animate-pulse"
                           : selectedItem.status === "diagnosing"
@@ -436,9 +436,9 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
 
                   {/* What Failed Section */}
                   <div className="space-y-2">
-                    <span className="text-[9.5px] font-semibold text-slate-450 block uppercase tracking-wider">What Failed</span>
-                    <div className="bg-rose-50/50 border border-rose-100 p-3.5 rounded-xl">
-                      <span className="text-[9.5px] font-mono text-rose-750 block font-semibold leading-relaxed select-all">
+                    <span className="text-xs font-semibold text-slate-450 block uppercase tracking-wider">What Failed</span>
+                    <div className="bg-rose-50/50 border border-rose-100 p-3 rounded-xl">
+                      <span className="text-xs font-mono text-rose-750 block font-semibold leading-relaxed select-all">
                         {selectedItem.errorMessage}
                       </span>
                     </div>
@@ -446,10 +446,10 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
 
                   {/* Doctor Triage Diagnosis details */}
                   <div className="space-y-3 pt-2">
-                    <span className="text-[9.5px] font-semibold text-slate-450 block uppercase tracking-wider">Doctor Triage findings</span>
+                    <span className="text-xs font-semibold text-slate-450 block uppercase tracking-wider">Doctor Triage findings</span>
                     
-                    <div className="bg-muted/50 border p-3.5 rounded-xl space-y-3">
-                      <div className="flex items-center justify-between text-[10px] font-semibold border-b pb-1.5 text-muted-foreground">
+                    <div className="bg-muted/50 border p-3 rounded-xl space-y-3">
+                      <div className="flex items-center justify-between text-xs font-semibold border-b pb-2 text-muted-foreground">
                         <span className="font-semibold">Primary Cause: {selectedItem.primaryCause}</span>
                         <span className="text-primary font-semibold bg-primary/10 border border-primary/25 px-2 py-0.2 rounded-full">
                           Confidence {Math.round(selectedItem.confidence * 100)}%
@@ -466,9 +466,9 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
 
                   {/* How to Fix remediation steps */}
                   <div className="bg-primary/10 border border-indigo-150 p-4 rounded-xl space-y-3">
-                    <div className="flex items-center gap-1.5 text-primary border-b border-primary/25 pb-1.5">
+                    <div className="flex items-center gap-2 text-primary border-b border-primary/25 pb-2">
                       <Sparkles size={13} className="animate-pulse" />
-                      <span className="text-[11px] font-medium">Suggested remediation steps</span>
+                      <span className="text-xs font-medium">Suggested remediation steps</span>
                     </div>
                     <div className="space-y-3 text-foreground font-medium">
                       <ol className="list-decimal pl-4 space-y-1 leading-relaxed text-muted-foreground font-semibold">
@@ -478,9 +478,9 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                       </ol>
                       
                       {/* suggested locator code snippet */}
-                      <div className="space-y-1 pt-1.5">
-                        <span className="text-[8.5px] font-semibold text-muted-foreground block uppercase">Recommended Code updates</span>
-                        <pre className="font-mono text-[9.5px] font-semibold text-primary bg-card border border-primary/25 p-2.5 rounded-xl select-all">
+                      <div className="space-y-1 pt-2">
+                        <span className="text-xs font-semibold text-muted-foreground block uppercase">Recommended Code updates</span>
+                        <pre className="font-mono text-xs font-semibold text-primary bg-card border border-primary/25 p-3 rounded-xl select-all">
                           {selectedItem.testName.includes("Login") 
                             ? `driver.element().click(clickableField("Submit"));` 
                             : `driver.element().wait(10000);`
@@ -491,19 +491,19 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                   </div>
 
                   {/* Actions buttons */}
-                  <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t text-[10.5px]">
+                  <div className="flex items-center justify-between gap-3 flex-wrap pt-2 border-t text-xs">
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => handleResolve(selectedItem.id)}
                         disabled={selectedItem.status === "resolved"}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-8.5 px-3.5 font-semibold text-[11px] shadow-xs flex items-center justify-center gap-1"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-8.5 px-3 font-semibold text-xs shadow-xs flex items-center justify-center gap-1"
                       >
                         <CheckCircle size={12} className="fill-current" /> Mark Resolved
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => handleAnalyze(selectedItem.id)}
-                        className="h-8.5 rounded-xl border-border text-slate-650 bg-card px-3.5 font-semibold shadow-2xs flex items-center justify-center gap-1"
+                        className="h-8.5 rounded-xl border-border text-slate-650 bg-card px-3 font-semibold shadow-2xs flex items-center justify-center gap-1"
                       >
                         <RefreshCw size={12} /> Re-diagnose
                       </Button>
@@ -511,7 +511,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                     
                     <Button
                       onClick={() => handleCreateBug(selectedItem.id)}
-                      className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl h-8.5 px-3.5 font-black text-[11px] shadow-xs flex items-center justify-center gap-1"
+                      className="bg-slate-800 hover:bg-slate-900 text-white rounded-xl h-8.5 px-3 font-bold text-xs shadow-xs flex items-center justify-center gap-1"
                     >
                       <Bug size={12} /> File Bug Ticket
                     </Button>
@@ -523,18 +523,18 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
                   <div className="flex items-center gap-2 border-b pb-2">
                     <Bot size={15} className="text-indigo-650" />
-                    <span className="text-[11px] font-medium text-slate-450">Triage Tunnels chat assistant</span>
+                    <span className="text-xs font-medium text-slate-450">Triage Tunnels chat assistant</span>
                   </div>
 
-                  <div className="h-48 border rounded-xl bg-muted/50 p-4 overflow-y-auto space-y-3 font-semibold leading-relaxed text-[11px] text-slate-750">
+                  <div className="h-48 border rounded-xl bg-muted/50 p-4 overflow-y-auto space-y-3 font-semibold leading-relaxed text-xs text-slate-750">
                     {chatMessages.map((msg, i) => (
-                      <div key={i} className={`flex items-start gap-2.5 max-w-[80%] ${msg.role === "user" ? "ml-auto flex-row-reverse text-right" : "text-left"}`}>
+                      <div key={i} className={`flex items-start gap-3 max-w-[80%] ${msg.role === "user" ? "ml-auto flex-row-reverse text-right" : "text-left"}`}>
                         <div className={`h-7 w-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 select-none ${
                           msg.role === "user" ? "bg-slate-800 text-white" : "bg-indigo-650 text-white animate-pulse"
                         }`}>
                           {msg.role === "user" ? "U" : "D"}
                         </div>
-                        <div className={`p-2.5 rounded-2xl ${
+                        <div className={`p-3 rounded-2xl ${
                           msg.role === "user" ? "bg-muted text-foreground rounded-tr-none" : "bg-primary/10 border border-primary/25 text-primary rounded-tl-none font-medium shadow-3xs"
                         }`}>
                           {msg.text}
@@ -542,7 +542,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                       </div>
                     ))}
                     {chatting && (
-                      <div className="flex items-center gap-1.5 text-muted-foreground italic text-[10px]">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
                         <Loader2 size={12} className="animate-spin text-indigo-650" />
                         <span>Doctor is analyzing page locators styling context...</span>
                       </div>
@@ -573,7 +573,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
               <div className="lg:col-span-4 space-y-6">
                 
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-[11px] font-medium text-slate-450 block border-b pb-2">Triage Evidence Viewer</span>
+                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Triage Evidence Viewer</span>
                   
                   {/* Evidence media selector */}
                   <div className="flex bg-muted p-0.5 border rounded-xl select-none mb-2">
@@ -586,7 +586,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                       <button
                         key={tab.id}
                         onClick={() => setEvidenceTab(tab.id as any)}
-                        className={`flex-1 py-1 rounded-lg text-[9px] font-semibold uppercase text-center ${
+                        className={`flex-1 py-1 rounded-lg text-xs font-semibold uppercase text-center ${
                           evidenceTab === tab.id ? "bg-card text-primary shadow-3xs" : "text-slate-450 hover:text-foreground"
                         }`}
                       >
@@ -596,19 +596,19 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
                   </div>
 
                   {/* Dynamic media placeholder frame */}
-                  <div className="aspect-video bg-muted border rounded-xl flex items-center justify-center relative overflow-hidden font-mono text-[9px] select-none text-slate-450">
-                    <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:10px_10px] flex flex-col items-center justify-center p-2 text-center">
+                  <div className="aspect-video bg-muted border rounded-xl flex items-center justify-center relative overflow-hidden font-mono text-xs select-none text-slate-450">
+                    <div className="absolute inset-0 [background-size:10px_10px] flex flex-col items-center justify-center p-2 text-center">
                       <span className="font-semibold uppercase">{evidenceTab} log details</span>
-                      <span className="text-[11px] text-muted-foreground mt-1 block">Click to open raw report logs</span>
+                      <span className="text-xs text-muted-foreground mt-1 block">Click to open raw report logs</span>
                     </div>
                   </div>
 
                   {/* Similar Failures grouping link */}
-                  <div className="bg-primary/10 border border-primary/25 p-3 rounded-xl flex items-center justify-between text-[10px]">
+                  <div className="bg-primary/10 border border-primary/25 p-3 rounded-xl flex items-center justify-between text-xs">
                     <span className="font-semibold text-indigo-950">Similar failure occurrences:</span>
                     <button
                       onClick={() => showToast(`Found ${selectedItem.similarFailuresCount} executions with identical traces.`, "info")}
-                      className="text-indigo-650 hover:underline font-semibold font-mono text-[10.5px]"
+                      className="text-indigo-650 hover:underline font-semibold font-mono text-xs"
                     >
                       {selectedItem.similarFailuresCount} tests matched
                     </button>
@@ -633,33 +633,33 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
         <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
           <div className="flex items-center gap-2 border-b pb-2 select-none">
             <TrendingUp size={15} className="text-indigo-650 animate-pulse" />
-            <span className="text-[11px] font-medium text-slate-450">Recurring Issues Groups Map</span>
+            <span className="text-xs font-medium text-slate-450">Recurring Issues Groups Map</span>
           </div>
 
           <div className="space-y-4 text-left">
             {recurring.map((item, idx) => (
-              <div key={idx} className="p-4 border rounded-xl bg-muted/50 space-y-3.5 text-[10.5px]">
-                <div className="flex justify-between items-center border-b pb-1.5 flex-wrap gap-2 font-semibold text-foreground">
+              <div key={idx} className="p-4 border rounded-xl bg-muted/50 space-y-3 text-xs">
+                <div className="flex justify-between items-center border-b pb-2 flex-wrap gap-2 font-semibold text-foreground">
                   <span className="font-mono text-primary truncate max-w-[400px]">{item.signature}</span>
-                  <span className="text-[9.5px] bg-rose-50 border border-rose-150 text-rose-700 px-2.5 py-0.5 rounded-full font-semibold animate-pulse">
+                  <span className="text-xs bg-rose-50 border border-rose-150 text-rose-700 px-3 py-0.5 rounded-full font-semibold animate-pulse">
                     Frequencies: {item.count} hits
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-[10px] text-muted-foreground font-semibold leading-relaxed">
+                <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground font-semibold leading-relaxed">
                   <div>
-                    <span className="text-muted-foreground block text-[11px]">First witnessed occurrence</span>
+                    <span className="text-muted-foreground block text-xs">First witnessed occurrence</span>
                     <span className="text-foreground font-mono font-medium">{new Date(item.firstSeen).toLocaleDateString()}</span>
                   </div>
                   <div>
-                    <span className="text-muted-foreground block text-[11px]">Most recent occurrence</span>
+                    <span className="text-muted-foreground block text-xs">Most recent occurrence</span>
                     <span className="text-foreground font-mono font-medium">{new Date(item.lastSeen).toLocaleDateString()}</span>
                   </div>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px] mb-1 font-medium">Involved classes paths</span>
-                  <div className="flex flex-wrap gap-1.5">
+                  <span className="text-muted-foreground block text-xs mb-1 font-medium">Involved classes paths</span>
+                  <div className="flex flex-wrap gap-2">
                     {item.tests.map((test, i) => (
-                      <span key={i} className="px-2 py-0.5 text-[9px] bg-card border rounded font-mono font-semibold text-slate-650">
+                      <span key={i} className="px-2 py-0.5 text-xs bg-card border rounded font-mono font-semibold text-slate-650">
                         {test}
                       </span>
                     ))}
@@ -668,7 +668,7 @@ export default function AiDiagnosisSection({ selectedTestName, onSelectTest }: A
               </div>
             ))}
             {recurring.length === 0 && (
-              <p className="text-muted-foreground italic text-center py-12">No recurring failures found in the run history.</p>
+              <p className="text-muted-foreground text-center py-12">No recurring failures found in the run history.</p>
             )}
           </div>
         </div>

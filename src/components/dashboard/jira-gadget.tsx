@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import { MoreHorizontal, GripVertical } from "lucide-react"
+import { MoreHorizontal, GripVertical } from "@/components/ui/icons"
 
 interface GadgetProps {
   title: string
@@ -23,11 +23,11 @@ export function Gadget({ title, icon, actions, children, className, fullWidth }:
       className
     )}>
       {/* Jira-style gadget header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-muted/50">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 bg-muted/50">
         <div className="flex items-center gap-2">
           <GripVertical className="h-3.5 w-3.5 text-slate-300 cursor-grab" />
           {icon && <span className="text-muted-foreground">{icon}</span>}
-          <h3 className="text-[11px] font-medium text-foreground">{title}</h3>
+          <h3 className="text-xs font-medium text-foreground">{title}</h3>
         </div>
         <div className="flex items-center gap-1">
           {actions}
@@ -39,9 +39,9 @@ export function Gadget({ title, icon, actions, children, className, fullWidth }:
           </button>
           {menuOpen && (
             <div className="absolute right-2 top-8 z-10 w-32 rounded-md border border-border bg-card py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)]">
-              <button className="block w-full px-3 py-1 text-left text-[10px] text-muted-foreground hover:bg-muted/50">Refresh</button>
-              <button className="block w-full px-3 py-1 text-left text-[10px] text-muted-foreground hover:bg-muted/50">Configure</button>
-              <button className="block w-full px-3 py-1 text-left text-[10px] text-red-600 hover:bg-muted/50">Remove</button>
+              <button className="block w-full px-3 py-1 text-left text-xs text-muted-foreground hover:bg-muted/50">Refresh</button>
+              <button className="block w-full px-3 py-1 text-left text-xs text-muted-foreground hover:bg-muted/50">Configure</button>
+              <button className="block w-full px-3 py-1 text-left text-xs text-red-600 hover:bg-muted/50">Remove</button>
             </div>
           )}
         </div>

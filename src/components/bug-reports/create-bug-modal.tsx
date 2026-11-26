@@ -6,7 +6,7 @@ import { applyModulePrefix } from "@/lib/bug-reports/title-prefix"
 import { encodeImageForAi } from "@/lib/images/encode-for-ai"
 import { useProjectIntegration } from "@/hooks/use-project-integration"
 import { ComposerDialog, ComposerTitle, ComposerText, ComposerSection, ChipRow, ChipSelect } from "@/components/ui/issue-composer"
-import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check, AlertTriangle, Server, Globe, Tag, UserRound, GitBranch, Plus, Link2, Boxes, Image as ImageIcon } from "lucide-react"
+import { Bug, X, Sparkles, Paperclip, Video, Trash2, Check, AlertTriangle, Server, Globe, Tag, UserRound, GitBranch, Plus, Link2, Boxes, Image as ImageIcon } from "@/components/ui/icons"
 
 /**
  * Shared bug-creation modal — extracted from the Bug Reports page so the same
@@ -548,7 +548,7 @@ export function CreateBugModal({
       description="Describe the defect; every field stays editable before you save."
       wide
       crumbs={[
-        <span key="b" className="inline-flex items-center gap-1.5 font-medium">
+        <span key="b" className="inline-flex items-center gap-2 font-medium">
           <Bug className="h-3.5 w-3.5 text-red-500" />
           New bug
         </span>,
@@ -557,7 +557,7 @@ export function CreateBugModal({
           type="button"
           onClick={() => setAiOpen((v) => !v)}
           aria-expanded={aiOpen}
-          className={`inline-flex h-6 items-center gap-1 rounded-md px-1.5 font-medium transition-colors ${aiOpen ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
+          className={`inline-flex h-6 items-center gap-1 rounded-md px-2 font-medium transition-colors ${aiOpen ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
         >
           <Sparkles className="h-3.5 w-3.5" /> Write with AI
         </button>,
@@ -592,10 +592,10 @@ export function CreateBugModal({
             dir="auto"
             autoFocus
             placeholder="Describe what went wrong in your own words — e.g. 'checkout button does nothing on mobile after applying a discount code'. Paste a screenshot here too."
-            className="w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none placeholder:text-muted-foreground/70"
+            className="w-full resize-none bg-transparent text-xs leading-relaxed outline-none placeholder:text-muted-foreground/70"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+            <label className="inline-flex h-7 cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
               <Paperclip className="h-3.5 w-3.5" />
               {aiImage ? (aiImage.name.length > 24 ? `${aiImage.name.slice(0, 24)}…` : aiImage.name) : "Attach picture"}
               <input type="file" accept="image/*" className="hidden" onChange={(e) => setAiImage(e.target.files?.[0] || null)} />
@@ -609,20 +609,20 @@ export function CreateBugModal({
               type="button"
               onClick={handleGenerateWithAI}
               disabled={aiGenerating}
-              className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+              className="ml-auto inline-flex h-7 items-center gap-2 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
             >
               <Sparkles className="h-3.5 w-3.5" />
               {aiGenerating ? "Writing the bug…" : "Fill the form"}
             </button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Fills title, description, severity, priority, steps and expected/actual results.
           </p>
           {/* Say which engine answered, and on what evidence: a rule-based
               draft means no AI provider produced one, and a degraded draft
               means the model never saw the attached screenshot. */}
           {aiNotice && (
-            <p className={`text-[11px] font-medium ${aiNotice.kind === "ai" ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
+            <p className={`text-xs font-medium ${aiNotice.kind === "ai" ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>
               {aiNotice.text}
             </p>
           )}
@@ -642,7 +642,7 @@ export function CreateBugModal({
       {/* Possible duplicates, checked as the title is typed — a hint, not a block. */}
       {duplicateMatches.length > 0 && (
         <div className="mt-2 rounded-md border border-amber-300/70 bg-amber-50 p-2 dark:border-amber-500/30 dark:bg-amber-500/10">
-          <p className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 dark:text-amber-300">
+          <p className="flex items-center gap-2 text-xs font-medium text-amber-800 dark:text-amber-300">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
             {duplicateMatches.length === 1 ? "A similar defect already exists" : `${duplicateMatches.length} similar defects already exist`}
             <span className="font-normal text-amber-700/80 dark:text-amber-400/80">· still different? carry on</span>
@@ -654,7 +654,7 @@ export function CreateBugModal({
                 href={`/projects/${projectId}/bug-reports?bugId=${m.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded px-1.5 py-1 text-[11px] hover:bg-background/70"
+                className="flex items-center gap-2 rounded px-2 py-1 text-xs hover:bg-background/70"
               >
                 <span className="shrink-0 font-mono text-amber-700 dark:text-amber-400">{m.bugKey || "BUG"}</span>
                 <span className="min-w-0 flex-1 truncate" title={m.title}>{m.title}</span>
@@ -671,7 +671,7 @@ export function CreateBugModal({
       <ChipRow>
         <span
           title="Module: groups the defect in the QA report and prefixes the title as [Module]. Empty = inherit the linked test case's module."
-          className={`relative inline-flex h-7 max-w-[14rem] items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${suiteId ? "border-border bg-card text-foreground" : "border-dashed border-border text-muted-foreground hover:bg-accent"}`}
+          className={`relative inline-flex h-7 max-w-[14rem] items-center gap-2 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${suiteId ? "border-border bg-card text-foreground" : "border-dashed border-border text-muted-foreground hover:bg-accent"}`}
         >
           <Boxes className="h-3.5 w-3.5 shrink-0" />
           <ModuleSelect
@@ -732,7 +732,7 @@ export function CreateBugModal({
             options={opMembers.map((m) => ({ value: String(m.id), label: m.name }))}
           />
         ) : (
-          <span className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${assignee ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
+          <span className={`inline-flex h-7 items-center gap-2 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${assignee ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
             <UserRound className="h-3.5 w-3.5 shrink-0" />
             <input
               aria-label="Assignee email"
@@ -743,7 +743,7 @@ export function CreateBugModal({
             />
           </span>
         )}
-        <span className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${parent ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
+        <span className={`inline-flex h-7 items-center gap-2 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${parent ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"}`}>
           <GitBranch className="h-3.5 w-3.5 shrink-0" />
           <input
             aria-label={`Parent task (${trackerName} work package)`}
@@ -753,7 +753,7 @@ export function CreateBugModal({
             placeholder="Parent task"
             className="w-24 bg-transparent outline-none placeholder:text-muted-foreground focus:w-48"
           />
-          {parentLoading && <span className="text-[10px] text-muted-foreground">…</span>}
+          {parentLoading && <span className="text-xs text-muted-foreground">…</span>}
           <datalist id="create-bug-parent-options">
             {parentOptions.map((wp) => (
               <option key={wp.id} value={wp.id}>
@@ -769,7 +769,7 @@ export function CreateBugModal({
       <ComposerSection
         title={`Steps to reproduce${steps.length ? ` (${steps.length})` : ""}`}
         action={
-          <button type="button" onClick={addStep} className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+          <button type="button" onClick={addStep} className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
             <Plus className="h-3.5 w-3.5" /> Add step
           </button>
         }
@@ -778,14 +778,14 @@ export function CreateBugModal({
           <button
             type="button"
             onClick={addRecordedSteps}
-            className="mb-1.5 inline-flex h-7 items-center gap-1.5 rounded-md border border-dashed border-primary/30 px-2 text-xs text-primary hover:bg-primary/5"
+            className="mb-2 inline-flex h-7 items-center gap-2 rounded-md border border-dashed border-primary/30 px-2 text-xs text-primary hover:bg-primary/5"
           >
             <Sparkles className="h-3.5 w-3.5" />
             Add {sessionSteps.length} recorded step{sessionSteps.length === 1 ? "" : "s"} from this session
           </button>
         )}
         {steps.length === 0 ? (
-          <button type="button" onClick={addStep} className="w-full rounded-md px-2 py-1.5 text-left text-[13px] text-muted-foreground/70 hover:bg-accent/50">
+          <button type="button" onClick={addStep} className="w-full rounded-md px-2 py-2 text-left text-xs text-muted-foreground/70 hover:bg-accent/50">
             1. Go to…
           </button>
         ) : (
@@ -800,7 +800,7 @@ export function CreateBugModal({
                   dir="auto"
                   aria-label={`Step ${idx + 1}`}
                   placeholder="Describe the step…"
-                  className="h-8 min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/60"
+                  className="h-8 min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
                 />
                 <button
                   type="button"
@@ -824,7 +824,7 @@ export function CreateBugModal({
             dir="auto"
             aria-label="Expected result"
             placeholder="What should happen"
-            className="h-8 w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/60"
+            className="h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
           />
         </ComposerSection>
         <ComposerSection title="Actual result">
@@ -834,7 +834,7 @@ export function CreateBugModal({
             dir="auto"
             aria-label="Actual result"
             placeholder="What happened instead"
-            className="h-8 w-full bg-transparent text-[13px] outline-none placeholder:text-muted-foreground/60"
+            className="h-8 w-full bg-transparent text-xs outline-none placeholder:text-muted-foreground/60"
           />
         </ComposerSection>
       </div>
@@ -842,10 +842,10 @@ export function CreateBugModal({
       <ComposerSection title="Evidence">
         {attachmentChoices && attachmentChoices.length > 0 ? (
           <div className="mb-2">
-            <p className="mb-1 text-[11px] text-muted-foreground">
+            <p className="mb-1 text-xs text-muted-foreground">
               From this session — click to attach ({sessionAttachments.length} selected)
             </p>
-            <div className="grid max-h-[170px] grid-cols-4 gap-1.5 overflow-y-auto pr-1">
+            <div className="grid max-h-[170px] grid-cols-4 gap-2 overflow-y-auto pr-1">
               {attachmentChoices.map((att) => {
                 const selected = isAttached(att.filePath)
                 const isVideo = att.kind === "video"
@@ -861,7 +861,7 @@ export function CreateBugModal({
                     {isVideo ? (
                       <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
                         <Video className="h-4 w-4" />
-                        <span className="text-[11px]">Video</span>
+                        <span className="text-xs">Video</span>
                       </div>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -879,9 +879,9 @@ export function CreateBugModal({
           </div>
         ) : (
           sessionAttachments.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1.5">
+            <div className="mb-2 flex flex-wrap gap-2">
               {sessionAttachments.map((att) => (
-                <span key={att.filePath} className="inline-flex h-7 max-w-[16rem] items-center gap-1.5 rounded-md border border-border bg-card px-2 text-xs">
+                <span key={att.filePath} className="inline-flex h-7 max-w-[16rem] items-center gap-2 rounded-md border border-border bg-card px-2 text-xs">
                   <Paperclip className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate" title={att.fileName}>{att.fileName}</span>
                   <button
@@ -898,8 +898,8 @@ export function CreateBugModal({
           )
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs ${screenshotFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-2 rounded-md border px-2 text-xs ${screenshotFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
             <ImageIcon className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{screenshotFile ? screenshotFile.name : "Screenshot"}</span>
             <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" className="hidden" onChange={(e) => setScreenshotFile(e.target.files?.[0] || null)} />
@@ -909,7 +909,7 @@ export function CreateBugModal({
               <X className="h-3.5 w-3.5" />
             </button>
           )}
-          <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs ${videoFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
+          <label className={`inline-flex h-7 max-w-[14rem] cursor-pointer items-center gap-2 rounded-md border px-2 text-xs ${videoFile ? "border-border bg-card" : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
             <Video className="h-3.5 w-3.5 shrink-0" />
             <span className="truncate">{videoFile ? videoFile.name : "Video file"}</span>
             <input type="file" accept="video/webm,video/mp4,video/quicktime,video/ogg" className="hidden" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
@@ -919,7 +919,7 @@ export function CreateBugModal({
               <X className="h-3.5 w-3.5" />
             </button>
           )}
-          <span className={`inline-flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${videoUrl ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"} ${videoFile ? "opacity-50" : ""}`}>
+          <span className={`inline-flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring ${videoUrl ? "border-border bg-card" : "border-dashed border-border text-muted-foreground"} ${videoFile ? "opacity-50" : ""}`}>
             <Link2 className="h-3.5 w-3.5 shrink-0" />
             <input
               aria-label="Video URL"

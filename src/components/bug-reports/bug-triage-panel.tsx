@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Copy, Loader2, Sparkles } from "lucide-react"
+import { Copy, Loader2, Sparkles } from "@/components/ui/icons"
 import { DECISION_LABEL, type TriageResult } from "@/lib/bug-reports/triage"
 
 /**
@@ -94,13 +94,13 @@ export function BugTriagePanel({
     <div className="space-y-3">
       {matches.length > 0 && (
         <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
-          <p className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-violet-800 dark:text-violet-300">
+          <p className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-800 dark:text-violet-300">
             <Copy className="h-3.5 w-3.5" /> Possible duplicates ({matches.length})
           </p>
           <ul className="space-y-1">
             {matches.map((m) => (
-              <li key={m.id} className="flex items-center gap-2 text-[11px]">
-                <span className="shrink-0 rounded bg-background px-1.5 py-0.5 font-mono text-[10px]">{m.score}%</span>
+              <li key={m.id} className="flex items-center gap-2 text-xs">
+                <span className="shrink-0 rounded bg-background px-2 py-0.5 font-mono text-xs">{m.score}%</span>
                 <button onClick={() => onOpenBug(m.id)} className="min-w-0 flex-1 truncate text-left font-medium hover:underline" title={m.title}>
                   {m.bugKey ?? "BUG"} · {m.title}
                 </button>
@@ -114,7 +114,7 @@ export function BugTriagePanel({
       <div className="rounded-xl border p-3">
         <div className="flex flex-wrap items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-500" />
-          <p className="min-w-0 flex-1 text-[11px] font-semibold">
+          <p className="min-w-0 flex-1 text-xs font-semibold">
             AI triage
             <span className="block font-medium text-muted-foreground">
               Real bug, requirement issue, test issue, environment or duplicate? With a reason and a severity check.
@@ -123,14 +123,14 @@ export function BugTriagePanel({
           <button
             onClick={runTriage}
             disabled={running}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-violet-600 px-3 text-[11px] font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
+            className="inline-flex h-8 items-center gap-2 rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
           >
             {running ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             {running ? "Triaging…" : result ? "Run again" : "Triage with AI"}
           </button>
         </div>
-        {running && <p className="mt-2 text-[11px] font-medium text-muted-foreground">A local model can take up to a minute.</p>}
-        {error && <p className="mt-2 text-[11px] font-medium text-red-600">{error}</p>}
+        {running && <p className="mt-2 text-xs font-medium text-muted-foreground">A local model can take up to a minute.</p>}
+        {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
         {result && (
           <div className={`mt-3 space-y-2 rounded-lg border p-3 ${DECISION_TONE[result.decision] ?? ""}`}>
             <p className="text-xs font-bold">
@@ -145,14 +145,14 @@ export function BugTriagePanel({
               )}
               <span className="ml-2 font-medium text-muted-foreground">{Math.round(result.confidence * 100)}% sure</span>
             </p>
-            <p dir="auto" className="text-[11px] font-medium leading-relaxed">{result.reason}</p>
+            <p dir="auto" className="text-xs font-medium leading-relaxed">{result.reason}</p>
             {result.question && (
-              <p dir="auto" className="text-[11px] font-medium">
+              <p dir="auto" className="text-xs font-medium">
                 <b>Ask the business:</b> {result.question}
               </p>
             )}
             {(result.severity || result.priority) && (
-              <p className="text-[11px] font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Suggested: severity <b className="text-foreground">{result.severity ?? "—"}</b>, priority{" "}
                 <b className="text-foreground">{result.priority ?? "—"}</b>
                 {Object.keys(changes).length === 0 && " (already set)"}
@@ -164,7 +164,7 @@ export function BugTriagePanel({
                   onClick={async () => {
                     await onApply(changes)
                   }}
-                  className="h-7 rounded-md border bg-background px-2.5 text-[11px] font-semibold hover:bg-muted"
+                  className="h-7 rounded-md border bg-background px-3 text-xs font-semibold hover:bg-muted"
                 >
                   Apply {Object.entries(changes).map(([k, v]) => `${k} ${v}`).join(", ")}
                 </button>
@@ -174,7 +174,7 @@ export function BugTriagePanel({
                   onClick={async () => {
                     await onApply({ status: "Duplicate", resolution: "Duplicate", resolutionNote: `Duplicate of ${result.duplicateOf!.bugKey ?? result.duplicateOf!.id}` })
                   }}
-                  className="h-7 rounded-md border bg-background px-2.5 text-[11px] font-semibold hover:bg-muted"
+                  className="h-7 rounded-md border bg-background px-3 text-xs font-semibold hover:bg-muted"
                 >
                   Mark as duplicate
                 </button>
@@ -184,7 +184,7 @@ export function BugTriagePanel({
                   onClick={async () => {
                     await onApply({ status: "Rejected", resolution: "ByDesign", resolutionNote: `${DECISION_LABEL[result.decision]}: ${result.reason}` })
                   }}
-                  className="h-7 rounded-md border bg-background px-2.5 text-[11px] font-semibold hover:bg-muted"
+                  className="h-7 rounded-md border bg-background px-3 text-xs font-semibold hover:bg-muted"
                 >
                   Reject with this reason
                 </button>

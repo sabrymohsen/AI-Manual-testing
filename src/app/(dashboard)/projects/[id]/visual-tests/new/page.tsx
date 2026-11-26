@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Check, ChevronDown, ChevronRight, FileUp, Folder, Loader2, Play, Save, Search } from "lucide-react"
+import { ArrowLeft, Check, ChevronDown, ChevronRight, FileUp, Folder, Loader2, Play, Save, Search } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { CompareSettings, DEFAULT_SETTINGS, EnvironmentPicker, type VisualSettings } from "@/components/visual-tests/settings-fields"
@@ -37,7 +37,7 @@ function StepCard({
 }) {
   return (
     <section className={`rounded-xl border bg-card ${open ? "shadow-sm ring-1 ring-indigo-100" : ""}`}>
-      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 px-5 py-4 text-left">
+      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 px-6 py-4 text-left">
         <span
           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${done ? "bg-emerald-100 text-emerald-700" : open ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}
         >
@@ -49,7 +49,7 @@ function StepCard({
         </span>
         {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
       </button>
-      {open && <div className="border-t px-5 py-5">{children}</div>}
+      {open && <div className="border-t px-6 py-6">{children}</div>}
     </section>
   )
 }
@@ -331,7 +331,7 @@ function Wizard() {
                     </div>
                     {open &&
                       g.pages.map(p => (
-                        <label key={p.key} className="flex items-center gap-2 px-9 py-1.5 text-sm hover:bg-muted/50">
+                        <label key={p.key} className="flex items-center gap-2 px-8 py-2 text-sm hover:bg-muted/50">
                           <input
                             type="checkbox"
                             checked={!isExcluded(p)}

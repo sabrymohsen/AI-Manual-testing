@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AssertionBuilder } from "./assertion-builder"
-import { Trash2, Plus, ChevronUp, ChevronDown, RefreshCw, CheckCircle, AlertTriangle, MessageSquareText, SlidersHorizontal } from "lucide-react"
+import { Trash2, Plus, ChevronUp, ChevronDown, RefreshCw, CheckCircle, AlertTriangle, MessageSquareText, SlidersHorizontal } from "@/components/ui/icons"
 import { PlainEnglishEditor, isPlainStep } from "@/components/plain-english/plain-english-editor"
 
 interface Step {
@@ -172,7 +172,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
             setMode(m)
             setModeTouched(true)
           }}
-          className={`flex items-center gap-1 rounded-md px-2.5 py-1 font-medium ${mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+          className={`flex items-center gap-1 rounded-md px-3 py-1 font-medium ${mode === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
         >
           <Icon className="h-3.5 w-3.5" /> {label}
         </button>
@@ -184,7 +184,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[13px] font-medium text-foreground">Steps <span className="font-normal text-muted-foreground">{steps.length || ""}</span></h2>
+          <h2 className="text-xs font-medium text-foreground">Steps <span className="font-normal text-muted-foreground">{steps.length || ""}</span></h2>
           {modeToggle}
         </div>
         <PlainEnglishEditor
@@ -204,7 +204,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[13px] font-medium text-foreground">Steps <span className="font-normal text-muted-foreground">{steps.length || ""}</span></h2>
+        <h2 className="text-xs font-medium text-foreground">Steps <span className="font-normal text-muted-foreground">{steps.length || ""}</span></h2>
         <div className="flex items-center gap-2">
           {modeToggle}
           <Button type="button" variant="outline" size="sm" onClick={addStep}>
@@ -221,7 +221,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
         {steps.map((step, index) => (
           <div key={index} className="border rounded-lg p-4 space-y-3 bg-card/45">
             {isPlainStep(step) && (
-              <p className="rounded-md bg-primary/10 px-2 py-1 text-[11px] text-primary">
+              <p className="rounded-md bg-primary/10 px-2 py-1 text-xs text-primary">
                 Written in plain English — it runs from its description. Edit it in the Plain English view; the fields below are a summary.
               </p>
             )}
@@ -269,7 +269,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
                       size="sm"
                       onClick={() => handleValidateStepSelector(index, step.targetType, step.targetValue)}
                       disabled={validatingIdx === index}
-                      className="text-[10px] h-6 px-2 hover:bg-background flex items-center gap-1"
+                      className="text-xs h-6 px-2 hover:bg-background flex items-center gap-1"
                     >
                       <RefreshCw className={`h-3 w-3 ${validatingIdx === index ? "animate-spin" : ""}`} />
                       Validate Selector
@@ -308,7 +308,7 @@ export function StepBuilder({ steps, onChange, projectId, manual = false }: Step
                 </select>
 
                 {validationResults[index] && (
-                  <div className="flex items-center gap-1 text-[11px] font-medium pt-1">
+                  <div className="flex items-center gap-1 text-xs font-medium pt-1">
                     {validationResults[index].valid ? (
                       <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
                         <CheckCircle className="h-3.5 w-3.5 fill-current" />

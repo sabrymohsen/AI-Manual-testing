@@ -20,7 +20,7 @@ import {
   RotateCcw,
   Search,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -247,7 +247,7 @@ export default function HubRunsSection({
       <a
         href={`/api/hub/report?projectId=${projectId}&ref=${ref}&format=html`}
         onClick={(e) => e.stopPropagation()}
-        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
         title="Download a shareable HTML report"
       >
         <Download className="h-3 w-3" /> Report
@@ -255,7 +255,7 @@ export default function HubRunsSection({
       <a
         href={`/api/hub/report?projectId=${projectId}&ref=${ref}&format=csv`}
         onClick={(e) => e.stopPropagation()}
-        className="rounded px-1 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="rounded px-1 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
         title="Download as CSV"
       >
         CSV
@@ -279,7 +279,7 @@ export default function HubRunsSection({
       <div key={r.id} className={nested ? "border-t" : ""}>
         <div
           className={cn(
-            "flex w-full flex-wrap items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted/50",
+            "flex w-full flex-wrap items-center gap-3 px-4 py-3 text-sm hover:bg-muted/50",
             nested && "pl-10",
             open && "bg-primary/10"
           )}
@@ -309,12 +309,12 @@ export default function HubRunsSection({
             </span>
           )}
           {r.triggerSource && r.triggerSource !== "manual" && (
-            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground" title={r.triggeredByName ?? undefined}>
+            <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground" title={r.triggeredByName ?? undefined}>
               {SOURCE_LABEL[r.triggerSource] ?? r.triggerSource}
             </span>
           )}
           {r.environment && (
-            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary" title="Environment">
+            <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary" title="Environment">
               {r.environment}
             </span>
           )}
@@ -324,7 +324,7 @@ export default function HubRunsSection({
             {isActive(r.status) ? (
               <button
                 onClick={() => setPendingCancel({ ids: [r.id], label: r.script?.name ?? "this run" })}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-rose-700"
+                className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-rose-700"
               >
                 <Ban className="h-3 w-3" /> Cancel
               </button>
@@ -335,7 +335,7 @@ export default function HubRunsSection({
                   <button
                     onClick={() => rerun(r.id, { rerunExecutionIds: [r.id] }, "Re-run")}
                     disabled={busy === r.id}
-                    className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                     title="Run this test file again"
                   >
                     {busy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Re-run
@@ -414,13 +414,13 @@ export default function HubRunsSection({
             }}
             title="Pick two runs to see what newly broke and what got fixed"
           >
-            <GitCompareArrows className="mr-1.5 h-4 w-4" /> {compareMode ? "Done comparing" : "Compare"}
+            <GitCompareArrows className="mr-2 h-4 w-4" /> {compareMode ? "Done comparing" : "Compare"}
           </Button>
           <Button variant="outline" size="sm" onClick={() => setTriggersOpen(!triggersOpen)}>
-            <CalendarClock className="mr-1.5 h-4 w-4" /> Schedules & CI
+            <CalendarClock className="mr-2 h-4 w-4" /> Schedules & CI
           </Button>
           <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-1.5 h-4 w-4" /> Refresh
+            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>
         </div>
       </div>
@@ -489,7 +489,7 @@ export default function HubRunsSection({
                     {g.runs.filter((r) => r.status === "Passed").length} passed, {failedCount} failed
                   </span>
                   {first.triggerSource && first.triggerSource !== "manual" && (
-                    <span className="rounded bg-card px-1.5 py-0.5 text-[10px] text-muted-foreground" title={first.triggeredByName ?? undefined}>
+                    <span className="rounded bg-card px-2 py-0.5 text-xs text-muted-foreground" title={first.triggeredByName ?? undefined}>
                       {SOURCE_LABEL[first.triggerSource] ?? first.triggerSource}
                     </span>
                   )}
@@ -497,7 +497,7 @@ export default function HubRunsSection({
                     {active.length > 0 ? (
                       <button
                         onClick={() => setPendingCancel({ ids: active.map((r) => r.id), label: `${active.length} unfinished runs in this batch` })}
-                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-card hover:text-rose-700"
+                        className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-card hover:text-rose-700"
                       >
                         <Ban className="h-3 w-3" /> Cancel batch
                       </button>
@@ -507,7 +507,7 @@ export default function HubRunsSection({
                           <button
                             onClick={() => rerun(g.key, { rerunFailedOfBatch: g.batchId }, "Re-running failed tests")}
                             disabled={busy === g.key}
-                            className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-rose-700 hover:bg-card disabled:opacity-50"
+                            className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-rose-700 hover:bg-card disabled:opacity-50"
                           >
                             {busy === g.key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Re-run {failedCount} failed
                           </button>
@@ -528,7 +528,7 @@ export default function HubRunsSection({
       {nextCursor && (
         <div className="flex justify-center">
           <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Load more
+            {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Load more
           </Button>
         </div>
       )}

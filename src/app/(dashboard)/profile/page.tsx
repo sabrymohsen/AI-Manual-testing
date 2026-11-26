@@ -12,7 +12,7 @@ import {
   ClipboardList,
   CheckCircle2,
   Loader2,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -281,7 +281,7 @@ export default function ProfilePage() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`-mb-px inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${
+              className={`-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
                 active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -302,7 +302,7 @@ export default function ProfilePage() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={profile.avatarUrl} alt="" className="h-28 w-28 rounded-full border object-cover" />
                 ) : (
-                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 text-3xl font-semibold uppercase text-white">
+                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-indigo-400 text-3xl font-semibold uppercase text-white">
                     {(profile.name || profile.email)[0]}
                   </div>
                 )}
@@ -324,7 +324,7 @@ export default function ProfilePage() {
               </div>
               <p className="mt-3 text-base font-semibold">{profile.name || profile.email}</p>
               {profile.jobTitle && <p className="text-xs text-muted-foreground">{profile.jobTitle}</p>}
-              <span className="mt-2 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
+              <span className="mt-2 rounded-full bg-primary/10 px-3 py-0.5 text-xs font-semibold text-primary">
                 {profile.role}
               </span>
             </div>
@@ -340,8 +340,8 @@ export default function ProfilePage() {
                     <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${s.color}`}>
                       <s.icon className="h-4 w-4" />
                     </span>
-                    <span className="mt-1.5 text-lg font-semibold leading-none">{s.value}</span>
-                    <span className="mt-1 text-[11px] font-medium text-muted-foreground">
+                    <span className="mt-2 text-lg font-semibold leading-none">{s.value}</span>
+                    <span className="mt-1 text-xs font-medium text-muted-foreground">
                       {s.label}
                     </span>
                   </div>
@@ -353,47 +353,47 @@ export default function ProfilePage() {
           {/* Right: editable form */}
           <form onSubmit={handleSave} className="space-y-4 rounded-xl border bg-card p-6">
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Full Name</Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Your name" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Job Title</Label>
                 <Input value={form.jobTitle} onChange={(e) => setForm({ ...form, jobTitle: e.target.value })} placeholder="e.g. QA Lead" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Department</Label>
                 <Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} placeholder="e.g. Engineering" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Phone</Label>
                 <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="+20 …" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Timezone</Label>
                 <select
                   value={form.timezone}
                   onChange={(e) => setForm({ ...form, timezone: e.target.value })}
-                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   {TIMEZONES.map((tz) => (
                     <option key={tz} value={tz}>{tz}</option>
                   ))}
                 </select>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label className="text-xs font-semibold">Language</Label>
                 <select
                   value={form.language}
                   onChange={(e) => setForm({ ...form, language: e.target.value })}
-                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  className="h-9 w-full cursor-pointer rounded-lg border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   {LANGUAGES.map((l) => (
                     <option key={l.value} value={l.value}>{l.label}</option>
                   ))}
                 </select>
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
+              <div className="space-y-2 sm:col-span-2">
                 <Label className="text-xs font-semibold">Theme</Label>
                 <div className="flex gap-2">
                   {(["light", "dark", "system"] as const).map((t) => (
@@ -401,7 +401,7 @@ export default function ProfilePage() {
                       key={t}
                       type="button"
                       onClick={() => setForm({ ...form, theme: t })}
-                      className={`rounded-lg border px-3 py-1.5 text-xs font-semibold capitalize transition-colors ${
+                      className={`rounded-lg border px-3 py-2 text-xs font-semibold capitalize transition-colors ${
                         form.theme === t ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
                       }`}
                     >
@@ -411,10 +411,10 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <div className="flex items-baseline justify-between">
                 <Label className="text-xs font-semibold">Bio</Label>
-                <span className={`text-[10px] ${form.bio.length > 500 ? "font-bold text-red-500" : "text-muted-foreground"}`}>
+                <span className={`text-xs ${form.bio.length > 500 ? "font-bold text-red-500" : "text-muted-foreground"}`}>
                   {form.bio.length}/500
                 </span>
               </div>
@@ -429,7 +429,7 @@ export default function ProfilePage() {
               <Button type="submit" disabled={saving} className="bg-primary text-white hover:bg-primary/90">
                 {saving ? (
                   <>
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Saving…
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…
                   </>
                 ) : (
                   "Save changes"
@@ -452,7 +452,7 @@ export default function ProfilePage() {
               </p>
             </div>
           ) : (
-            <ol className="relative space-y-5 border-l pl-6">
+            <ol className="relative space-y-6 border-l pl-6">
               {activity.map((a) => (
                 <li key={a.id} className="relative">
                   <span
@@ -463,7 +463,7 @@ export default function ProfilePage() {
                   <p className="text-sm font-medium text-foreground">{a.description}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {new Date(a.createdAt).toLocaleString()}
-                    {a.project && <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{a.project.name}</span>}
+                    {a.project && <span className="ml-2 rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{a.project.name}</span>}
                   </p>
                 </li>
               ))}
@@ -489,7 +489,7 @@ export default function ProfilePage() {
                 Use at least 8 characters. You&apos;ll stay signed in on this device.
               </p>
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">Current password</Label>
               <Input
                 type="password"
@@ -499,7 +499,7 @@ export default function ProfilePage() {
                 required
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">New password</Label>
               <Input
                 type="password"
@@ -510,7 +510,7 @@ export default function ProfilePage() {
                 minLength={8}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs font-semibold">Confirm new password</Label>
               <Input
                 type="password"
@@ -520,7 +520,7 @@ export default function ProfilePage() {
                 required
               />
               {pw.confirm && pw.next !== pw.confirm && (
-                <p className="text-[11px] font-medium text-red-500">Passwords don&apos;t match</p>
+                <p className="text-xs font-medium text-red-500">Passwords don&apos;t match</p>
               )}
             </div>
             <Button
@@ -530,7 +530,7 @@ export default function ProfilePage() {
             >
               {pwSaving ? (
                 <>
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Updating…
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating…
                 </>
               ) : (
                 "Update password"

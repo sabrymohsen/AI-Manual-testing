@@ -147,12 +147,12 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <div className="inline-flex rounded-md border bg-card p-0.5">
           {(Object.keys(ZOOMS) as Zoom[]).map((z) => (
-            <button key={z} onClick={() => setZoom(z)} className={`rounded px-2.5 py-1 capitalize ${zoom === z ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+            <button key={z} onClick={() => setZoom(z)} className={`rounded px-3 py-1 capitalize ${zoom === z ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
               {z}
             </button>
           ))}
         </div>
-        <label className="inline-flex items-center gap-1.5 text-muted-foreground">
+        <label className="inline-flex items-center gap-2 text-muted-foreground">
           <input type="checkbox" checked={byEpic} onChange={(e) => setByEpic(e.target.checked)} /> Group by epic
         </label>
         <span className="text-muted-foreground">Drag a bar to move it · drag its edges to change start or due date</span>
@@ -169,14 +169,14 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
             {/* Header: sprints, then days */}
             <div className="sticky top-0 z-20 border-b bg-muted/60 backdrop-blur">
               <div className="relative flex h-6 border-b">
-                <div className="shrink-0 border-r px-4 text-[10px] font-semibold uppercase leading-6 tracking-wide text-muted-foreground" style={{ width: LABEL_W }}>
+                <div className="shrink-0 border-r px-4 text-xs font-semibold uppercase leading-6 tracking-wide text-muted-foreground" style={{ width: LABEL_W }}>
                   Sprints
                 </div>
                 <div className="relative flex-1">
                   {sprintBands.map((b) => (
                     <div
                       key={b.name + b.from}
-                      className={`absolute top-0.5 h-5 truncate rounded px-1.5 text-[10px] font-semibold leading-5 ${b.active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}
+                      className={`absolute top-0.5 h-5 truncate rounded px-2 text-xs font-semibold leading-5 ${b.active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}
                       style={{ left: Math.max(b.from, 0) * DAY_W, width: (Math.min(b.to, totalDays - 1) - Math.max(b.from, 0) + 1) * DAY_W }}
                       title={b.name}
                     >
@@ -185,14 +185,14 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
                   ))}
                 </div>
               </div>
-              <div className="flex text-[10px] text-muted-foreground">
-                <div className="shrink-0 border-r px-4 py-1.5 font-semibold uppercase tracking-wide" style={{ width: LABEL_W }}>Issue</div>
+              <div className="flex text-xs text-muted-foreground">
+                <div className="shrink-0 border-r px-4 py-2 font-semibold uppercase tracking-wide" style={{ width: LABEL_W }}>Issue</div>
                 <div className="flex">
                   {Array.from({ length: totalDays }).map((_, i) => {
                     const day = addDays(start, i)
                     const showDay = zoom === "week" || (zoom === "month" ? day.getDay() === 1 : day.getDate() === 1)
                     return (
-                      <div key={i} className={`shrink-0 border-r py-1.5 text-center ${day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/60" : ""}`} style={{ width: DAY_W }}>
+                      <div key={i} className={`shrink-0 border-r py-2 text-center ${day.getDay() === 0 || day.getDay() === 6 ? "bg-muted/60" : ""}`} style={{ width: DAY_W }}>
                         {(day.getDate() === 1 || i === 0) && <div className="whitespace-nowrap font-semibold text-foreground">{format(day, "MMM")}</div>}
                         {showDay && <span className="whitespace-nowrap">{format(day, "d")}</span>}
                       </div>
@@ -219,7 +219,7 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
               {groups.map((g) => (
                 <div key={g.key}>
                   {g.title && (
-                    <div className="relative flex items-center gap-2 border-b bg-muted/40 px-4 py-1.5 text-xs font-semibold" style={{ width: LABEL_W }}>
+                    <div className="relative flex items-center gap-2 border-b bg-muted/40 px-4 py-2 text-xs font-semibold" style={{ width: LABEL_W }}>
                       <span className="h-2.5 w-2.5 rounded-sm" style={{ background: g.color ?? "#94a3b8" }} />
                       {g.title}
                       <span className="font-normal text-muted-foreground">{g.bars.length}</span>
@@ -235,14 +235,14 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
                     return (
                       <div key={t.id} className="relative flex items-center border-b last:border-0 hover:bg-muted/20">
                         <button onClick={() => openTask(t.id)} className="flex shrink-0 items-center gap-2 border-r bg-card px-4 py-2 text-left" style={{ width: LABEL_W }}>
-                          <span className="font-mono text-[10px] font-bold text-primary">{t.key}</span>
+                          <span className="font-mono text-xs font-bold text-primary">{t.key}</span>
                           <span className="truncate text-xs font-medium">{t.title}</span>
                         </button>
                         <div className="relative h-9 flex-1">
                           <div
                             onPointerDown={(ev) => onPointerDown(ev, t.id, "move")}
                             onPointerUp={() => onPointerUp(bar)}
-                            className={`group absolute top-1.5 flex h-6 cursor-grab items-center gap-1 overflow-hidden rounded px-2 text-[10px] font-semibold text-white shadow-sm ${active ? "cursor-grabbing ring-2 ring-primary/40" : ""}`}
+                            className={`group absolute top-1.5 flex h-6 cursor-grab items-center gap-1 overflow-hidden rounded px-2 text-xs font-semibold text-white shadow-sm ${active ? "cursor-grabbing ring-2 ring-primary/40" : ""}`}
                             style={{ left, width, backgroundColor: color, opacity: bar.planned ? 1 : 0.6 }}
                             title={`${t.key}: ${t.title}\n${format(s, "MMM d")} → ${format(e, "MMM d")}${bar.planned ? "" : " (from its sprint)"}`}
                           >
@@ -262,7 +262,7 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
                             />
                           </div>
                           {active && (
-                            <span className="absolute -top-0.5 z-20 rounded bg-foreground px-1.5 text-[10px] text-background" style={{ left }}>
+                            <span className="absolute -top-0.5 z-20 rounded bg-foreground px-2 text-xs text-background" style={{ left }}>
                               {format(s, "MMM d")} → {format(e, "MMM d")}
                             </span>
                           )}

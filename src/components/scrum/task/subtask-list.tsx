@@ -3,7 +3,7 @@
 import { useState } from "react"
 import type { ScrumSubtask } from "@/types/scrum"
 import { useSubtaskMutations, useScrumMembers } from "@/hooks/scrum/use-scrum"
-import { ChevronDown, ChevronRight, Plus, Trash2, UserCircle2 } from "lucide-react"
+import { ChevronDown, ChevronRight, Plus, Trash2, UserCircle2 } from "@/components/ui/icons"
 import { Input } from "@/components/ui/input"
 
 type Member = { id: string; name: string | null; email: string; avatarUrl?: string | null }
@@ -20,7 +20,7 @@ function AssigneeBubble({ user }: { user: ScrumSubtask["assignee"] }) {
     return <img src={user.avatarUrl} alt={displayName(user)} className="h-5 w-5 shrink-0 rounded-full object-cover" />
   }
   return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold uppercase text-indigo-700">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold uppercase text-indigo-700">
       {displayName(user).slice(0, 2)}
     </span>
   )
@@ -97,7 +97,7 @@ export function SubtaskList({
                   {s.title}
                   {/* A description exists but is hidden — hint that there's more. */}
                   {!isOpen && s.description && (
-                    <span className="ml-1.5 text-[10px] text-muted-foreground">≡</span>
+                    <span className="ml-2 text-xs text-muted-foreground">≡</span>
                   )}
                 </span>
 
@@ -117,7 +117,7 @@ export function SubtaskList({
               {isOpen && (
                 <div className="space-y-2 border-t bg-muted/20 px-3 py-2">
                   <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Description
                     </label>
                     <textarea
@@ -136,7 +136,7 @@ export function SubtaskList({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Assignee
                     </label>
                     <select
@@ -178,7 +178,7 @@ export function SubtaskList({
         <button
           type="submit"
           disabled={add.isPending}
-          className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-2.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+          className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
         >
           <Plus className="h-3.5 w-3.5" /> Add
         </button>

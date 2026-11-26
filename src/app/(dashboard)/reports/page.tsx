@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { CheckCircle, FileText, Bug, ShieldCheck, Zap, Timer } from "lucide-react"
+import { CheckCircle, FileText, Bug, ShieldCheck, Zap, Timer } from "@/components/ui/icons"
 import {
   useProjects,
   useProjectReport,

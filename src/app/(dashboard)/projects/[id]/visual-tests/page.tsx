@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { Globe, ListChecks, Loader2, Play, Plus, ScanEye, Workflow, X } from "lucide-react"
+import { Globe, ListChecks, Loader2, Play, Plus, ScanEye, Workflow, X } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { EnvChips, RunStatusBadge, TEST_TYPE_LABEL, api, formatDate } from "@/components/visual-tests/shared"
@@ -110,7 +110,7 @@ export default function VisualTestsPage() {
       </div>
 
       {choosing && (
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
+        <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-semibold text-foreground">What would you like to test?</h2>
             <button onClick={() => setChoosing(false)} className="rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Close">

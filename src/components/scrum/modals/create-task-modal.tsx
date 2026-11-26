@@ -18,7 +18,7 @@ import { ComposerDialog, ComposerTitle, ComposerText, ChipRow, ChipButton, Creat
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { CalendarDays, Check, ChevronDown, Hash, Layers, Monitor, Search, Tag, UserRound, Zap } from "lucide-react"
+import { CalendarDays, Check, ChevronDown, Hash, Layers, Monitor, Search, Tag, UserRound, Zap } from "@/components/ui/icons"
 
 const PRIORITIES: TaskPriority[] = ["HIGHEST", "HIGH", "MEDIUM", "LOW", "LOWEST"]
 type FormType = keyof typeof ISSUE_TYPE_CONFIG
@@ -163,13 +163,13 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
       title={`Create ${typeLabel}`}
       description="Fields adapt to the issue type you pick."
       crumbs={[
-        <span key="key" className="rounded border border-border px-1 font-mono text-[10px]">{boardKey || "ISSUE"}</span>,
+        <span key="key" className="rounded border border-border px-1 font-mono text-xs">{boardKey || "ISSUE"}</span>,
         <DropdownMenu key="type">
           <DropdownMenuTrigger asChild>
             <button
               type="button"
               aria-label="Issue type"
-              className="inline-flex h-6 items-center gap-1.5 rounded-md px-1.5 font-medium text-foreground transition-colors hover:bg-accent"
+              className="inline-flex h-6 items-center gap-2 rounded-md px-2 font-medium text-foreground transition-colors hover:bg-accent"
             >
               <span className={cn("h-2 w-2 rounded-full", TYPE_DOT[type as TaskType])} />
               New {typeLabel.toLowerCase()}
@@ -275,7 +275,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
                 onChange={(e) => setMemberQuery(e.target.value)}
                 placeholder="Assign to…"
                 aria-label="Filter members"
-                className="h-8 w-full rounded-md bg-transparent pl-7 pr-2 text-xs outline-none placeholder:text-muted-foreground"
+                className="h-8 w-full rounded-md bg-transparent pl-8 pr-2 text-xs outline-none placeholder:text-muted-foreground"
               />
             </div>
             <div className="max-h-56 overflow-y-auto border-t border-border pt-1">
@@ -290,7 +290,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
                     type="button"
                     aria-pressed={on}
                     onClick={() => setAssigneeIds(on ? assigneeIds.filter((id) => id !== m.id) : [...assigneeIds, m.id])}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs hover:bg-accent"
                   >
                     <AvatarStack members={[m]} max={1} size="sm" />
                     <span className="truncate">{m.name || m.email}</span>
@@ -318,7 +318,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
             {sprints?.map((sp) => (
               <DropdownMenuItem key={sp.id} onSelect={() => setSprintId(sp.id)} className="gap-2 text-xs">
                 <span className="truncate">{sp.name}</span>
-                {sp.status === "ACTIVE" && <span className="rounded-full bg-emerald-500/10 px-1.5 text-[10px] text-emerald-700 dark:text-emerald-400">Active</span>}
+                {sp.status === "ACTIVE" && <span className="rounded-full bg-emerald-500/10 px-2 text-xs text-emerald-700 dark:text-emerald-400">Active</span>}
                 {sprintId === sp.id && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-primary" />}
               </DropdownMenuItem>
             ))}
@@ -379,7 +379,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
         {/* Due date */}
         <label
           className={cn(
-            "relative inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border px-2 text-xs transition-colors focus-within:ring-2 focus-within:ring-ring",
+            "relative inline-flex h-7 cursor-pointer items-center gap-2 rounded-md border px-2 text-xs transition-colors focus-within:ring-2 focus-within:ring-ring",
             dueDate
               ? "border-border bg-card text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:bg-accent"
               : "border-dashed border-border text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -399,7 +399,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
         {/* Labels */}
         <span
           className={cn(
-            "inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring",
+            "inline-flex h-7 items-center gap-2 rounded-md border px-2 text-xs focus-within:ring-2 focus-within:ring-ring",
             labels.trim() ? "border-border bg-card text-foreground" : "border-dashed border-border text-muted-foreground"
           )}
         >
@@ -417,7 +417,7 @@ export function CreateTaskModal({ projectId }: { projectId: string }) {
 
       {showEnvironment && (
         <ChipRow className="mt-2">
-          <span className="inline-flex h-7 w-full items-center gap-1.5 rounded-md border border-dashed border-border px-2 text-xs text-muted-foreground focus-within:border-solid focus-within:ring-2 focus-within:ring-ring">
+          <span className="inline-flex h-7 w-full items-center gap-2 rounded-md border border-dashed border-border px-2 text-xs text-muted-foreground focus-within:border-solid focus-within:ring-2 focus-within:ring-ring">
             <Monitor className="h-3.5 w-3.5 shrink-0" />
             <input
               id="environment"

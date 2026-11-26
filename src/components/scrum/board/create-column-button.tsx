@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useColumnMutations } from "@/hooks/scrum/use-scrum"
 import type { TaskStatus } from "@/types/scrum"
 import { STATUS_META } from "@/components/scrum/shared"
-import { Plus } from "lucide-react"
+import { Plus } from "@/components/ui/icons"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -32,16 +32,16 @@ export function CreateColumnButton({ projectId }: { projectId: string }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="flex h-9 w-[200px] shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
+        <button className="flex h-9 w-[200px] shrink-0 items-center gap-2 rounded-lg px-3 text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
           <Plus className="h-3.5 w-3.5" /> Add column
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-72 space-y-3">
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Column name</label>
           <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. QA Review" autoFocus />
         </div>
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">Maps to status</label>
           <Select value={status} onValueChange={(v) => setStatus(v as TaskStatus)}>
             <SelectTrigger>

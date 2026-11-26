@@ -24,7 +24,7 @@ import {
   Wand2,
   Database,
   RefreshCw,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { Button } from "@/components/ui/button"
 
 interface ExtractedDocument {
@@ -290,7 +290,7 @@ export default function AITestCasesPage() {
         {steps.map((step, idx) => (
           <div key={step.key} className="flex items-center gap-2">
             <div
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
                 idx === currentStepIndex
                   ? "bg-primary text-white"
                   : idx < currentStepIndex
@@ -414,7 +414,7 @@ export default function AITestCasesPage() {
 
           {/* Extracted Requirements */}
           {extractedDoc.requirements.length > 0 && (
-            <div className="bg-white dark:bg-slate-800 border rounded-xl p-5">
+            <div className="bg-white dark:bg-slate-800 border rounded-xl p-6">
               <h3 className="font-semibold text-foreground dark:text-slate-100 mb-4 flex items-center gap-2">
                 <ListChecks className="h-5 w-5 text-primary" />
                 Extracted Requirements ({extractedDoc.requirements.length})
@@ -425,7 +425,7 @@ export default function AITestCasesPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded">{req.id}</span>
                       <span className="font-semibold text-foreground dark:text-slate-200">{req.title}</span>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold ml-auto ${
+                      <span className={`text-xs px-2 py-0.5 rounded font-bold ml-auto ${
                         req.priority === "Critical" ? "bg-red-50 text-red-600" :
                         req.priority === "High" ? "bg-orange-50 text-orange-600" :
                         req.priority === "Low" ? "bg-muted/50 text-muted-foreground" :
@@ -440,7 +440,7 @@ export default function AITestCasesPage() {
           )}
 
           {/* Text Preview */}
-          <div className="bg-white dark:bg-slate-800 border rounded-xl p-5">
+          <div className="bg-white dark:bg-slate-800 border rounded-xl p-6">
             <h3 className="font-semibold text-foreground dark:text-slate-100 mb-3 flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
               Document Preview
@@ -626,7 +626,7 @@ export default function AITestCasesPage() {
             {generatedTestCases.map((tc, idx) => (
               <div
                 key={idx}
-                className={`border rounded-xl p-5 transition-all ${
+                className={`border rounded-xl p-6 transition-all ${
                   tc.selected
                     ? "border-indigo-300 dark:border-indigo-700 bg-indigo-50/30 dark:bg-indigo-950/10"
                     : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 opacity-60"
@@ -646,14 +646,14 @@ export default function AITestCasesPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <h4 className="font-semibold text-foreground dark:text-slate-100 text-sm">{tc.title}</h4>
-                      <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                      <span className={`text-xs px-2 py-0.5 rounded font-bold ${
                         tc.priority === "Critical" ? "bg-red-50 text-red-600" :
                         tc.priority === "High" ? "bg-orange-50 text-orange-600" :
                         tc.priority === "Low" ? "bg-muted/50 text-muted-foreground" :
                         "bg-blue-50 text-blue-600"
                       }`}>{tc.priority}</span>
                       {tc.tags?.map((tag, tIdx) => (
-                        <span key={tIdx} className="text-[10px] px-2 py-0.5 rounded bg-muted dark:bg-slate-700 text-muted-foreground dark:text-muted-foreground flex items-center gap-1">
+                        <span key={tIdx} className="text-xs px-2 py-0.5 rounded bg-muted dark:bg-slate-700 text-muted-foreground dark:text-muted-foreground flex items-center gap-1">
                           <Tag className="h-2.5 w-2.5" /> {tag}
                         </span>
                       ))}

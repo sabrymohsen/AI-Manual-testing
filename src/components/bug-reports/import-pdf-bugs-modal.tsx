@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   X, Upload, FileText, Loader2, AlertTriangle, CheckCircle2, ChevronDown, ChevronRight, Image as ImageIcon,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import type { ProjectModule } from "@/components/bug-reports/module-select"
 
 /**
@@ -298,10 +298,10 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="w-full max-w-5xl bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col max-h-[92vh] overflow-hidden text-[13px]">
+      <div className="w-full max-w-5xl bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] flex flex-col max-h-[92vh] overflow-hidden text-xs">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center justify-between gap-3 px-6 py-3 border-b">
+          <div className="flex items-center gap-3 min-w-0">
             <FileText className="h-4 w-4 text-primary shrink-0" />
             <div className="min-w-0">
               <h2 className="font-semibold text-sm text-foreground">Import bugs from PDF</h2>
@@ -312,14 +312,14 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
               </p>
             </div>
           </div>
-          <button onClick={close} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground" aria-label="Close">
+          <button onClick={close} className="p-2 rounded-md hover:bg-muted text-muted-foreground" aria-label="Close">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {error && (
-            <div className="mx-5 mt-4 p-2.5 rounded-lg border border-red-500/30 bg-red-500/10 text-red-600 flex items-start gap-2">
+            <div className="mx-6 mt-4 p-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-600 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
@@ -327,7 +327,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
 
           {/* Step 1: upload */}
           {!preview && !result && (
-            <div className="p-5">
+            <div className="p-6">
               <div
                 onDragOver={(e) => {
                   e.preventDefault()
@@ -366,8 +366,8 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
 
           {/* Step 2: preview */}
           {preview && !result && (
-            <div className="p-5 space-y-4">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+            <div className="p-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
                 <span dir="auto" className="text-foreground font-medium">
                   {preview.report.subtitle || preview.report.title}
                 </span>
@@ -396,7 +396,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
               </div>
 
               {preview.report.warnings.length > 0 && (
-                <div className="p-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 space-y-0.5">
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 space-y-0.5">
                   {preview.report.warnings.map((w, i) => (
                     <div key={i}>{w}</div>
                   ))}
@@ -447,7 +447,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
                             dir="auto"
                             value={d.title}
                             onChange={(e) => update(d.ref, { title: e.target.value })}
-                            className="h-8 text-[13px]"
+                            className="h-8 text-xs"
                           />
                           {d.existing && (
                             <p className="mt-1 text-xs text-amber-700">
@@ -521,7 +521,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
                             onChange={(v) => update(d.ref, { actualResult: v })}
                           />
                           <div>
-                            <div className="text-xs font-medium text-muted-foreground mb-1.5">
+                            <div className="text-xs font-medium text-muted-foreground mb-2">
                               Screenshots (click a picture to enlarge, untick to leave it out)
                             </div>
                             {d.shots.length === 0 ? (
@@ -564,7 +564,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
 
           {/* Step 3: result */}
           {result && (
-            <div className="p-5 space-y-4">
+            <div className="p-6 space-y-4">
               {result.created.length > 0 && (
                 <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-700 flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
@@ -615,7 +615,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3 border-t bg-muted/20">
+        <div className="flex items-center justify-between gap-3 px-6 py-3 border-t bg-muted/20">
           <div className="text-xs text-muted-foreground">
             {preview && !result && `${selected.length} of ${drafts.length} bugs selected · ${shotCount} screenshots`}
           </div>
@@ -626,7 +626,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
                   Cancel
                 </Button>
                 <Button size="sm" onClick={read} disabled={!file || reading}>
-                  {reading ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <FileText className="h-4 w-4 mr-1.5" />}
+                  {reading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
                   {reading ? "Reading PDF…" : "Read PDF"}
                 </Button>
               </>
@@ -637,7 +637,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
                   Choose another PDF
                 </Button>
                 <Button size="sm" onClick={create} disabled={!selected.length || creating}>
-                  {creating && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+                  {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   {creating
                     ? "Creating…"
                     : `Create ${selected.length} bug${selected.length === 1 ? "" : "s"}`}
@@ -675,7 +675,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={Math.min(10, Math.max(3, value.split("\n").length + 1))}
-        className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-[13px] leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30"
+        className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary/30"
       />
     </label>
   )

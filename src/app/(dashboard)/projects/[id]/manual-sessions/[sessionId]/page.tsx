@@ -26,7 +26,7 @@ import {
   Clock,
   Send,
   Camera
-} from "lucide-react"
+} from "@/components/ui/icons"
 import { ScreenshotAnnotator } from "@/components/ui/screenshot-annotator"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
@@ -654,7 +654,7 @@ export default function ManualSessionWorkspace() {
               </div>
 
               <div className="flex items-center gap-2">
-                <Button onClick={handleCompleteSession} className="bg-green-600 hover:bg-green-700 text-white font-semibold h-9 px-4 rounded-lg text-xs flex items-center gap-1.5">
+                <Button onClick={handleCompleteSession} className="bg-green-600 hover:bg-green-700 text-white font-semibold h-9 px-4 rounded-lg text-xs flex items-center gap-2">
                   Complete Session
                 </Button>
                 <Button onClick={handleCancelSession} variant="ghost" className="text-muted-foreground hover:text-red-600 hover:bg-accent h-9 px-3 rounded-lg text-xs">
@@ -678,16 +678,16 @@ export default function ManualSessionWorkspace() {
 
             <div className="space-y-2">
               <h3 className="text-xs font-medium text-muted-foreground">Areas/Modules Covered</h3>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-2">
                 {(exploratory.areas || "App features").split(",").map((a, i) => (
-                  <span key={i} className="text-[10px] font-semibold bg-card border border-border text-foreground rounded-lg px-2.5 py-0.5">
+                  <span key={i} className="text-xs font-semibold bg-card border border-border text-foreground rounded-lg px-3 py-0.5">
                     {a.trim()}
                   </span>
                 ))}
               </div>
             </div>
 
-            <Button onClick={() => setShowBugDialog(true)} className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg py-2 flex items-center justify-center gap-1.5 shadow-md">
+            <Button onClick={() => setShowBugDialog(true)} className="w-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg py-2 flex items-center justify-center gap-2 shadow-md">
               <Bug size={14} /> Log Bug Report
             </Button>
           </aside>
@@ -753,14 +753,14 @@ export default function ManualSessionWorkspace() {
               <h3 className="text-xs font-medium text-muted-foreground">Exploratory Log Timeline</h3>
               
               {session.notes.filter(n => !n.note.includes("Exploratory Mission:")).length === 0 ? (
-                <p className="text-xs text-muted-foreground italic py-12 text-center">No timeline events logged yet. Type notes or drop screenshots above.</p>
+                <p className="text-xs text-muted-foreground py-12 text-center">No timeline events logged yet. Type notes or drop screenshots above.</p>
               ) : (
                 <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-border">
                   {session.notes.filter(n => !n.note.includes("Exploratory Mission:")).map((n) => (
                     <div key={n.id} className="relative pl-8 flex gap-3 items-start group">
                       <span className="absolute left-1.5 top-1.5 h-3 w-3 rounded-full bg-primary ring-4 ring-background"></span>
                       <div className="flex-grow bg-muted/40 border border-border rounded-lg p-4 space-y-2">
-                        <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                        <div className="flex justify-between items-center text-xs text-muted-foreground">
                           <span>Observation Event</span>
                           <span>{new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
                         </div>
@@ -788,14 +788,14 @@ export default function ManualSessionWorkspace() {
           <aside className="w-80 bg-background border-l border-border p-4 space-y-4 overflow-y-auto shrink-0">
             <h3 className="text-xs font-medium text-muted-foreground">Exploratory Bugs Found ({session.bugs.length})</h3>
             {session.bugs.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic">No bugs reported yet in this session.</p>
+              <p className="text-xs text-muted-foreground ">No bugs reported yet in this session.</p>
             ) : (
               <div className="space-y-2">
                 {session.bugs.map((b) => (
                   <div key={b.id} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between text-xs">
                     <div>
                       <span className="font-semibold text-foreground block truncate max-w-[200px]">{b.title}</span>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Severity: {b.severity}</span>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-mono">Severity: {b.severity}</span>
                     </div>
                     <Bug size={14} className="text-red-500" />
                   </div>
@@ -861,7 +861,7 @@ export default function ManualSessionWorkspace() {
                     value={bugSteps}
                     onChange={(e) => setBugSteps(e.target.value)}
                     placeholder="1. Open app... 2. Click button..."
-                    className="w-full bg-background border border-border p-2.5 rounded-lg text-xs text-foreground focus:outline-none h-16 resize-none"
+                    className="w-full bg-background border border-border p-3 rounded-lg text-xs text-foreground focus:outline-none h-16 resize-none"
                   />
                 </div>
 
@@ -891,7 +891,7 @@ export default function ManualSessionWorkspace() {
                 <Button type="button" variant="outline" onClick={() => setShowBugDialog(false)} className="h-9 px-4 rounded-lg border-border hover:bg-accent text-foreground text-xs">
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-5 rounded-lg text-xs flex items-center gap-1">
+                <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 rounded-lg text-xs flex items-center gap-1">
                   Log Bug
                 </Button>
               </div>
@@ -964,14 +964,14 @@ export default function ManualSessionWorkspace() {
             <span className="text-xs text-muted-foreground font-medium">Session Progress</span>
             <div className="flex items-center gap-3">
               <div className="w-32 bg-muted rounded-full h-2">
-                <div style={{ width: `${completionPercent}%` }} className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"></div>
+                <div style={{ width: `${completionPercent}%` }} className=" bg-blue-500 h-2 rounded-full transition-all duration-300"></div>
               </div>
               <span className="text-xs font-mono font-semibold text-foreground">{completionPercent}% ({completedSteps}/{totalSteps} steps)</span>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button onClick={handleCompleteSession} className="bg-green-600 hover:bg-green-700 text-white font-semibold h-9 px-4 rounded-lg text-xs flex items-center gap-1.5">
+            <Button onClick={handleCompleteSession} className="bg-green-600 hover:bg-green-700 text-white font-semibold h-9 px-4 rounded-lg text-xs flex items-center gap-2">
               <CheckCircle size={14} /> Complete Run
             </Button>
             <Button onClick={handleCancelSession} variant="ghost" className="text-muted-foreground hover:text-red-600 hover:bg-accent h-9 px-3 rounded-lg text-xs">
@@ -987,14 +987,14 @@ export default function ManualSessionWorkspace() {
         {/* Left Panel: Test Case Queue */}
         <aside className="w-80 bg-background border-r border-border flex flex-col overflow-hidden shrink-0">
           <div className="p-4 border-b border-border">
-            <h2 className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1.5">
+            <h2 className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-2">
               <FileText size={12} /> Test Case Queue
             </h2>
-            <span className="text-[10px] text-muted-foreground">Tick cases to bulk-mark, or click a case to run its steps</span>
+            <span className="text-xs text-muted-foreground">Tick cases to bulk-mark, or click a case to run its steps</span>
 
             {session.sessionCases.length > 0 && (
               <div className="mt-3 flex items-center justify-between gap-2">
-                <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={selectedCaseIds.length === session.sessionCases.length}
@@ -1009,17 +1009,17 @@ export default function ManualSessionWorkspace() {
                   Select all
                 </label>
                 {selectedCaseIds.length > 0 && (
-                  <span className="text-[10px] font-semibold text-primary">{selectedCaseIds.length} selected</span>
+                  <span className="text-xs font-semibold text-primary">{selectedCaseIds.length} selected</span>
                 )}
               </div>
             )}
 
             {selectedCaseIds.length > 0 && (
-              <div className="mt-2 flex items-center gap-1.5">
+              <div className="mt-2 flex items-center gap-2">
                 <Button
                   onClick={() => handleBulkMarkCases("Passed")}
                   disabled={bulkUpdating}
-                  className="h-7 flex-1 bg-green-600 hover:bg-green-700 text-white text-[10px] font-semibold flex items-center justify-center gap-1"
+                  className="h-7 flex-1 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold flex items-center justify-center gap-1"
                 >
                   <CheckCircle size={12} /> Mark Passed
                 </Button>
@@ -1027,7 +1027,7 @@ export default function ManualSessionWorkspace() {
                   onClick={() => handleBulkMarkCases("Failed")}
                   disabled={bulkUpdating}
                   variant="outline"
-                  className="h-7 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 text-[10px] font-semibold flex items-center justify-center gap-1 px-2"
+                  className="h-7 border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-500/10 text-xs font-semibold flex items-center justify-center gap-1 px-2"
                 >
                   <XCircle size={12} /> Fail
                 </Button>
@@ -1071,7 +1071,7 @@ export default function ManualSessionWorkspace() {
                        <HelpCircle size={14} className="text-muted-foreground" />}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between mt-2 text-[10px] text-muted-foreground">
+                  <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                     <span>{c.testCase.module || "General"}</span>
                     <span>{c.stepResults.filter(s => s.status !== "Pending").length}/{c.stepResults.length} steps</span>
                   </div>
@@ -1087,12 +1087,12 @@ export default function ManualSessionWorkspace() {
             <div className="flex-1 flex flex-col p-6 space-y-6">
               
               {/* Header Details */}
-              <div className="bg-card border border-border p-5 rounded-lg">
+              <div className="bg-card border border-border p-6 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                  <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">
                     Active Test Case
                   </span>
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${
                     currentCase.testCase.priority === "Critical" ? "bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30" :
                     currentCase.testCase.priority === "High" ? "bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-500/30" :
                     "bg-muted text-muted-foreground"
@@ -1102,7 +1102,7 @@ export default function ManualSessionWorkspace() {
                 </div>
                 <h2 className="text-xl font-semibold text-foreground mb-2">{currentCase.testCase.title}</h2>
                 {currentCase.testCase.preconditions && (
-                  <p className="text-xs text-muted-foreground font-mono bg-muted/50 p-2.5 border border-border rounded-lg">
+                  <p className="text-xs text-muted-foreground font-mono bg-muted/50 p-3 border border-border rounded-lg">
                     <span className="font-semibold text-foreground">PRECONDITIONS:</span> {currentCase.testCase.preconditions}
                   </p>
                 )}
@@ -1112,7 +1112,7 @@ export default function ManualSessionWorkspace() {
               <div className="flex-grow space-y-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-medium text-muted-foreground">Step Results Checklist</h3>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <Button onClick={goToPrevStep} variant="ghost" className="h-7 w-7 p-0 hover:bg-accent text-muted-foreground rounded-lg">
                       <ChevronLeft size={16} />
                     </Button>
@@ -1137,7 +1137,7 @@ export default function ManualSessionWorkspace() {
                         <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-start 2xl:justify-between 2xl:gap-4">
                           <div className="min-w-0 flex-1 space-y-2">
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-xs bg-muted text-foreground rounded px-1.5 py-0.5">
+                              <span className="font-semibold text-xs bg-muted text-foreground rounded px-2 py-0.5">
                                 Step {step.stepNumber}
                               </span>
                               <p className="text-sm font-semibold text-foreground">{step.actionDescription}</p>
@@ -1151,25 +1151,25 @@ export default function ManualSessionWorkspace() {
                             {isStepActive && (
                               <div className="mt-3 space-y-2 pt-2 border-t border-border">
                                 <div>
-                                  <label className="block text-[11px] font-medium text-muted-foreground mb-1">Actual Result</label>
+                                  <label className="block text-xs font-medium text-muted-foreground mb-1">Actual Result</label>
                                   <input
                                     type="text"
                                     value={step.actualResult || ""}
                                     placeholder="Observed behavior..."
                                     onChange={(e) => updateLocalStepResult(step.id, { actualResult: e.target.value })}
-                                    className="w-full bg-card border border-border px-3 py-1.5 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
+                                    className="w-full bg-card border border-border px-3 py-2 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-ring text-foreground"
                                   />
                                 </div>
                                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                                   <div>
-                                    <label className="block text-[11px] font-medium text-muted-foreground mb-1">Notes</label>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Notes</label>
                                     <input
                                       type="text"
                                       id={`notes-${step.id}`}
                                       value={step.notes || ""}
                                       placeholder="Add remarks..."
                                       onChange={(e) => updateLocalStepResult(step.id, { notes: e.target.value })}
-                                      className="w-full bg-card border border-border px-3 py-1.5 rounded-lg text-xs focus:outline-none text-foreground"
+                                      className="w-full bg-card border border-border px-3 py-2 rounded-lg text-xs focus:outline-none text-foreground"
                                     />
                                   </div>
                                   <div className="flex flex-wrap items-end gap-2">
@@ -1184,7 +1184,7 @@ export default function ManualSessionWorkspace() {
                                       type="button"
                                       variant="outline"
                                       onClick={() => document.getElementById(`file-${step.id}`)?.click()}
-                                      className="text-xs bg-card border-border hover:bg-accent text-foreground rounded-lg flex items-center gap-1.5 h-8 py-1"
+                                      className="text-xs bg-card border-border hover:bg-accent text-foreground rounded-lg flex items-center gap-2 h-8 py-1"
                                     >
                                       <ImageIcon size={14} /> {step.screenshotPath ? "Replace Screenshot" : "Add Screenshot"}
                                     </Button>
@@ -1201,15 +1201,15 @@ export default function ManualSessionWorkspace() {
                                 </div>
 
                                 {suggestedResult && (
-                                  <div className="p-2.5 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary space-y-1">
+                                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-xs text-primary space-y-1">
                                     <span className="font-semibold flex items-center gap-1"><Sparkles size={12} /> AI Expected Result Suggestion:</span>
                                     <p>{suggestedResult}</p>
                                     <div className="flex justify-end gap-2 mt-1">
                                       <Button size="sm" onClick={() => {
                                         updateLocalStepResult(step.id, { expectedResult: suggestedResult })
                                         setSuggestedResult(null)
-                                      }} className="bg-primary hover:bg-primary/90 h-6 text-[10px] py-0 px-2 text-white">Accept Suggestion</Button>
-                                      <Button size="sm" variant="ghost" onClick={() => setSuggestedResult(null)} className="h-6 text-[10px] py-0 px-2 text-muted-foreground hover:text-foreground">Dismiss</Button>
+                                      }} className="bg-primary hover:bg-primary/90 h-6 text-xs py-0 px-2 text-white">Accept Suggestion</Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setSuggestedResult(null)} className="h-6 text-xs py-0 px-2 text-muted-foreground hover:text-foreground">Dismiss</Button>
                                     </div>
                                   </div>
                                 )}
@@ -1337,9 +1337,9 @@ export default function ManualSessionWorkspace() {
                   </div>
                 </div>
 
-                <div className="bg-card p-3.5 rounded-lg border border-border space-y-2">
+                <div className="bg-card p-3 rounded-lg border border-border space-y-2">
                   <h3 className="text-xs font-semibold uppercase text-muted-foreground">Hotkeys Quick Cheat</h3>
-                  <div className="text-[11px] font-mono space-y-1.5 text-muted-foreground">
+                  <div className="text-xs font-mono space-y-2 text-muted-foreground">
                     <div><span className="text-primary font-semibold bg-background px-1 rounded">P</span> : Pass Step</div>
                     <div><span className="text-red-600 dark:text-red-400 font-semibold bg-background px-1 rounded">F</span> : Fail Step</div>
                     <div><span className="text-orange-400 font-semibold bg-background px-1 rounded">B</span> : Block Step</div>
@@ -1356,7 +1356,7 @@ export default function ManualSessionWorkspace() {
             {activeTab === "notes" && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Append Session Note</label>
+                  <label className="block text-xs font-semibold text-muted-foreground mb-2 uppercase">Append Session Note</label>
                   <textarea
                     value={sessionNotes}
                     onChange={(e) => setSessionNotes(e.target.value)}
@@ -1381,19 +1381,19 @@ export default function ManualSessionWorkspace() {
                       }
                     }}
                     disabled={savingNotes || !sessionNotes.trim()}
-                    className="w-full bg-primary hover:bg-primary/90 text-white text-xs font-semibold py-1.5 mt-2 rounded-lg"
+                    className="w-full bg-primary hover:bg-primary/90 text-white text-xs font-semibold py-2 mt-2 rounded-lg"
                   >
                     Log note
                   </Button>
                 </div>
 
                 <div className="border-t border-border pt-4 space-y-3">
-                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase">Logged Notes feed ({session.notes.length})</h4>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase">Logged Notes feed ({session.notes.length})</h4>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {session.notes.map((n) => (
-                      <div key={n.id} className="p-2.5 bg-card border border-border rounded-lg text-[11px]">
+                      <div key={n.id} className="p-3 bg-card border border-border rounded-lg text-xs">
                         <p className="text-foreground">{n.note}</p>
-                        <span className="text-[9px] text-muted-foreground block mt-1">
+                        <span className="text-xs text-muted-foreground block mt-1">
                           {new Date(n.createdAt).toLocaleTimeString()}
                         </span>
                       </div>
@@ -1407,13 +1407,13 @@ export default function ManualSessionWorkspace() {
               <div className="space-y-3">
                 <h3 className="text-xs font-semibold uppercase text-muted-foreground mb-2">Bugs logged in this session ({session.bugs.length})</h3>
                 {session.bugs.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No bug reports created during this session.</p>
+                  <p className="text-xs text-muted-foreground ">No bug reports created during this session.</p>
                 ) : (
                   session.bugs.map((b) => (
-                    <div key={b.id} className="p-2.5 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between text-xs">
+                    <div key={b.id} className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-center justify-between text-xs">
                       <div>
                         <span className="font-semibold text-foreground block truncate max-w-[180px]">{b.title}</span>
-                        <span className="text-[10px] text-muted-foreground font-mono">Severity: {b.severity}</span>
+                        <span className="text-xs text-muted-foreground font-mono">Severity: {b.severity}</span>
                       </div>
                       <Bug size={14} className="text-red-500" />
                     </div>
@@ -1453,7 +1453,7 @@ export default function ManualSessionWorkspace() {
                 value={failureActualResult}
                 onChange={(e) => setFailureActualResult(e.target.value)}
                 placeholder="What went wrong? Describe actual behavior..."
-                className="w-full bg-background border border-border p-2.5 rounded-lg text-xs focus:outline-none text-foreground h-20"
+                className="w-full bg-background border border-border p-3 rounded-lg text-xs focus:outline-none text-foreground h-20"
               />
             </div>
 
@@ -1485,7 +1485,7 @@ export default function ManualSessionWorkspace() {
               <Button type="button" variant="outline" onClick={() => setFailingStepId(null)} className="h-9 px-4 rounded-lg border-border hover:bg-accent text-foreground text-xs">
                 Cancel
               </Button>
-              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-5 rounded-lg text-xs flex items-center gap-1">
+              <Button type="submit" className="bg-red-600 hover:bg-red-700 text-white font-semibold h-9 px-6 rounded-lg text-xs flex items-center gap-1">
                 Save & Fail Step
               </Button>
             </div>
