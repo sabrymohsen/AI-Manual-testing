@@ -2,28 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'">
+<link rel="stylesheet" href="app.css">
 <title>Find</title>
 <style>
-  :root { --bg:#ffffff; --fg:#1b1b1f; --muted:#6b6b76; --border:#e6e6ea; --hover:rgba(0,0,0,.06); }
-  @media (prefers-color-scheme: dark) { :root { --bg:#1c1d21; --fg:#ececef; --muted:#9a9aa5; --border:#2e2f34; --hover:rgba(255,255,255,.08); } }
-  html, body { margin:0; height:100%; background:transparent; }
-  .bar { box-sizing:border-box; height:100%; display:flex; align-items:center; gap:4px; padding:0 6px 0 10px;
-         background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:10px;
-         font:13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  input { flex:1; min-width:0; border:0; outline:0; background:transparent; color:inherit; font:inherit; }
-  .n { min-width:64px; text-align:right; color:var(--muted); font-variant-numeric:tabular-nums; font-size:12px; }
-  button { border:0; background:transparent; color:inherit; cursor:pointer; width:24px; height:24px; border-radius:6px; font:inherit; }
-  button:hover { background:var(--hover); }
+  html, body { height: 100%; min-height: 0; background: transparent; }
+  .bar { height: 100%; display: flex; align-items: center; gap: 4px; padding: 0 4px 0 12px;
+         background: var(--surface); color: var(--fg); border: 1px solid var(--border); border-radius: 12px; }
+  input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; }
+  .n { min-width: 64px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; line-height: 16px; }
+  button { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: transparent; display: grid; place-items: center; }
+  button svg { width: 16px; height: 16px; fill: currentColor; }
 </style>
 </head>
 <body>
   <div class="bar" role="search">
     <input id="q" placeholder="Find in page" aria-label="Find in page" autofocus>
     <span class="n" id="n"></span>
-    <button id="prev" title="Previous (Shift+Enter)" aria-label="Previous">↑</button>
-    <button id="next" title="Next (Enter)" aria-label="Next">↓</button>
-    <button id="close" title="Close (Esc)" aria-label="Close">×</button>
+    <button id="prev" title="Previous (Shift+Enter)" aria-label="Previous"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M213.66,165.66a8,8,0,0,1-11.32,0L128,91.31,53.66,165.66a8,8,0,0,1-11.32-11.32l80-80a8,8,0,0,1,11.32,0l80,80A8,8,0,0,1,213.66,165.66Z"/></svg></button>
+    <button id="next" title="Next (Enter)" aria-label="Next"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></button>
+    <button id="close" title="Close (Esc)" aria-label="Close"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"/></svg></button>
   </div>
   <script src="find.js"></script>
 </body>

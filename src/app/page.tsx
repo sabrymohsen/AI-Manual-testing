@@ -1,284 +1,310 @@
+import type { Metadata } from "next"
 import Link from "next/link"
-import { ArrowRight, Check, ChevronDown, Download, Globe2, Languages, Sparkles, Zap } from "lucide-react"
+import { ArrowRight, CaretDown, Check, X } from "@phosphor-icons/react/dist/ssr"
 import { getSession } from "@/lib/auth"
 import { AppPreview } from "@/components/landing/app-preview"
 import { DesktopDownloadCards } from "@/components/auth/desktop-downloads"
-import { AI_POINTS, FAQ, FEATURE_GROUPS, FLOW } from "@/components/landing/features"
+import { AI_POINTS, BENEFITS, FAQ, NAV, PROBLEMS, STEPS, TRACKERS } from "@/components/landing/features"
+import { Logo } from "@/components/landing/logo"
+import { SiteNav } from "@/components/landing/site-nav"
+import { RevealObserver, TaglineReveal } from "@/components/landing/motion"
 
-/* Public website: what QA Engine is, every feature (real page names), the AI,
-   and the desktop app downloads. Light first, on the app's own theme tokens. */
+/* Public website, built to SKILL.md: one audience (QA teams that test from
+   requirement documents), one primary action (create an account), dark theme
+   on the approved surfaces, Geist, Phosphor icons, named text styles. */
 
-function Logo() {
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000"),
+  title: "QA Engine: test cases and bugs from your requirements document",
+  description:
+    "Upload a BRD in Arabic or English. QA Engine finds what needs testing, drafts the test cases and bugs, and syncs them with Jira, Azure DevOps, OpenProject or ClickUp.",
+  openGraph: {
+    title: "QA Engine",
+    description: "From the requirements document to a tested, tracked release.",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image", title: "QA Engine", description: "From the requirements document to a tested, tracked release." },
+}
+
+const FOCUS = "outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+const EASE = "duration-300 ease-out-soft"
+
+function PrimaryCta({ href, label, large }: { href: string; label: string; large?: boolean }) {
   return (
-    <span className="inline-flex items-center gap-2 text-[15px] font-semibold tracking-tight text-foreground">
-      <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-        <Zap className="h-4 w-4" fill="currentColor" />
-      </span>
-      QA Engine
-    </span>
+    <Link
+      href={href}
+      className={`${large ? "button-md px-4 py-3" : "button-md px-3 py-2"} inline-flex items-center gap-2 rounded-xl bg-white text-black transition-[transform,opacity] ${EASE} hover:opacity-90 active:scale-[0.98] ${FOCUS}`}
+    >
+      {label} <ArrowRight className="h-4 w-4" aria-hidden />
+    </Link>
   )
 }
 
-const NAV = [
-  { href: "#features", label: "Features" },
-  { href: "#ai", label: "AI" },
-  { href: "#download", label: "Desktop app" },
-  { href: "#faq", label: "FAQ" },
-]
-
-function SectionTitle({ kicker, title, blurb, center }: { kicker: string; title: string; blurb?: string; center?: boolean }) {
+function SectionHead({ kicker, title, text, center }: { kicker: string; title: string; text?: string; center?: boolean }) {
   return (
-    <div className={`max-w-2xl space-y-3 ${center ? "mx-auto text-center" : ""}`}>
-      <p className="text-[13px] font-medium text-primary">{kicker}</p>
-      <h2 className="text-[28px] font-semibold leading-tight tracking-tight text-foreground sm:text-[34px]">{title}</h2>
-      {blurb && <p className="text-[15px] leading-relaxed text-muted-foreground">{blurb}</p>}
+    <div className={`max-w-[680px] space-y-4 ${center ? "mx-auto text-center" : ""}`}>
+      <p className="caption-1 text-white/50">{kicker}</p>
+      <h2 className="heading-3 text-white max-sm:text-3xl">{title}</h2>
+      {text && <p className="body-3 text-white/60">{text}</p>}
     </div>
   )
 }
 
 export default async function Home() {
   const session = await getSession()
-  const primary = session ? { href: "/dashboard", label: "Open the app" } : { href: "/register", label: "Get started free" }
+  const primary = session ? { href: "/dashboard", label: "Open the app" } : { href: "/register", label: "Create a free account" }
 
   return (
-    <div className="min-h-screen bg-background font-sans text-foreground antialiased">
-      {/* ── Nav ── */}
-      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
-          <Link href="/" aria-label="QA Engine home">
-            <Logo />
-          </Link>
-          <nav className="hidden items-center gap-6 text-[13px] text-muted-foreground md:flex">
-            {NAV.map((n) => (
-              <a key={n.href} href={n.href} className="transition-colors hover:text-foreground">
-                {n.label}
-              </a>
-            ))}
-          </nav>
-          <div className="flex items-center gap-1.5">
-            {!session && (
-              <Link href="/login" className="rounded-md px-3 py-1.5 text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground">
-                Sign in
-              </Link>
-            )}
-            <Link
-              href={primary.href}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[13px] font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
-            >
-              {primary.label}
-            </Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-black font-sans text-white antialiased">
+      <a
+        href="#main"
+        className="button-sm fixed left-4 top-4 z-[60] -translate-y-24 rounded-lg bg-white px-3 py-2 text-black transition-transform focus:translate-y-0"
+      >
+        Skip to content
+      </a>
+      <noscript>
+        <style>{`.reveal{opacity:1!important;transform:none!important}.tagline-word{color:#fff!important}`}</style>
+      </noscript>
+      <RevealObserver />
+      <SiteNav primary={primary} signedIn={!!session} />
 
-      <main>
+      <main id="main">
         {/* ── Hero ── */}
-        <section className="relative overflow-hidden">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,hsl(var(--primary)/0.14),transparent)]" />
-          <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 pb-24 pt-16 sm:px-6 lg:grid-cols-[1fr_1.05fr] lg:pt-24">
-            <div className="space-y-6">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[12px] text-muted-foreground shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-primary" /> AI that knows QA · Arabic &amp; English
-              </span>
-              <h1 className="text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-[54px]">
-                One workspace for your <span className="text-primary">whole QA process</span>
-              </h1>
-              <p className="max-w-xl text-[16px] leading-relaxed text-muted-foreground">
-                QA Engine takes you from the business requirements document to tested, tracked releases: AI finds the requirements, writes the
-                test cases and drafts the bugs — your team reviews, runs and ships.
-              </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Link
-                  href={primary.href}
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-[14px] font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
-                >
-                  {primary.label} <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a
-                  href="#download"
-                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-5 py-2.5 text-[14px] font-medium text-foreground shadow-sm transition-colors hover:bg-accent"
-                >
-                  <Download className="h-4 w-4" /> Download the app
-                </a>
-              </div>
-              <ul className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13px] text-muted-foreground">
-                {["Works in the browser", "Mac & Windows app", "Free AI on your computer"].map((t) => (
-                  <li key={t} className="flex items-center gap-1.5">
-                    <Check className="h-3.5 w-3.5 text-emerald-500" /> {t}
-                  </li>
-                ))}
-              </ul>
+        <section className="px-4 pb-24 pt-32 sm:px-6 sm:pt-40">
+          <div className="mx-auto flex max-w-6xl flex-col items-center text-center">
+            <p className="caption-1 mb-6 rounded-lg border border-white/10 bg-[#181818] px-3 py-1 text-white/60">
+              For QA teams that test from requirement documents
+            </p>
+            <h1 className="heading-1 hero-gradient-dark max-w-[680px] pb-2 max-sm:text-5xl">
+              Test cases and bugs, <br className="max-sm:hidden" />
+              straight from your BRD
+            </h1>
+            <p className="body-3 mt-6 max-w-[680px] text-white/60 sm:text-lg">
+              Upload a BRD in Arabic or English. QA Engine finds what needs testing, drafts the test cases and the bugs, and your team
+              reviews, runs and ships.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <PrimaryCta href={primary.href} label={primary.label} large />
+              <p className="caption-2 text-white/50">Free account. Works in the browser, on Mac and on Windows.</p>
             </div>
-            <AppPreview />
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              <span className="caption-2 text-white/40">Syncs with</span>
+              {TRACKERS.map((t) => (
+                <span key={t} className="title-4 text-white/70">
+                  {t}
+                </span>
+              ))}
+            </div>
+            <div className="reveal mt-16 w-full">
+              <AppPreview />
+            </div>
           </div>
         </section>
 
-        {/* ── The flow ── */}
-        <section className="border-y border-border bg-[hsl(var(--sidebar))]">
-          <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-            <p className="mb-4 text-center text-[13px] text-muted-foreground">Everything connected, from the first document to the final report</p>
-            <ol className="flex flex-wrap items-center justify-center gap-2">
-              {FLOW.map((s, i) => (
-                <li key={s.label} className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[13px] font-medium shadow-sm">
-                    <s.icon className="h-3.5 w-3.5 text-primary" /> {s.label}
-                  </span>
-                  {i < FLOW.length - 1 && <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/60" />}
+        {/* ── Problem → solution ── */}
+        <section id="product" className="scroll-mt-24 border-t border-white/10 px-4 py-24 sm:px-6">
+          <div className="reveal mx-auto max-w-6xl space-y-12">
+            <SectionHead
+              kicker="Why teams switch"
+              title="Testing from a BRD should not mean copying it by hand"
+              text="The same information usually gets rewritten in three places: the document, the test sheet and the tracker. QA Engine keeps it in one."
+            />
+            <div className="grid gap-4 md:grid-cols-3">
+              {PROBLEMS.map((p) => (
+                <article key={p.before} className="rounded-2xl border border-white/10 bg-[#181818] p-6">
+                  <p className="body-6 flex gap-3 text-white/50">
+                    <X className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" aria-hidden /> {p.before}
+                  </p>
+                  <div className="my-4 h-px bg-white/10" />
+                  <p className="body-5 flex gap-3 text-white">
+                    <Check weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden /> {p.after}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Tagline reveal ── */}
+        <section className="px-4 py-24 sm:px-6 sm:py-32">
+          <TaglineReveal lines={["Every requirement gets a test.", "Every failed test gets a bug", "your developers can act on."]} />
+        </section>
+
+        {/* ── Benefits ── */}
+        <section className="border-t border-white/10 px-4 py-24 sm:px-6">
+          <div className="mx-auto max-w-6xl space-y-16">
+            <div className="reveal">
+              <SectionHead
+                kicker="What you get"
+                title="One workspace for the whole QA process"
+                text="Each part below is a page in the app, with the same name you will see in the sidebar."
+              />
+            </div>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {BENEFITS.map((b, i) => (
+                <article
+                  key={b.id}
+                  id={b.id}
+                  className={`reveal flex flex-col gap-6 rounded-2xl border border-white/10 bg-[#181818] p-6 sm:p-8 ${i === 0 ? "lg:col-span-2" : ""}`}
+                >
+                  <div className="space-y-3">
+                    <p className="caption-3 text-white/40">{b.label}</p>
+                    <h3 className="heading-5 text-white">{b.title}</h3>
+                    <p className="body-6 max-w-[680px] text-white/60">{b.text}</p>
+                  </div>
+                  <ul className={`grid gap-3 ${i === 0 ? "md:grid-cols-3" : ""}`}>
+                    {b.points.map((p) => (
+                      <li key={p} className="body-6 flex gap-3 text-white/80">
+                        <Check weight="bold" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" aria-hidden /> {p}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="mt-auto flex flex-wrap gap-2">
+                    {b.pages.map((pg) => (
+                      <span key={pg.name} className="caption-4 inline-flex items-center gap-2 rounded-lg bg-[#272727] px-3 py-2 text-white/80">
+                        <pg.icon className="h-4 w-4" aria-hidden /> {pg.name}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── How it works ── */}
+        <section id="how" className="scroll-mt-24 border-t border-white/10 px-4 py-24 sm:px-6">
+          <div className="mx-auto max-w-6xl space-y-12">
+            <div className="reveal">
+              <SectionHead kicker="How it works" title="Three steps from document to bug report" center />
+            </div>
+            <ol className="grid gap-4 md:grid-cols-3">
+              {STEPS.map((s, i) => (
+                <li key={s.title} className="reveal rounded-2xl border border-white/10 bg-[#181818] p-6">
+                  <div className="mb-6 flex items-center justify-between">
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#272727] text-white">
+                      <s.icon className="h-5 w-5" aria-hidden />
+                    </span>
+                    <span className="caption-3 font-mono text-white/30">0{i + 1}</span>
+                  </div>
+                  <h3 className="title-2 mb-2 text-white">{s.title}</h3>
+                  <p className="body-6 text-white/60">{s.text}</p>
                 </li>
               ))}
             </ol>
           </div>
         </section>
 
-        {/* ── Features ── */}
-        <section id="features" className="scroll-mt-16">
-          <div className="mx-auto max-w-6xl space-y-24 px-4 py-24 sm:px-6">
-            <SectionTitle
-              center
-              kicker="Features"
-              title="Everything a QA team needs"
-              blurb="Plan, test, automate, track and collaborate — each part below is a page in the app, with the same name."
-            />
-            {FEATURE_GROUPS.map((g) => (
-              <div key={g.id} id={g.id} className="scroll-mt-20 space-y-8">
-                <SectionTitle kicker={g.label} title={g.title} blurb={g.blurb} />
-                <div className={`grid gap-4 ${g.features.length === 1 ? "" : g.features.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
-                  {g.features.map((f) => (
-                    <article key={f.name} className="rounded-xl border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md">
-                      <div className="mb-4 flex items-center gap-3">
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <f.icon className="h-[18px] w-[18px]" />
-                        </span>
-                        <h3 className="text-[16px] font-semibold">{f.name}</h3>
-                      </div>
-                      <p className="mb-4 text-[14px] leading-relaxed text-muted-foreground">{f.summary}</p>
-                      <ul className={`grid gap-2 ${g.features.length === 1 ? "sm:grid-cols-2" : ""}`}>
-                        {f.points.map((p) => (
-                          <li key={p} className="flex gap-2 text-[13px] text-foreground/90">
-                            <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" /> {p}
-                          </li>
-                        ))}
-                      </ul>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
         {/* ── AI ── */}
-        <section id="ai" className="scroll-mt-16 border-y border-border bg-[hsl(var(--sidebar))]">
-          <div className="mx-auto max-w-6xl space-y-12 px-4 py-24 sm:px-6">
-            <SectionTitle
-              kicker="AI"
-              title="AI you can trust with your test plan"
-              blurb="Helpful where it saves time, careful where mistakes cost you — and always reviewed by a person before it counts."
-            />
+        <section id="ai" className="scroll-mt-24 border-t border-white/10 px-4 py-24 sm:px-6">
+          <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.3fr]">
+            <div className="reveal">
+              <SectionHead
+                kicker="AI"
+                title="AI you can trust with your test plan"
+                text="It saves time where it helps and stays careful where mistakes cost you. A person reviews everything before it counts."
+              />
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {AI_POINTS.map((p) => (
-                <div key={p.title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                  <p.icon className="mb-3 h-5 w-5 text-primary" />
-                  <h3 className="mb-1.5 text-[15px] font-semibold">{p.title}</h3>
-                  <p className="text-[14px] leading-relaxed text-muted-foreground">{p.text}</p>
+                <div key={p.title} className="reveal rounded-2xl border border-white/10 bg-[#181818] p-6">
+                  <p.icon className="mb-4 h-6 w-6 text-white" aria-hidden />
+                  <h3 className="title-3 mb-2 text-white">{p.title}</h3>
+                  <p className="body-6 text-white/60">{p.text}</p>
                 </div>
               ))}
             </div>
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[13px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Languages className="h-4 w-4" /> Arabic and English documents
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Globe2 className="h-4 w-4" /> Ollama · Kimi · OpenAI · Anthropic · Gemini
-              </span>
-            </div>
           </div>
         </section>
 
-        {/* ── Download ── */}
-        <section id="download" className="scroll-mt-16">
-          <div className="mx-auto max-w-6xl space-y-10 px-4 py-24 sm:px-6">
-            <SectionTitle
+        {/* ── Desktop app ── */}
+        <section id="download" className="scroll-mt-24 border-t border-white/10 px-4 py-24 sm:px-6">
+          <div className="reveal mx-auto max-w-6xl space-y-12">
+            <SectionHead
               kicker="Desktop app"
               title="QA Engine on your Mac or PC"
-              blurb="Its own window and dock icon, stays signed in, updates itself with one click — and uses Ollama on your computer for free, private AI."
+              text="Its own window and dock icon. It stays signed in, updates in one click, and runs free, private AI with Ollama on your computer."
             />
             <DesktopDownloadCards />
-            <div className="grid gap-4 text-[13px] text-muted-foreground sm:grid-cols-3">
-              <p>
-                <span className="font-medium text-foreground">1. Install.</span> Mac: open the file and drag QA Engine to Applications. Windows: run
-                the setup.
-              </p>
-              <p>
-                <span className="font-medium text-foreground">2. First launch.</span> Mac: System Settings → Privacy &amp; Security → Open Anyway.
-                Windows: if the browser says the file &quot;isn&apos;t commonly downloaded&quot;, open Downloads (Ctrl+J) → ⋯ → Keep → Keep anyway.
-                Then on &quot;Windows protected your PC&quot; click More info → Run anyway.
-              </p>
-              <p>
-                <span className="font-medium text-foreground">3. Sign in.</span> Use the same account as the website. If Ollama is installed, the
-                app finds it by itself.
-              </p>
-            </div>
+            <ol className="grid gap-6 sm:grid-cols-3">
+              {[
+                ["Install", "On Mac, open the file and drag QA Engine to Applications. On Windows, run the setup."],
+                ["Open it the first time", "On Mac, open System Settings, Privacy and Security, then Open Anyway. On Windows, click More info, then Run anyway."],
+                ["Sign in", "Use the same account as the website. If Ollama is installed, the app finds it by itself."],
+              ].map(([t, d], i) => (
+                <li key={t} className="space-y-2">
+                  <p className="title-4 text-white">
+                    {i + 1}. {t}
+                  </p>
+                  <p className="body-6 text-white/60">{d}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
         {/* ── FAQ ── */}
-        <section id="faq" className="scroll-mt-16 border-t border-border">
-          <div className="mx-auto grid max-w-6xl gap-10 px-4 py-24 sm:px-6 lg:grid-cols-[1fr_1.4fr]">
-            <SectionTitle kicker="FAQ" title="Questions people ask" />
-            <div className="divide-y divide-border rounded-xl border border-border bg-card">
+        <section id="faq" className="scroll-mt-24 border-t border-white/10 px-4 py-24 sm:px-6">
+          <div className="mx-auto grid max-w-6xl gap-12 lg:grid-cols-[1fr_1.4fr]">
+            <div className="reveal">
+              <SectionHead kicker="FAQ" title="Questions people ask" />
+            </div>
+            <div className="reveal divide-y divide-white/10 rounded-2xl border border-white/10 bg-[#181818]">
               {FAQ.map((f) => (
-                <details key={f.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[14px] font-medium">
+                <details key={f.q} className="group [&_summary::-webkit-details-marker]:hidden">
+                  <summary
+                    className={`title-4 flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-6 py-4 text-white transition-colors ${EASE} hover:bg-white/5 ${FOCUS}`}
+                  >
                     {f.q}
-                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                    <CaretDown
+                      className="h-4 w-4 shrink-0 text-white/50 transition-transform duration-500 ease-out-soft group-open:rotate-180"
+                      aria-hidden
+                    />
                   </summary>
-                  <p className="mt-2 text-[14px] leading-relaxed text-muted-foreground">{f.a}</p>
+                  <p className="body-6 px-6 pb-4 text-white/60">{f.a}</p>
                 </details>
               ))}
             </div>
           </div>
         </section>
 
-        {/* ── Final call ── */}
+        {/* ── Risk reversal + final CTA (same action as the hero) ── */}
         <section className="px-4 pb-24 sm:px-6">
-          <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl bg-primary px-6 py-14 text-center text-primary-foreground shadow-lg sm:px-12">
-            <h2 className="text-[28px] font-semibold tracking-tight sm:text-[34px]">Start testing smarter today</h2>
-            <p className="mx-auto mt-3 max-w-xl text-[15px] opacity-90">
-              Create your account, upload your first BRD and get test cases in minutes.
+          <div className="reveal mx-auto max-w-6xl rounded-2xl border border-white/10 bg-[#181818] px-6 py-16 text-center sm:px-12">
+            <h2 className="heading-3 mx-auto max-w-[680px] text-white max-sm:text-3xl">Upload your first BRD today</h2>
+            <p className="body-3 mx-auto mt-4 max-w-[680px] text-white/60">
+              Create a free account and get your first test cases in minutes. No install needed, and the AI can run for free on your own computer.
             </p>
-            <div className="mt-7 flex flex-wrap justify-center gap-2.5">
-              <Link
-                href={primary.href}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-[14px] font-medium text-primary shadow-sm transition-opacity hover:opacity-90"
-              >
-                {primary.label} <ArrowRight className="h-4 w-4" />
-              </Link>
-              <a
-                href="#download"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-5 py-2.5 text-[14px] font-medium text-white transition-colors hover:bg-white/10"
-              >
-                <Download className="h-4 w-4" /> Download the app
-              </a>
+            <div className="mt-8 flex justify-center">
+              <PrimaryCta href={primary.href} label={primary.label} large />
             </div>
+            <ul className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-2">
+              {["Free account", "Works in the browser", "Nothing saved without your review"].map((t) => (
+                <li key={t} className="caption-2 flex items-center gap-2 text-white/60">
+                  <Check weight="bold" className="h-4 w-4 text-emerald-400" aria-hidden /> {t}
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
       </main>
 
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-[13px] text-muted-foreground sm:flex-row sm:px-6">
+      <footer className="border-t border-white/10 px-4 py-12 sm:px-6">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
           <Logo />
-          <nav className="flex flex-wrap items-center gap-5">
+          <nav aria-label="Footer" className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
             {NAV.map((n) => (
-              <a key={n.href} href={n.href} className="hover:text-foreground">
+              <a key={n.href} href={n.href} className={`caption-2 rounded-md text-white/50 transition-colors ${EASE} hover:text-white ${FOCUS}`}>
                 {n.label}
               </a>
             ))}
-            <Link href="/login" className="hover:text-foreground">
-              Sign in
-            </Link>
+            {!session && (
+              <Link href="/login" className={`caption-2 rounded-md text-white/50 transition-colors ${EASE} hover:text-white ${FOCUS}`}>
+                Sign in
+              </Link>
+            )}
           </nav>
-          <p>© {new Date().getFullYear()} QA Engine</p>
+          <p className="caption-5 text-white/40">© {new Date().getFullYear()} QA Engine</p>
         </div>
       </footer>
     </div>

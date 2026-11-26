@@ -2,44 +2,33 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'self'">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self'">
+<link rel="stylesheet" href="app.css">
 <title>Custom server</title>
 <style>
-  :root { --bg:#fbfbfc; --fg:#1b1b1f; --muted:#6b6b76; --card:#ffffff; --border:#e6e6ea; --accent:#5e6ad2; --accent-fg:#fff; --err:#dc2626; --danger:#dc2626; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0e0f11; --fg:#ececef; --muted:#9a9aa5; --card:#16171a; --border:#26272b; --accent:#7c86e3; --accent-fg:#fff; --err:#f87171; --danger:#f87171; } }
-  * { box-sizing:border-box; }
-  body { margin:0; padding:24px; background:var(--bg); color:var(--fg); font: 13px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
-  h1 { font-size:15px; font-weight:600; margin:0 0 4px; }
-  p { margin:0 0 16px; color:var(--muted); }
-  label { display:block; font-weight:500; margin-bottom:6px; }
-  input { width:100%; font:inherit; height:32px; padding:0 10px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--fg); }
-  input:focus { outline:2px solid var(--accent); outline-offset:1px; }
-  .error { color:var(--danger); min-height:20px; font-size:12px; margin-top:6px; }
-  .actions { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
-  button { font:inherit; font-weight:500; height:32px; padding:0 12px; border-radius:6px; border:1px solid var(--border); background:transparent; color:var(--fg); cursor:pointer; }
-  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
-
-  .brand { display:flex; align-items:center; gap:8px; font-weight:600; font-size:13px; margin-bottom:20px; color:var(--fg); }
-  .mark { width:22px; height:22px; border-radius:6px; background:var(--accent); display:grid; place-items:center; box-shadow:0 1px 2px rgba(0,0,0,.12); }
-  .mark svg { width:13px; height:13px; fill:#fff; }
-  button { transition: background .12s, border-color .12s; }
-  button:hover { background: color-mix(in srgb, var(--fg) 5%, transparent); }
-  button.primary:hover { background: color-mix(in srgb, var(--accent) 88%, #000); }
+  body { padding: 24px; background: var(--surface); }
+  code { font-size: 12px; color: var(--fg); }
+  form { margin-top: 24px; }
 </style>
 </head>
 <body>
-  <div class="brand"><span class="mark"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span>QA Engine</div>
-  <h1>Connect to a custom server</h1>
-  <p>Use this for a self-hosted QA Engine, or <code>http://localhost:3000</code> while developing.</p>
-  <form id="form">
-    <label for="url">Server URL</label>
-    <input id="url" type="text" placeholder="https://qa.example.com" autofocus spellcheck="false" autocomplete="off">
-    <div class="error" id="error" role="alert"></div>
-    <div class="actions">
-      <button type="button" id="cancel">Cancel</button>
-      <button type="submit" class="primary">Connect</button>
+  <main>
+    <div class="brand"><span class="mark"><svg viewBox="0 0 256 256" aria-hidden="true"><path d="M213.85,125.46l-112,120a8,8,0,0,1-13.69-7l14.66-73.33L45.19,143.49a8,8,0,0,1-3-13l112-120a8,8,0,0,1,13.69,7L153.18,90.9l57.63,21.61a8,8,0,0,1,3,12.95Z"/></svg></span><span class="title-4">QA Engine</span></div>
+    <div class="stack-8">
+      <h1 class="heading-6">Connect to a custom server</h1>
+      <p class="body-6">Use this for a self hosted QA Engine, or <code>http://localhost:3000</code> while developing.</p>
     </div>
-  </form>
+    <form id="form" novalidate>
+      <label for="url" class="title-4">Server URL</label>
+      <input id="url" type="text" placeholder="https://qa.example.com" autofocus spellcheck="false" autocomplete="off" aria-describedby="error">
+      <div class="error" id="error" role="alert"></div>
+      <div class="actions" style="margin-top:16px">
+        <button type="button" id="cancel">Cancel</button>
+        <button type="submit" class="primary">Connect</button>
+      </div>
+    </form>
+  </main>
   <script src="server.js"></script>
 </body>
 </html>

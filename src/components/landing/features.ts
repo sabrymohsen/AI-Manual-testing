@@ -1,251 +1,217 @@
 import {
-  BarChart3,
   Bell,
-  Bot,
   Bug,
   Camera,
-  Cpu,
-  FileSpreadsheet,
+  ChartLine,
+  ChatCircle,
+  Code,
+  FileArrowUp,
   FileText,
-  FlaskConical,
-  KanbanSquare,
-  LayoutDashboard,
-  MessageSquare,
+  Kanban,
+  ListChecks,
+  Robot,
   ShieldCheck,
+  Sparkle,
+  TestTube,
   Users,
-  Video,
-} from "lucide-react"
+  VideoCamera,
+} from "@phosphor-icons/react/dist/ssr"
 
 /**
- * Feature copy for the public website. Names are the app's real page names
- * (the sidebar), so what people read here is what they find inside.
+ * Copy for the public website. Page names are the app's real sidebar names,
+ * so what people read here is what they find inside. Copy rules (SKILL.md):
+ * benefit first, no hyphens in text, no invented numbers or testimonials.
  */
-export interface Feature {
-  icon: any
-  name: string
-  summary: string
-  points: string[]
-}
 
-export interface FeatureGroup {
+export interface Benefit {
   id: string
   label: string
   title: string
-  blurb: string
-  features: Feature[]
+  text: string
+  pages: { icon: any; name: string }[]
+  points: string[]
 }
 
-export const FEATURE_GROUPS: FeatureGroup[] = [
+export const BENEFITS: Benefit[] = [
   {
     id: "plan",
     label: "Plan",
-    title: "From the business document to a planned sprint",
-    blurb: "Start where the work starts: the BRD. Turn it into requirements, epics and user stories, then plan the sprint.",
-    features: [
-      {
-        icon: FileSpreadsheet,
-        name: "BRD Hub",
-        summary: "Upload Word or PDF requirement documents and let AI pull out what needs testing.",
-        points: [
-          "Versions, preview, comments and review approvals",
-          "AI analysis in Arabic and English, checked against the document's own text",
-          "Flags vague wording and open questions before testing starts",
-          "One click creates the epics and user stories on the Scrum board",
-        ],
-      },
-      {
-        icon: KanbanSquare,
-        name: "Scrum Board",
-        summary: "Backlog, sprints and a board your team moves cards on — with tests attached to every story.",
-        points: [
-          "Drag-and-drop board, backlog and sprints",
-          "Story detail with subtasks, links, attachments and work logs",
-          "Each story shows its test cases and whether they pass",
-          "Sync with Jira, Azure DevOps, OpenProject or ClickUp",
-        ],
-      },
-      {
-        icon: BarChart3,
-        name: "Reports",
-        summary: "Burndown, velocity, defect trends and coverage — live from your sprints and test runs.",
-        points: ["Sprint burndown and velocity", "Defect trends and test coverage"],
-      },
-      {
-        icon: LayoutDashboard,
-        name: "Dashboard",
-        summary: "Every project's health on one screen: tests, bugs and recent activity.",
-        points: ["Test and bug numbers per project", "Recent activity across the team"],
-      },
+    title: "Know what to test before the sprint starts",
+    text: "Upload the BRD and get its requirements as a list you can check, each one matched to the sentence it came from.",
+    pages: [
+      { icon: FileText, name: "BRD Hub" },
+      { icon: Kanban, name: "Scrum Board" },
+      { icon: ChartLine, name: "Reports" },
+    ],
+    points: [
+      "Flags vague wording and open questions early",
+      "Creates the epics and user stories on the board in one click",
+      "Burndown, velocity and defect trends from your own sprints",
     ],
   },
   {
     id: "test",
     label: "Test",
-    title: "Manual testing that's fast to write and easy to prove",
-    blurb: "Write clear test cases, run them in a real browser, and keep the evidence with every result.",
-    features: [
-      {
-        icon: FileText,
-        name: "Test Cases",
-        summary: "A test library built for testers: steps, expected results, priorities and history.",
-        points: [
-          "AI drafts test cases from a requirement — reviewed before they count",
-          "Suites, tags, filters and bulk edits",
-          "Versions and review state on every case",
-          "Linked to requirements and stories for full traceability",
-        ],
-      },
-      {
-        icon: FlaskConical,
-        name: "Live QA Session",
-        summary: "Test inside a browser streamed into the app while everything is recorded.",
-        points: [
-          "Video of the whole session",
-          "Turn any moment into a bug with an annotated screenshot",
-          "Session history with every recording and bug",
-        ],
-      },
-      {
-        icon: Video,
-        name: "Recorder Studio",
-        summary: "Click through your website once; get a test you can replay.",
-        points: ["Records real clicks and typing", "Readable steps you can edit", "Replay as an automated test"],
-      },
-      {
-        icon: Camera,
-        name: "Visual Tests",
-        summary: "Catch layout changes before your users do.",
-        points: [
-          "Check a whole website, a list of pages or a test case's steps",
-          "Pixel comparison against approved screenshots",
-          "Approve a change in one click",
-        ],
-      },
+    title: "Prove every result with evidence",
+    text: "Write clear test cases, run them in a real browser, and keep the video and screenshots with every result.",
+    pages: [
+      { icon: ListChecks, name: "Test Cases" },
+      { icon: TestTube, name: "Live QA Session" },
+      { icon: Camera, name: "Visual Tests" },
+    ],
+    points: [
+      "AI drafts cases from a requirement, a person approves them",
+      "Every session is recorded, any moment can become a bug",
+      "Pixel comparison against screenshots you approved",
     ],
   },
   {
     id: "automate",
     label: "Automate",
-    title: "Automation in plain Playwright JavaScript",
-    blurb: "No framework to learn: write or record standard Playwright tests and run them from the app.",
-    features: [
-      {
-        icon: Cpu,
-        name: "Automation Hub",
-        summary: "Write, record, run and debug automated tests in one place.",
-        points: [
-          "Editor with Playwright autocomplete and checks",
-          "Runs queue up and keep their screenshots, videos and traces",
-          "Schedules and CI triggers, parallel runs",
-          "Environment variables and encrypted secrets",
-          "Visual comparison and flaky-test detection",
-        ],
-      },
+    title: "Replay the checks you repeat every release",
+    text: "Record a flow once or write it in plain Playwright JavaScript, then run it on a schedule or from your CI.",
+    pages: [
+      { icon: Code, name: "Automation Hub" },
+      { icon: VideoCamera, name: "Recorder Studio" },
+    ],
+    points: [
+      "Runs keep their screenshots, videos and traces",
+      "Encrypted secrets and environments per project",
+      "Flaky tests are found and listed for you",
     ],
   },
   {
     id: "track",
     label: "Track",
-    title: "Bugs your developers can act on",
-    blurb: "Every bug arrives with steps, evidence and the right severity — and lands in the tracker your team already uses.",
-    features: [
-      {
-        icon: Bug,
-        name: "Bug Reports",
-        summary: "Write a clear bug in seconds, from a failed step or a screenshot.",
-        points: [
-          "AI drafts the title, steps and expected vs. actual result",
-          "Suggested severity and a summary for developers",
-          "Board with statuses from your own tracker",
-          "Two-way sync with Jira, Azure DevOps, OpenProject or ClickUp",
-        ],
-      },
+    title: "Send bugs your developers can act on",
+    text: "Every bug arrives with steps, expected and actual results, screenshots and a severity, in the tracker your team already uses.",
+    pages: [{ icon: Bug, name: "Bug Reports" }],
+    points: [
+      "AI drafts the title, steps and severity from a failed step",
+      "Import bugs with their screenshots from an automation report PDF",
+      "Syncs both ways with Jira, Azure DevOps, OpenProject and ClickUp",
     ],
   },
   {
     id: "team",
     label: "Team",
-    title: "The whole QA team in one place",
-    blurb: "Talk, assign and keep everyone up to date without leaving the app.",
-    features: [
-      {
-        icon: MessageSquare,
-        name: "Team Chat",
-        summary: "Project channels and private messages, with @mentions of people, tests and bugs.",
-        points: ["Real-time channels and direct messages", "Mentions notify the right person"],
-      },
-      {
-        icon: Users,
-        name: "Members",
-        summary: "Invite your team and decide who can do what in each project.",
-        points: ["Owner, Admin, Member and Viewer roles", "Fine-grained permissions per project", "Email invitations"],
-      },
-      {
-        icon: Bell,
-        name: "Notifications",
-        summary: "A live bell for assignments, mentions, BRD changes and finished AI work.",
-        points: ["Real-time, on every page", "Links straight to what changed"],
-      },
+    title: "Keep the whole QA team in one place",
+    text: "Talk, assign and follow the work without leaving the app, with the right access for each person.",
+    pages: [
+      { icon: ChatCircle, name: "Team Chat" },
+      { icon: Users, name: "Members" },
+      { icon: Bell, name: "Notifications" },
+    ],
+    points: [
+      "Channels and private messages with mentions of tests and bugs",
+      "Owner, Admin, Member and Viewer roles per project",
+      "A live bell for assignments, mentions and finished AI work",
     ],
   },
 ]
 
-/** The journey shown under the hero. */
-export const FLOW = [
-  { icon: FileSpreadsheet, label: "BRD" },
-  { icon: KanbanSquare, label: "Stories" },
-  { icon: FileText, label: "Test cases" },
-  { icon: FlaskConical, label: "Run" },
-  { icon: Bug, label: "Bugs" },
-  { icon: BarChart3, label: "Reports" },
+/** Problem → solution: what testing from a BRD usually looks like, and what changes. */
+export const PROBLEMS = [
+  {
+    before: "Requirements hide inside a long Word document",
+    after: "Every requirement is listed, linked to its sentence in the BRD",
+  },
+  {
+    before: "Test cases are typed out by hand, one by one",
+    after: "AI drafts the test cases and your team reviews them",
+  },
+  {
+    before: "Each bug is written twice, once for QA and once for Jira",
+    after: "One bug with evidence, synced to your tracker",
+  },
+]
+
+export const STEPS = [
+  {
+    icon: FileArrowUp,
+    title: "Upload your BRD",
+    text: "Word or PDF, in Arabic or English. QA Engine reads it and lists what needs testing.",
+  },
+  {
+    icon: Sparkle,
+    title: "Review what the AI found",
+    text: "Requirements, user stories and test cases arrive as drafts. Nothing is saved until you approve it.",
+  },
+  {
+    icon: TestTube,
+    title: "Run the tests and file the bugs",
+    text: "Test in a recorded browser. Failed steps become bugs with screenshots, sent to your tracker.",
+  },
 ]
 
 export const AI_POINTS = [
   {
     icon: ShieldCheck,
-    title: "Built-in QA expertise",
-    text: "Every AI request carries testing know-how — test design techniques, clear steps, severity rules, resilient locators — so answers follow good QA practice.",
+    title: "Built on QA practice",
+    text: "Every request carries testing know how: test design techniques, clear steps, severity rules and resilient locators.",
   },
   {
-    icon: FileSpreadsheet,
+    icon: FileText,
     title: "Checked, not guessed",
-    text: "Requirements found in a BRD are matched to the document's own words. Anything the AI can't point to is marked as unverified, and nothing is saved until you review it.",
+    text: "Requirements are matched to the document's own words. Anything the AI cannot point to is marked unverified.",
   },
   {
-    icon: Bot,
+    icon: Robot,
     title: "Free AI on your own computer",
-    text: "Have Ollama? The desktop app finds it automatically and runs your AI requests on your machine — free and private. Or add a key for Kimi, OpenAI, Anthropic or Gemini.",
+    text: "The desktop app finds Ollama by itself and runs requests on your machine. Or add a key for Kimi, OpenAI, Anthropic or Gemini.",
   },
   {
-    icon: Cpu,
+    icon: Sparkle,
     title: "Keeps working while you do",
-    text: "Long AI jobs run in the background. Move anywhere in the app — you'll get a message when your test cases are ready.",
+    text: "Long AI jobs run in the background. You get a notification when your test cases are ready.",
   },
 ]
 
 export const FAQ = [
   {
     q: "Do I need to install anything?",
-    a: "No. QA Engine works in your browser. The desktop app is optional — it gives QA Engine its own window and lets the AI run on your own computer with Ollama.",
+    a: "No. QA Engine works in your browser. The desktop app is optional. It gives QA Engine its own window and lets the AI run on your own computer with Ollama.",
   },
   {
     q: "Does it support Arabic?",
-    a: "Yes. BRDs, requirements, test cases and bug reports work in Arabic and English, and the AI answers in the document's language.",
+    a: "Yes. BRDs, requirements, test cases and bug reports work in Arabic and English, and the AI answers in the language of the document.",
   },
   {
     q: "Which AI does it use?",
-    a: "Your choice: free Ollama models on your own computer (found automatically by the desktop app), or a cloud provider such as Kimi, OpenAI, Anthropic or Gemini with your own key. Without any AI, built-in rules still extract requirements and draft bugs.",
+    a: "Your choice: free Ollama models on your own computer, or a cloud provider such as Kimi, OpenAI, Anthropic or Gemini with your own key. Without any AI, built in rules still pull out requirements and draft bugs.",
+  },
+  {
+    q: "Does the AI save anything without asking?",
+    a: "No. Requirements, stories, test cases and bugs from the AI arrive as drafts. A person reviews them, and only then are they saved.",
   },
   {
     q: "Can it work with Jira or Azure DevOps?",
-    a: "Yes. Stories and bugs sync with Jira, Azure DevOps, OpenProject and ClickUp, using your tracker's own statuses.",
+    a: "Yes. Stories and bugs sync with Jira, Azure DevOps, OpenProject and ClickUp, using the statuses your tracker already has.",
+  },
+  {
+    q: "Can I bring in bugs from my automation runs?",
+    a: "Yes. On Bug Reports, import the bug report PDF that your automation produces. QA Engine creates one bug per entry, with its steps, results and screenshots.",
+  },
+  {
+    q: "Who can see my projects?",
+    a: "Only the people you invite. Each member gets a role in the project: Owner, Admin, Member or Viewer.",
   },
   {
     q: "How do updates work?",
-    a: "The website updates on its own — you'll see a Reload prompt. The desktop app tells you when a new version is out and installs it with one click.",
+    a: "The website updates by itself and shows a Reload prompt. The desktop app tells you when a new version is out and installs it in one click.",
   },
   {
     q: "Why does my Mac or Windows warn me the first time?",
-    a: "The desktop app isn't signed with a paid certificate yet, so Mac and Windows don't recognise it. On Mac, open System Settings → Privacy & Security and click Open Anyway. On Windows, if the browser holds the download, open Downloads (Ctrl+J), click ⋯ → Keep → Keep anyway; then on \"Windows protected your PC\" click More info → Run anyway. Don't double-click a file ending in .crdownload or .partial — that's an unfinished download. You only do this once; the Windows .zip is an alternative that needs no install.",
+    a: "The desktop app is not signed with a paid certificate yet. On Mac, open System Settings, then Privacy and Security, and click Open Anyway. On Windows, click More info and then Run anyway. You only do this once.",
   },
+]
+
+export const TRACKERS = ["Jira", "Azure DevOps", "OpenProject", "ClickUp"]
+
+export const NAV = [
+  { href: "#product", label: "Product" },
+  { href: "#how", label: "How it works" },
+  { href: "#ai", label: "AI" },
+  { href: "#download", label: "Desktop app" },
+  { href: "#faq", label: "FAQ" },
 ]

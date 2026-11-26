@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Apple, Download, Monitor } from "lucide-react"
+import { AppleLogo, DownloadSimple, WindowsLogo } from "@phosphor-icons/react"
 
 /**
  * Desktop app download links (login / sign-up pages and the website).
@@ -79,52 +80,50 @@ export function DesktopDownloads() {
   )
 }
 
-/** Large download cards for the website (light, theme tokens). */
+/** Large download cards for the website (dark landing page). */
 export function DesktopDownloadCards() {
   const { os, inApp, version } = useDesktopEnv()
 
   const cards = [
-    { ...FILES.macArm, icon: Apple, recommended: os === "mac" },
-    { ...FILES.macIntel, icon: Apple, recommended: false },
-    { ...FILES.windows, icon: Monitor, recommended: os === "windows" },
+    { ...FILES.macArm, icon: AppleLogo, recommended: os === "mac" },
+    { ...FILES.macIntel, icon: AppleLogo, recommended: false },
+    { ...FILES.windows, icon: WindowsLogo, recommended: os === "windows" },
   ]
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3">
         {cards.map((c) => (
           <a
             key={c.href}
             href={c.href}
             download
-            className={`group relative flex flex-col gap-3 rounded-xl border p-5 transition-all hover:-translate-y-0.5 hover:shadow-md ${
-              c.recommended ? "border-primary/50 bg-primary/[0.04] ring-1 ring-primary/20" : "border-border bg-card"
+            className={`group relative flex flex-col gap-4 rounded-2xl border p-6 outline-none transition-[transform,background-color] duration-300 ease-out-soft hover:-translate-y-0.5 hover:bg-[#1F1F1F] focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.98] ${
+              c.recommended ? "border-white/30 bg-[#181818]" : "border-white/10 bg-[#181818]"
             }`}
           >
             {c.recommended && (
-              <span className="absolute end-3 top-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-medium text-primary-foreground">
-                For this computer
-              </span>
+              <span className="caption-3 absolute end-4 top-4 rounded-md bg-white px-2 py-0.5 text-black">For this computer</span>
             )}
-            <c.icon className="h-6 w-6 text-foreground" />
+            <c.icon weight="fill" className="h-6 w-6 text-white" aria-hidden />
             <div>
-              <p className="text-[15px] font-semibold text-foreground">{c.label}</p>
-              <p className="text-[12px] text-muted-foreground">{c.hint}</p>
+              <p className="title-3 text-white">{c.label}</p>
+              <p className="caption-2 text-white/50">{c.hint}</p>
             </div>
-            <span className="mt-auto inline-flex items-center gap-1.5 text-[13px] font-medium text-primary">
-              <Download className="h-3.5 w-3.5" /> Download{version ? ` v${version}` : ""}
+            <span className="button-sm mt-auto inline-flex items-center gap-2 text-white/80 group-hover:text-white">
+              <DownloadSimple className="h-4 w-4" aria-hidden /> Download{version ? ` v${version}` : ""}
             </span>
           </a>
         ))}
       </div>
-      <p className="text-[12px] text-muted-foreground">
-        Windows installer blocked by your browser or company? Try the{" "}
-        <a href="/downloads/QA-Engine-win.zip" download className="font-medium text-primary hover:underline">
+      <p className="caption-2 text-white/50">
+        Windows installer blocked by your browser or company? Use the{" "}
+        <a href="/downloads/QA-Engine-win.zip" download className="font-medium text-white underline underline-offset-4 hover:text-white/80">
           Windows .zip
-        </a>{" "}
-        — unzip it and open <span className="font-medium text-foreground">QA Engine.exe</span>, no install needed.
+        </a>
+        . Unzip it and open <span className="font-medium text-white">QA Engine.exe</span>, no install needed.
       </p>
-      {inApp && <p className="text-[12px] text-muted-foreground">You&apos;re already using the desktop app.</p>}
+      {inApp && <p className="caption-2 text-white/50">You are already using the desktop app.</p>}
     </div>
   )
 }
