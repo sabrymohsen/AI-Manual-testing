@@ -64,6 +64,7 @@ import {
   FileUp
 } from "@/components/ui/icons"
 import { LinkedEntities } from "@/components/entity-links/linked-entities"
+import { BugReproduction } from "@/components/bug-reports/bug-reproduction"
 import { BugTriagePanel } from "@/components/bug-reports/bug-triage-panel"
 import {
   useBugShortcuts,
@@ -2689,13 +2690,17 @@ export default function ProjectBugReportsPage() {
               {activeDetailTab === "overview" && (
                 <div className="space-y-6">
 
-                  <DrawerSection icon={FileText} title="Steps to reproduce">
-                    {isEditingDesc ? (
+                  {isEditingDesc ? (
+                    <section className="space-y-2">
+                      <h4 className="text-sm font-semibold text-foreground">How to reproduce</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Put preconditions under a &quot;Preconditions:&quot; line and number each step (1. 2. 3.). Expected and actual results are below.
+                      </p>
                       <div className="space-y-2">
                         <textarea
                           value={editDescValue}
                           onChange={(e) => setEditDescValue(e.target.value)}
-                          rows={5}
+                          rows={10}
                           autoFocus
                           className="w-full rounded-lg border bg-background p-3 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-primary/30"
                         />
@@ -2708,63 +2713,29 @@ export default function ProjectBugReportsPage() {
                             }}
                             className="bg-primary text-white"
                           >
-                            Save description
+                            Save steps
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => setIsEditingDesc(false)}>Cancel</Button>
                         </div>
                       </div>
-                    ) : (
-                      <p
-                        onClick={() => setIsEditingDesc(true)}
-                        title="Click to edit"
-                        className={`cursor-text whitespace-pre-wrap rounded-lg border border-transparent p-3 -mx-3 text-sm leading-relaxed transition-colors hover:border-border hover:bg-muted/40 ${selectedBug.stepsToReproduce ? "text-foreground" : "text-muted-foreground"}`}
-                        dir="auto"
-                      >
-                        {selectedBug.stepsToReproduce || "No steps yet. Click to write how to make the bug happen."}
-                      </p>
-                    )}
-                  </DrawerSection>
 
-                  <div className="grid gap-4 border-t border-border/60 pt-6 md:grid-cols-2">
-                    <div className="space-y-1.5">
-                      <span className="flex items-center gap-2 text-xs font-medium text-emerald-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden /> Expected
-                      </span>
-                      <textarea
-                        value={editExpectedValue}
-                        onChange={(e) => setEditExpectedValue(e.target.value)}
-                        onBlur={() => {
-                          if (editExpectedValue !== (selectedBug.expectedResult || "")) {
-                            handleInlineUpdate({ expectedResult: editExpectedValue })
-                          }
-                        }}
-                        rows={4}
-                        placeholder="What should happen"
-                        dir="auto"
-                        aria-label="Expected result"
-                        className="w-full resize-y rounded-lg border bg-background p-3 text-sm leading-relaxed text-foreground outline-none focus:ring-2 focus:ring-primary/30"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="flex items-center gap-2 text-xs font-medium text-rose-700">
-                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden /> Actual
-                      </span>
-                      <textarea
-                        value={editActualValue}
-                        onChange={(e) => setEditActualValue(e.target.value)}
-                        onBlur={() => {
-                          if (editActualValue !== (selectedBug.actualResult || "")) {
-                            handleInlineUpdate({ actualResult: editActualValue })
-                          }
-                        }}
-                        rows={4}
-                        placeholder="What happened instead"
-                        dir="auto"
-                        aria-label="Actual result"
-                        className="w-full resize-y rounded-lg border border-rose-200 bg-rose-50/40 p-3 text-sm leading-relaxed text-foreground outline-none focus:ring-2 focus:ring-rose-300"
-                      />
-                    </div>
-                  </div>
+                    </section>
+                  ) : (
+                    <BugReproduction
+                      text={selectedBug.stepsToReproduce}
+                      expected={editExpectedValue}
+                      actual={editActualValue}
+                      onEdit={() => setIsEditingDesc(true)}
+                      onExpectedChange={setEditExpectedValue}
+                      onActualChange={setEditActualValue}
+                      onExpectedBlur={() => {
+                        if (editExpectedValue !== (selectedBug.expectedResult || "")) handleInlineUpdate({ expectedResult: editExpectedValue })
+                      }}
+                      onActualBlur={() => {
+                        if (editActualValue !== (selectedBug.actualResult || "")) handleInlineUpdate({ actualResult: editActualValue })
+                      }}
+                    />
+                  )}
 
                   <div className="space-y-4 border-t border-border/60 pt-6">
                   {/* Screenshots preview */}
