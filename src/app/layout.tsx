@@ -8,7 +8,10 @@ export const metadata: Metadata = {
   title: "QA Engine",
   description: "Create and execute browser-based functional tests with AI assistance",
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png", sizes: "64x64" },
+    ],
     apple: "/apple-touch-icon.png",
   },
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { verifyToken } from "@/lib/auth"
 
-const PUBLIC_PATHS = ["/", "/opengraph-image", "/login", "/register", "/api/auth/login", "/api/auth/register", "/api/auth/logout", "/api/health"]
+const PUBLIC_PATHS = ["/", "/opengraph-image", "/icon.svg", "/favicon.png", "/apple-touch-icon.png", "/login", "/register", "/api/auth/login", "/api/auth/register", "/api/auth/logout", "/api/health"]
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
