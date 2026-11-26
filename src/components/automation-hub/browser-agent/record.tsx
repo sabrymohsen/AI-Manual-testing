@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { ArrowLeft, Copy, Globe, Loader2, Play, RefreshCw, Save, Search, Trash2, X } from "@/components/ui/icons"
@@ -284,7 +285,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
       <div className="space-y-3 rounded-xl border bg-card p-3">
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={start} disabled={ap.busy}>
-            {ap.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />} {ap.isOpen ? "Restart at start page" : "Open start page"}
+            {ap.busy ? <BusyDot /> : <Globe className="h-4 w-4" />} {ap.isOpen ? "Restart at start page" : "Open start page"}
           </Button>
           {ap.isOpen && (
             <>
@@ -375,7 +376,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
               <span className="min-w-0 flex-1 break-words font-normal text-foreground" dir="auto">
                 {s.sentence}
               </span>
-              <button onClick={() => setSteps((x) => x.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100" title="Remove">
+              <button onClick={() => setSteps((x) => x.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" title="Remove">
                 <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-rose-600" />
               </button>
             </li>
@@ -386,7 +387,7 @@ export function RecordPanel({ projectId, settings, onOpenTests }: { projectId: s
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Test name" className="h-8 w-full rounded-md border bg-card px-2 text-xs font-normal" dir="auto" />
           <div className="flex flex-wrap gap-2">
             <Button size="sm" onClick={save} disabled={saving || !steps.length}>
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Save as no-code test
+              {saving ? <BusyDot /> : <Save className="h-4 w-4" />} Save as no-code test
             </Button>
             <Button size="sm" variant={code === "js" ? "default" : "outline"} onClick={() => setCode(code === "js" ? "none" : "js")} disabled={!steps.length}>
               JavaScript

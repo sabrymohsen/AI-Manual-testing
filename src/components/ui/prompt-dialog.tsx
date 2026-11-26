@@ -5,9 +5,8 @@ import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "@/components/ui/icons"
 
-/** One-field dialog: bulk tag edits and naming a new plan. */
+/** One-field dialog, the in-app replacement for window.prompt. */
 export function PromptDialog({
   open,
   title,
@@ -16,6 +15,7 @@ export function PromptDialog({
   placeholder,
   confirmLabel,
   suggestions,
+  initialValue = "",
   pending,
   onCancel,
   onSubmit,
@@ -28,14 +28,16 @@ export function PromptDialog({
   confirmLabel: string
   /** Clickable chips that fill the field, e.g. existing tags. */
   suggestions?: string[]
+  /** Starting text, e.g. the current value when editing. */
+  initialValue?: string
   pending?: boolean
   onCancel: () => void
   onSubmit: (value: string) => void
 }) {
   const [value, setValue] = useState("")
   useEffect(() => {
-    if (open) setValue("")
-  }, [open])
+    if (open) setValue(initialValue)
+  }, [open, initialValue])
 
   const submit = () => value.trim() && onSubmit(value.trim())
 

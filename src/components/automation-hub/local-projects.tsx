@@ -6,6 +6,7 @@
  * results in the Automation Hub. In a browser, the shared results are visible
  * but running needs the desktop app on the computer that has the project.
  */
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { FolderOpen, Laptop, Loader2, Play, Square, Unlink } from "@/components/ui/icons"
@@ -195,7 +196,7 @@ export function LocalProjectPanel({
             className="h-8 min-w-[180px] rounded-md border bg-card px-2 text-xs"
           />
         )}
-        {running && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+        {running && <BusyDot />}
       </div>
       {(running || log) && (
         <pre ref={logRef} className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-md bg-slate-900 p-3 font-mono text-xs leading-relaxed text-slate-100">

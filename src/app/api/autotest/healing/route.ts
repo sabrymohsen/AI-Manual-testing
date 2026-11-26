@@ -2,69 +2,17 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 
-// Seed default healing events if database table is empty
-const SEED_HEALING_EVENTS = [
-  {
-    originalLocator: "By.id(\"submit-btn-old\")",
-    recoveredLocator: "By.xpath(\"//button[@type='submit' and contains(@class, 'indigo')]\")",
-    confidence: 0.92,
-    pageUrl: "https://example.com/login",
-    testName: "LoginFlowTest.testLoginRedirection",
-    status: "recovered"
-  },
-  {
-    originalLocator: "By.cssSelector(\"input.search-bar\")",
-    recoveredLocator: "By.id(\"search-input\")",
-    confidence: 0.88,
-    pageUrl: "https://example.com/products",
-    testName: "SearchFlowTest.testSearchFunctionality",
-    status: "recovered"
-  },
-  {
-    originalLocator: "By.xpath(\"//a[text()='Upgrade Plan']\")",
-    recoveredLocator: "By.cssSelector(\"a.pricing-btn-upgrade\")",
-    confidence: 0.74,
-    pageUrl: "https://example.com/settings",
-    testName: "SettingsTest.testBillingUpgrade",
-    status: "needs_review"
-  },
-  {
-    originalLocator: "By.id(\"deprecated-delete-btn\")",
-    recoveredLocator: "By.xpath(\"//button[contains(@class, 'btn-danger')]\")",
-    confidence: 0.58,
-    pageUrl: "https://example.com/admin",
-    testName: "AdminUserTest.testDeleteUser",
-    status: "needs_review"
-  },
-  {
-    originalLocator: "By.className(\"pricing-plan-free\")",
-    recoveredLocator: "By.cssSelector(\".pricing-card-free\")",
-    confidence: 0.95,
-    pageUrl: "https://example.com/pricing",
-    testName: "PricingTest.testFreePlanSelection",
-    status: "recovered"
-  }
-]
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
   if (auth.error) return unauthorizedResponse(auth.error)
 
   try {
-    let events = await prisma.healingEvent.findMany({
+    const events = await prisma.healingEvent.findMany({
       orderBy: { createdAt: "desc" }
     })
 
-    if (events.length === 0) {
-      await Promise.all(
-        SEED_HEALING_EVENTS.map(e =>
-          prisma.healingEvent.create({ data: e })
-        )
-      )
-      events = await prisma.healingEvent.findMany({
-        orderBy: { createdAt: "desc" }
-      })
-    }
+    // No invented sample rows: an empty table means nothing has been recorded yet.
 
     // Compute KPIs
     const totalRecoveries = events.length

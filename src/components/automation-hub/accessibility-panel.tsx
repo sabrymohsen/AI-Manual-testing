@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -146,7 +147,7 @@ export default function AccessibilityPanel({
           disabled={toggling}
           className="flex items-center gap-2 ml-auto"
         >
-          <span className="text-xs font-semibold text-muted-foreground">Enable Accessibility Audit</span>
+          <span className="text-xs font-semibold text-muted-foreground">Enable accessibility audit</span>
           <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${script.accessibilityEnabled ? "bg-primary" : "bg-slate-300"}`}>
             <span className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${script.accessibilityEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
           </span>
@@ -161,7 +162,7 @@ export default function AccessibilityPanel({
 
       {/* Results */}
       {loading ? (
-        <div className="bg-card border rounded-xl py-16 flex justify-center"><Loader2 size={22} className="animate-spin text-primary" /></div>
+        <div className="bg-card border rounded-xl py-16 flex justify-center"><BusyDot /></div>
       ) : !result ? (
         <div className="bg-card border rounded-xl py-16 text-center space-y-2">
           <AlertTriangle size={24} className="text-slate-300 mx-auto" />
@@ -175,19 +176,19 @@ export default function AccessibilityPanel({
           {/* Score cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className={`rounded-xl p-4 flex flex-col justify-center ${wcag.className}`}>
-              <span className="text-xs font-semibold uppercase opacity-80">Compliance</span>
+              <span className="text-xs font-semibold  opacity-80">Compliance</span>
               <span className="text-lg font-semibold leading-tight">{wcag.label}</span>
             </div>
             <div className="bg-card border rounded-xl p-4">
-              <span className="text-xs font-semibold uppercase text-muted-foreground block">Checks Passed</span>
+              <span className="text-xs font-semibold  text-muted-foreground block">Checks passed</span>
               <span className="text-lg font-semibold text-emerald-600 flex items-center gap-2"><CheckCircle2 size={16} /> {result.passCount}</span>
             </div>
             <div className="bg-card border rounded-xl p-4">
-              <span className="text-xs font-semibold uppercase text-muted-foreground block">Violations</span>
+              <span className="text-xs font-semibold  text-muted-foreground block">Violations</span>
               <span className="text-lg font-semibold text-rose-600 flex items-center gap-2"><AlertTriangle size={16} /> {result.violationCount}</span>
             </div>
             <div className="bg-card border rounded-xl p-4">
-              <span className="text-xs font-semibold uppercase text-muted-foreground block">Audited</span>
+              <span className="text-xs font-semibold  text-muted-foreground block">Audited</span>
               <span className="text-xs font-semibold text-foreground">{new Date(result.createdAt).toLocaleString()}</span>
             </div>
           </div>
@@ -200,7 +201,7 @@ export default function AccessibilityPanel({
                 <button
                   key={sev}
                   onClick={() => setSeverityFilter(sev)}
-                  className={`px-3 py-1 rounded-lg text-xs font-semibold uppercase transition-all ${
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold  transition-all ${
                     severityFilter === sev ? "bg-primary text-white" : "bg-muted/50 text-muted-foreground border hover:bg-muted"
                   }`}
                 >
@@ -224,10 +225,10 @@ export default function AccessibilityPanel({
               </p>
             ) : (
               <div className="divide-y">
-                <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/50 text-xs font-semibold uppercase text-muted-foreground tracking-wider">
+                <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/50 text-xs font-semibold  text-muted-foreground ">
                   <span className="col-span-3">Rule</span>
                   <span className="col-span-2">Severity</span>
-                  <span className="col-span-7">Element / Description</span>
+                  <span className="col-span-7">Element / description</span>
                 </div>
                 {filteredViolations.map((v, i) => {
                   const sev = SEVERITY_META[v.severity] || SEVERITY_META.minor
@@ -257,7 +258,7 @@ export default function AccessibilityPanel({
                             <span className="text-muted-foreground font-medium">{v.description || "—"}</span>
                           </div>
                           <div>
-                            <span className="text-xs font-medium text-muted-foreground block">Suggested Fix</span>
+                            <span className="text-xs font-medium text-muted-foreground block">Suggested fix</span>
                             {/^https?:\/\//.test(v.fix) ? (
                               <a href={v.fix} target="_blank" rel="noreferrer" className="text-primary font-semibold underline break-all">{v.fix}</a>
                             ) : (

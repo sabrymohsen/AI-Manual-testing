@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot, Skeleton, SkeletonLines } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Bot,
@@ -243,7 +244,7 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                       disabled={!keyInputs[c.provider] || savingKey === c.provider}
                       className="h-8 px-3 bg-primary text-white hover:bg-primary/90 rounded-lg text-xs font-semibold disabled:opacity-40"
                     >
-                      {savingKey === c.provider ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                      {savingKey === c.provider ? <BusyDot /> : <Save size={12} />}
                     </Button>
                   </div>
                 </div>
@@ -307,7 +308,7 @@ export function ProvidersPanel({ onDefaultChanged }: { onDefaultChanged?: () => 
                   disabled={t?.loading}
                   className="h-8 rounded-lg bg-card border-border text-muted-foreground text-xs font-semibold gap-1"
                 >
-                  {t?.loading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />} Test
+                  {t?.loading ? <BusyDot /> : <Zap size={12} />} Test
                 </Button>
                 <button
                   onClick={() => setDefault(c.provider)}
@@ -441,7 +442,7 @@ export function CommandsPanel({ onRun, sending }: { onRun: (text: string) => voi
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Terminal size={16} className="text-primary" />
-        <h3 className="text-sm font-semibold text-foreground">Command Library</h3>
+        <h3 className="text-sm font-semibold text-foreground">Command library</h3>
         <span className="text-xs text-muted-foreground font-semibold">
           One click sends the command to the assistant. <span className="text-emerald-600 font-semibold">●</span> = runs a real engine tool.
         </span>
@@ -647,7 +648,7 @@ export function UsagePrivacyPanel() {
       {/* CONSENT & PRIVACY */}
       <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3">
         <h3 className="text-xs font-semibold text-foreground flex items-center gap-2">
-          <ShieldCheck size={14} className="text-primary" /> Consent & Privacy
+          <ShieldCheck size={14} className="text-primary" /> Consent & privacy
         </h3>
         <ToggleRow
           label="Allow AI to access test data"
@@ -666,7 +667,7 @@ export function UsagePrivacyPanel() {
         <div className="flex items-center justify-between gap-3 pt-1">
           <div>
             <p className="text-xs font-semibold text-foreground">Monthly budget limit (USD)</p>
-            <p className="text-xs text-muted-foreground font-semibold">0 = unlimited. Paid calls pause when the month's estimated spend hits this.</p>
+            <p className="text-xs text-muted-foreground font-semibold">0 = unlimited. Paid calls pause when the month&apos;s estimated spend hits this.</p>
           </div>
           <div className="flex gap-2 shrink-0">
             <div className="relative">
@@ -693,7 +694,7 @@ export function UsagePrivacyPanel() {
       {/* DATA ACCESS AUDIT */}
       <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
-          <ShieldCheck size={13} /> Data Access Audit
+          <ShieldCheck size={13} /> Data access audit
           <span className="text-xs text-muted-foreground font-semibold ml-1">what was sent to (or withheld from) a provider</span>
         </div>
         <div className="max-h-72 overflow-auto divide-y">
@@ -707,11 +708,11 @@ export function UsagePrivacyPanel() {
                 <span className="font-semibold text-foreground w-20 shrink-0">{r.provider}</span>
                 <span className="font-mono text-muted-foreground truncate flex-1">{r.dataSummary}</span>
                 {r.withheld ? (
-                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">withheld</span>
+                  <span className="text-xs font-semibold  px-2 py-0.5 rounded bg-muted text-muted-foreground border border-border">withheld</span>
                 ) : r.redacted ? (
-                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">redacted</span>
+                  <span className="text-xs font-semibold  px-2 py-0.5 rounded bg-amber-50 text-amber-600 border border-amber-100">redacted</span>
                 ) : (
-                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">sent</span>
+                  <span className="text-xs font-semibold  px-2 py-0.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-100">sent</span>
                 )}
                 <span className="text-muted-foreground font-semibold whitespace-nowrap">{new Date(r.createdAt).toLocaleTimeString()}</span>
               </div>
@@ -856,7 +857,7 @@ function UsageBarChart({ daily }: { daily: { date: string; tokens: number; cost:
 function StatTile({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string; hint?: string }) {
   return (
     <div className="bg-card border rounded-xl p-3 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <div className="flex items-center gap-2 text-xs font-semibold   text-muted-foreground">
         <Icon size={12} className="text-primary" /> {label}
       </div>
       <div className="text-xl font-semibold text-foreground mt-1">{value}</div>
@@ -885,10 +886,11 @@ function ToggleRow({ label, hint, on, disabled, onChange }: { label: string; hin
 
 function PanelLoader({ label }: { label: string }) {
   return (
-    <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
-      <Loader2 className="animate-spin text-primary" size={28} />
-      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-xs">{label}</span>
-    </div>
+<div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm" role="status" aria-label={label}>
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-32 w-full" />
+          <SkeletonLines lines={3} />
+        </div>
   )
 }
 

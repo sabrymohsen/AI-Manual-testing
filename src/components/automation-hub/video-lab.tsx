@@ -1,5 +1,7 @@
 "use client"
 
+import { Modal } from "@/components/ui/modal"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
   Video,
@@ -197,8 +199,8 @@ export default function VideoLabSection({
     })
 
   const SUB_TABS = [
-    { id: "gallery" as const, label: "Video Gallery", icon: Film },
-    { id: "settings" as const, label: "Recording Settings", icon: SettingsIcon },
+    { id: "gallery" as const, label: "Video gallery", icon: Film },
+    { id: "settings" as const, label: "Recording settings", icon: SettingsIcon },
     { id: "clips" as const, label: "Clips", icon: Scissors }
   ]
 
@@ -230,12 +232,12 @@ export default function VideoLabSection({
           </span>
         </span>
         {durations[v.id] !== undefined && (
-          <span className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-xs font-bold rounded px-2 py-0.5 font-mono">
+          <span className="absolute bottom-1.5 right-1.5 bg-black/70 text-white text-xs font-semibold rounded px-2 py-0.5 font-mono">
             {fmtTime(durations[v.id])}
           </span>
         )}
         {v.isClip && (
-          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-0.5 bg-primary text-white text-xs font-semibold uppercase rounded px-2 py-0.5">
+          <span className="absolute top-1.5 left-1.5 inline-flex items-center gap-0.5 bg-primary text-white text-xs font-semibold  rounded px-2 py-0.5">
             <Scissors size={8} /> clip
           </span>
         )}
@@ -243,8 +245,8 @@ export default function VideoLabSection({
       <div className="p-3 space-y-1">
         <p className="text-xs font-semibold text-foreground truncate">{v.testName}</p>
         <div className="flex items-center gap-2 text-xs font-semibold">
-          {v.browser && <span className="bg-muted border rounded px-1 py-px text-muted-foreground uppercase">{v.browser}</span>}
-          <span className={`uppercase font-semibold ${statusCls(v.status)}`}>{v.status}</span>
+          {v.browser && <span className="bg-muted border rounded px-1 py-px text-muted-foreground ">{v.browser}</span>}
+          <span className={` font-semibold ${statusCls(v.status)}`}>{v.status}</span>
           <span className="ml-auto text-muted-foreground font-mono">{new Date(v.createdAt).toLocaleDateString()}</span>
         </div>
       </div>
@@ -258,7 +260,7 @@ export default function VideoLabSection({
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
               subTab === t.id ? "bg-card text-primary shadow-sm border" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -276,13 +278,13 @@ export default function VideoLabSection({
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search test / tag..." className="w-full h-8 rounded-xl border pl-8 pr-3 text-xs bg-muted/50 font-semibold" />
             </div>
             <select value={browserFilter} onChange={(e) => setBrowserFilter(e.target.value)} className="h-8 rounded-xl border px-2 text-xs bg-muted/50 font-semibold cursor-pointer">
-              <option value="all">All Browsers</option>
+              <option value="all">All browsers</option>
               {browsers.map((b) => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-8 rounded-xl border px-2 text-xs bg-muted/50 font-semibold cursor-pointer">
-              <option value="all">All Status</option>
+              <option value="all">All status</option>
               <option value="pass">Pass</option>
               <option value="fail">Fail</option>
             </select>
@@ -294,7 +296,7 @@ export default function VideoLabSection({
 
           {loading ? (
             <div className="py-20 flex justify-center bg-card border rounded-xl">
-              <Loader2 size={22} className="animate-spin text-primary" />
+              <BusyDot />
             </div>
           ) : shown.length === 0 ? (
             <div className="py-16 text-center bg-card border rounded-xl space-y-2">
@@ -339,12 +341,12 @@ export default function VideoLabSection({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-card border rounded-xl shadow-sm p-4 space-y-4">
             <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
-              <SettingsIcon size={13} className="text-primary" /> Recording {savingSettings && <Loader2 size={11} className="animate-spin text-indigo-400" />}
+              <SettingsIcon size={13} className="text-primary" /> Recording {savingSettings && <BusyDot />}
             </span>
             <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
               <div>
-                <span className="text-xs font-semibold text-foreground block">Enable Video Recording</span>
-                <span className="text-xs text-muted-foreground font-medium">Saved to the hub's run settings</span>
+                <span className="text-xs font-semibold text-foreground block">Enable video recording</span>
+                <span className="text-xs text-muted-foreground font-medium">Saved to the hub&apos;s run settings</span>
               </div>
               <button onClick={() => patchSettings({ recordVideo: !settings.recordVideo })} className={`h-6 w-11 rounded-full relative transition-colors ${settings.recordVideo ? "bg-primary" : "bg-slate-300"}`}>
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${settings.recordVideo ? "left-[22px]" : "left-0.5"}`} />
@@ -398,7 +400,7 @@ export default function VideoLabSection({
                   <input type="number" min={50} value={settings.maxStorageMb} onChange={(e) => setSettings({ ...settings, maxStorageMb: Number(e.target.value) })} onBlur={(e) => patchSettings({ maxStorageMb: Number(e.target.value) })} className="w-full h-8 rounded-lg border px-2 text-xs font-semibold bg-muted/50" />
                 </div>
                 <button onClick={runCleanup} disabled={cleaning || !settings.autoDeleteDays} className="w-full inline-flex items-center justify-center gap-2 h-8 rounded-xl border border-rose-200 text-rose-600 bg-card hover:bg-rose-50 disabled:opacity-40 text-xs font-semibold">
-                  {cleaning ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  {cleaning ? <BusyDot /> : <Trash2 size={12} />}
                   Clean up videos older than {settings.autoDeleteDays || "—"} days
                 </button>
               </>
@@ -494,8 +496,7 @@ function PlayerModal({ video, onClose, onClip }: { video: VideoItem; onClose: ()
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-4xl max-h-[94vh] overflow-y-auto p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onClose} label="Video player" overlayClassName="bg-black/80" className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-[calc(100vw-2rem)] max-w-4xl max-h-[94vh] overflow-y-auto p-4 space-y-3">
         <div className="flex items-center justify-between border-b pb-2">
           <div>
             <span className="text-sm font-semibold text-foreground">{video.testName}</span>
@@ -563,7 +564,7 @@ function PlayerModal({ video, onClose, onClip }: { video: VideoItem; onClose: ()
         {/* Clip creator */}
         {showClip && (
           <div className="bg-muted/50 border rounded-xl p-3 space-y-3">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-2"><Scissors size={11} className="text-primary" /> Clip Creator</span>
+            <span className="text-xs font-medium text-muted-foreground flex items-center gap-2"><Scissors size={11} className="text-primary" /> Clip creator</span>
             <div className="flex items-center gap-2 flex-wrap">
               <button onClick={() => setClipIn(current)} className="inline-flex items-center gap-1 h-7 px-3 rounded-lg border bg-card text-muted-foreground text-xs font-semibold"><Circle size={9} /> Set In {clipIn !== null && `(${fmtTime(clipIn)})`}</button>
               <button onClick={() => setClipOut(current)} className="inline-flex items-center gap-1 h-7 px-3 rounded-lg border bg-card text-muted-foreground text-xs font-semibold"><Circle size={9} /> Set Out {clipOut !== null && `(${fmtTime(clipOut)})`}</button>
@@ -581,14 +582,13 @@ function PlayerModal({ video, onClose, onClip }: { video: VideoItem; onClose: ()
                 disabled={creatingClip || clipIn === null || clipOut === null || (clipOut ?? 0) <= (clipIn ?? 0)}
                 className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold"
               >
-                {creatingClip ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Create Clip
+                {creatingClip ? <BusyDot /> : <Save size={12} />} Create Clip
               </button>
               {clipDone && <span className="text-xs font-semibold text-emerald-600 inline-flex items-center gap-1"><CheckCircle2 size={12} /> Clip saved to Clips + Evidence Vault</span>}
               <span className="text-xs text-muted-foreground font-medium ml-auto">Cut with ffmpeg — appears in Clips & Evidence Vault</span>
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

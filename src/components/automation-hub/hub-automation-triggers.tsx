@@ -4,6 +4,7 @@
  *   - Schedules — "every weekday at 02:00, run the regression folder"
  *   - CI tokens — a pipeline starts a run and polls its status
  */
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useState } from "react"
 import { CalendarClock, Check, Copy, KeyRound, Loader2, Play, Plus, Trash2 } from "@/components/ui/icons"
 import { toast } from "sonner"
@@ -260,7 +261,7 @@ export default function HubAutomationTriggers({ projectId, onRunStarted }: { pro
         )}
 
         {schedules === null ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <BusyDot />
         ) : schedules.length === 0 ? (
           <p className="text-xs text-muted-foreground">No schedules yet — add a nightly regression run.</p>
         ) : (

@@ -8,6 +8,8 @@
  * expect, snippets, checks for the usual mistakes). Below: the run's results
  * per test, with the error, screenshot, trace and video.
  */
+import { Modal } from "@/components/ui/modal"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Editor from "@monaco-editor/react"
 import {
@@ -556,7 +558,7 @@ export default function HubTestsSection({
   if (tests === null) {
     return (
       <div className="flex items-center gap-2 rounded-xl border bg-card p-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading tests…
+        <BusyDot /> Loading tests…
       </div>
     )
   }
@@ -669,7 +671,7 @@ export default function HubTestsSection({
                     onClick={() => run({ kind: "folder", folder: f })}
                     disabled={starting}
                     title={`Run every test in ${f || "No folder"}`}
-                    className="rounded p-1 text-muted-foreground opacity-0 hover:bg-primary/10 hover:text-primary group-hover:opacity-100 focus:opacity-100"
+                    className="rounded p-1 text-muted-foreground opacity-0 hover:bg-primary/10 hover:text-primary group-hover:opacity-100 focus-visible:opacity-100 focus:opacity-100"
                   >
                     <Play className="h-3.5 w-3.5" />
                   </button>
@@ -689,7 +691,7 @@ export default function HubTestsSection({
                         {!last ? (
                           <Circle className="h-3.5 w-3.5 shrink-0 text-slate-300" />
                         ) : isActive(last.status) ? (
-                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+                          <BusyDot />
                         ) : last.status === "Passed" ? (
                           <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                         ) : (
@@ -810,7 +812,7 @@ export default function HubTestsSection({
                   </datalist>
                 </label>
                 <Button id="hub-save" size="sm" variant="outline" onClick={save} disabled={saving || !dirty} title="Save (Ctrl/⌘ + S)">
-                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} {dirty ? "Save" : "Saved"}
+                  {saving ? <BusyDot /> : <Save className="h-4 w-4" />} {dirty ? "Save" : "Saved"}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={duplicate} title="Duplicate">
                   <Copy className="h-4 w-4" />
@@ -849,7 +851,7 @@ export default function HubTestsSection({
               {/* run bar */}
               <div className="flex flex-wrap items-center gap-2 border-b bg-muted/70 px-3 py-2">
                 <Button id="hub-run" size="sm" onClick={() => run({ kind: "test" })} disabled={starting || running} title="Run (Ctrl/⌘ + Enter)">
-                  {starting || running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+                  {starting || running ? <BusyDot /> : <Play className="h-4 w-4" />}
                   {running ? (execution?.status === "Queued" ? "Queued…" : "Running…") : "Run test"}
                 </Button>
                 <select value={browser} onChange={(e) => setBrowser(e.target.value)} aria-label="Browser" className="h-8 rounded-md border bg-card px-2 text-sm">
@@ -1238,8 +1240,7 @@ function ExploreDialog({ projectId, projectUrl, onClose }: { projectId: string; 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-xl space-y-3 overflow-y-auto rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onClose} label="AI explorer" overlayClassName="bg-black/50" className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-xl space-y-3 overflow-y-auto rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Wand2 className="h-5 w-5 text-violet-500" /> AI explorer
@@ -1297,11 +1298,10 @@ function ExploreDialog({ projectId, projectUrl, onClose }: { projectId: string; 
             Cancel
           </Button>
           <Button onClick={start} disabled={busy || title.trim().length < 3 || url.trim().length < 4}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Start exploring
+            {busy && <BusyDot />} Start exploring
           </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1332,8 +1332,7 @@ function NewTestDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onCancel}>
-      <div className="w-full max-w-md space-y-4 rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]" onClick={(e) => e.stopPropagation()}>
+    <Modal onClose={onCancel} label="New test" overlayClassName="bg-black/50" className="w-[calc(100vw-2rem)] max-w-md space-y-4 rounded-xl bg-card p-6 shadow-[0_8px_24px_rgba(0,0,0,0.08)]">
         <h2 className="text-lg font-semibold text-foreground">New test</h2>
         <label className="block space-y-1 text-sm">
           <span className="font-medium text-foreground">Name</span>
@@ -1425,11 +1424,10 @@ function NewTestDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={!valid || busy}>
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Create
+            {busy && <BusyDot />} Create
           </Button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 

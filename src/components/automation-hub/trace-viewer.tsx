@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
 import {
   Route,
@@ -238,7 +239,7 @@ export default function TraceViewerSection({
     { id: "timeline" as const, label: "Timeline", icon: Activity, count: data?.actions.length },
     { id: "network" as const, label: "Network", icon: Globe, count: data?.network.length },
     { id: "console" as const, label: "Console", icon: Terminal, count: data?.console.length },
-    { id: "observability" as const, label: "Browser Observability", icon: Eye, count: data?.browserObservability?.warnings?.length }
+    { id: "observability" as const, label: "Browser observability", icon: Eye, count: data?.browserObservability?.warnings?.length }
   ]
 
   // ---------- Render ----------
@@ -246,7 +247,7 @@ export default function TraceViewerSection({
   if (listLoading) {
     return (
       <div className="py-24 flex justify-center bg-card border rounded-xl">
-        <Loader2 size={24} className="animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -285,7 +286,7 @@ export default function TraceViewerSection({
 
         {data?.test && (
           <span
-            className={`inline-flex items-center gap-1 rounded-full border font-semibold uppercase px-2 py-0.5 text-xs ${statusBadgeClass(
+            className={`inline-flex items-center gap-1 rounded-full border font-semibold  px-2 py-0.5 text-xs ${statusBadgeClass(
               data.test.status
             )}`}
           >
@@ -304,13 +305,13 @@ export default function TraceViewerSection({
           href={`/api/hub/traces/${encodeURIComponent(selectedId)}/download`}
           className="ml-auto inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-xs font-semibold"
         >
-          <Download size={12} /> Download Trace
+          <Download size={12} /> Download trace
         </a>
       </div>
 
       {traceLoading ? (
         <div className="py-24 flex justify-center bg-card border rounded-xl">
-          <Loader2 size={22} className="animate-spin text-primary" />
+          <BusyDot />
         </div>
       ) : !data ? (
         <div className="py-20 text-center bg-card border rounded-xl text-muted-foreground text-xs font-medium">
@@ -331,7 +332,7 @@ export default function TraceViewerSection({
               )}
               {data.locatorHealth?.enabled && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary border border-primary/25 px-2 py-0.5 text-xs font-medium">
-                  <Zap size={9} /> Smart Locator
+                  <Zap size={9} /> Smart locator
                 </span>
               )}
             </div>
@@ -502,7 +503,7 @@ export default function TraceViewerSection({
                       const hint = sourceHint(c.message)
                       return (
                         <div key={i} className="flex gap-2 items-start hover:bg-white/5 px-1 -mx-1 rounded py-0.5">
-                          <span className={`shrink-0 rounded border px-2 py-px text-xs font-semibold uppercase ${lvl.className}`}>
+                          <span className={`shrink-0 rounded border px-2 py-px text-xs font-semibold  ${lvl.className}`}>
                             {lvl.label}
                           </span>
                           <span className="shrink-0 text-xs font-medium text-muted-foreground pt-0.5">{c.source}</span>
@@ -554,7 +555,7 @@ function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
   return (
     <div className="py-16 flex flex-col items-center justify-center gap-2 text-muted-foreground">
       <Icon size={22} />
-      <span className="text-xs uppercase font-semibold tracking-wider">{text}</span>
+      <span className="text-xs  font-semibold ">{text}</span>
     </div>
   )
 }
@@ -584,10 +585,10 @@ function ActionDetail({
           </span>
           <div>
             <p className="text-xs font-semibold text-foreground">{action.name}</p>
-            <p className="text-xs font-semibold uppercase text-muted-foreground">{action.category}</p>
+            <p className="text-xs font-semibold  text-muted-foreground">{action.category}</p>
           </div>
           <span
-            className={`ml-auto inline-flex items-center gap-1 rounded-full border font-semibold uppercase px-2 py-0.5 text-xs ${statusBadgeClass(
+            className={`ml-auto inline-flex items-center gap-1 rounded-full border font-semibold  px-2 py-0.5 text-xs ${statusBadgeClass(
               action.status
             )}`}
           >
@@ -608,7 +609,7 @@ function ActionDetail({
             <span className="text-muted-foreground text-xs block flex items-center gap-1">
               Locator
               {smartLocator && action.locator && (
-                <span className="inline-flex items-center gap-0.5 rounded bg-primary/15 text-primary px-1 text-xs font-semibold uppercase">
+                <span className="inline-flex items-center gap-0.5 rounded bg-primary/15 text-primary px-1 text-xs font-semibold ">
                   <Zap size={7} /> Smart
                 </span>
               )}
@@ -659,7 +660,7 @@ function ActionDetail({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={`/api/hub/evidence/${evidence.id}/file`} alt="step screenshot" className="w-full object-contain max-h-52" />
-            <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 bg-black/70 text-white text-xs font-medium rounded-md px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="absolute bottom-1.5 right-1.5 inline-flex items-center gap-1 bg-black/70 text-white text-xs font-medium rounded-md px-2 py-0.5 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity">
               <ArrowUpRight size={9} /> Evidence Vault
             </span>
           </button>
@@ -687,7 +688,7 @@ function NetPanel({ title, data }: { title: string; data: any }) {
   const body = data?.postData?.text || data?.content?.text || ""
   return (
     <div className="space-y-2 overflow-hidden">
-      <span className="text-xs font-semibold uppercase text-muted-foreground">{title}</span>
+      <span className="text-xs font-semibold  text-muted-foreground">{title}</span>
       {headers.length > 0 && (
         <div className="space-y-0.5 max-h-32 overflow-auto">
           {headers.slice(0, 24).map((h, i) => (

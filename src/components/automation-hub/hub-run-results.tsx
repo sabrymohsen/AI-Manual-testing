@@ -5,6 +5,7 @@
  * error and the code around it, the screenshot, and links to its trace and
  * video. Shared by the Tests tab (latest run) and the Runs tab (history).
  */
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState } from "react"
 import {
   AlertTriangle,
@@ -77,7 +78,7 @@ export function StatusBadge({ status }: { status: string }) {
   }
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${map[status] || "bg-muted/50 text-muted-foreground border-border"}`}>
-      {status === "Running" && <Loader2 className="h-3 w-3 animate-spin" />}
+      {status === "Running" && <BusyDot />}
       {status === "Queued" && <Clock className="h-3 w-3" />}
       {status === "Passed" && <CheckCircle2 className="h-3 w-3" />}
       {status === "Failed" && <XCircle className="h-3 w-3" />}
@@ -161,7 +162,7 @@ export default function HubRunResults({
 
       {isActive(execution.status) && results.length === 0 && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+          <BusyDot />
           {execution.status === "Queued"
             ? execution.queuePosition
               ? `Queued — ${execution.queuePosition} run${execution.queuePosition === 1 ? "" : "s"} ahead of this one.`
@@ -466,7 +467,7 @@ function FileBugButton({ executionId, testIndex }: { executionId: string; testIn
       className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-xs font-medium text-foreground hover:border-rose-300 hover:text-rose-700 disabled:opacity-60"
       title="Create a bug with this error, the steps and the screenshot"
     >
-      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bug className="h-3.5 w-3.5" />} File bug
+      {busy ? <BusyDot /> : <Bug className="h-3.5 w-3.5" />} File bug
     </button>
   )
 }

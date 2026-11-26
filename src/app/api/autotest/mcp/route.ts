@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { requireAuth, unauthorizedResponse } from "@/lib/api-guards"
 
-// Seed default mcp details if empty
-const SEED_MCP_ACTIVITIES = [
-  { action: "test_list", status: "success", duration: 80, result: "Exposed 4 test classes from com.ourcompany.tests." },
-  { action: "test_run", status: "success", duration: 4200, result: "Ran LoginFlowTest on browser Chrome. Build outcome: BUILD SUCCESS." },
-  { action: "doctor_analyze", status: "success", duration: 1800, result: "Analyzed login failure report. Triage: NoSuchElementException detected." },
-  { action: "browser_navigate", status: "success", duration: 1200, result: "Opened Chrome browser session and loaded target URL." },
-  { action: "report_get", status: "success", duration: 90, result: "Allure diagnostic metrics retrieved successfully." }
-]
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth()
@@ -28,20 +20,11 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    let activities = await prisma.mcpActivity.findMany({
+    const activities = await prisma.mcpActivity.findMany({
       orderBy: { createdAt: "desc" }
     })
 
-    if (activities.length === 0) {
-      await Promise.all(
-        SEED_MCP_ACTIVITIES.map(a =>
-          prisma.mcpActivity.create({ data: a })
-        )
-      )
-      activities = await prisma.mcpActivity.findMany({
-        orderBy: { createdAt: "desc" }
-      })
-    }
+    // No invented sample rows: an empty table means nothing has been recorded yet.
 
     return NextResponse.json({
       config,

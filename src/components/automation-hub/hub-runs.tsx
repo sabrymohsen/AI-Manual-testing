@@ -7,6 +7,7 @@
  * running run, re-run one or only a batch's failures, download a shareable
  * report, and compare two runs ("what newly broke?").
  */
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   Ban,
@@ -266,7 +267,7 @@ export default function HubRunsSection({
   if (runs === null) {
     return (
       <div className="flex items-center gap-2 rounded-xl border bg-card p-10 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading runs…
+        <BusyDot /> Loading runs…
       </div>
     )
   }
@@ -338,7 +339,7 @@ export default function HubRunsSection({
                     className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
                     title="Run this test file again"
                   >
-                    {busy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Re-run
+                    {busy === r.id ? <BusyDot /> : <RotateCcw className="h-3 w-3" />} Re-run
                   </button>
                 )}
               </>
@@ -433,7 +434,7 @@ export default function HubRunsSection({
             <p className="text-muted-foreground">Tick two runs or batches below to compare them ({picked.length}/2 picked).</p>
           ) : !comparison ? (
             <p className="flex items-center gap-2 text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Comparing…
+              <BusyDot /> Comparing…
             </p>
           ) : (
             <div className="grid gap-3 md:grid-cols-3">
@@ -509,7 +510,7 @@ export default function HubRunsSection({
                             disabled={busy === g.key}
                             className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-xs font-medium text-rose-700 hover:bg-card disabled:opacity-50"
                           >
-                            {busy === g.key ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />} Re-run {failedCount} failed
+                            {busy === g.key ? <BusyDot /> : <RotateCcw className="h-3 w-3" />} Re-run {failedCount} failed
                           </button>
                         )}
                         {reportLinks(g.key)}
@@ -528,7 +529,7 @@ export default function HubRunsSection({
       {nextCursor && (
         <div className="flex justify-center">
           <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Load more
+            {loadingMore && <BusyDot />} Load more
           </Button>
         </div>
       )}

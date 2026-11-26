@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot, Skeleton, SkeletonLines } from "@/components/ui/skeleton"
 import { useEffect, useState, useRef, Fragment } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -360,21 +361,22 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
 
   const quickActions = [
     { label: "▶ Run All Web Tests", text: "Run all web tests" },
-    { label: "Check Flaky Tests", text: "Check flaky tests" },
-    { label: "Heal Broken Locators", text: "Heal broken locators" },
+    { label: "Check flaky tests", text: "Check flaky tests" },
+    { label: "Heal broken locators", text: "Heal broken locators" },
     {
       label: "Generate Test for...",
       fill: "Generate a web test for "
     },
-    { label: "Coverage Report", text: "Show me the coverage report" }
+    { label: "Coverage report", text: "Show me the coverage report" }
   ]
 
   if (loading) {
     return (
-      <div className="py-24 text-center text-muted-foreground flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
-        <Loader2 className="animate-spin text-primary" size={28} />
-        <span className="font-medium text-xs">Loading QA Assistant Console...</span>
-      </div>
+<div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm" role="status" aria-label="Loading QA Assistant Console">
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-32 w-full" />
+          <SkeletonLines lines={3} />
+        </div>
     )
   }
 
@@ -383,7 +385,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
     { id: "commands", label: "Commands", icon: Terminal },
     { id: "skills", label: "Skills", icon: Sparkles },
     { id: "providers", label: "Providers", icon: Bot },
-    { id: "usage", label: "Usage & Privacy", icon: BarChart3 }
+    { id: "usage", label: "Usage & privacy", icon: BarChart3 }
   ]
 
   return (
@@ -420,7 +422,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               <Bot size={16} className="text-primary" />
               <span className="text-xs font-medium text-muted-foreground">AI Agent — QA Assistant</span>
               <span
-                className={`text-xs uppercase font-semibold px-2 py-0.5 rounded-full border ${
+                className={`text-xs  font-semibold px-2 py-0.5 rounded-full border ${
                   settings.hasKey ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"
                 }`}
               >
@@ -549,7 +551,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               disabled={sending || !inputVal.trim()}
               className="bg-primary hover:bg-primary/90 text-white h-10 px-4 rounded-xl font-semibold text-xs shadow-sm"
             >
-              {sending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+              {sending ? <BusyDot /> : <Send size={13} />}
             </Button>
           </div>
         </div>
@@ -583,7 +585,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                       <span className="flex items-center gap-2 shrink-0">
                         <span className="text-xs font-mono text-amber-600 font-semibold">{call.duration}ms</span>
                         <span
-                          className={`text-xs border px-2 py-px rounded-full uppercase font-semibold flex items-center gap-0.5 ${
+                          className={`text-xs border px-2 py-px rounded-full  font-semibold flex items-center gap-0.5 ${
                             call.status === "success"
                               ? "bg-emerald-50 border-emerald-100 text-emerald-700"
                               : call.status === "denied"
@@ -617,7 +619,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                 onClick={handleClearHistory}
                 className="w-full text-muted-foreground hover:text-rose-600 rounded-lg text-xs font-semibold h-8 flex items-center justify-center gap-2 transition-colors"
               >
-                <Trash2 size={11} /> Clear Conversation
+                <Trash2 size={11} /> Clear conversation
               </button>
             </div>
           </div>
@@ -639,7 +641,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
 
             <div className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground block uppercase">AI Provider</label>
+                <label className="text-xs font-semibold text-muted-foreground block ">AI Provider</label>
                 <select
                   value={settings.provider}
                   onChange={(e) => {
@@ -658,7 +660,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground block uppercase">Model</label>
+                <label className="text-xs font-semibold text-muted-foreground block ">Model</label>
                 <select
                   value={settings.model}
                   onChange={(e) => setSettings({ ...settings, model: e.target.value })}
@@ -673,7 +675,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground block uppercase">
+                <label className="text-xs font-semibold text-muted-foreground block ">
                   API Key {settings.provider === "Ollama" && <span className="text-slate-300 normal-case">(not needed for local Ollama)</span>}
                 </label>
                 <input
@@ -687,7 +689,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-muted-foreground block uppercase">Permission Level</label>
+                <label className="text-xs font-semibold text-muted-foreground block ">Permission level</label>
                 <select
                   value={settings.permission}
                   onChange={(e) => setSettings({ ...settings, permission: e.target.value })}
@@ -720,7 +722,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
                 Cancel
               </Button>
               <Button onClick={handleSaveSettings} className="bg-primary text-white hover:bg-primary/90 flex-1 rounded-xl font-semibold">
-                Save Settings
+                Save settings
               </Button>
             </div>
           </div>
@@ -730,7 +732,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
       {/* TOAST */}
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-semibold uppercase ${
+          className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-semibold  ${
             toast.type === "success"
               ? "bg-emerald-50 border-emerald-200 text-emerald-800"
               : toast.type === "error"
@@ -748,7 +750,7 @@ export default function AiAgentSection({ onNavigate, projectId }: AiAgentSection
           <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center gap-2 text-rose-600">
               <Shield size={18} />
-              <h3 className="text-sm font-semibold uppercase tracking-wider">Confirm Action</h3>
+              <h3 className="text-sm font-semibold  ">Confirm action</h3>
             </div>
             <p className="text-xs text-muted-foreground font-semibold leading-relaxed">{confirmTitle}</p>
             <div className="flex gap-2 pt-2 border-t">

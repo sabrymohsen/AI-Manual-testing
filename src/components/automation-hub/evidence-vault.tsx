@@ -1,5 +1,7 @@
 "use client"
 
+import { Modal } from "@/components/ui/modal"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -132,7 +134,7 @@ const StatusBadge = ({ status, small = false }: { status: string; small?: boolea
   const Icon = meta.icon
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border font-semibold uppercase ${meta.className} ${
+      className={`inline-flex items-center gap-1 rounded-full border font-semibold  ${meta.className} ${
         small ? "px-2 py-px text-xs" : "px-2 py-0.5 text-xs"
       }`}
     >
@@ -185,7 +187,7 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
   if (loadingText) {
     return (
       <div className="h-48 flex items-center justify-center bg-slate-950 rounded-xl">
-        <Loader2 size={18} className="animate-spin text-indigo-400" />
+        <BusyDot />
       </div>
     )
   }
@@ -219,7 +221,7 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <div className="bg-slate-950 rounded-xl p-3 space-y-2 overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Request</span>
+                <span className="text-xs font-semibold  text-muted-foreground">Request</span>
                 <span className="text-xs font-mono font-semibold text-indigo-300">{entry.request?.method}</span>
               </div>
               <p className="font-mono text-xs text-slate-300 break-all">{entry.request?.url}</p>
@@ -232,7 +234,7 @@ function EvidenceMedia({ item, large = false }: { item: EvidenceItem; large?: bo
             </div>
             <div className="bg-slate-950 rounded-xl p-3 space-y-2 overflow-hidden">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase text-muted-foreground">Response</span>
+                <span className="text-xs font-semibold  text-muted-foreground">Response</span>
                 <span className="flex items-center gap-2">
                   <span className={`text-xs font-mono font-semibold ${Number(entry.response?.status) < 400 ? "text-emerald-300" : "text-rose-300"}`}>
                     {entry.response?.status}
@@ -422,7 +424,7 @@ function GifPlayer({ item, large = false }: { item: EvidenceItem; large?: boolea
           className={`w-full object-contain bg-slate-950 rounded-xl ${maxH}`}
         />
         <div className="flex items-center justify-between px-1">
-          <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">
+          <span className="inline-flex items-center gap-1 text-xs font-semibold  text-muted-foreground">
             <ImageIcon size={10} /> Animated GIF · native playback
           </span>
           <a
@@ -441,7 +443,7 @@ function GifPlayer({ item, large = false }: { item: EvidenceItem; large?: boolea
       <div className={`relative bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center ${maxH}`}>
         {!ready && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 size={18} className="animate-spin text-indigo-400" />
+            <BusyDot />
           </div>
         )}
         <canvas ref={canvasRef} className={`w-full object-contain ${maxH}`} />
@@ -587,7 +589,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
               title="Inspect highlighted element"
             >
               <span className="absolute inset-1.5 rounded-lg ring-2 ring-primary/80 group-hover:ring-primary/30 shadow-[0_0_0_9999px_rgba(0,0,0,0)] transition-all pointer-events-none" />
-              <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 bg-primary text-white text-xs font-semibold uppercase rounded-md px-2 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none">
+              <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 bg-primary text-white text-xs font-semibold  rounded-md px-2 py-1 shadow-[0_4px_12px_rgba(0,0,0,0.06)] pointer-events-none">
                 <Crosshair size={10} /> {action}
                 {loc.value && <span className="font-mono lowercase opacity-90">· {loc.strategy}</span>}
               </span>
@@ -611,7 +613,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
         {/* Highlight toggle */}
         <button
           onClick={() => setShowHighlights((v) => !v)}
-          className={`absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[8.5px] font-semibold uppercase shadow-lg transition-colors ${
+          className={`absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[8.5px] font-semibold  shadow-lg transition-colors ${
             showHighlights ? "bg-white text-indigo-700" : "bg-black/60 text-white"
           }`}
         >
@@ -625,7 +627,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
         <div className="bg-muted/50 border rounded-xl p-3 space-y-2 text-left">
           <div className="flex items-center justify-between border-b pb-2">
             <span className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-              <Crosshair size={11} className="text-primary" /> Element Inspector
+              <Crosshair size={11} className="text-primary" /> Element inspector
             </span>
             <button onClick={() => setDetailsOpen(false)} className="text-muted-foreground hover:text-muted-foreground">
               <X size={13} />
@@ -655,7 +657,7 @@ function ScreenshotHighlighter({ item, large = false }: { item: EvidenceItem; la
               <span className="font-mono">{host || "—"}</span>
             </div>
             <div>
-              <span className="text-muted-foreground text-xs block">Step / Status</span>
+              <span className="text-muted-foreground text-xs block">Step / status</span>
               #{item.stepNumber} · {item.status.toUpperCase()}
             </div>
           </div>
@@ -803,9 +805,9 @@ function ExecutionLogViewer() {
       {/* Toolbar */}
       <div className="flex items-center gap-2 flex-wrap border-b p-3 bg-muted/50">
         <ScrollText size={14} className="text-primary" />
-        <span className="text-xs font-medium text-muted-foreground">Execution Logs</span>
+        <span className="text-xs font-medium text-muted-foreground">Execution logs</span>
         <span
-          className={`inline-flex items-center gap-1 text-[8.5px] font-semibold uppercase rounded-full px-2 py-0.5 ${
+          className={`inline-flex items-center gap-1 text-[8.5px] font-semibold  rounded-full px-2 py-0.5 ${
             connected ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-muted text-muted-foreground border"
           }`}
         >
@@ -824,7 +826,7 @@ function ExecutionLogViewer() {
 
         <button
           onClick={() => setDedup((v) => !v)}
-          className={`h-8 px-2.5 rounded-xl border text-[9px] font-semibold uppercase ${
+          className={`h-8 px-2.5 rounded-xl border text-[9px] font-semibold  ${
             dedup ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground"
           }`}
           title="Collapse consecutive duplicate lines"
@@ -833,7 +835,7 @@ function ExecutionLogViewer() {
         </button>
         <button
           onClick={() => setAutoScroll((v) => !v)}
-          className={`h-8 px-2.5 rounded-xl border text-[9px] font-semibold uppercase inline-flex items-center gap-1 ${
+          className={`h-8 px-2.5 rounded-xl border text-[9px] font-semibold  inline-flex items-center gap-1 ${
             autoScroll ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground"
           }`}
           title="Auto-scroll to newest lines"
@@ -854,7 +856,7 @@ function ExecutionLogViewer() {
           <button
             key={lvl}
             onClick={() => setEnabled((e) => ({ ...e, [lvl]: !e[lvl] }))}
-            className={`inline-flex items-center gap-1.5 rounded-full pl-1.5 pr-2 py-0.5 text-[8.5px] font-semibold uppercase border transition-all ${
+            className={`inline-flex items-center gap-1.5 rounded-full pl-1.5 pr-2 py-0.5 text-[8.5px] font-semibold  border transition-all ${
               enabled[lvl] ? "bg-card text-foreground border-border" : "bg-muted/50 text-slate-300 border-border"
             }`}
           >
@@ -869,7 +871,7 @@ function ExecutionLogViewer() {
       <div ref={scrollRef} className="bg-slate-950 h-[54vh] overflow-auto p-3 font-mono text-xs leading-relaxed">
         {initialLoading ? (
           <div className="h-full flex items-center justify-center">
-            <Loader2 size={18} className="animate-spin text-indigo-400" />
+            <BusyDot />
           </div>
         ) : filtered.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-muted-foreground">
@@ -1105,7 +1107,7 @@ export default function EvidenceVaultSection({
         </div>
 
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer">
-          <option value="all">All Types</option>
+          <option value="all">All types</option>
           <option value="screenshot">Screenshots</option>
           <option value="gif">Animated GIFs</option>
           <option value="video">Videos</option>
@@ -1114,21 +1116,21 @@ export default function EvidenceVaultSection({
         </select>
 
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer">
-          <option value="all">All Status</option>
+          <option value="all">All status</option>
           <option value="pass">Pass</option>
           <option value="fail">Fail</option>
           <option value="flaky">Flaky</option>
         </select>
 
         <select value={rangeFilter} onChange={(e) => setRangeFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer">
-          <option value="all">Any Time</option>
-          <option value="1h">Last Hour</option>
+          <option value="all">Any time</option>
+          <option value="1h">Last hour</option>
           <option value="24h">Last 24h</option>
           <option value="7d">Last 7 Days</option>
         </select>
 
         <select value={tagFilter} onChange={(e) => setTagFilter(e.target.value)} className="h-9 rounded-xl border px-3 text-xs bg-muted/50 font-semibold cursor-pointer max-w-[130px]">
-          <option value="">All Tags</option>
+          <option value="">All tags</option>
           {allTags.map((t) => (
             <option key={t} value={t}>{t}</option>
           ))}
@@ -1136,9 +1138,9 @@ export default function EvidenceVaultSection({
 
         <div className="flex items-center bg-muted border rounded-xl p-0.5 ml-auto">
           {[
-            { id: "grid", label: "Vault Grid", icon: LayoutGrid },
+            { id: "grid", label: "Vault grid", icon: LayoutGrid },
             { id: "timeline", label: "Timeline", icon: Film },
-            { id: "logs", label: "Execution Logs", icon: ScrollText }
+            { id: "logs", label: "Execution logs", icon: ScrollText }
           ].map((m) => (
             <button
               key={m.id}
@@ -1158,7 +1160,7 @@ export default function EvidenceVaultSection({
         <>
           {loading ? (
             <div className="py-24 flex justify-center bg-card border rounded-xl">
-              <Loader2 size={24} className="animate-spin text-primary" />
+              <BusyDot />
             </div>
           ) : items.length === 0 ? (
             <div className="py-20 text-center bg-card border rounded-xl space-y-2">
@@ -1221,7 +1223,7 @@ export default function EvidenceVaultSection({
                       <div className="p-3 space-y-2">
                         <div className="flex items-center gap-2">
                           <TypeIcon size={11} className="text-primary shrink-0" />
-                          <span className="text-xs font-semibold uppercase text-muted-foreground">{(TYPE_META[item.fileType] || TYPE_META.log).label}</span>
+                          <span className="text-xs font-semibold  text-muted-foreground">{(TYPE_META[item.fileType] || TYPE_META.log).label}</span>
                           <span className="ml-auto text-xs font-semibold text-muted-foreground flex items-center gap-1">
                             <Clock size={9} /> {relativeTime(item.createdAt)}
                           </span>
@@ -1232,7 +1234,7 @@ export default function EvidenceVaultSection({
                         <div className="flex items-center gap-2 flex-wrap">
                           <StatusBadge status={item.status} small />
                           {item.tags.slice(0, 3).map((t) => (
-                            <span key={t} className="text-xs uppercase font-semibold bg-muted text-muted-foreground border rounded-full px-2 py-px">{t}</span>
+                            <span key={t} className="text-xs  font-semibold bg-muted text-muted-foreground border rounded-full px-2 py-px">{t}</span>
                           ))}
                         </div>
                       </div>
@@ -1250,7 +1252,7 @@ export default function EvidenceVaultSection({
                     variant="outline"
                     className="rounded-xl h-8 px-4 text-xs font-semibold border-border text-muted-foreground bg-card"
                   >
-                    {loadingMore ? <Loader2 size={11} className="animate-spin" /> : "Load More"}
+                    {loadingMore ? <BusyDot /> : "Load More"}
                   </Button>
                 )}
               </div>
@@ -1264,7 +1266,7 @@ export default function EvidenceVaultSection({
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-4">
           <div className="flex items-center gap-2 flex-wrap border-b pb-3">
             <Film size={14} className="text-primary" />
-            <span className="text-xs font-medium text-muted-foreground">Timeline Walkthrough</span>
+            <span className="text-xs font-medium text-muted-foreground">Timeline walkthrough</span>
             <select
               value={selectedExecId}
               onChange={(e) => setSelectedExecId(e.target.value)}
@@ -1287,7 +1289,7 @@ export default function EvidenceVaultSection({
 
           {timelineLoading ? (
             <div className="py-20 flex justify-center">
-              <Loader2 size={22} className="animate-spin text-primary" />
+              <BusyDot />
             </div>
           ) : timelineSteps.length === 0 ? (
             <p className="text-muted-foreground text-xs text-center py-16">No evidence recorded for this execution.</p>
@@ -1325,7 +1327,7 @@ export default function EvidenceVaultSection({
                       <div><span className="text-muted-foreground text-xs block">Type</span>{(TYPE_META[activeStep.fileType] || TYPE_META.log).label}</div>
                       <div><span className="text-muted-foreground text-xs block">Status</span><StatusBadge status={activeStep.status} small /></div>
                       {activeStep.pageUrl && <div><span className="text-muted-foreground text-xs block">Page URL</span><span className="font-mono break-all">{activeStep.pageUrl}</span></div>}
-                      {activeStep.elementLocator && <div><span className="text-muted-foreground text-xs block">Locator / Command</span><span className="font-mono break-all text-primary">{activeStep.elementLocator}</span></div>}
+                      {activeStep.elementLocator && <div><span className="text-muted-foreground text-xs block">Locator / command</span><span className="font-mono break-all text-primary">{activeStep.elementLocator}</span></div>}
                       <div><span className="text-muted-foreground text-xs block">Captured</span>{new Date(activeStep.createdAt).toLocaleString()}</div>
                       <a
                         href={`/api/hub/evidence/${activeStep.id}/download`}
@@ -1375,14 +1377,10 @@ export default function EvidenceVaultSection({
 
       {/* DETAIL MODAL */}
       {(detail || detailLoading) && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
-          <div
-            className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-4xl max-h-[92vh] overflow-y-auto p-6 space-y-4 text-left"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Modal onClose={() => setDetail(null)} label="Evidence details" overlayClassName="bg-black/70" className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-[calc(100vw-2rem)] max-w-4xl max-h-[92vh] overflow-y-auto p-6 space-y-4 text-left">
             {detailLoading && !detail ? (
               <div className="py-20 flex justify-center">
-                <Loader2 size={22} className="animate-spin text-primary" />
+                <BusyDot />
               </div>
             ) : detail ? (
               <>
@@ -1427,12 +1425,12 @@ export default function EvidenceVaultSection({
                         <span className="text-xs text-muted-foreground">{relativeTime(detail.evidence.createdAt)}</span>
                       </div>
                       <div><span className="text-muted-foreground text-xs block">Test</span>{detail.evidence.testName} ({detail.evidence.scriptType || "—"})</div>
-                      <div><span className="text-muted-foreground text-xs block">Browser / Duration</span>{detail.evidence.browser || "—"} · {formatDuration(detail.evidence.executionDuration)}</div>
+                      <div><span className="text-muted-foreground text-xs block">Browser / duration</span>{detail.evidence.browser || "—"} · {formatDuration(detail.evidence.executionDuration)}</div>
                       {detail.evidence.pageUrl && (
                         <div><span className="text-muted-foreground text-xs block">Page URL</span><span className="font-mono break-all">{detail.evidence.pageUrl}</span></div>
                       )}
                       {detail.evidence.elementLocator && (
-                        <div><span className="text-muted-foreground text-xs block">Locator / Command</span><span className="font-mono break-all text-primary">{detail.evidence.elementLocator}</span></div>
+                        <div><span className="text-muted-foreground text-xs block">Locator / command</span><span className="font-mono break-all text-primary">{detail.evidence.elementLocator}</span></div>
                       )}
                     </div>
 
@@ -1441,7 +1439,7 @@ export default function EvidenceVaultSection({
                       <span className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Tag size={9} /> Tags</span>
                       <div className="flex gap-2 flex-wrap">
                         {detail.evidence.tags.map((t) => (
-                          <span key={t} className="inline-flex items-center gap-1 text-xs uppercase font-semibold bg-card text-muted-foreground border rounded-full pl-2 pr-1 py-0.5">
+                          <span key={t} className="inline-flex items-center gap-1 text-xs  font-semibold bg-card text-muted-foreground border rounded-full pl-2 pr-1 py-0.5">
                             {t}
                             <button onClick={() => updateTags(detail.evidence.tags.filter((x) => x !== t))} className="text-slate-300 hover:text-rose-500">
                               <X size={9} />
@@ -1476,14 +1474,13 @@ export default function EvidenceVaultSection({
                       href={`/api/hub/evidence/${detail.evidence.id}/download`}
                       className="flex items-center justify-center gap-2 h-9 rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted/50 text-xs font-semibold"
                     >
-                      <Download size={12} /> Download File
+                      <Download size={12} /> Download file
                     </a>
                   </div>
                 </div>
               </>
             ) : null}
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   )

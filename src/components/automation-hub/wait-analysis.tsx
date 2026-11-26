@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useMemo, useState } from "react"
 import {
   Timer,
@@ -76,7 +77,7 @@ export default function WaitAnalysisPanel() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center bg-card border rounded-xl">
-        <Loader2 size={22} className="animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -100,28 +101,28 @@ export default function WaitAnalysisPanel() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-card border rounded-xl p-3 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            <Timer size={10} /> Total Suite Wait
+            <Timer size={10} /> Total suite wait
           </span>
           <p className="text-xl font-semibold text-foreground mt-1">{fmtMs(data.suite.totalWaitMs)}</p>
           <p className="text-xs text-muted-foreground font-semibold">{data.suite.testCount} tests · {data.suite.avgWaitMs}ms avg/action</p>
         </div>
         <div className="bg-card border rounded-xl p-3 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            <TrendingDown size={10} /> Potential Savings
+            <TrendingDown size={10} /> Potential savings
           </span>
           <p className="text-xl font-semibold text-emerald-600 mt-1">{fmtMs(data.suite.potentialSavingsMs)}</p>
           <p className="text-xs text-muted-foreground font-semibold">from reducible waits</p>
         </div>
         <div className="bg-card border rounded-xl p-3 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            <AlertTriangle size={10} /> Flagged Tests
+            <AlertTriangle size={10} /> Flagged tests
           </span>
           <p className="text-xl font-semibold text-amber-600 mt-1">{data.suite.flaggedTests}</p>
           <p className="text-xs text-muted-foreground font-semibold">with reducible waits</p>
         </div>
         <div className="bg-card border rounded-xl p-3 shadow-sm">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-            <Gauge size={10} /> Configured Timeouts
+            <Gauge size={10} /> Configured timeouts
           </span>
           <p className="text-sm font-semibold text-foreground mt-2">
             {data.config.elementTimeoutSec}s <span className="text-muted-foreground font-semibold text-xs">element</span>
@@ -206,7 +207,7 @@ export default function WaitAnalysisPanel() {
                           <span className={`h-2 w-2 rounded-sm ${BUCKET_META[b].color}`} />
                           {fmtMs(p.buckets[b])}
                           {flagged && (
-                            <span className="inline-flex items-center gap-0.5 text-rose-600 font-semibold uppercase">
+                            <span className="inline-flex items-center gap-0.5 text-rose-600 font-semibold ">
                               <Zap size={8} /> reducible
                             </span>
                           )}

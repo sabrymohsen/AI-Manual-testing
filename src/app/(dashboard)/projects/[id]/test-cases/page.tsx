@@ -11,7 +11,7 @@ import { FilterMenus } from "./_components/filter-menus"
 import { CaseTable, KEYS } from "./_components/case-table"
 import { DetailPanel } from "./_components/detail-panel"
 import { RunDialog } from "./_components/run-dialog"
-import { PromptDialog } from "./_components/prompt-dialog"
+import { PromptDialog } from "@/components/ui/prompt-dialog"
 import { REVIEW_META, REVIEW_ORDER, PRIORITY_ORDER, formatMinutes } from "./_components/config"
 import {
   useDeleteCases,

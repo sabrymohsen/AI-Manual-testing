@@ -1,5 +1,9 @@
 "use client"
 
+import { Modal } from "@/components/ui/modal"
+import { PromptDialog } from "@/components/ui/prompt-dialog"
+import { useConfirm } from "@/components/ui/alert-provider"
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import {
@@ -114,6 +118,8 @@ async function reportError(res: Response, fallback: string) {
 
 export default function VisualDiffSection({ projectId }: { projectId: string }) {
   const [subTab, setSubTab] = useState<"baselines" | "compare" | "settings">("baselines")
+  const confirm = useConfirm()
+  const [tagging, setTagging] = useState<{ id: string; current: string } | null>(null)
   const [baselines, setBaselines] = useState<Baseline[]>([])
   const [screenshotOptions, setScreenshotOptions] = useState<ScreenshotOption[]>([])
   const [loading, setLoading] = useState(true)
@@ -196,7 +202,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
   }
 
   const deleteBaseline = async (id: string) => {
-    if (!confirm("Delete this baseline and its stored image?")) return
+    if (!(await confirm({ title: "Delete this baseline?", description: "Its stored image is deleted too. This cannot be undone.", confirmLabel: "Delete baseline", variant: "danger" }))) return
     const res = await fetch(`/api/hub/visual/baselines/${id}`, { method: "DELETE" })
     if (!res.ok) await reportError(res, "Couldn't delete the baseline")
     load()
@@ -298,8 +304,8 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
   // ---------- Render ----------
 
   const SUB_TABS = [
-    { id: "baselines" as const, label: "Baseline Manager", icon: Images },
-    { id: "compare" as const, label: "Comparison Runs", icon: ScanEye },
+    { id: "baselines" as const, label: "Baseline manager", icon: Images },
+    { id: "compare" as const, label: "Comparison runs", icon: ScanEye },
     { id: "settings" as const, label: "Settings", icon: SlidersHorizontal }
   ]
 
@@ -311,7 +317,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
           <button
             key={t.id}
             onClick={() => setSubTab(t.id)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
               subTab === t.id ? "bg-card text-primary shadow-sm border" : "text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -322,7 +328,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
 
       {loading ? (
         <div className="py-20 flex justify-center bg-card border rounded-xl">
-          <Loader2 size={22} className="animate-spin text-primary" />
+          <BusyDot />
         </div>
       ) : (
         <>
@@ -337,7 +343,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                   onClick={() => setShowCreate((v) => !v)}
                   className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-semibold"
                 >
-                  <Plus size={12} /> New Baseline
+                  <Plus size={12} /> New baseline
                 </button>
               </div>
 
@@ -385,7 +391,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                       disabled={creating || !form.testName || (!form.evidenceId && !form.dataUrl)}
                       className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold"
                     >
-                      {creating ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Save baseline
+                      {creating ? <BusyDot /> : <Check size={12} />} Save baseline
                     </button>
                   </div>
                 </div>
@@ -425,7 +431,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                           <a href={`/api/hub/visual/baselines/${b.id}/download`} className="h-7 w-7 rounded-lg border flex items-center justify-center text-muted-foreground hover:bg-muted/50" title="Download">
                             <Download size={12} />
                           </a>
-                          <button onClick={() => { const t = prompt("Version / branch tag:", b.versionTag); if (t !== null) tagBaseline(b.id, t) }} className="h-7 w-7 rounded-lg border flex items-center justify-center text-muted-foreground hover:bg-muted/50" title="Tag">
+                          <button onClick={() => setTagging({ id: b.id, current: b.versionTag ?? "" })} className="h-7 w-7 rounded-lg border flex items-center justify-center text-muted-foreground hover:bg-muted/50" title="Tag">
                             <Tag size={12} />
                           </button>
                           <button onClick={() => deleteBaseline(b.id)} className="h-7 w-7 rounded-lg border flex items-center justify-center text-rose-500 hover:bg-rose-50" title="Delete">
@@ -474,7 +480,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                       disabled={running || !selectedBaselineId || (!currentEvidenceId && !currentDataUrl)}
                       className="inline-flex items-center gap-2 h-8 px-3 rounded-xl bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold shrink-0"
                     >
-                      {running ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} className="fill-current" />} Run
+                      {running ? <BusyDot /> : <Play size={12} className="fill-current" />} Run
                     </button>
                   </div>
                 </div>
@@ -590,7 +596,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
           {subTab === "settings" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="bg-card border rounded-xl shadow-sm p-4 space-y-4">
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2"><SlidersHorizontal size={13} className="text-primary" /> Comparison Settings</span>
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2"><SlidersHorizontal size={13} className="text-primary" /> Comparison settings</span>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-semibold"><span className="text-muted-foreground">Diff threshold (pass/fail)</span><span className="text-primary font-semibold font-mono">{threshold}%</span></div>
                   <input type="range" min={0} max={100} value={threshold} onChange={(e) => setThreshold(Number(e.target.value))} className="w-full accent-indigo-600 cursor-pointer" />
@@ -604,7 +610,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                 <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
                   <div>
                     <span className="text-xs font-semibold text-foreground block">Ignore anti-aliasing</span>
-                    <span className="text-xs text-muted-foreground font-medium">Don't count anti-aliased edge pixels as changes</span>
+                    <span className="text-xs text-muted-foreground font-medium">Don&apos;t count anti-aliased edge pixels as changes</span>
                   </div>
                   <button onClick={() => setIgnoreAntiAliasing((v) => !v)} className={`h-6 w-11 rounded-full relative transition-colors ${ignoreAntiAliasing ? "bg-primary" : "bg-slate-300"}`}>
                     <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-card shadow transition-all ${ignoreAntiAliasing ? "left-[22px]" : "left-0.5"}`} />
@@ -613,7 +619,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
               </div>
 
               <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
-                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2"><Layers size={13} className="text-primary" /> Visual Testing Provider</span>
+                <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2"><Layers size={13} className="text-primary" /> Visual testing provider</span>
                 {PROVIDERS.map((p) => (
                   <button
                     key={p.id}
@@ -629,7 +635,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                       <span className="text-xs font-medium text-muted-foreground">{p.note}</span>
                     </div>
                     {provider === p.id && <CheckCircle2 size={14} className="text-primary" />}
-                    {!p.available && <span className="text-xs font-semibold uppercase bg-muted border rounded-full px-2 py-0.5 text-muted-foreground">optional</span>}
+                    {!p.available && <span className="text-xs font-semibold  bg-muted border rounded-full px-2 py-0.5 text-muted-foreground">optional</span>}
                   </button>
                 ))}
                 <p className="text-xs text-muted-foreground font-medium leading-relaxed">
@@ -643,8 +649,7 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
 
       {/* INVESTIGATE MODAL */}
       {investigate && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setInvestigate(null)}>
-          <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-6xl max-h-[92vh] overflow-y-auto p-6 space-y-3" onClick={(e) => e.stopPropagation()}>
+        <Modal onClose={() => setInvestigate(null)} label="Investigate comparison" overlayClassName="bg-black/70" className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-[calc(100vw-2rem)] max-w-6xl max-h-[92vh] overflow-y-auto p-6 space-y-3">
             <div className="flex items-center justify-between border-b pb-2">
               <span className="text-sm font-semibold text-foreground flex items-center gap-2">
                 <ScanEye size={16} className="text-primary" /> Visual Investigation — {investigate.diffScore}% changed
@@ -666,9 +671,21 @@ export default function VisualDiffSection({ projectId }: { projectId: string }) 
                 </div>
               ))}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
+      <PromptDialog
+        open={tagging !== null}
+        title="Tag this baseline"
+        label="Version or branch tag"
+        placeholder="e.g. v2.4 or release/2026-11"
+        confirmLabel="Save tag"
+        initialValue={tagging?.current ?? ""}
+        onCancel={() => setTagging(null)}
+        onSubmit={(t) => {
+          if (tagging) tagBaseline(tagging.id, t)
+          setTagging(null)
+        }}
+      />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -139,7 +140,7 @@ export default function ExecutionTargetsModal({
       <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
           <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Server size={15} className="text-primary" /> Manage Execution Targets
+            <Server size={15} className="text-primary" /> Manage execution targets
           </h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-muted-foreground p-1">
             <X size={16} />
@@ -149,7 +150,7 @@ export default function ExecutionTargetsModal({
         {/* Target list */}
         {loading ? (
           <div className="py-12 flex justify-center">
-            <Loader2 size={20} className="animate-spin text-primary" />
+            <BusyDot />
           </div>
         ) : targets.length === 0 ? (
           <p className="text-muted-foreground text-xs text-center py-6">
@@ -167,7 +168,7 @@ export default function ExecutionTargetsModal({
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-xs text-foreground truncate">{t.name}</span>
                       {t.isDefault && (
-                        <span className="inline-flex items-center gap-0.5 text-xs font-semibold uppercase bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-px">
+                        <span className="inline-flex items-center gap-0.5 text-xs font-semibold  bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2 py-px">
                           <Star size={8} className="fill-current" /> Default
                         </span>
                       )}
@@ -188,7 +189,7 @@ export default function ExecutionTargetsModal({
                     title="Test connection"
                     className="p-2 rounded-lg border bg-card text-primary hover:bg-primary/10"
                   >
-                    {testing === t.id ? <Loader2 size={12} className="animate-spin" /> : <Wifi size={12} />}
+                    {testing === t.id ? <BusyDot /> : <Wifi size={12} />}
                   </button>
                   <button onClick={() => setDraft(t)} className="p-2 rounded-lg border bg-card text-muted-foreground hover:bg-muted text-xs font-semibold">
                     Edit
@@ -211,7 +212,7 @@ export default function ExecutionTargetsModal({
             {error && <p className="text-rose-600 text-xs font-semibold bg-rose-50 border border-rose-100 rounded-lg p-2">{error}</p>}
             <div className="grid grid-cols-2 gap-3">
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase text-muted-foreground block">Name</span>
+                <span className="text-xs font-semibold  text-muted-foreground block">Name</span>
                 <input
                   value={draft.name || ""}
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
@@ -220,7 +221,7 @@ export default function ExecutionTargetsModal({
                 />
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase text-muted-foreground block">Type</span>
+                <span className="text-xs font-semibold  text-muted-foreground block">Type</span>
                 <select
                   value={draft.type}
                   onChange={(e) => setDraft({ ...draft, type: e.target.value })}
@@ -233,7 +234,7 @@ export default function ExecutionTargetsModal({
               </label>
               {draft.type !== "local" && (
                 <label className="space-y-1 col-span-2">
-                  <span className="text-xs font-semibold uppercase text-muted-foreground block">Execution Address (URL)</span>
+                  <span className="text-xs font-semibold  text-muted-foreground block">Execution Address (URL)</span>
                   <input
                     value={draft.url || ""}
                     onChange={(e) => setDraft({ ...draft, url: e.target.value })}
@@ -243,7 +244,7 @@ export default function ExecutionTargetsModal({
                 </label>
               )}
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase text-muted-foreground block">Platform</span>
+                <span className="text-xs font-semibold  text-muted-foreground block">Platform</span>
                 <select
                   value={draft.platform}
                   onChange={(e) => setDraft({ ...draft, platform: e.target.value })}
@@ -255,7 +256,7 @@ export default function ExecutionTargetsModal({
                 </select>
               </label>
               <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase text-muted-foreground block">Browser</span>
+                <span className="text-xs font-semibold  text-muted-foreground block">Browser</span>
                 <select
                   value={draft.browser}
                   onChange={(e) => setDraft({ ...draft, browser: e.target.value })}
@@ -269,7 +270,7 @@ export default function ExecutionTargetsModal({
               {draft.type === "browserstack" && (
                 <>
                   <label className="space-y-1">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground block">Username</span>
+                    <span className="text-xs font-semibold  text-muted-foreground block">Username</span>
                     <input
                       value={draft.credentials?.username || ""}
                       onChange={(e) => setDraft({ ...draft, credentials: { ...draft.credentials, username: e.target.value } })}
@@ -277,7 +278,7 @@ export default function ExecutionTargetsModal({
                     />
                   </label>
                   <label className="space-y-1">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground block">Access Key</span>
+                    <span className="text-xs font-semibold  text-muted-foreground block">Access key</span>
                     <input
                       type="password"
                       value={draft.credentials?.accessKey || ""}
@@ -304,7 +305,7 @@ export default function ExecutionTargetsModal({
                 disabled={saving}
                 className="bg-primary hover:bg-primary/90 text-white rounded-xl h-8 px-4 text-xs font-semibold flex items-center gap-2"
               >
-                {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save Target
+                {saving ? <BusyDot /> : <Save size={11} />} Save Target
               </Button>
               <Button
                 onClick={() => { setDraft(null); setError("") }}
@@ -321,7 +322,7 @@ export default function ExecutionTargetsModal({
             variant="outline"
             className="w-full rounded-xl h-9 text-xs font-semibold border-dashed border-border text-muted-foreground bg-card flex items-center gap-2 justify-center"
           >
-            <Plus size={13} /> Add Execution Target
+            <Plus size={13} /> Add execution target
           </Button>
         )}
       </div>

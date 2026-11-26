@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CheckCircle2, ExternalLink, Loader2, MinusCircle, Play, Search, Square, XCircle } from "@/components/ui/icons"
@@ -382,7 +383,7 @@ export function RunCasesPanel({ projectId, settings, onOpenRun }: { projectId: s
               <div className="max-h-80 overflow-auto rounded-md border">
                 {cases === null ? (
                   <p className="flex items-center gap-2 p-3 text-xs font-normal text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+                    <BusyDot /> Loading…
                   </p>
                 ) : shown.length === 0 ? (
                   <p className="p-3 text-xs font-normal text-muted-foreground">{cases.length ? "No match." : "This project has no test cases with steps yet. Write steps instead."}</p>
@@ -467,7 +468,7 @@ function closeAll(browsers: Map<string, AgentBrowser>) {
 function StepIcon({ s }: { s: StepStatus }) {
   if (s === "passed") return <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
   if (s === "failed") return <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-600" />
-  if (s === "running") return <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+  if (s === "running") return <BusyDot />
   return <MinusCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
 }
 

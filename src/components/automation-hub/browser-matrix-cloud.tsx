@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useState } from "react"
 import {
   Cloud,
@@ -167,7 +168,7 @@ export default function BrowserMatrixCloudPanel() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center bg-card border rounded-xl">
-        <Loader2 size={22} className="animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -182,13 +183,13 @@ export default function BrowserMatrixCloudPanel() {
           <div className="flex items-center gap-2 border-b pb-2">
             <Zap size={15} className="text-primary" />
             <span className="text-xs font-medium text-muted-foreground">Cross-Browser Parallel Mode</span>
-            {saving && <Loader2 size={12} className="animate-spin text-indigo-400 ml-auto" />}
+            {saving && <BusyDot />}
           </div>
 
           {/* Parallel toggle */}
           <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
             <div>
-              <span className="text-xs font-semibold text-foreground block">Parallel Execution</span>
+              <span className="text-xs font-semibold text-foreground block">Parallel execution</span>
               <span className="text-xs text-muted-foreground font-medium">
                 {isParallel ? "All browsers run simultaneously" : "Browsers run sequentially"}
               </span>
@@ -272,7 +273,7 @@ export default function BrowserMatrixCloudPanel() {
         {/* Execution summary */}
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
-            <Gauge size={13} className="text-primary" /> Execution Summary
+            <Gauge size={13} className="text-primary" /> Execution summary
           </span>
           {savings && savings.testCount > 0 ? (
             <>
@@ -335,7 +336,7 @@ export default function BrowserMatrixCloudPanel() {
             <Cloud size={15} className="text-primary" />
             <span className="text-xs font-medium text-muted-foreground">BrowserStack Cloud</span>
             <span
-              className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-xs font-semibold uppercase ${
+              className={`ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-xs font-semibold  ${
                 bs?.configured ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-muted text-muted-foreground border-border"
               }`}
             >
@@ -360,7 +361,7 @@ export default function BrowserMatrixCloudPanel() {
           {/* browserstack.yml editor */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase font-semibold text-muted-foreground flex items-center gap-1">
+              <span className="text-xs  font-semibold text-muted-foreground flex items-center gap-1">
                 <Server size={10} /> browserstack.yml
               </span>
               <button
@@ -368,7 +369,7 @@ export default function BrowserMatrixCloudPanel() {
                 disabled={!ymlDirty || ymlSaving}
                 className="inline-flex items-center gap-1 h-7 px-3 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-40 text-white text-xs font-semibold"
               >
-                {ymlSaving ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />} Save{ymlDirty ? " *" : ""}
+                {ymlSaving ? <BusyDot /> : <Save size={10} />} Save{ymlDirty ? " *" : ""}
               </button>
             </div>
             <textarea
@@ -384,7 +385,7 @@ export default function BrowserMatrixCloudPanel() {
 
           {/* Quick platform add */}
           <div className="bg-muted/50 border rounded-xl p-3 space-y-2">
-            <span className="text-xs uppercase font-semibold text-muted-foreground">Add platform</span>
+            <span className="text-xs  font-semibold text-muted-foreground">Add platform</span>
             <div className="flex items-center gap-2 flex-wrap">
               {!pf.realMobile ? (
                 <select value={pf.os} onChange={(e) => setPf({ ...pf, os: e.target.value })} className="h-7 rounded-lg border px-2 text-xs font-semibold bg-card cursor-pointer">
@@ -414,7 +415,7 @@ export default function BrowserMatrixCloudPanel() {
               )}
               <button
                 onClick={() => setPf({ ...pf, realMobile: !pf.realMobile })}
-                className={`inline-flex items-center gap-1 h-7 px-2 rounded-lg border text-xs font-semibold uppercase ${
+                className={`inline-flex items-center gap-1 h-7 px-2 rounded-lg border text-xs font-semibold  ${
                   pf.realMobile ? "bg-primary text-white border-primary" : "bg-card text-muted-foreground"
                 }`}
               >
@@ -433,19 +434,19 @@ export default function BrowserMatrixCloudPanel() {
         {/* Cost + usage */}
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-3">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
-            <DollarSign size={13} className="text-primary" /> Cost Estimation & Usage
+            <DollarSign size={13} className="text-primary" /> Cost estimation & usage
           </span>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-muted/50 border rounded-xl p-2">
-              <p className="text-xs uppercase font-semibold text-muted-foreground">Sessions / run</p>
+              <p className="text-xs  font-semibold text-muted-foreground">Sessions / run</p>
               <p className="text-base font-semibold text-foreground mt-0.5">{bs?.costEstimate.sessionsPerRun}</p>
             </div>
             <div className="bg-muted/50 border rounded-xl p-2">
-              <p className="text-xs uppercase font-semibold text-muted-foreground">Est. min / run</p>
+              <p className="text-xs  font-semibold text-muted-foreground">Est. min / run</p>
               <p className="text-base font-semibold text-foreground mt-0.5">{bs?.costEstimate.estMinutesPerRun}</p>
             </div>
             <div className="bg-muted/50 border rounded-xl p-2">
-              <p className="text-xs uppercase font-semibold text-muted-foreground">Est. $ / run</p>
+              <p className="text-xs  font-semibold text-muted-foreground">Est. $ / run</p>
               <p className="text-base font-semibold text-emerald-600 mt-0.5">${bs?.costEstimate.estCostPerRun}</p>
             </div>
           </div>
@@ -464,7 +465,7 @@ export default function BrowserMatrixCloudPanel() {
         {/* Sessions */}
         <div className="bg-card border rounded-xl shadow-sm p-4 space-y-2">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
-            <Film size={13} className="text-primary" /> Cloud Sessions
+            <Film size={13} className="text-primary" /> Cloud sessions
           </span>
           {bs && bs.sessions.length > 0 ? (
             <div className="space-y-2">

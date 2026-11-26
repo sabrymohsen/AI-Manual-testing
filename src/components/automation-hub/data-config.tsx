@@ -1,5 +1,7 @@
 "use client"
 
+import { useConfirm } from "@/components/ui/alert-provider"
+import { BusyDot, Skeleton, SkeletonLines } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Settings,
@@ -110,7 +112,7 @@ export default function DataConfigSection() {
     { id: "Environment", label: "Environment", icon: Server },
     { id: "Test Data", label: "Test Data", icon: Database },
     { id: "Secrets", label: "Secrets", icon: Lock },
-    { id: "Logs", label: "System Logs", icon: ScrollText }
+    { id: "Logs", label: "System logs", icon: ScrollText }
   ]
 
   return (
@@ -120,7 +122,7 @@ export default function DataConfigSection() {
         <div>
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Settings size={18} className="text-primary" />
-            Data &amp; Config
+            Data &amp; settings
           </h2>
           <p className="text-xs text-muted-foreground font-semibold">
             Run settings, environment variables and secrets (available to tests as process.env), test data &amp; logs.
@@ -159,6 +161,7 @@ export default function DataConfigSection() {
 // PROPERTIES TAB
 // ============================================================
 function PropertiesTab() {
+  const confirm = useConfirm()
   const [rows, setRows] = useState<PropertyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -248,7 +251,7 @@ function PropertiesTab() {
   }
 
   const resetAll = async () => {
-    if (!confirm("Reset ALL settings to their defaults? This clears your overrides.")) return
+    if (!(await confirm({ title: "Reset all settings to their defaults?", description: "Every override you made is cleared.", confirmLabel: "Reset all", variant: "danger" }))) return
     await fetch("/api/hub/config/properties/reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -345,7 +348,7 @@ function PropertiesTab() {
           disabled={saving || dirtyCount === 0}
           className="bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-semibold gap-2 disabled:opacity-40"
         >
-          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          {saving ? <BusyDot /> : <Save size={13} />}
           Save{dirtyCount > 0 ? ` (${dirtyCount})` : ""}
         </Button>
       </div>
@@ -357,7 +360,7 @@ function PropertiesTab() {
       {showHistory && (
         <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
-            <History size={13} /> Change History
+            <History size={13} /> Change history
           </div>
           <div className="max-h-56 overflow-auto divide-y">
             {history.length === 0 ? (
@@ -395,11 +398,11 @@ function PropertiesTab() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-semibold text-foreground truncate">{r.name}</span>
-                    <span className={`text-xs font-semibold uppercase px-2 py-0.5 rounded border ${GROUP_STYLES[r.group] || GROUP_STYLES.Other}`}>
+                    <span className={`text-xs font-semibold  px-2 py-0.5 rounded border ${GROUP_STYLES[r.group] || GROUP_STYLES.Other}`}>
                       {r.group}
                     </span>
                     {(r.isCustom || changed) && (
-                      <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">
+                      <span className="text-xs font-semibold  px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">
                         {changed ? "edited" : "custom"}
                       </span>
                     )}
@@ -485,6 +488,7 @@ function PropertyInput({ row, value, onChange }: { row: PropertyRow; value: stri
 // ENV / SECRETS TAB (shared — secretsMode toggles which set is shown)
 // ============================================================
 function EnvTab({ secretsMode }: { secretsMode: boolean }) {
+  const confirm = useConfirm()
   const [rows, setRows] = useState<EnvRow[]>([])
   const [loading, setLoading] = useState(true)
   const [revealed, setRevealed] = useState<Record<string, string>>({})
@@ -549,7 +553,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
   }
 
   const remove = async (id: string) => {
-    if (!confirm("Delete this entry?")) return
+    if (!(await confirm({ title: secretsMode ? "Delete this secret?" : "Delete this variable?", description: "Runs that use it will no longer get its value.", confirmLabel: "Delete", variant: "danger" }))) return
     await fetch(`/api/hub/config/env/${id}`, { method: "DELETE" })
     await load()
   }
@@ -626,7 +630,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
       {showAudit && secretsMode && (
         <div className="bg-card border rounded-xl shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b bg-muted/50 text-xs font-semibold text-foreground flex items-center gap-2">
-            <History size={13} /> Secret Access Audit
+            <History size={13} /> Secret access audit
           </div>
           <div className="max-h-52 overflow-auto divide-y">
             {audit.length === 0 ? (
@@ -674,7 +678,7 @@ function EnvTab({ secretsMode }: { secretsMode: boolean }) {
                   {r.isSecret ? (shown !== undefined ? shown : "••••••••••••") : r.value || <span className="text-slate-300">∅</span>}
                 </div>
                 <div>
-                  <span className="text-xs font-semibold uppercase px-2 py-0.5 rounded border bg-muted text-muted-foreground border-border">
+                  <span className="text-xs font-semibold  px-2 py-0.5 rounded border bg-muted text-muted-foreground border-border">
                     {r.scope}
                   </span>
                 </div>
@@ -856,7 +860,7 @@ function LogsTab() {
             <button
               key={lv}
               onClick={() => setEnabled((e) => ({ ...e, [lv]: !e[lv] }))}
-              className={`text-xs font-semibold uppercase px-2 py-2 rounded-lg border transition-colors ${
+              className={`text-xs font-semibold  px-2 py-2 rounded-lg border transition-colors ${
                 enabled[lv] ? `bg-card ${LEVEL_STYLES[lv]} border-border` : "bg-muted text-slate-300 border-transparent"
               }`}
             >
@@ -906,9 +910,10 @@ function LogsTab() {
 // ============================================================
 function LoadingCard({ label }: { label: string }) {
   return (
-    <div className="py-24 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
-      <Loader2 className="animate-spin text-primary" size={28} />
-      <span className="font-semibold text-muted-foreground uppercase tracking-widest text-xs">{label}</span>
-    </div>
+<div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm" role="status" aria-label={label}>
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-32 w-full" />
+          <SkeletonLines lines={3} />
+        </div>
   )
 }

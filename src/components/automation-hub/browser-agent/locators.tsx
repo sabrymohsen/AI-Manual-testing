@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Copy, Globe, Loader2, RefreshCw, Wand2, X } from "@/components/ui/icons"
@@ -56,7 +57,7 @@ export function LocatorsPanel({ projectId, settings }: { projectId: string; sett
       <div className="space-y-3 rounded-xl border bg-card p-3">
         <div className="flex items-center gap-2">
           <Button size="sm" onClick={() => ap.open(settings.startUrl).then((ok) => ok && (setExact({}), setSel(null)))} disabled={ap.busy}>
-            {ap.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />} {ap.isOpen ? "Reopen start page" : "Open start page"}
+            {ap.busy ? <BusyDot /> : <Globe className="h-4 w-4" />} {ap.isOpen ? "Reopen start page" : "Open start page"}
           </Button>
           {ap.isOpen && (
             <>
@@ -89,7 +90,7 @@ export function LocatorsPanel({ projectId, settings }: { projectId: string; sett
             </p>
             {js === undefined ? (
               <p className="flex items-center gap-2 text-xs font-normal text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Finding a unique locator…
+                <BusyDot /> Finding a unique locator…
               </p>
             ) : js ? (
               <>

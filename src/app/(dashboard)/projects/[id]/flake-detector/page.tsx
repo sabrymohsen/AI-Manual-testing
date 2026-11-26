@@ -36,7 +36,7 @@ interface FlakyTestItem {
 interface KPIs {
   suiteStability: number
   flakyCount: number
-  avgActionTime: number
+  avgActionTime: number | null
   slowestTest: string
 }
 
@@ -49,7 +49,7 @@ export default function FlakeDetectorPage() {
   const [kpis, setKpis] = useState<KPIs>({
     suiteStability: 100,
     flakyCount: 0,
-    avgActionTime: 380,
+    avgActionTime: null,
     slowestTest: "N/A"
   })
 
@@ -138,7 +138,7 @@ export default function FlakeDetectorPage() {
           {[
             { label: "Suite Stability", val: `${kpis.suiteStability}%`, desc: "Target rate >90%", icon: Award, color: kpis.suiteStability >= 80 ? "text-emerald-600 bg-emerald-50" : "text-amber-600 bg-amber-50" },
             { label: "Flaky Tests", val: kpis.flakyCount, desc: "High flakiness score tests", icon: AlertTriangle, color: kpis.flakyCount > 0 ? "text-rose-600 bg-rose-50 animate-pulse" : "text-muted-foreground bg-muted/50" },
-            { label: "Avg Action Time", val: `${kpis.avgActionTime}ms`, desc: "Includes element identification", icon: Clock, color: "text-primary bg-primary/10" },
+            { label: "Avg Action Time", val: kpis.avgActionTime == null ? "—" : `${kpis.avgActionTime}ms`, desc: "Includes element identification", icon: Clock, color: "text-primary bg-primary/10" },
             { label: "Slowest Test Name", val: kpis.slowestTest.split(".")[0], desc: kpis.slowestTest, icon: Flame, color: "text-amber-600 bg-amber-55" }
           ].map((kpi, idx) => (
             <div key={idx} className="bg-card border rounded-xl p-4 shadow-sm flex items-center justify-between gap-4">

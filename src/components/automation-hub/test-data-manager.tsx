@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import Editor from "@monaco-editor/react"
@@ -210,7 +211,7 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
       {/* LEFT: file browser */}
       <div className="lg:col-span-3 bg-card border rounded-xl shadow-2xs overflow-hidden">
         <div className="p-3 border-b space-y-3">
-          <span className="text-xs font-medium text-muted-foreground block">Test Data Files</span>
+          <span className="text-xs font-medium text-muted-foreground block">Test data files</span>
           <div className="relative">
             <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-300" />
             <input
@@ -224,12 +225,12 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
             onClick={() => setWizardOpen(true)}
             className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl h-8 text-xs font-semibold flex items-center gap-2 justify-center"
           >
-            <Plus size={12} /> New Data Set
+            <Plus size={12} /> New data set
           </Button>
         </div>
         <div className="p-2 space-y-1 max-h-[520px] overflow-y-auto">
           {loading ? (
-            <div className="py-10 text-center"><Loader2 size={18} className="animate-spin text-primary mx-auto" /></div>
+            <div className="py-10 text-center"><BusyDot /></div>
           ) : filtered.length === 0 ? (
             <p className="text-slate-300 text-xs px-2 py-4 text-center">No data files. Create one to get started.</p>
           ) : (
@@ -247,10 +248,10 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
                 </div>
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {f.fields.slice(0, 4).map((field) => (
-                    <span key={field} className="text-xs uppercase font-semibold bg-muted text-muted-foreground border rounded-full px-2 py-px">{field}</span>
+                    <span key={field} className="text-xs  font-semibold bg-muted text-muted-foreground border rounded-full px-2 py-px">{field}</span>
                   ))}
                   {f.linkedScriptIds.length > 0 && (
-                    <span className="text-xs uppercase font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full px-2 py-px flex items-center gap-0.5">
+                    <span className="text-xs  font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-full px-2 py-px flex items-center gap-0.5">
                       <Link2 size={8} /> {f.linkedScriptIds.length}
                     </span>
                   )}
@@ -275,7 +276,7 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
               variant="outline"
               className="rounded-xl h-8 px-3 text-xs font-semibold border-border text-muted-foreground bg-card flex items-center gap-2"
             >
-              {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />} Save{dirty ? " *" : ""}
+              {saving ? <BusyDot /> : <Save size={11} />} Save{dirty ? " *" : ""}
             </Button>
             <button
               onClick={handleDelete}
@@ -316,7 +317,7 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
         {/* Preview table */}
         <div className="bg-card border rounded-xl p-3 shadow-2xs space-y-3">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
-            <Table2 size={12} /> Data Preview
+            <Table2 size={12} /> Data preview
           </span>
           {previewRows.fields.length === 0 ? (
             <p className="text-muted-foreground text-xs py-3 text-center">Valid JSON with objects renders as a table here.</p>
@@ -326,7 +327,7 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
                 <thead>
                   <tr>
                     {previewRows.fields.map((f) => (
-                      <th key={f} className="text-left font-semibold uppercase text-muted-foreground border-b px-2 py-1 whitespace-nowrap">{f}</th>
+                      <th key={f} className="text-left font-semibold  text-muted-foreground border-b px-2 py-1 whitespace-nowrap">{f}</th>
                     ))}
                   </tr>
                 </thead>
@@ -350,7 +351,7 @@ export default function TestDataManager({ scripts }: { scripts: ScriptRef[] }) {
         {/* dataProvider mapping preview */}
         {previewRows.fields.length > 0 && (
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
-            <span className="text-xs uppercase font-semibold text-muted-foreground tracking-wider flex items-center gap-2">
+            <span className="text-xs  font-semibold text-muted-foreground  flex items-center gap-2">
               <Wand2 size={11} /> @Test(dataProvider) mapping
             </span>
             <pre className="font-mono text-xs leading-relaxed text-slate-200 overflow-x-auto">
@@ -366,7 +367,7 @@ public void test(JsonObject data) {
         {/* Link to scripts */}
         <div className="bg-card border rounded-xl p-3 shadow-2xs space-y-3">
           <span className="text-xs font-medium text-muted-foreground flex items-center gap-2 border-b pb-2">
-            <Link2 size={12} /> Linked Test Scripts
+            <Link2 size={12} /> Linked test scripts
           </span>
           {!selected ? (
             <p className="text-muted-foreground text-xs py-2 text-center">Select a data file to link scripts.</p>
@@ -389,13 +390,13 @@ public void test(JsonObject data) {
                     <button
                       key={s.id}
                       onClick={() => toggleLink(s.id)}
-                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-bold text-left ${
+                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-semibold text-left ${
                         linked ? "bg-emerald-50/50 text-emerald-800" : "hover:bg-muted/50 text-muted-foreground"
                       }`}
                     >
                       {linked ? <CheckCircle2 size={11} className="text-emerald-500" /> : <span className="w-[11px] h-[11px] rounded-full border border-border" />}
                       <span className="truncate">{s.name}</span>
-                      <span className="ml-auto text-xs uppercase text-muted-foreground font-semibold">{s.type}</span>
+                      <span className="ml-auto text-xs  text-muted-foreground font-semibold">{s.type}</span>
                     </button>
                   )
                 })}
@@ -412,12 +413,12 @@ public void test(JsonObject data) {
           <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <Wand2 size={15} className="text-primary" /> Create Data Set
+                <Wand2 size={15} className="text-primary" /> Create data set
               </h3>
               <button onClick={() => setWizardOpen(false)} className="text-muted-foreground hover:text-muted-foreground p-1"><X size={16} /></button>
             </div>
             <label className="space-y-1 block">
-              <span className="text-xs font-medium text-muted-foreground">Data Set Name</span>
+              <span className="text-xs font-medium text-muted-foreground">Data set name</span>
               <input
                 value={wizardName}
                 onChange={(e) => setWizardName(e.target.value)}
@@ -449,7 +450,7 @@ public void test(JsonObject data) {
                 variant="outline"
                 className="w-full rounded-lg h-7 text-xs font-semibold border-dashed border-border text-muted-foreground bg-card flex items-center gap-1 justify-center"
               >
-                <Plus size={10} /> Add Field
+                <Plus size={10} /> Add field
               </Button>
             </div>
             <div className="flex gap-2 pt-2 border-t">
@@ -461,7 +462,7 @@ public void test(JsonObject data) {
                 disabled={!wizardName.trim() || wizardFields.filter((f) => f.trim()).length === 0}
                 className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-xl h-9 text-xs font-semibold"
               >
-                Generate Template
+                Generate template
               </Button>
             </div>
           </div>
@@ -470,7 +471,7 @@ public void test(JsonObject data) {
 
       {/* TOAST */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-semibold uppercase ${
+        <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-lg text-xs font-semibold  ${
           toast.type === "success" ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-rose-50 border-rose-200 text-rose-800"
         }`}>
           <span>{toast.text}</span>

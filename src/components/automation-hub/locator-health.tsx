@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { Fragment, useEffect, useMemo, useState } from "react"
 import {
   Activity,
@@ -109,7 +110,7 @@ export default function LocatorHealthPanel() {
   if (loading) {
     return (
       <div className="py-20 flex justify-center bg-card border rounded-xl">
-        <Loader2 size={22} className="animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -152,7 +153,7 @@ export default function LocatorHealthPanel() {
               </span>
             </div>
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Avg Stability</p>
+              <p className="text-xs font-medium text-muted-foreground">Avg stability</p>
               <p className="text-xs font-semibold text-muted-foreground">{summary.total} tracked locators</p>
             </div>
           </div>
@@ -173,14 +174,14 @@ export default function LocatorHealthPanel() {
         <div className="lg:col-span-2 bg-card border rounded-xl shadow-sm overflow-hidden">
           <div className="flex items-center gap-2 flex-wrap p-3 border-b">
             <Target size={14} className="text-primary" />
-            <span className="text-xs font-medium text-muted-foreground">Locator Health</span>
+            <span className="text-xs font-medium text-muted-foreground">Locator health</span>
             <div className="ml-auto flex items-center gap-2 flex-wrap">
               <select
                 value={pageFilter}
                 onChange={(e) => setPageFilter(e.target.value)}
                 className="h-8 rounded-lg border px-2 text-xs bg-muted/50 font-semibold cursor-pointer max-w-[150px]"
               >
-                <option value="all">All Pages</option>
+                <option value="all">All pages</option>
                 {pages.map((p) => (
                   <option key={p} value={p}>
                     {(() => {
@@ -198,7 +199,7 @@ export default function LocatorHealthPanel() {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="h-8 rounded-lg border px-2 text-xs bg-muted/50 font-semibold cursor-pointer"
               >
-                <option value="all">All Types</option>
+                <option value="all">All types</option>
                 {strategies.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -224,7 +225,7 @@ export default function LocatorHealthPanel() {
                   <th className="text-left px-2 py-2">Page</th>
                   <th className="text-right px-2 py-2">Resolution (est.)</th>
                   <th className="text-left px-2 py-2">Stability</th>
-                  <th className="text-left px-2 py-2">Last Changed</th>
+                  <th className="text-left px-2 py-2">Last changed</th>
                   <th className="text-center px-3 py-2">Alt.</th>
                 </tr>
               </thead>
@@ -244,7 +245,7 @@ export default function LocatorHealthPanel() {
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             {isOpen ? <ChevronDown size={11} className="text-muted-foreground shrink-0" /> : <ChevronRight size={11} className="text-muted-foreground shrink-0" />}
-                            <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-xs font-semibold uppercase shrink-0">
+                            <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-xs font-semibold  shrink-0">
                               {l.strategy}
                             </span>
                             <span className="font-mono text-foreground truncate max-w-[200px]">{l.locator}</span>
@@ -322,7 +323,7 @@ export default function LocatorHealthPanel() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-slate-300 w-4">#{i + 1}</span>
-                    <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-xs font-semibold uppercase">
+                    <span className="inline-block rounded bg-muted border text-muted-foreground px-1 text-xs font-semibold ">
                       {l.strategy}
                     </span>
                     <span className={`ml-auto font-mono font-semibold text-xs ${meta.text}`}>{l.stabilityScore}</span>

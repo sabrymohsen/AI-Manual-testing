@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useMemo, useState } from "react"
 import {
   Package,
@@ -141,7 +142,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
   if (loading) {
     return (
       <div className="bg-card border rounded-xl p-6 flex justify-center shadow-2xs">
-        <Loader2 size={20} className="animate-spin text-primary" />
+        <BusyDot />
       </div>
     )
   }
@@ -166,7 +167,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
       {/* Header */}
       <div className="flex items-center gap-2 flex-wrap p-3 border-b">
         <Package size={15} className="text-primary" />
-        <span className="text-xs font-medium text-muted-foreground">Diagnostics Bundle</span>
+        <span className="text-xs font-medium text-muted-foreground">Diagnostics bundle</span>
         <span className="font-mono text-xs text-muted-foreground bg-muted/50 border rounded px-2 py-0.5">
           {data.entries.length} files · {fmtBytes(data.entries.reduce((s, e) => s + e.size, 0))}
         </span>
@@ -182,7 +183,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
       <div className="flex items-center gap-1 px-3 pt-3 border-b">
         {[
           { id: "files" as const, label: "Files", icon: FileJson },
-          { id: "redaction" as const, label: "Redaction Report", icon: Lock },
+          { id: "redaction" as const, label: "Redaction report", icon: Lock },
           { id: "metadata" as const, label: "Metadata", icon: Cpu }
         ].map((t) => (
           <button
@@ -244,7 +245,7 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                 />
               ) : previewLoading ? (
                 <div className="h-[46vh] flex items-center justify-center bg-slate-950 rounded-xl">
-                  <Loader2 size={18} className="animate-spin text-indigo-400" />
+                  <BusyDot />
                 </div>
               ) : (
                 <pre className="font-mono text-xs leading-relaxed bg-slate-950 text-slate-200 rounded-xl p-3 overflow-auto h-[46vh] whitespace-pre-wrap">
@@ -276,10 +277,10 @@ export default function DiagnosticsBundlePanel({ diagnosisId, testName }: { diag
                 </svg>
                 <span className="absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-lg font-semibold text-foreground">{data.redaction.privacyScore}</span>
-                  <span className={`text-xs font-semibold uppercase ${privacyBand.color}`}>{privacyBand.label}</span>
+                  <span className={`text-xs font-semibold  ${privacyBand.color}`}>{privacyBand.label}</span>
                 </span>
               </div>
-              <p className="text-xs font-medium text-muted-foreground mt-2">Privacy Score</p>
+              <p className="text-xs font-medium text-muted-foreground mt-2">Privacy score</p>
               <p className="text-xs text-muted-foreground font-medium mt-1 leading-relaxed">
                 {data.redaction.totalHits === 0
                   ? "No residual sensitive patterns detected in the sanitized bundle."

@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot, Skeleton, SkeletonLines } from "@/components/ui/skeleton"
 import { useEffect, useState, useMemo } from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -71,28 +72,28 @@ interface TestExecutionItem {
   createdAt: string
 }
 
+/** A self-healing event as /api/autotest/healing returns it. */
 interface HealingEventItem {
   id: string
-  locatorName: string
-  oldSelector: string
-  newSelector: string
-  confidence: number
-  status: string
-  className: string
-  methodName: string
+  originalLocator: string
+  recoveredLocator: string
+  confidence: number // 0..1
+  pageUrl: string
+  testName: string
+  status: string // "recovered" | "failed" | "needs_review"
   createdAt: string
 }
 
+/** A flaky test as /api/autotest/flakes returns it. */
 interface FlakyTestItem {
   id: string
   testName: string
-  flakinessScore: number
+  flakinessScore: number // 0..1
   totalRuns: number
-  failedRuns: number
-  avgWaitTime: number
-  avgSyncTime: number
-  avgAssertTime: number
+  failures: number
+  retries: number
   rootCause: string
+  suggestedFix: string
 }
 
 interface DiagnosisItem {
@@ -195,7 +196,6 @@ export default function AutomationHubPage() {
 
   // 6. Flakes Section States
   const [flakyTests, setFlakyTests] = useState<FlakyTestItem[]>([])
-  const [stabilizeConfig, setStabilizeConfig] = useState(true)
 
   // 7. Matrix Section States
   const [matrixCells, setMatrixCells] = useState<MatrixCell[]>([])
@@ -252,12 +252,12 @@ export default function AutomationHubPage() {
 
       if (healRes.ok) {
         const d = await healRes.json()
-        setHealingEvents(d.healingEvents || [])
+        setHealingEvents(d.events || [])
       }
 
       if (flakesRes.ok) {
         const d = await flakesRes.json()
-        setFlakyTests(d.flakyTests || [])
+        setFlakyTests(d.tests || [])
       }
 
       if (diagnosisRes.ok) {
@@ -331,24 +331,34 @@ export default function AutomationHubPage() {
 
   // 5. HEAL ACTIONS
   const activeHeals = useMemo(() => {
-    return healingEvents.filter(h => h.className.toLowerCase().includes(selectedTestName.toLowerCase()))
-  }, [healingEvents, selectedTestName])
+    // Events needing a decision first, then the newest.
+    return [...healingEvents].sort((a, b) => Number(b.status === "needs_review") - Number(a.status === "needs_review"))
+  }, [healingEvents])
 
-  const handleApproveHeal = async (healId: string) => {
+  const [healError, setHealError] = useState<string | null>(null)
+  const handleHealAction = async (eventId: string, action: "approve" | "reject") => {
+    setHealError(null)
     try {
-      const res = await fetch(`/api/autotest/healing?id=${healId}`, { method: "PUT" })
-      if (res.ok) {
-        loadAllHubData()
+      const res = await fetch("/api/autotest/healing/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, action }),
+      })
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        setHealError(d.error || "The change could not be saved. Try again.")
+        return
       }
-    } catch (err) {
-      console.error(err)
+      loadAllHubData()
+    } catch {
+      setHealError("The change could not be saved because the server could not be reached.")
     }
   }
 
   // 6. FLAKES ACTIONS
   const activeFlakes = useMemo(() => {
-    return flakyTests.filter(f => f.testName.toLowerCase().includes(selectedTestName.toLowerCase()))
-  }, [flakyTests, selectedTestName])
+    return flakyTests
+  }, [flakyTests])
 
   // 7. MATRIX ACTIONS
   const matrixMap = useMemo(() => {
@@ -530,9 +540,10 @@ export default function AutomationHubPage() {
 
       {/* HUB MAIN WORKSPACE (analysis tools) */}
       {["Tests", "Runs", "Recorder", "BrowserAgent"].includes(activeTab) ? null : loading ? (
-        <div className="py-32 flex flex-col items-center justify-center gap-2 border bg-card rounded-xl shadow-sm">
-          <Loader2 className="animate-spin text-primary" size={32} />
-          <span className="font-semibold text-muted-foreground text-sm">Loading…</span>
+<div className="space-y-4 rounded-xl border bg-card p-6 shadow-sm" role="status" aria-label="Loading">
+          <Skeleton className="h-8 w-1/3" />
+          <Skeleton className="h-32 w-full" />
+          <SkeletonLines lines={3} />
         </div>
       ) : (
         <div className="transition-all duration-300">
@@ -576,12 +587,12 @@ export default function AutomationHubPage() {
               <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border w-fit select-none">
                 {[
                   { id: "recoveries", label: "Self-Healing", icon: Shield },
-                  { id: "locators", label: "Locator Health", icon: Activity }
+                  { id: "locators", label: "Locator health", icon: Activity }
                 ].map(v => (
                   <button
                     key={v.id}
                     onClick={() => setHealView(v.id as "recoveries" | "locators")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                       healView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -596,61 +607,57 @@ export default function AutomationHubPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Self-healing recovery events queue</span>
-                  
+                  <h3 className="title-4 border-b pb-2 text-foreground">Self-healing events</h3>
+                  {healError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{healError}</p>}
+
                   {activeHeals.length > 0 ? (
                     <div className="space-y-3">
-                      {activeHeals.map(event => (
-                        <div key={event.id} className="p-4 border rounded-xl bg-card space-y-3 shadow-3xs text-left">
-                          <div className="flex justify-between items-center border-b pb-2 flex-wrap gap-2">
-                            <div>
-                              <span className="text-xs font-semibold text-foreground block">{event.locatorName}</span>
-                              <span className="text-xs text-muted-foreground block font-mono mt-0.5">{event.className}.{event.methodName}</span>
+                      {activeHeals.map(event => {
+                        const pct = Math.round(event.confidence * 100)
+                        return (
+                        <div key={event.id} className="space-y-3 rounded-xl border bg-card p-4 text-left">
+                          <div className="flex flex-wrap items-start justify-between gap-2 border-b pb-2">
+                            <div className="min-w-0">
+                              <span className="block truncate text-xs font-semibold text-foreground" dir="auto" title={event.testName}>{event.testName}</span>
+                              <span className="mt-0.5 block truncate text-xs text-muted-foreground" title={event.pageUrl}>{event.pageUrl}</span>
                             </div>
-                            <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs border font-semibold uppercase ${
-                              event.confidence >= healingThreshold 
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-250 animate-pulse" 
-                                : "bg-amber-50 text-amber-700 border-amber-250"
-                            }`}>
-                              Confidence: {event.confidence}%
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono leading-relaxed">
-                            <div className="bg-muted/50 border p-3 rounded-xl">
-                              <span className="text-muted-foreground font-semibold block uppercase text-xs">Old broken selector</span>
-                              <span className="text-foreground block truncate select-all">{event.oldSelector}</span>
-                            </div>
-                            <div className="bg-primary/10 border border-primary/25 p-3 rounded-xl">
-                              <span className="text-indigo-650 font-semibold block uppercase text-xs">Healed recovery selector</span>
-                              <span className="text-primary block truncate select-all">{event.newSelector}</span>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                                {event.status === "needs_review" ? "Needs review" : event.status === "recovered" ? "Accepted" : "Rejected"}
+                              </span>
+                              <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${pct >= healingThreshold ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}>
+                                {pct}% confidence
+                              </span>
                             </div>
                           </div>
 
-                          {event.status === "pending" && (
-                            <div className="flex justify-end gap-2 pt-2 border-t">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => alert("Discarded healed selector suggestion")}
-                                className="h-7.5 rounded-lg border-border text-muted-foreground bg-card"
-                              >
+                          <div className="grid grid-cols-1 gap-4 font-mono text-xs md:grid-cols-2">
+                            <div className="rounded-xl border bg-muted/50 p-3">
+                              <span className="mb-1 block font-sans text-xs text-muted-foreground">Broken locator</span>
+                              <span className="block select-all break-all text-foreground">{event.originalLocator}</span>
+                            </div>
+                            <div className="rounded-xl border border-primary/25 bg-primary/10 p-3">
+                              <span className="mb-1 block font-sans text-xs text-primary">Healed locator</span>
+                              <span className="block select-all break-all text-primary">{event.recoveredLocator}</span>
+                            </div>
+                          </div>
+
+                          {event.status === "needs_review" && (
+                            <div className="flex justify-end gap-2 border-t pt-2">
+                              <Button size="sm" variant="outline" onClick={() => handleHealAction(event.id, "reject")}>
                                 Reject
                               </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleApproveHeal(event.id)}
-                                className="bg-indigo-650 hover:bg-primary/90 text-white rounded-lg h-7.5 font-semibold px-3"
-                              >
-                                Approve Healed Locator
+                              <Button size="sm" onClick={() => handleHealAction(event.id, "approve")}>
+                                Approve healed locator
                               </Button>
                             </div>
                           )}
                         </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
-                    <p className="text-slate-450 text-center py-12">No healing events registered for {selectedTestName}. HTML document structure matches locators!</p>
+                    <p className="py-12 text-center text-sm text-muted-foreground">No self-healing events recorded yet. They appear here when a run recovers from a broken locator.</p>
                   )}
                 </div>
               </div>
@@ -658,12 +665,12 @@ export default function AutomationHubPage() {
               {/* Sidebar threshold configurators */}
               <div className="lg:col-span-4 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4 text-left">
-                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Heal Settings</span>
+                  <span className="text-xs font-medium text-slate-500 block border-b pb-2">Heal settings</span>
                   
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-xs font-semibold">
                       <span className="text-muted-foreground">Auto-Apply Confidence Threshold</span>
-                      <span className="text-indigo-650 font-semibold">{healingThreshold}%</span>
+                      <span className="text-indigo-600 font-semibold">{healingThreshold}%</span>
                     </div>
                     <input
                       type="range"
@@ -690,13 +697,13 @@ export default function AutomationHubPage() {
               {/* Flake Map sub-view switch (Timing Profile · Wait Analysis) */}
               <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border w-fit select-none">
                 {[
-                  { id: "timing", label: "Timing Profile", icon: Activity },
-                  { id: "waits", label: "Wait Analysis", icon: Clock }
+                  { id: "timing", label: "Flaky tests", icon: Activity },
+                  { id: "waits", label: "Wait analysis", icon: Clock }
                 ].map(v => (
                   <button
                     key={v.id}
                     onClick={() => setFlakeView(v.id as "timing" | "waits")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                       flakeView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -708,90 +715,33 @@ export default function AutomationHubPage() {
               {flakeView === "waits" ? (
                 <WaitAnalysisPanel />
               ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              <div className="lg:col-span-8 space-y-6">
+            <div className="grid grid-cols-1 gap-6">
+              <div className="space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Timing performance breakdowns</span>
-                  
+                  <h3 className="title-4 border-b pb-2 text-foreground">Flaky tests</h3>
+
                   {activeFlakes.length > 0 ? (
-                    <div className="space-y-4 text-left">
-                      <div className="p-4 border rounded-xl bg-muted/50 space-y-3">
-                        <div className="flex justify-between items-center text-xs font-semibold border-b pb-1">
-                          <span className="text-foreground">{activeFlakes[0].testName} Stability</span>
-                          <span className="text-amber-600 font-semibold">Stability Index: {100 - activeFlakes[0].flakinessScore}%</span>
-                        </div>
-
-                        {/* Timing distribution bars */}
-                        <div className="space-y-3 pt-2 font-mono text-xs">
-                          <div className="space-y-1">
-                            <div className="flex justify-between font-semibold text-muted-foreground">
-                              <span>Element wait time</span>
-                              <span>{activeFlakes[0].avgWaitTime}ms</span>
-                            </div>
-                            <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
-                              <div className="bg-amber-450 h-full" style={{ width: `${(activeFlakes[0].avgWaitTime / 3000) * 100}%` }} />
-                            </div>
+                    <div className="space-y-3 text-left">
+                      {activeFlakes.map((f) => (
+                        <div key={f.id} className="space-y-2 rounded-xl border bg-muted/40 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <span className="truncate text-xs font-semibold text-foreground" dir="auto">{f.testName}</span>
+                            <span className="text-xs font-semibold text-amber-600">{Math.round(f.flakinessScore * 100)}% flaky</span>
                           </div>
-
-                          <div className="space-y-1">
-                            <div className="flex justify-between font-semibold text-muted-foreground">
-                              <span>Locator sync time</span>
-                              <span>{activeFlakes[0].avgSyncTime}ms</span>
-                            </div>
-                            <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
-                              <div className="bg-indigo-400 h-full" style={{ width: `${(activeFlakes[0].avgSyncTime / 3000) * 100}%` }} />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1">
-                            <div className="flex justify-between font-semibold text-muted-foreground">
-                              <span>Assertion checks checks</span>
-                              <span>{activeFlakes[0].avgAssertTime}ms</span>
-                            </div>
-                            <div className="w-full bg-slate-150 h-2 rounded-full overflow-hidden">
-                              <div className="bg-emerald-450 h-full" style={{ width: `${(activeFlakes[0].avgAssertTime / 3000) * 100}%` }} />
-                            </div>
-                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {f.failures} failure{f.failures === 1 ? "" : "s"} and {f.retries} retr{f.retries === 1 ? "y" : "ies"} in {f.totalRuns} run{f.totalRuns === 1 ? "" : "s"}
+                          </p>
+                          {f.rootCause && <p className="text-xs text-foreground"><span className="font-semibold">Likely cause:</span> {f.rootCause}</p>}
+                          {f.suggestedFix && <p className="text-xs text-foreground"><span className="font-semibold">Suggested fix:</span> {f.suggestedFix}</p>}
                         </div>
-                      </div>
-
-                      <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl space-y-2">
-                        <div className="flex items-center gap-1 text-amber-700">
-                          <AlertTriangle size={13} />
-                          <span className="text-xs font-medium">Root cause diagnosis recommendation</span>
-                        </div>
-                        <p className="text-slate-650 leading-relaxed font-semibold">
-                          {activeFlakes[0].rootCause === "sync"
-                            ? "Timing sync issue detected. Increasing explicit wait limits or using smart elements wrapper selectors solves this flakiness."
-                            : "Dynamic network requests delays. Add explicit assertions limits or verify endpoints response sizes."
-                          }
-                        </p>
-                      </div>
+                      ))}
                     </div>
                   ) : (
-                    <p className="text-slate-450 text-center py-12">No timing profiling recorded for {selectedTestName}. The test runs with 100% stability index.</p>
+                    <p className="py-12 text-center text-sm text-muted-foreground">No flaky tests recorded yet. For real timings from your runs, open Wait analysis.</p>
                   )}
                 </div>
               </div>
 
-              {/* Sidebar stabilization config */}
-              <div className="lg:col-span-4 space-y-6 text-left">
-                <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Profiler config Controls</span>
-                  <div className="flex items-center justify-between p-3 border rounded-xl bg-muted/50">
-                    <span className="font-semibold text-foreground text-xs">Enable Flake Profiler</span>
-                    <input
-                      type="checkbox"
-                      checked={stabilizeConfig}
-                      onChange={() => setStabilizeConfig(!stabilizeConfig)}
-                      className="h-4 w-4 rounded border-slate-350 text-indigo-650 focus:ring-primary cursor-pointer"
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground block font-medium mt-1 leading-relaxed">
-                    Builds the timing profile from each run's Playwright trace.
-                  </span>
-                </div>
-              </div>
             </div>
               )}
             </div>
@@ -803,13 +753,13 @@ export default function AutomationHubPage() {
               {/* Browser Matrix sub-view switch (Local Grid · Cloud & Parallel) */}
               <div className="flex items-center gap-1 bg-muted p-1 rounded-xl border w-fit select-none">
                 {[
-                  { id: "local", label: "Local Matrix", icon: LayoutGrid },
-                  { id: "cloud", label: "Cloud & Parallel", icon: Server }
+                  { id: "local", label: "Local matrix", icon: LayoutGrid },
+                  { id: "cloud", label: "Cloud & parallel", icon: Server }
                 ].map(v => (
                   <button
                     key={v.id}
                     onClick={() => setMatrixView(v.id as "local" | "cloud")}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
                       matrixView === v.id ? "bg-card text-primary shadow-3xs border" : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -824,18 +774,18 @@ export default function AutomationHubPage() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               <div className="lg:col-span-8 space-y-6">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Matrix Results Grid</span>
+                  <span className="text-xs font-medium text-slate-500 block border-b pb-2">Matrix results grid</span>
                   <div className="overflow-x-auto">
                     <table className="w-full text-center border-collapse">
                       <thead>
-                        <tr className="bg-muted/50 border-b text-xs font-semibold text-slate-450 uppercase tracking-wider text-left">
-                          <th className="p-3 text-left w-48">Test Class</th>
+                        <tr className="bg-muted/50 border-b text-xs font-semibold text-slate-500   text-left">
+                          <th className="p-3 text-left w-48">Test class</th>
                           {["Chrome", "Firefox", "Edge", "Safari"].map(b => (
                             <th key={b} className="p-3 text-center">{b}</th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody className="divide-y text-slate-650 text-left">
+                      <tbody className="divide-y text-slate-600 text-left">
                         {["LoginFlowTest", "ApiCrudTest", "DbQueryTest", "SearchFlowTest"].map(t => (
                           <tr key={t} className="hover:bg-muted/50 transition-colors">
                             <td className="p-3 font-semibold text-foreground text-left truncate w-48">{t}</td>
@@ -890,7 +840,7 @@ export default function AutomationHubPage() {
                     </div>
                     <div className="flex items-start gap-3 bg-primary/10 border border-primary/25 p-3 rounded-xl">
                       <Info className="text-primary shrink-0 mt-0.5" size={14} />
-                      <p className="text-slate-650 leading-relaxed font-semibold">
+                      <p className="text-slate-600 leading-relaxed font-semibold">
                         {matrixRecommendation}
                       </p>
                     </div>
@@ -901,10 +851,10 @@ export default function AutomationHubPage() {
               {/* Sidebar matrix batch controls */}
               <div className="lg:col-span-4 space-y-6 text-left">
                 <div className="bg-card border rounded-xl p-4 shadow-2xs space-y-4">
-                  <span className="text-xs font-medium text-slate-450 block border-b pb-2">Batch Run Controls</span>
+                  <span className="text-xs font-medium text-slate-500 block border-b pb-2">Batch run controls</span>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-450 block">1. Select Suite Classes</label>
+                      <label className="text-xs font-medium text-slate-500 block">1. Select Suite Classes</label>
                       <div className="space-y-1">
                         {["LoginFlowTest", "ApiCrudTest", "DbQueryTest", "SearchFlowTest"].map(t => (
                           <div key={t} className="flex items-center gap-2">
@@ -912,7 +862,7 @@ export default function AutomationHubPage() {
                               type="checkbox"
                               checked={batchTests.includes(t)}
                               onChange={() => setBatchTests(prev => prev.includes(t) ? prev.filter(item => item !== t) : [...prev, t])}
-                              className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
+                              className="h-3.5 w-3.5 rounded border-border text-indigo-600 focus:ring-primary cursor-pointer"
                             />
                             <span className="text-foreground font-semibold font-mono text-xs">{t}</span>
                           </div>
@@ -921,7 +871,7 @@ export default function AutomationHubPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-450 block">2. Target Browsers</label>
+                      <label className="text-xs font-medium text-slate-500 block">2. Target Browsers</label>
                       <div className="space-y-1">
                         {["Chrome", "Firefox", "Edge", "Safari"].map(b => (
                           <div key={b} className="flex items-center gap-2">
@@ -929,7 +879,7 @@ export default function AutomationHubPage() {
                               type="checkbox"
                               checked={batchBrowsers.includes(b)}
                               onChange={() => setBatchBrowsers(prev => prev.includes(b) ? prev.filter(item => item !== b) : [...prev, b])}
-                              className="h-3.5 w-3.5 rounded border-border text-indigo-650 focus:ring-primary cursor-pointer"
+                              className="h-3.5 w-3.5 rounded border-border text-indigo-600 focus:ring-primary cursor-pointer"
                             />
                             <span className="text-foreground font-semibold font-mono text-xs">{b}</span>
                           </div>
@@ -939,17 +889,17 @@ export default function AutomationHubPage() {
 
                     {runningMatrixBatch ? (
                       <div className="space-y-2 text-center py-2">
-                        <Loader2 size={16} className="animate-spin text-indigo-650 mx-auto" />
+                        <BusyDot />
                         <span className="text-xs text-primary font-semibold">
                           Executing {matrixProgress} of {matrixTotal} combinations...
                         </span>
                         <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
-                          <div className="bg-indigo-650 h-full transition-all duration-300" style={{ width: `${(matrixProgress / matrixTotal) * 100}%` }} />
+                          <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${(matrixProgress / matrixTotal) * 100}%` }} />
                         </div>
                       </div>
                     ) : (
-                      <Button onClick={handleRunMatrixBatch} className="bg-indigo-650 hover:bg-primary/90 text-white rounded-xl w-full h-9.5 font-semibold text-xs">
-                        Execute Batch Matrix Suite
+                      <Button onClick={handleRunMatrixBatch} className="bg-indigo-600 hover:bg-primary/90 text-white rounded-xl w-full h-9.5 font-semibold text-xs">
+                        Execute batch matrix suite
                       </Button>
                     )}
                   </div>
@@ -997,21 +947,21 @@ export default function AutomationHubPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-fade-in text-left">
           <div className="bg-card rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 w-full max-w-md space-y-4 text-foreground">
             <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="text-base font-semibold text-foreground">Diagnostics Matrix Cell Details</h3>
+              <h3 className="text-base font-semibold text-foreground">Diagnostics matrix cell details</h3>
               <button onClick={() => setSelectedMatrixCell(null)} className="text-muted-foreground hover:text-muted-foreground font-semibold">Close</button>
             </div>
             <div className="space-y-3 text-xs">
               <div>
-                <span className="text-muted-foreground font-semibold block">Test Class</span>
+                <span className="text-muted-foreground font-semibold block">Test class</span>
                 <span className="font-mono font-semibold">{selectedMatrixCell.testId}</span>
               </div>
               <div>
-                <span className="text-muted-foreground font-semibold block">Target Browser</span>
+                <span className="text-muted-foreground font-semibold block">Target browser</span>
                 <span className="font-mono font-semibold">{selectedMatrixCell.browserName}</span>
               </div>
               <div>
                 <span className="text-muted-foreground font-semibold block">Status</span>
-                <span className={`font-semibold uppercase ${selectedMatrixCell.status === "pass" ? "text-emerald-600" : "text-rose-600 animate-pulse"}`}>
+                <span className={`font-semibold  ${selectedMatrixCell.status === "pass" ? "text-emerald-600" : "text-rose-600 animate-pulse"}`}>
                   {selectedMatrixCell.status}
                 </span>
               </div>
@@ -1024,7 +974,7 @@ export default function AutomationHubPage() {
             </div>
             <div className="flex gap-2 pt-2">
               <Button variant="outline" onClick={() => setSelectedMatrixCell(null)} className="flex-1 rounded-xl bg-card border-border text-muted-foreground">Close</Button>
-              <Button onClick={() => setSelectedMatrixCell(null)} className="bg-indigo-650 text-white hover:bg-primary/90 flex-1 rounded-xl font-semibold">Re-run Cell Combination</Button>
+              <Button onClick={() => setSelectedMatrixCell(null)} className="bg-indigo-600 text-white hover:bg-primary/90 flex-1 rounded-xl font-semibold">Re-run Cell Combination</Button>
             </div>
           </div>
         </div>
