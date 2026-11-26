@@ -1,5 +1,6 @@
 "use client"
 
+import { useConfirm } from "@/components/ui/alert-provider"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -162,8 +163,10 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
     save({ assigneeIds: next })
   }
 
-  const doDelete = () => {
-    if (confirm("Delete this task? This cannot be undone.")) del.mutate(task.id, { onSuccess: onClose })
+  const confirm = useConfirm()
+  const doDelete = async () => {
+    const ok = await confirm({ title: `Delete ${task.key}?`, description: "This cannot be undone.", confirmLabel: "Delete issue", variant: "danger" })
+    if (ok) del.mutate(task.id, { onSuccess: onClose })
   }
 
   const copyKey = () => {
@@ -186,7 +189,7 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
           
           <button
             onClick={copyKey}
-            className="flex items-center gap-1 font-mono text-xs font-bold text-muted-foreground hover:text-foreground bg-muted/60 px-3 py-1 rounded-md border border-border/50 transition-all"
+            className="flex items-center gap-1 font-mono text-xs font-semibold text-muted-foreground hover:text-foreground bg-muted/60 px-3 py-1 rounded-md border border-border/50 transition-all"
           >
             <span>{task.key}</span>
             <Copy className="h-3 w-3" />
@@ -197,7 +200,7 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
 
         <div className="flex items-center gap-2 pr-8">
           {transition && (
-            <Button size="sm" onClick={() => save({ status: transition.next })} className="h-8 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg px-3">
+            <Button size="sm" onClick={() => save({ status: transition.next })} className="h-8 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-3">
               {transition.label}
             </Button>
           )}
@@ -240,7 +243,7 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
       </div>
 
       {/* ── Main Content & Property Sidebar (Split View) ── */}
-      <div className="flex-1 grid grid-cols-[1fr_330px] divide-x divide-border min-h-0 overflow-hidden bg-background">
+      <div className="flex-1 grid grid-cols-[1fr_360px] divide-x divide-border min-h-0 overflow-hidden bg-background">
         {/* Left Scrollable Content */}
         <div className="overflow-y-auto p-6 space-y-6 min-w-0">
           {/* Issue Title */}
@@ -257,7 +260,7 @@ function DrawerBody({ task, projectId, onClose }: { task: ScrumTask; projectId: 
             ) : (
               <h2
                 onClick={() => setEditingTitle(true)}
-                className="cursor-pointer rounded-lg p-1 text-2xl font-bold tracking-tight text-foreground hover:bg-muted/50 transition-all leading-snug flex items-start justify-between group"
+                className="heading-5 group flex cursor-pointer items-start justify-between rounded-lg p-1 text-foreground transition-colors hover:bg-muted/50"
               >
                 <span>{task.title}</span>
                 <Pencil className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground shrink-0 ml-2 mt-1" />
@@ -335,14 +338,14 @@ function formatDescriptionHtml(text: string): string {
   html = html.replace(/<p>\s*(#{1,3}\s+.*?)\s*<\/p>/gi, "$1")
 
   // 2. Convert markdown headers to styled HTML with accent badges
-  html = html.replace(/(?:^|<p>)\s*###\s+(.*?)\s*(?:<\/p>|$)/gim, '<h3 class="text-sm font-bold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>$1</h3>')
-  html = html.replace(/(?:^|<p>)\s*##\s+(.*?)\s*(?:<\/p>|$)/gim, '<h2 class="text-base font-bold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span>$1</h2>')
-  html = html.replace(/(?:^|<p>)\s*#\s+(.*?)\s*(?:<\/p>|$)/gim, '<h1 class="text-lg font-bold tracking-tight text-foreground mt-6 mb-3 pb-1 border-b border-border flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-indigo-600"></span>$1</h1>')
+  html = html.replace(/(?:^|<p>)\s*###\s+(.*?)\s*(?:<\/p>|$)/gim, '<h3 class="text-sm font-semibold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span>$1</h3>')
+  html = html.replace(/(?:^|<p>)\s*##\s+(.*?)\s*(?:<\/p>|$)/gim, '<h2 class="text-base font-semibold tracking-tight text-foreground mt-6 mb-2 pb-1 border-b border-border/60 flex items-center gap-2"><span class="h-2.5 w-2.5 rounded-full bg-purple-500"></span>$1</h2>')
+  html = html.replace(/(?:^|<p>)\s*#\s+(.*?)\s*(?:<\/p>|$)/gim, '<h1 class="text-lg font-semibold tracking-tight text-foreground mt-6 mb-3 pb-1 border-b border-border flex items-center gap-2"><span class="h-3 w-3 rounded-full bg-indigo-600"></span>$1</h1>')
 
   // 3. Convert inline markdown bold, italic, code
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-foreground">$1</strong>')
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
   html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-  html = html.replace(/`([^`]+)`/g, '<code class="px-2 py-0.5 rounded bg-muted font-mono text-xs text-indigo-500 dark:text-indigo-400 font-bold">$1</code>')
+  html = html.replace(/`([^`]+)`/g, '<code class="px-2 py-0.5 rounded bg-muted font-mono text-xs text-indigo-500 dark:text-indigo-400 font-semibold">$1</code>')
 
   // 4. Convert bullet lists
   html = html.replace(/-\s+\[ \]\s+(.*$)/gim, '<div class="flex items-center gap-2 text-xs py-1"><input type="checkbox" disabled class="rounded" /> <span>$1</span></div>')
@@ -374,13 +377,14 @@ function TypeGlyph({ task }: { task: ScrumTask }) {
 }
 
 function StatusPill({ status, onChange }: { status: TaskStatus; onChange: (s: TaskStatus) => void }) {
+  const confirm = useConfirm()
   const sc = STATUS_COLORS[status]
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "inline-flex items-center gap-2 rounded-xl border px-3 py-1 text-xs font-bold transition-all hover:scale-105 shadow-2xs",
+            "inline-flex items-center gap-2 rounded-xl border px-3 py-1 text-xs font-semibold transition-all hover:bg-muted shadow-2xs",
             sc.bg,
             sc.text,
             sc.border
@@ -397,9 +401,9 @@ function StatusPill({ status, onChange }: { status: TaskStatus; onChange: (s: Ta
           return (
             <DropdownMenuItem
               key={s}
-              onClick={() => {
+              onClick={async () => {
                 if (s === status) return
-                if (s === "DONE" && !confirm("Mark this issue as complete?")) return
+                if (s === "DONE" && !(await confirm({ title: "Mark this issue as done?", confirmLabel: "Mark as done" }))) return
                 onChange(s)
               }}
             >
@@ -438,7 +442,7 @@ function TitleEditor({ initial, onSave, onCancel }: { initial: string; onSave: (
           onCancel()
         }
       }}
-      className="w-full resize-none rounded-xl border border-input px-3 py-2 text-xl font-bold leading-snug focus:outline-none focus:ring-2 focus:ring-ring"
+      className="w-full resize-none rounded-xl border border-input px-3 py-2 text-xl font-semibold leading-snug focus:outline-none focus:ring-2 focus:ring-ring"
     />
   )
 }
@@ -480,7 +484,7 @@ function DescriptionBlock({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+        <h4 className="title-4 flex items-center gap-2 text-foreground">
           <FileText className="h-4 w-4 text-indigo-500" /> Description
         </h4>
         {!editing && (
@@ -498,7 +502,7 @@ function DescriptionBlock({
         <div className="space-y-3">
           <RichTextEditor value={draft} onChange={setDraft} />
           <div className="flex items-center gap-2">
-            <Button size="sm" onClick={saveDescription} disabled={saving} className="rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button size="sm" onClick={saveDescription} disabled={saving} className="rounded-xl font-semibold bg-primary hover:bg-primary/90 text-primary-foreground">
               {saving ? "Saving…" : "Save Description"}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setEditing(false)} disabled={saving} className="rounded-xl font-semibold">
@@ -529,7 +533,7 @@ function DescriptionBlock({
 function MiniAvatar({ member }: { member: ScrumMember | null }) {
   if (!member) return null
   return (
-    <span className="inline-flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-bold text-primary">
+    <span className="inline-flex h-5 w-5 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
       {member.avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={member.avatarUrl} alt={member.name || member.email} className="h-full w-full object-cover" />

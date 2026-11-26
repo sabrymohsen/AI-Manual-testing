@@ -40,8 +40,8 @@ export function TaskLinkedIssues({
   return (
     <section className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <Link2 className="h-3.5 w-3.5" /> Linked Issues {links.length > 0 && <span className="text-foreground">({links.length})</span>}
+        <h4 className="title-4 flex items-center gap-2 text-foreground">
+          <Link2 className="h-3.5 w-3.5" /> Linked issues {links.length > 0 && <span className="text-foreground">({links.length})</span>}
         </h4>
         <button
           onClick={() => setDialogOpen(true)}
@@ -75,7 +75,7 @@ export function TaskLinkedIssues({
                         <TypeIcon className={cn("h-3.5 w-3.5 shrink-0", TYPE_META[l.task.type]?.color)} />
                         <button
                           onClick={() => openTask(l.task.id)}
-                          className="font-mono text-xs font-bold text-primary hover:underline"
+                          className="font-mono text-xs font-semibold text-primary hover:underline"
                         >
                           {l.task.key}
                         </button>
@@ -154,7 +154,7 @@ function LinkIssueDialog({
         <div className="space-y-4 px-6 py-4">
           {/* Relationship chips */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Relationship</label>
+            <label className="text-xs font-semibold text-muted-foreground">Relationship</label>
             <div className="flex flex-wrap gap-2">
               {LINK_TYPES.map((t) => {
                 const meta = LINK_TYPE_META[t] ?? LINK_TYPE_META["relates to"]
@@ -178,7 +178,7 @@ function LinkIssueDialog({
 
           {/* Search */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search issue</label>
+            <label className="text-xs font-semibold text-muted-foreground">Search issue</label>
             <div className="flex items-center gap-2 rounded-lg border border-input px-3 focus-within:ring-1 focus-within:ring-ring">
               <Search className="h-4 w-4 text-muted-foreground" />
               <input
@@ -218,7 +218,7 @@ function LinkIssueDialog({
                     className="flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm transition-colors hover:border-primary/30 hover:bg-muted disabled:opacity-50"
                   >
                     <TypeIcon className={cn("h-4 w-4 shrink-0", TYPE_META[t.type]?.color)} />
-                    <span className="font-mono text-xs font-bold text-primary">{t.key}</span>
+                    <span className="font-mono text-xs font-semibold text-primary">{t.key}</span>
                     <span className="flex-1 truncate text-foreground">{t.title}</span>
                     <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold", sc.bg, sc.text)}>{sc.label}</span>
                   </button>

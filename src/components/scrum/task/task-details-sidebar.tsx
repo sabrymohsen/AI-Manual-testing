@@ -1,5 +1,6 @@
 "use client"
 
+import { useConfirm } from "@/components/ui/alert-provider"
 import { useEffect, useRef, useState } from "react"
 import type { ScrumTask, ScrumMember } from "@/types/scrum"
 import { useTaskDetailMutations, useScrumLabels, type CurrentUser } from "@/hooks/scrum/use-scrum"
@@ -75,8 +76,8 @@ export function TaskDetailsSidebar({
   onSave: SaveFn
 }) {
   return (
-    <div className="space-y-6">
-      <div className="p-6 rounded-2xl border bg-card/80 shadow-xs">
+    <div className="space-y-4">
+      <div className="rounded-xl border bg-card p-4">
         <DetailsPanel
           projectId={projectId}
           task={task}
@@ -87,19 +88,19 @@ export function TaskDetailsSidebar({
           onSave={onSave}
         />
       </div>
-      <div className="p-6 rounded-2xl border bg-card/80 shadow-xs">
+      <div className="rounded-xl border bg-card p-4">
         <DatesPanel task={task} onSave={onSave} />
       </div>
-      <div className="p-6 rounded-2xl border bg-card/80 shadow-xs">
+      <div className="rounded-xl border bg-card p-4">
         <TimeTrackingPanel projectId={projectId} task={task} />
       </div>
-      <div className="p-6 rounded-2xl border bg-card/80 shadow-xs">
+      <div className="rounded-xl border bg-card p-4">
         <AttachmentsPanel projectId={projectId} task={task} />
       </div>
-      <div className="p-6 rounded-2xl border bg-card/80 shadow-xs">
+      <div className="rounded-xl border bg-card p-4">
         <WatchersPanel projectId={projectId} task={task} members={members} currentUser={currentUser} />
       </div>
-      <div className="p-6 rounded-2xl border bg-card/80 shadow-xs">
+      <div className="rounded-xl border bg-card p-4">
         <TaskTrackerPanel taskId={task.id} />
       </div>
     </div>
@@ -108,16 +109,16 @@ export function TaskDetailsSidebar({
 
 function SectionTitle({ icon: Icon, children }: { icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
   return (
-    <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-      <Icon className="h-4 w-4 text-indigo-500" /> {children}
+    <h4 className="title-4 mb-3 flex items-center gap-2 text-foreground">
+      <Icon className="h-4 w-4 text-muted-foreground" /> {children}
     </h4>
   )
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[92px_1fr] items-center gap-2 py-2 border-b border-border/40 last:border-0">
-      <span className="text-xs font-bold text-muted-foreground">{label}</span>
+    <div className="grid grid-cols-[84px_1fr] items-center gap-2 py-1">
+      <span className="caption-4 text-muted-foreground">{label}</span>
       <div className="min-w-0">{children}</div>
     </div>
   )
@@ -144,11 +145,11 @@ function DetailsPanel({
 }) {
   return (
     <div className="space-y-1">
-      <SectionTitle icon={Tag}>Details &amp; Metadata</SectionTitle>
+      <SectionTitle icon={Tag}>Details</SectionTitle>
       <div>
         <Row label="Type">
           <Select value={task.type} onValueChange={(v) => onSave({ type: v })}>
-            <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
+            <SelectTrigger className="h-8 w-full gap-2 border-transparent px-2 text-left text-xs hover:border-input [&>span]:min-w-0 [&>span]:truncate">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -172,7 +173,7 @@ function DetailsPanel({
 
         <Row label="Reporter">
           <Select value={task.reporterId ?? "none"} onValueChange={(v) => onSave({ reporterId: v === "none" ? null : v })}>
-            <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
+            <SelectTrigger className="h-8 w-full gap-2 border-transparent px-2 text-left text-xs hover:border-input [&>span]:min-w-0 [&>span]:truncate">
               <SelectValue placeholder="Unassigned" />
             </SelectTrigger>
             <SelectContent>
@@ -188,7 +189,7 @@ function DetailsPanel({
 
         <Row label="Priority">
           <Select value={task.priority} onValueChange={(v) => onSave({ priority: v })}>
-            <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
+            <SelectTrigger className="h-8 w-full gap-2 border-transparent px-2 text-left text-xs hover:border-input [&>span]:min-w-0 [&>span]:truncate">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -213,7 +214,7 @@ function DetailsPanel({
             value={task.storyPoints != null ? String(task.storyPoints) : "none"}
             onValueChange={(v) => onSave({ storyPoints: v === "none" ? null : Number(v) })}
           >
-            <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
+            <SelectTrigger className="h-8 w-full gap-2 border-transparent px-2 text-left text-xs hover:border-input [&>span]:min-w-0 [&>span]:truncate">
               <SelectValue placeholder="—" />
             </SelectTrigger>
             <SelectContent>
@@ -229,7 +230,7 @@ function DetailsPanel({
 
         <Row label="Sprint">
           <Select value={task.sprintId ?? "none"} onValueChange={(v) => onSave({ sprintId: v === "none" ? null : v })}>
-            <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
+            <SelectTrigger className="h-8 w-full gap-2 border-transparent px-2 text-left text-xs hover:border-input [&>span]:min-w-0 [&>span]:truncate">
               <SelectValue placeholder="No sprint" />
             </SelectTrigger>
             <SelectContent>
@@ -245,7 +246,7 @@ function DetailsPanel({
 
         <Row label="Epic">
           <Select value={task.epicId ?? "none"} onValueChange={(v) => onSave({ epicId: v === "none" ? null : v })}>
-            <SelectTrigger className="h-8 border-transparent px-2 hover:border-input">
+            <SelectTrigger className="h-8 w-full gap-2 border-transparent px-2 text-left text-xs hover:border-input [&>span]:min-w-0 [&>span]:truncate">
               <SelectValue placeholder="No epic" />
             </SelectTrigger>
             <SelectContent>
@@ -328,9 +329,9 @@ function AssigneePicker({
         <button className="flex h-8 w-full items-center gap-2 rounded-lg border border-input/40 px-2 text-sm hover:bg-muted/50 transition-all outline-none">
           {assigned.length > 0 ? (
             <>
-              <AvatarStack members={assigned as ScrumMember[]} max={3} />
+              <AvatarStack members={assigned as ScrumMember[]} max={assigned.length > 3 ? 2 : 3} />
               <span className="truncate text-xs font-semibold">
-                {assigned.length === 1 ? assigned[0].name || assigned[0].email : `${assigned.length} assigned`}
+                {assigned.length === 1 ? assigned[0].name || assigned[0].email : `${assigned.length} people`}
               </span>
             </>
           ) : (
@@ -341,7 +342,7 @@ function AssigneePicker({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64 p-2 shadow-xl border rounded-xl">
-        <div className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground border-b mb-1">
+        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground border-b mb-1">
           Assignees ({assigned.length})
         </div>
         {allMembers.length === 0 ? (
@@ -414,8 +415,13 @@ function TagInput({
       {values.map((v) => (
         <span key={v} className="inline-flex items-center gap-1 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
           {v}
-          <button onClick={() => onChange(values.filter((x) => x !== v))} className="hover:text-red-600">
-            <X className="h-2.5 w-2.5" />
+          <button
+            type="button"
+            onClick={() => onChange(values.filter((x) => x !== v))}
+            aria-label={`Remove ${v}`}
+            className="rounded-sm hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-3 w-3" aria-hidden />
           </button>
         </span>
       ))}
@@ -432,8 +438,9 @@ function TagInput({
                 onChange(values.slice(0, -1))
               }
             }}
-            placeholder={values.length ? "" : placeholder}
-            className="min-w-[60px] flex-1 bg-transparent px-1 py-0.5 text-xs focus:outline-none"
+            placeholder={values.length ? "Add…" : placeholder}
+            aria-label={placeholder}
+            className="min-w-16 flex-1 bg-transparent px-1 py-0.5 text-xs placeholder:text-muted-foreground focus:outline-none"
           />
         </PopoverTrigger>
         <PopoverContent align="start" className="w-48 p-1" onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -515,7 +522,7 @@ function TimeTrackingPanel({ projectId, task }: { projectId: string; task: Scrum
 
   return (
     <div>
-      <SectionTitle icon={Clock}>Time Tracking</SectionTitle>
+      <SectionTitle icon={Clock}>Time tracking</SectionTitle>
       <div className="space-y-2">
         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
           <div className={cn("h-full rounded-full", exceeded ? "bg-red-500" : "bg-blue-500")} style={{ width: `${loggedPct}%` }} />
@@ -602,6 +609,7 @@ function LogWorkDialog({
 // ── Attachments ──────────────────────────────────────────────────────────────
 
 function AttachmentsPanel({ projectId, task }: { projectId: string; task: ScrumTask }) {
+  const confirm = useConfirm()
   const { uploadAttachment, deleteAttachment } = useTaskDetailMutations(projectId, task.id)
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -652,8 +660,9 @@ function AttachmentsPanel({ projectId, task }: { projectId: string; task: ScrumT
                 <Download className="h-3.5 w-3.5" />
               </a>
               <button
-                onClick={() => {
-                  if (confirm(`Delete ${a.name}?`)) deleteAttachment.mutate(a.id)
+                onClick={async () => {
+                  if (await confirm({ title: `Delete ${a.name}?`, description: "The file is removed from this issue.", confirmLabel: "Delete file", variant: "danger" }))
+                    deleteAttachment.mutate(a.id)
                 }}
                 className="text-muted-foreground opacity-0 transition-opacity hover:text-red-600 group-hover:opacity-100"
                 title="Delete"

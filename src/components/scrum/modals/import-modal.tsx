@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot, SkeletonLines } from "@/components/ui/skeleton"
 import { useMemo, useRef, useState } from "react"
 import * as XLSX from "xlsx"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Download, FileSpreadsheet, ListChecks, Loader2, Search, Upload, X } from "@/components/ui/icons"
+import { CheckCircle2, Download, FileSpreadsheet, ListChecks, Search, Upload, X } from "@/components/ui/icons"
 
 type ImportSource = "file" | "testCases"
 
@@ -507,9 +508,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
             </div>
             <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border p-2">
               {pickerLoading && (
-                <p className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Loading test cases…
-                </p>
+                <SkeletonLines lines={4} className="p-2" />
               )}
               {!pickerLoading && visibleTestCases.length === 0 && (
                 <p className="py-6 text-center text-sm text-muted-foreground">No test cases found.</p>
@@ -588,7 +587,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
             {result ? "Done" : "Cancel"}
           </Button>
           <Button onClick={submit} disabled={!canSubmit}>
-            {submitting && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+            {submitting && <BusyDot />}
             {source === "file"
               ? `Import ${validRowCount || ""} ${
                   validRowCount === 1

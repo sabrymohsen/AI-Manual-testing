@@ -10,7 +10,7 @@ import { Pencil, Trash2, Check, X } from "@/components/ui/icons"
 
 function Avatar({ name, email, url }: { name: string | null; email: string; url: string | null }) {
   return (
-    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-bold text-primary">
+    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-xs font-semibold text-primary">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={name || email} className="h-full w-full object-cover" />
@@ -182,7 +182,7 @@ export function CommentList({
 
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <h4 className="title-4 text-foreground">
         Comments {comments.length > 0 && <span className="text-foreground">({comments.length})</span>}
       </h4>
 

@@ -19,7 +19,7 @@ const OPTIONS: { key: SwimlaneMode; label: string; icon: React.ReactNode }[] = [
 export function SwimlaneToggle({ value, onChange }: SwimlaneToggleProps) {
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-bold uppercase tracking-wider text-[#6B778C]/60">Swimlane</span>
+      <span className="text-xs font-semibold text-[#6B778C]/60">Swimlane</span>
       <div className="flex gap-1 rounded-lg border border-[#DFE1E6] p-0.5 bg-white">
         {OPTIONS.map((opt) => (
           <button

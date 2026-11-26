@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import Link from "next/link"
 import { toast } from "sonner"
-import { FileText, FileType2, Plus, Loader2, X, ExternalLink } from "@/components/ui/icons"
+import { FileText, FileType2, Plus, X, ExternalLink } from "@/components/ui/icons"
 
 interface LinkedBrd {
   linkId: string
@@ -79,7 +79,7 @@ export function TaskLinkedBrds({ projectId, taskId }: { projectId: string; taskI
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+        <h4 className="title-4 flex items-center gap-2 text-foreground">
           <FileText className="h-3.5 w-3.5" /> Linked BRD Documents
         </h4>
         {canManage && (

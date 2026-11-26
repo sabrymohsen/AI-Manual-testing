@@ -1,9 +1,10 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState } from "react"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { AlertTriangle, RefreshCw } from "@/components/ui/icons"
+import { AlertTriangle } from "@/components/ui/icons"
 
 export type ConfirmDialogProps = {
   open: boolean
@@ -53,109 +54,77 @@ export function ConfirmDialog({
     }
   }
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (variant === "danger" || variant === "warning") {
-      return
-    }
-    onCancel?.()
-  }
-
-  useEffect(() => {
-    if (!open) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (variant !== "danger" && variant !== "warning") {
-          onCancel?.()
-        }
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [open, variant, onCancel])
-
-  if (!open) return null
-
   let headerIcon = null
-  let confirmButtonClass = "rounded-xl font-semibold text-xs h-9 "
+  let confirmButtonClass = "button-sm "
 
   if (variant === "danger") {
-    headerIcon = <AlertTriangle className="h-5 w-5 text-rose-500 shrink-0 animate-pulse" />
+    headerIcon = <AlertTriangle weight="fill" className="h-5 w-5 shrink-0 text-rose-500" aria-hidden />
     confirmButtonClass += "bg-rose-600 hover:bg-rose-700 text-white"
   } else if (variant === "warning") {
-    headerIcon = <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+    headerIcon = <AlertTriangle weight="fill" className="h-5 w-5 shrink-0 text-amber-500" aria-hidden />
     confirmButtonClass += "bg-amber-600 hover:bg-amber-700 text-white"
   } else {
-    confirmButtonClass += "bg-primary hover:bg-primary/90 text-white"
+    confirmButtonClass += "bg-primary hover:bg-primary/90 text-primary-foreground"
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-      onClick={handleBackdropClick}
-    >
-      <div
-        className="w-full max-w-md p-6 border border-border dark:border-slate-800 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] bg-background space-y-4 text-left"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <DialogPrimitive.Root open={open} onOpenChange={(next) => !next && showCancel && !isLoading && onCancel?.()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content
+          role="alertdialog"
+          aria-describedby={description ? "confirm-dialog-description" : undefined}
+          onInteractOutside={(e) => {
+            // Danger and warning dialogs only close through their buttons.
+            if (variant !== "default") e.preventDefault()
+          }}
+          className="fixed left-1/2 top-1/2 z-[9999] w-[calc(100vw-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 space-y-6 rounded-2xl border border-border bg-background p-6 text-left shadow-[0_8px_24px_rgba(0,0,0,0.08)] focus:outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95"
+        >
         <div className="flex items-start gap-3">
           {headerIcon}
-          <div className="space-y-2 flex-1">
-            <h3 className="text-lg font-semibold text-slate-950 dark:text-slate-50">{title}</h3>
+          <div className="flex-1 space-y-2">
+            <DialogPrimitive.Title className="heading-6 text-foreground">{title}</DialogPrimitive.Title>
             {description && (
-              <p className="text-xs text-muted-foreground leading-relaxed font-semibold">{description}</p>
+              <DialogPrimitive.Description id="confirm-dialog-description" className="body-6 text-muted-foreground">
+                {description}
+              </DialogPrimitive.Description>
             )}
           </div>
         </div>
 
         {apiError && (
-          <div className="p-3 bg-rose-50/50 dark:bg-rose-955/10 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-700 dark:text-rose-455 font-semibold leading-relaxed animate-in fade-in">
+          <div role="alert" className="body-6 rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">
             {apiError}
           </div>
         )}
 
         {requireTextConfirmation && (
-          <div className="space-y-2 pt-2 border-t border-border dark:border-slate-800">
-            <label className="text-xs font-medium text-muted-foreground block">
-              To confirm, type <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">"{requireTextConfirmation}"</span>:
+          <div className="space-y-2">
+            <label htmlFor="confirm-dialog-text" className="caption-1 block text-muted-foreground">
+              To confirm, type <span className="rounded bg-muted px-1 py-0.5 font-mono text-foreground">{requireTextConfirmation}</span>
             </label>
             <Input
+              id="confirm-dialog-text"
               value={typedConfirmation}
               onChange={(e) => setTypedConfirmation(e.target.value)}
-              placeholder={`Type "${requireTextConfirmation}"`}
-              className="rounded-xl h-9 text-xs"
+              placeholder={`Type ${requireTextConfirmation}`}
               disabled={isLoading}
             />
           </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-3 border-t border-border dark:border-slate-800">
+        <div className="flex justify-end gap-2">
           {showCancel && (
-            <Button
-              variant="outline"
-              type="button"
-              onClick={onCancel}
-              disabled={isLoading}
-              className="rounded-xl text-xs h-9"
-            >
+            <Button variant="outline" type="button" onClick={onCancel} disabled={isLoading} className="button-sm">
               {cancelLabel}
             </Button>
           )}
-          <Button
-            type="button"
-            onClick={handleConfirm}
-            disabled={isConfirmDisabled}
-            className={confirmButtonClass}
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <RefreshCw className="h-3 w-3 animate-spin" /> Processing...
-              </span>
-            ) : (
-              confirmLabel
-            )}
+          <Button type="button" onClick={handleConfirm} disabled={isConfirmDisabled} className={confirmButtonClass} autoFocus>
+            {isLoading ? "Working…" : confirmLabel}
           </Button>
         </div>
-      </div>
-    </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   )
 }

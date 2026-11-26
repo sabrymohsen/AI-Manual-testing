@@ -1,12 +1,13 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useMemo, useState } from "react"
 import type { LinkedTestCase, LinkedBug } from "@/types/scrum"
 import { useScrumLinkables, useTraceabilityMutations } from "@/hooks/scrum/use-scrum"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { CreateBugModal } from "@/components/bug-reports/create-bug-modal"
-import { Plus, X, FlaskConical, Bug, Search, Link2, Play, Loader2 } from "@/components/ui/icons"
+import { Plus, X, FlaskConical, Bug, Search, Link2, Play, } from "@/components/ui/icons"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
@@ -80,8 +81,8 @@ export function TraceabilityLinks({
       {/* Test cases */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <FlaskConical className="h-3.5 w-3.5" /> Test Cases {testCases.length > 0 && <span className="text-foreground">({testCases.length})</span>}
+          <h4 className="title-4 flex items-center gap-2 text-foreground">
+            <FlaskConical className="h-3.5 w-3.5" /> Test cases {testCases.length > 0 && <span className="text-foreground">({testCases.length})</span>}
           </h4>
           <Picker
             label="Link test cases"
@@ -109,7 +110,7 @@ export function TraceabilityLinks({
                 disabled={running}
                 className="ml-auto inline-flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
               >
-                {running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />} Run linked tests
+                {running ? <BusyDot /> : <Play className="h-3 w-3" />} Run linked tests
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60">
                 <DropdownMenuItem disabled={!automated.length} onClick={() => run("Automated Run")} className="text-sm">
@@ -155,7 +156,7 @@ export function TraceabilityLinks({
       {/* Bugs */}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <h4 className="title-4 flex items-center gap-2 text-foreground">
             <Bug className="h-3.5 w-3.5" /> Bugs {bugs.length > 0 && <span className="text-foreground">({bugs.length})</span>}
           </h4>
           <button
@@ -172,7 +173,7 @@ export function TraceabilityLinks({
             {bugs.map((b) => (
               <li key={b.id} className="group flex items-center gap-2 rounded border border-border px-2 py-2 text-sm">
                 <Bug className="h-3.5 w-3.5 shrink-0 text-red-600" />
-                {b.bugKey && <span className="font-mono text-xs font-bold text-red-600">{b.bugKey}</span>}
+                {b.bugKey && <span className="font-mono text-xs font-semibold text-red-600">{b.bugKey}</span>}
                 <span className="flex-1 truncate">{b.title}</span>
                 <span className="rounded bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">{b.status}</span>
                 <button
@@ -256,7 +257,7 @@ function LinkBugDialog({
 
           <div className="flex items-center gap-2">
             <span className="h-px flex-1 bg-border" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">or link existing</span>
+            <span className="text-xs font-semibold text-muted-foreground">or link existing</span>
             <span className="h-px flex-1 bg-border" />
           </div>
 
@@ -286,7 +287,7 @@ function LinkBugDialog({
                   className="flex w-full items-center gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm transition-colors hover:border-red-200 hover:bg-muted"
                 >
                   <Bug className="h-4 w-4 shrink-0 text-red-600" />
-                  {b.bugKey && <span className="font-mono text-xs font-bold text-red-600">{b.bugKey}</span>}
+                  {b.bugKey && <span className="font-mono text-xs font-semibold text-red-600">{b.bugKey}</span>}
                   <span className="flex-1 truncate text-foreground">{b.title}</span>
                   <span className={cn("shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground")}>{b.severity}</span>
                 </button>

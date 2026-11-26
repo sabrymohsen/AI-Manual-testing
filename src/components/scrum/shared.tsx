@@ -53,7 +53,7 @@ export function initials(name: string | null | undefined, email?: string) {
 
 /** Overlapping avatar stack, showing up to `max` then a +N chip. */
 export function AvatarStack({ members, max = 2, size = "md" }: { members: ScrumMember[]; max?: number; size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "h-[18px] w-[18px] text-xs border" : "h-6 w-6 text-xs border-2"
+  const dim = size === "sm" ? "h-5 w-5 text-xs border" : "h-6 w-6 text-xs border-2"
   const shown = members.slice(0, max)
   const extra = members.length - shown.length
   return (
@@ -62,7 +62,7 @@ export function AvatarStack({ members, max = 2, size = "md" }: { members: ScrumM
         <span
           key={m.id}
           title={m.name || m.email}
-          className={cn("inline-flex items-center justify-center overflow-hidden rounded-full border-background bg-primary/10 font-bold text-primary", dim)}
+          className={cn("inline-flex items-center justify-center overflow-hidden rounded-full border-background bg-primary/10 font-semibold text-primary", dim)}
         >
           {m.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -73,7 +73,7 @@ export function AvatarStack({ members, max = 2, size = "md" }: { members: ScrumM
         </span>
       ))}
       {extra > 0 && (
-        <span className={cn("inline-flex items-center justify-center rounded-full border-background bg-muted font-bold text-muted-foreground", dim)}>
+        <span className={cn("inline-flex items-center justify-center rounded-full border-background bg-muted font-semibold text-muted-foreground", dim)}>
           +{extra}
         </span>
       )}
@@ -179,8 +179,26 @@ export function DotLabel({
         className
       )}
     >
-      <span className={cn("h-[7px] w-[7px] shrink-0 rounded-full", dotClass)} style={dotColor ? { backgroundColor: dotColor } : undefined} />
+      <span className={cn("h-2 w-2 shrink-0 rounded-full", dotClass)} style={dotColor ? { backgroundColor: dotColor } : undefined} />
       <span className="truncate">{children}</span>
     </span>
+  )
+}
+
+/** Inline error for a Scrum view whose data failed to load (SKILL.md B9: specific, with a next step). */
+export function ViewError({ what = "issues", error, onRetry }: { what?: string; error?: unknown; onRetry: () => void }) {
+  const detail = error instanceof Error && error.message ? ` ${error.message}.` : ""
+  return (
+    <div role="alert" className="mx-auto mt-16 flex max-w-md flex-col items-center gap-3 rounded-xl border border-border bg-card p-6 text-center">
+      <p className="title-3 text-foreground">The {what} could not be loaded</p>
+      <p className="body-6 text-muted-foreground">Check your connection and try again.{detail}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="button-sm rounded-lg bg-primary px-3 py-2 text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
+      >
+        Try again
+      </button>
+    </div>
   )
 }

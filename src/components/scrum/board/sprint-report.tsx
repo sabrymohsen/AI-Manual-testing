@@ -5,8 +5,9 @@
  * the ideal line) and velocity of recent sprints. The numbers come from the
  * same functions as the Reports page, built from each task's status history.
  */
+import { Skeleton, SkeletonLines } from "@/components/ui/skeleton"
 import { useQuery } from "@tanstack/react-query"
-import { BarChart3, Loader2 } from "@/components/ui/icons"
+import { BarChart3, } from "@/components/ui/icons"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
@@ -53,7 +54,7 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
           </DialogTitle>
         </DialogHeader>
         {isLoading ? (
-          <div className="flex items-center gap-2 py-16 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</div>
+          <div className="space-y-4 py-6"><Skeleton className="h-24 w-full" /><SkeletonLines lines={3} /></div>
         ) : error ? (
           <p className="py-8 text-sm text-destructive">{(error as Error).message}</p>
         ) : data ? (
@@ -119,7 +120,7 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint?: string; tone?: "warn" }) {
   return (
     <div className="rounded-lg border bg-card p-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className={`mt-0.5 text-lg font-semibold ${tone === "warn" ? "text-amber-600" : "text-foreground"}`}>{value}</p>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>

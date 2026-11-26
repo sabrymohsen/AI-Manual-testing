@@ -20,7 +20,7 @@ function AssigneeBubble({ user }: { user: ScrumSubtask["assignee"] }) {
     return <img src={user.avatarUrl} alt={displayName(user)} className="h-5 w-5 shrink-0 rounded-full object-cover" />
   }
   return (
-    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold uppercase text-indigo-700">
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700">
       {displayName(user).slice(0, 2)}
     </span>
   )
@@ -59,7 +59,7 @@ export function SubtaskList({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <h4 className="title-4 text-foreground">
           Subtasks {total > 0 && <span className="ml-1 text-foreground">{done}/{total}</span>}
         </h4>
       </div>
@@ -117,7 +117,7 @@ export function SubtaskList({
               {isOpen && (
                 <div className="space-y-2 border-t bg-muted/20 px-3 py-2">
                   <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">
                       Description
                     </label>
                     <textarea
@@ -136,7 +136,7 @@ export function SubtaskList({
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <label className="mb-1 block text-xs font-semibold text-muted-foreground">
                       Assignee
                     </label>
                     <select

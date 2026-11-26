@@ -14,7 +14,7 @@ import {
   setBoardDragging,
 } from "@/hooks/scrum/use-scrum"
 import { useScrumUI, boardDisplayFor, type BoardDisplay } from "@/stores/scrum-ui"
-import { STATUS_META, STATUS_ORDER, overdueDays, StatusIcon } from "@/components/scrum/shared"
+import { STATUS_META, STATUS_ORDER, StatusIcon, ViewError, overdueDays } from "@/components/scrum/shared"
 import { TaskCard } from "./task-card"
 import { CreateColumnButton } from "./create-column-button"
 import { QuickFilters, type QuickFilter } from "./quick-filters"
@@ -39,7 +39,7 @@ import { Input } from "@/components/ui/input"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 export function BoardView({ projectId, filters }: { projectId: string; filters: TaskFilters }) {
-  const { data: tasks, isLoading } = useScrumTasks(projectId, filters)
+  const { data: tasks, isLoading, isError, error: tasksError, refetch: refetchTasks } = useScrumTasks(projectId, filters)
   const { data: columns } = useBoardColumns(projectId)
   const { data: sprints } = useScrumSprints(projectId)
   const { data: epics } = useScrumEpics(projectId)
@@ -258,6 +258,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
     setEditError(null)
   }
 
+  if (isError) return <ViewError error={tasksError} onRetry={() => refetchTasks()} />
   if (isLoading || !columns) {
     return (
       <div className="flex gap-3 overflow-x-auto px-3 py-3">
@@ -528,7 +529,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                     // min-height:auto, which refuses to shrink below its
                     // content, so overflow-y-auto would never actually scroll
                     // and the column would grow past max-h-full instead.
-                    className={`min-h-[3rem] flex-1 space-y-2 overflow-y-auto rounded-md px-2 pb-2 transition-colors ${
+                    className={`min-h-12 flex-1 space-y-2 overflow-y-auto rounded-md px-2 pb-2 transition-colors ${
                       snapshot.isDraggingOver ? "bg-primary/5 ring-1 ring-inset ring-primary/30" : ""
                     }`}
                   >

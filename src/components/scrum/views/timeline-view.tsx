@@ -13,7 +13,7 @@ import { useMemo, useRef, useState } from "react"
 import type { TaskFilters, ScrumTask } from "@/types/scrum"
 import { useScrumSprints, useScrumTasks, useUpdateTask, setBoardDragging } from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
-import { STATUS_META } from "@/components/scrum/shared"
+import { STATUS_META, ViewError } from "@/components/scrum/shared"
 import { Skeleton } from "@/components/ui/skeleton"
 import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns"
 
@@ -31,7 +31,7 @@ interface Bar {
 type DragState = { taskId: string; mode: "move" | "start" | "end"; originX: number; deltaDays: number } | null
 
 export function TimelineView({ projectId, filters }: { projectId: string; filters: TaskFilters }) {
-  const { data: tasks, isLoading } = useScrumTasks(projectId, filters)
+  const { data: tasks, isLoading, isError, error: tasksError, refetch: refetchTasks } = useScrumTasks(projectId, filters)
   const { data: sprints } = useScrumSprints(projectId)
   const update = useUpdateTask(projectId)
   const { openTask } = useScrumUI()
@@ -88,6 +88,7 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
     return [...map.values()].sort((a, b) => (a.key === "none" ? 1 : b.key === "none" ? -1 : (a.title || "").localeCompare(b.title || "")))
   }, [model.bars, byEpic])
 
+  if (isError) return <ViewError error={tasksError} onRetry={() => refetchTasks()} />
   if (isLoading) return <Skeleton className="h-96 w-full rounded-xl" />
 
   const { start, totalDays, sprintBands, unscheduled } = model
@@ -169,7 +170,7 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
             {/* Header: sprints, then days */}
             <div className="sticky top-0 z-20 border-b bg-muted/60 backdrop-blur">
               <div className="relative flex h-6 border-b">
-                <div className="shrink-0 border-r px-4 text-xs font-semibold uppercase leading-6 tracking-wide text-muted-foreground" style={{ width: LABEL_W }}>
+                <div className="sticky left-0 z-10 shrink-0 border-r bg-muted px-4 text-xs font-medium leading-6 text-muted-foreground" style={{ width: LABEL_W }}>
                   Sprints
                 </div>
                 <div className="relative flex-1">
@@ -186,7 +187,7 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
                 </div>
               </div>
               <div className="flex text-xs text-muted-foreground">
-                <div className="shrink-0 border-r px-4 py-2 font-semibold uppercase tracking-wide" style={{ width: LABEL_W }}>Issue</div>
+                <div className="sticky left-0 z-10 shrink-0 border-r bg-muted px-4 py-2 font-medium" style={{ width: LABEL_W }}>Issue</div>
                 <div className="flex">
                   {Array.from({ length: totalDays }).map((_, i) => {
                     const day = addDays(start, i)
@@ -219,7 +220,7 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
               {groups.map((g) => (
                 <div key={g.key}>
                   {g.title && (
-                    <div className="relative flex items-center gap-2 border-b bg-muted/40 px-4 py-2 text-xs font-semibold" style={{ width: LABEL_W }}>
+                    <div className="sticky left-0 z-10 flex items-center gap-2 border-b bg-muted px-4 py-2 text-xs font-semibold" style={{ width: LABEL_W }}>
                       <span className="h-2.5 w-2.5 rounded-sm" style={{ background: g.color ?? "#94a3b8" }} />
                       {g.title}
                       <span className="font-normal text-muted-foreground">{g.bars.length}</span>
@@ -234,8 +235,8 @@ export function TimelineView({ projectId, filters }: { projectId: string; filter
                     const active = drag?.taskId === t.id
                     return (
                       <div key={t.id} className="relative flex items-center border-b last:border-0 hover:bg-muted/20">
-                        <button onClick={() => openTask(t.id)} className="flex shrink-0 items-center gap-2 border-r bg-card px-4 py-2 text-left" style={{ width: LABEL_W }}>
-                          <span className="font-mono text-xs font-bold text-primary">{t.key}</span>
+                        <button onClick={() => openTask(t.id)} className="sticky left-0 z-10 flex h-9 shrink-0 items-center gap-2 border-r bg-card px-4 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" style={{ width: LABEL_W }}>
+                          <span className="shrink-0 whitespace-nowrap font-mono text-xs font-semibold text-primary">{t.key}</span>
                           <span className="truncate text-xs font-medium">{t.title}</span>
                         </button>
                         <div className="relative h-9 flex-1">

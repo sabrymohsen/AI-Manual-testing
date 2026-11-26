@@ -114,9 +114,9 @@ export function SavedViews({ projectId, currentQuery, onApply }: { projectId: st
           <span className="hidden max-w-[140px] truncate xl:inline">{active ? active.name : "Views"}</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-64">
-          {mine.length > 0 && <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">My views</DropdownMenuLabel>}
+          {mine.length > 0 && <DropdownMenuLabel className="text-xs text-muted-foreground">My views</DropdownMenuLabel>}
           {mine.map(row)}
-          {team.length > 0 && <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">Shared with the team</DropdownMenuLabel>}
+          {team.length > 0 && <DropdownMenuLabel className="text-xs text-muted-foreground">Shared with the team</DropdownMenuLabel>}
           {team.map(row)}
           {views.length === 0 && <p className="px-2 py-2 text-xs text-muted-foreground">No saved views yet. Set some filters, then save them here.</p>}
           <DropdownMenuSeparator />

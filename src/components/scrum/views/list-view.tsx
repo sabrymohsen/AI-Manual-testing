@@ -5,16 +5,17 @@
  * fields a team plans by (type, points, sprint, epic), multi-select for bulk
  * edits, and CSV export of what's on screen.
  */
+import { useConfirm } from "@/components/ui/alert-provider"
 import { useMemo, useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ScrumTask, TaskFilters, TaskPriority, TaskStatus } from "@/types/scrum"
 import { useScrumEpics, useScrumMembers, useScrumSprints, useScrumTasks } from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
-import { PriorityBadge, STATUS_META, STATUS_ORDER, AvatarStack, overdueDays, StatusIcon, PriorityIcon, TYPE_DOT } from "@/components/scrum/shared"
-import { Skeleton } from "@/components/ui/skeleton"
+import { AvatarStack, PriorityBadge, PriorityIcon, STATUS_META, STATUS_ORDER, StatusIcon, TYPE_DOT, ViewError, overdueDays } from "@/components/scrum/shared"
+import { BusyDot, Skeleton } from "@/components/ui/skeleton"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { PermissionGate } from "@/components/permissions/PermissionGate"
-import { ArrowUpDown, ChevronDown, Download, Loader2, Trash2, X } from "@/components/ui/icons"
+import { ArrowUpDown, ChevronDown, Download, Trash2, X } from "@/components/ui/icons"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
@@ -29,11 +30,12 @@ function csvCell(v: unknown): string {
 
 export function ListView({ projectId, filters }: { projectId: string; filters: TaskFilters }) {
   const [sort, setSort] = useState<SortField>("boardRank")
-  const { data: tasks, isLoading } = useScrumTasks(projectId, { ...filters, sort })
+  const { data: tasks, isLoading, isError, error: tasksError, refetch: refetchTasks } = useScrumTasks(projectId, { ...filters, sort })
   const { data: sprints } = useScrumSprints(projectId)
   const { data: epics } = useScrumEpics(projectId)
   const { data: members } = useScrumMembers(projectId)
   const { openTask } = useScrumUI()
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
@@ -105,6 +107,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
     </button>
   )
 
+  if (isError) return <ViewError error={tasksError} onRetry={() => refetchTasks()} />
   if (isLoading) return <Skeleton className="h-96 w-full rounded-xl" />
 
   const menuBtn = "inline-flex items-center gap-1 rounded-md border bg-background px-3 py-1 text-xs font-medium hover:bg-accent disabled:opacity-50"
@@ -162,7 +165,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                 <DropdownMenuContent className="max-h-72 overflow-y-auto">
                   <DropdownMenuItem onClick={() => bulk.mutate({ action: "update", assigneeIds: [] })} className="text-sm text-muted-foreground">Unassigned</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs uppercase text-muted-foreground">Assign to</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-xs text-muted-foreground">Assign to</DropdownMenuLabel>
                   {(members ?? []).map((m) => (
                     <DropdownMenuItem key={m.id} onClick={() => bulk.mutate({ action: "update", assigneeIds: [m.id] })} className="text-sm">{m.name || m.email}</DropdownMenuItem>
                   ))}
@@ -172,12 +175,16 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                 <button
                   className={`${menuBtn} text-destructive`}
                   disabled={bulk.isPending}
-                  onClick={() => confirm(`Delete ${chosen.length} issue${chosen.length === 1 ? "" : "s"}? This can't be undone.`) && bulk.mutate({ action: "delete" })}
+                  onClick={async () => {
+                    const n = chosen.length
+                    const ok = await confirm({ title: `Delete ${n} issue${n === 1 ? "" : "s"}?`, description: "This cannot be undone.", confirmLabel: "Delete", variant: "danger" })
+                    if (ok) bulk.mutate({ action: "delete" })
+                  }}
                 >
                   <Trash2 className="h-3 w-3" /> Delete
                 </button>
               </PermissionGate>
-              {bulk.isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              {bulk.isPending && <BusyDot />}
               <button className="rounded p-1 text-muted-foreground hover:text-foreground" onClick={() => setSelected(new Set())} aria-label="Clear selection">
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -191,7 +198,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
 
       <div className="overflow-hidden rounded-lg border border-border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] whitespace-nowrap text-left text-sm">
+          <table className="w-full min-w-[960px] whitespace-nowrap text-left text-sm">
             <thead>
               <tr className="border-b border-border text-xs font-medium text-muted-foreground">
                 <th className="w-8 px-3 py-3">
@@ -203,7 +210,7 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                   />
                 </th>
                 <th className="px-3 py-3">Key</th>
-                <th className="px-3 py-3"><Header field="title" label="Title" /></th>
+                <th className="w-full px-3 py-3"><Header field="title" label="Title" /></th>
                 <th className="px-3 py-3">Type</th>
                 <th className="px-3 py-3">Status</th>
                 <th className="px-3 py-3"><Header field="priority" label="Priority" /></th>
@@ -224,10 +231,10 @@ export function ListView({ projectId, filters }: { projectId: string; filters: T
                       <input type="checkbox" aria-label={`Select ${t.key}`} checked={isSel} onChange={() => toggle(t.id)} />
                     </td>
                     <td className="px-3 py-2 font-mono text-xs tabular-nums text-muted-foreground">{t.key}</td>
-                    <td className="max-w-[320px] truncate px-3 py-2 text-xs font-medium text-foreground">{t.title}</td>
+                    <td className="max-w-0 truncate px-3 py-3 text-xs font-medium text-foreground" title={t.title}>{t.title}</td>
                     <td className="px-3 py-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-2">
-                        <span className={`h-[7px] w-[7px] rounded-full ${TYPE_DOT[t.type] ?? "bg-muted-foreground"}`} />
+                        <span className={`h-2 w-2 rounded-full ${TYPE_DOT[t.type] ?? "bg-muted-foreground"}`} />
                         {TYPE_LABEL[t.type] || t.type}
                       </span>
                     </td>

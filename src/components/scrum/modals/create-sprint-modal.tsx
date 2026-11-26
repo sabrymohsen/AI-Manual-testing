@@ -39,7 +39,7 @@ export function CreateSprintModal({ projectId }: { projectId: string }) {
   return (
     <Dialog open={createSprintOpen} onOpenChange={setCreateSprintOpen}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Create Sprint</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Create sprint</DialogTitle></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">Name *</label>

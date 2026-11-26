@@ -95,7 +95,7 @@ export function TaskCard({
             </button>
             {quickAction === "assignee" && (
               <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-border bg-card p-2 shadow-md">
-                <p className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Assignee</p>
+                <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Assignee</p>
                 {currentUser && (
                   <button
                     onClick={assignToMe}
@@ -104,7 +104,7 @@ export function TaskCard({
                       isAssignedToMe ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent"
                     )}
                   >
-                    <span className="h-5 w-5 rounded-full bg-primary text-xs font-bold text-white flex items-center justify-center">
+                    <span className="h-5 w-5 rounded-full bg-primary text-xs font-semibold text-white flex items-center justify-center">
                       {currentUser.name?.[0] || currentUser.email[0]}
                     </span>
                     {isAssignedToMe ? "Assigned to me" : "Assign to me"}
@@ -127,7 +127,7 @@ export function TaskCard({
                       task.assignees.some((a) => a.id === m.id) ? "bg-primary/10 text-primary font-semibold" : "hover:bg-accent"
                     )}
                   >
-                    <span className="h-5 w-5 rounded-full bg-muted text-xs font-bold text-foreground flex items-center justify-center">
+                    <span className="h-5 w-5 rounded-full bg-muted text-xs font-semibold text-foreground flex items-center justify-center">
                       {m.name?.[0] || m.email[0]}
                     </span>
                     {m.name || m.email}
@@ -151,7 +151,7 @@ export function TaskCard({
             </button>
             {quickAction === "status" && (
               <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border border-border bg-card p-2 shadow-md">
-                <p className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</p>
+                <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Status</p>
                 {columns?.map((col) => (
                   <button
                     key={col.id}
@@ -191,7 +191,7 @@ export function TaskCard({
             </button>
             {quickAction === "points" && (
               <div className="absolute right-0 top-full mt-1 w-32 rounded-lg border border-border bg-card p-2 shadow-md">
-                <p className="px-2 py-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">Story Points</p>
+                <p className="px-2 py-1 text-xs font-semibold text-muted-foreground">Story points</p>
                 <div className="grid grid-cols-4 gap-1">
                   {[null, 1, 2, 3, 5, 8, 13, 21].map((pts) => (
                     <button
@@ -291,7 +291,7 @@ export function TaskCard({
                   {tests.total - tests.passed - tests.failed} other
                 </span>
               )}
-              <span className="flex h-[3px] flex-1 overflow-hidden rounded-full bg-muted">
+              <span className="flex h-1 flex-1 overflow-hidden rounded-full bg-muted">
                 <span className="h-full bg-emerald-500" style={{ width: `${(tests.passed / tests.total) * 100}%` }} />
                 <span className="h-full bg-red-500" style={{ width: `${(tests.failed / tests.total) * 100}%` }} />
                 <span className="h-full bg-amber-500" style={{ width: `${((tests.total - tests.passed - tests.failed) / tests.total) * 100}%` }} />
@@ -304,7 +304,7 @@ export function TaskCard({
                 <span>
                   Subtasks {done}/{total}
                 </span>
-                <span className="h-[3px] flex-1 overflow-hidden rounded-full bg-muted">
+                <span className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
                   <span className="block h-full rounded-full bg-primary" style={{ width: `${(done / total) * 100}%` }} />
                 </span>
               </div>

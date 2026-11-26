@@ -57,7 +57,7 @@ export function FilterPanel({
           <SlidersHorizontal className="h-3.5 w-3.5" />
           <span className="hidden xl:inline">Filter</span>
           {count > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-primary-foreground">
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs font-semibold text-primary-foreground">
               {count}
             </span>
           )}
@@ -129,7 +129,7 @@ export function FilterPanel({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <p className="text-xs font-semibold text-muted-foreground">{title}</p>
       {children}
     </div>
   )

@@ -15,7 +15,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
 export function ActivityLog({ activities }: { activities: ScrumActivity[] }) {
   return (
     <div className="space-y-3">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Activity</h4>
+      <h4 className="title-4 text-foreground">Activity</h4>
       <ol className="space-y-2 border-l border-border pl-4">
         {activities.map((a) => {
           const Icon = ICONS[a.action] ?? Pencil

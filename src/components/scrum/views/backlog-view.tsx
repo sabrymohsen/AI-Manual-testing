@@ -8,8 +8,8 @@ import { useScrumTasks, useScrumSprints, useMoveTask, useSprintMutations, useScr
   setBoardDragging,
 } from "@/hooks/scrum/use-scrum"
 import { useScrumUI } from "@/stores/scrum-ui"
-import { AvatarStack, StatusIcon, PriorityIcon, DotLabel } from "@/components/scrum/shared"
-import { Skeleton } from "@/components/ui/skeleton"
+import { AvatarStack, DotLabel, PriorityIcon, StatusIcon, ViewError } from "@/components/scrum/shared"
+import { BusyDot, Skeleton } from "@/components/ui/skeleton"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -19,7 +19,7 @@ import {
 import { CompleteSprintModal } from "@/components/scrum/modals/complete-sprint-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Play, CheckCircle2, Loader2, ArrowRight, Trash2, X, FolderKanban, Filter } from "@/components/ui/icons"
+import { ChevronDown, ChevronRight, Plus, Zap, Inbox, Play, CheckCircle2, ArrowRight, Trash2, X, FolderKanban, Filter } from "@/components/ui/icons"
 import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -33,7 +33,7 @@ const SPRINT_STATUS: Record<string, { label: string; cls: string }> = {
 }
 
 export function BacklogView({ projectId, filters }: { projectId: string; filters: TaskFilters }) {
-  const { data: tasks, isLoading } = useScrumTasks(projectId, filters)
+  const { data: tasks, isLoading, isError, error: tasksError, refetch: refetchTasks } = useScrumTasks(projectId, filters)
   const { data: sprints } = useScrumSprints(projectId)
   const { data: epics } = useScrumEpics(projectId)
   const move = useMoveTask(projectId)
@@ -190,6 +190,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
       return next
     })
 
+  if (isError) return <ViewError error={tasksError} onRetry={() => refetchTasks()} />
   if (isLoading) return <Skeleton className="h-96 w-full rounded-xl" />
 
   const orderedSprints = [...(sprints ?? [])].sort((a, b) => {
@@ -271,7 +272,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                 </button>
                 <FolderKanban className="h-4 w-4 text-primary" />
                 <span className="text-sm font-semibold">Epics</span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
                   {epics.length}
                 </span>
                 {epicFilter && (
@@ -310,7 +311,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                         <span className="truncate">{epic.title}</span>
                         <span
                           className={cn(
-                            "shrink-0 rounded-full px-2 text-xs font-bold",
+                            "shrink-0 rounded-full px-2 text-xs font-semibold",
                             epicTasks.length === 0
                               ? "bg-muted text-muted-foreground"
                               : "bg-primary/15 text-primary"
@@ -381,7 +382,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
         {selected.size > 0 && (
           <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
             <div className="pointer-events-auto flex items-center gap-2 rounded-xl border bg-card px-3 py-2 shadow-xl">
-              <span className="text-xs font-bold">{selected.size} selected</span>
+              <span className="text-xs font-semibold">{selected.size} selected</span>
               {canBulkMove && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -389,7 +390,7 @@ export function BacklogView({ projectId, filters }: { projectId: string; filters
                       disabled={bulk.isPending}
                       className="inline-flex h-8 items-center gap-2 rounded-lg border border-input px-3 text-xs font-semibold hover:bg-muted disabled:opacity-60"
                     >
-                      {bulk.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                      {bulk.isPending ? <BusyDot /> : <ArrowRight className="h-3.5 w-3.5" />}
                       Move to
                     </button>
                   </DropdownMenuTrigger>
@@ -521,7 +522,7 @@ function Section({
         {subtitle && <span className="hidden text-xs text-muted-foreground sm:inline">· {subtitle}</span>}
         <div className="ml-auto flex items-center gap-2">
           {points > 0 && (
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary" title="Total story points">
+            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary" title="Total story points">
               {points} pts
             </span>
           )}
@@ -533,7 +534,7 @@ function Section({
               {over ? `Over capacity · usual ${velocity} pts` : `Capacity ~${velocity} pts`}
             </span>
           ) : null}
-          <span className="rounded-full bg-background px-2 py-0.5 text-xs font-bold text-muted-foreground">
+          <span className="rounded-full bg-background px-2 py-0.5 text-xs font-semibold text-muted-foreground">
             {tasks.length}
           </span>
           {onStart && (
@@ -543,7 +544,7 @@ function Section({
               className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
               title="Start this sprint"
             >
-              {sprintBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              {sprintBusy ? <BusyDot /> : <Play className="h-3.5 w-3.5" />}
               Start sprint
             </button>
           )}
@@ -554,7 +555,7 @@ function Section({
               className="inline-flex items-center gap-1 rounded-md border border-input bg-background px-3 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-60"
               title="Complete this sprint"
             >
-              {sprintBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+              {sprintBusy ? <BusyDot /> : <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
               Complete
             </button>
           )}
@@ -575,7 +576,7 @@ function Section({
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={cn(
-                "min-h-[48px] divide-y divide-border/60 transition-colors",
+                "min-h-12 divide-y divide-border/60 transition-colors",
                 snapshot.isDraggingOver && "bg-primary/5"
               )}
             >

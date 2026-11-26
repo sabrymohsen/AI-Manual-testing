@@ -252,7 +252,7 @@ export default function ScrumBoardPage() {
                     return (
                       <DropdownMenuItem key={t} onClick={() => openCreateTask(undefined, view === "board" ? activeSprint?.id : undefined, t)} className="gap-2 text-xs">
                         <Icon className={`h-4 w-4 ${meta.color}`} />
-                        <span className="font-medium">{t === "STORY" ? "User Story" : meta.label}</span>
+                        <span className="font-medium">{t === "STORY" ? "User story" : meta.label}</span>
                       </DropdownMenuItem>
                     )
                   })}
