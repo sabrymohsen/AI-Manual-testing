@@ -1,3 +1,4 @@
+import { notifySubtaskAssigned } from "@/lib/scrum/notifications"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { z } from "zod"
@@ -56,5 +57,6 @@ export async function POST(request: Request, { params }: { params: { taskId: str
     },
     include: subtaskInclude,
   })
+  await notifySubtaskAssigned({ taskId: params.taskId, subtaskTitle: subtask.title, assigneeId: subtask.assigneeId, actorId: auth.userId! })
   return NextResponse.json({ subtask }, { status: 201 })
 }

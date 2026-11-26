@@ -1,3 +1,4 @@
+import { notifySubtaskAssigned } from "@/lib/scrum/notifications"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { getSession } from "@/lib/auth"
@@ -18,13 +19,13 @@ async function guard(subtaskId: string, permission: ProjectPermission) {
   if (!session) return { error: "Not authenticated", status: 401 as const }
   const subtask = await prisma.subtask.findUnique({
     where: { id: subtaskId },
-    select: { task: { select: { projectId: true } } },
+    select: { assigneeId: true, taskId: true, task: { select: { projectId: true } } },
   })
   if (!subtask) return { error: "Subtask not found", status: 404 as const }
   const resolved = await resolveProjectRole(subtask.task.projectId, session.user.id)
   if (!resolved || resolved.role === null) return { error: "Access denied", status: 404 as const }
   if (!resolved.permissions[permission]) return { error: `Missing permission: ${permission}`, status: 403 as const }
-  return { error: null, status: 200 as const }
+  return { error: null, status: 200 as const, userId: session.user.id, before: subtask }
 }
 
 export async function PATCH(request: Request, { params }: { params: { subtaskId: string } }) {
@@ -45,6 +46,9 @@ export async function PATCH(request: Request, { params }: { params: { subtaskId:
     data: parsed.data,
     include: { assignee: { select: { id: true, name: true, email: true, avatarUrl: true } } },
   })
+  if (parsed.data.assigneeId && parsed.data.assigneeId !== g.before?.assigneeId && g.userId) {
+    await notifySubtaskAssigned({ taskId: subtask.taskId, subtaskTitle: subtask.title, assigneeId: subtask.assigneeId, actorId: g.userId })
+  }
   return NextResponse.json({ subtask })
 }
 

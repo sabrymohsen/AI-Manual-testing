@@ -19,6 +19,7 @@ import {
   Bug,
   FlaskConical,
   Monitor,
+  Kanban,
 } from "@/components/ui/icons"
 import { useNotificationStore, AppNotification } from "@/stores/notificationStore"
 
@@ -32,6 +33,7 @@ const TYPE_META: Record<string, { icon: React.ComponentType<{ className?: string
   BUG_ASSIGNED: { icon: Bug, accent: "text-rose-600", iconBg: "bg-rose-50" },
   BUG_STATUS: { icon: Bug, accent: "text-amber-600", iconBg: "bg-amber-50" },
   TEST_CASE_ASSIGNED: { icon: FlaskConical, accent: "text-violet-600", iconBg: "bg-violet-50" },
+  TASK_MOVED: { icon: Kanban, accent: "text-sky-600", iconBg: "bg-sky-50" },
   SYSTEM: { icon: Bell, accent: "text-muted-foreground", iconBg: "bg-muted" },
 }
 

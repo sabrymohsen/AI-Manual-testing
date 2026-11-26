@@ -1,3 +1,4 @@
+import { notifyTaskAssigned } from "@/lib/scrum/notifications"
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/db"
 import { withNextTaskNumber } from "@/lib/scrum/task-number"
@@ -6,7 +7,6 @@ import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { taskInclude, serializeTask, logActivity } from "@/lib/scrum/server"
 import { loadBoardSignals } from "@/lib/scrum/board-signals"
-import { notify } from "@/lib/notifications"
 import { logUserActivity } from "@/lib/user-activity"
 
 const STATUSES = ["TODO", "IN_PROGRESS", "DONE", "REVIEW", "TESTING", "DEPLOYED"] as const
@@ -147,18 +147,8 @@ export async function POST(
   logUserActivity(auth.session.user.id, "TASK_CREATED", `Created "${task.title}"`, params.projectId)
 
   // Notify assignees added at creation time (excluding the creator).
-  const notifyIds = (data.assigneeIds ?? []).filter((id) => id !== auth.session.user.id)
-  if (notifyIds.length > 0) {
-    notify(
-      notifyIds.map((userId) => ({
-        userId,
-        type: "TASK_ASSIGNED" as const,
-        title: "New task assigned",
-        body: `You've been assigned to ${task.title}`,
-        projectId: params.projectId,
-        actionUrl: `/projects/${params.projectId}/scrum?task=${task.id}`,
-      }))
-    ).catch(() => {})
+  if (data.assigneeIds?.length) {
+    await notifyTaskAssigned({ taskId: task.id, actorId: auth.session.user.id, userIds: data.assigneeIds })
   }
 
   return NextResponse.json({ task: serializeTask(task, project?.boardKey) }, { status: 201 })

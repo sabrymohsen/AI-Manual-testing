@@ -396,7 +396,11 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
       <DragDropContext onDragStart={() => setBoardDragging(true)} onDragEnd={(r) => { setBoardDragging(false); onDragEnd(r) }}>
         {/* Columns share the available width (flex-1) but never shrink below a
             readable 300px; past that the row overflows and scrolls sideways. */}
-        <div className="board-scroll flex min-h-0 flex-1 items-start gap-3 overflow-x-auto px-3 py-3">
+        {/* One scroll area for the whole board (both directions). Columns used to
+            scroll on their own inside this sideways-scrolling row; the drag
+            library supports only one scroll parent per list, so drop positions
+            came out wrong once either was scrolled. */}
+        <div className="board-scroll flex min-h-0 flex-1 items-start gap-3 overflow-auto px-3 py-3">
         {displayColumns.map((col: BoardColumn & { virtual?: boolean }) => {
           const rawList = byStatus.get(col.status) ?? []
           const overLimit = col.wipLimit != null && rawList.length > col.wipLimit
@@ -407,7 +411,7 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
           return (
             <div
               key={col.id}
-              className={`flex max-h-full w-[272px] shrink-0 flex-col rounded-xl ${COLUMN_TINT[col.status] ?? "bg-muted/60"}`}
+              className={`flex w-[272px] shrink-0 flex-col rounded-xl ${COLUMN_TINT[col.status] ?? "bg-muted/60"}`}
             >
               {/* Column header */}
               <div className="group/col flex h-9 items-center justify-between gap-2 pl-3 pr-2">
@@ -536,11 +540,8 @@ export function BoardView({ projectId, filters }: { projectId: string; filters: 
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    // min-h-0 is required: a flex item defaults to
-                    // min-height:auto, which refuses to shrink below its
-                    // content, so overflow-y-auto would never actually scroll
-                    // and the column would grow past max-h-full instead.
-                    className={`min-h-12 flex-1 space-y-2 overflow-y-auto rounded-md px-2 pb-2 transition-colors ${
+                    // No scroll of its own: the board scrolls (see board-scroll).
+                    className={`min-h-12 flex-1 space-y-2 rounded-md px-2 pb-2 transition-colors ${
                       snapshot.isDraggingOver ? "bg-primary/5 ring-1 ring-inset ring-primary/30" : ""
                     }`}
                   >

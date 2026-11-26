@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { syncScrumTask } from "@/lib/integrations/core/sync-scrum-task"
 import { z } from "zod"
 import { requireTaskOwner, taskDetailInclude, serializeTask, logActivity } from "@/lib/scrum/server"
-import { notify } from "@/lib/notifications"
+import { notifyTaskAssigned, notifyTaskMoved } from "@/lib/scrum/notifications"
 import { logUserActivity } from "@/lib/user-activity"
 
 const STATUSES = ["TODO", "IN_PROGRESS", "DONE", "REVIEW", "TESTING", "DEPLOYED"] as const
@@ -70,6 +70,7 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
     where: { id: params.taskId },
     select: {
       status: true,
+      sprintId: true,
       title: true,
       description: true,
       priority: true,
@@ -115,6 +116,8 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
   // so the activity feed shows who changed what and when).
   if (d.status !== undefined && d.status !== existing.status) {
     await logActivity(task.id, "moved", `${existing.status} → ${d.status}`, auth.userId)
+    // Dragging a card to another column lands here too.
+    await notifyTaskMoved({ taskId: task.id, actorId: auth.userId, toStatus: d.status })
     if (d.status === "DONE") {
       logUserActivity(auth.userId, "TASK_COMPLETED", `Completed "${task.title}"`, task.projectId)
     }
@@ -127,27 +130,14 @@ export async function PATCH(request: Request, { params }: { params: { taskId: st
     }
 
     // Notify newly-added assignees (not the actor, not existing assignees).
-    // Awaited rather than fire-and-forget: an unawaited promise can be torn
-    // down with the request before the rows are written, which is exactly how
-    // "I assigned it and they never got told" happens.
-    const newAssignees = [...after].filter((id) => !before.has(id) && id !== auth.userId)
-    if (newAssignees.length > 0) {
-      const taskKey = auth.boardKey ? `${auth.boardKey}-${task.taskNumber}` : `#${task.taskNumber}`
-      try {
-        await notify(
-          newAssignees.map((userId) => ({
-            userId,
-            type: "TASK_ASSIGNED" as const,
-            title: `Assigned to ${taskKey}`,
-            body: `You were assigned to ${task.title}`,
-            projectId: task.projectId,
-            actionUrl: `/projects/${task.projectId}/scrum?task=${task.id}`,
-          }))
-        )
-      } catch (err) {
-        console.error("Task assignment notification failed:", err)
-      }
-    }
+    // Awaited: an unawaited promise can be torn down with the request before
+    // the rows are written.
+    const newAssignees = [...after].filter((id) => !before.has(id))
+    if (newAssignees.length > 0) await notifyTaskAssigned({ taskId: task.id, actorId: auth.userId, userIds: newAssignees })
+  }
+  if (d.sprintId !== undefined && d.sprintId !== existing.sprintId && d.status === undefined) {
+    const sprint = d.sprintId ? await prisma.scrumSprint.findUnique({ where: { id: d.sprintId }, select: { name: true } }) : null
+    await notifyTaskMoved({ taskId: task.id, actorId: auth.userId, toSprintName: sprint?.name ?? null })
   }
   if (d.description !== undefined && (d.description ?? "") !== (existing.description ?? "")) {
     await logActivity(task.id, "description_edited", "Updated the description", auth.userId)

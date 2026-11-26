@@ -254,10 +254,13 @@
   .shadow-glow { box-shadow: 0 8px 20px -8px hsl(var(--brand-to) / 0.6); }
   .hover-lift { transition: transform 300ms var(--ease-out-soft), box-shadow 300ms var(--ease-out-soft); }
   .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 12px 28px -14px hsl(var(--brand-to) / 0.45); }
-  .animate-page { animation: fade-up 500ms var(--ease-out-soft) both; }
-  .animate-pop { animation: pop 400ms var(--ease-out-soft) both; }
+  /* "backwards", not "both": a fill that outlives the animation keeps a transform
+     in effect, and that offsets position:fixed children (the card you drag on the
+     Scrum board followed the cursor 240px away). */
+  .animate-page { animation: fade-up 500ms var(--ease-out-soft) backwards; }
+  .animate-pop { animation: pop 400ms var(--ease-out-soft) backwards; }
   /* Children appear one after another (cards, rows, columns). */
-  .stagger > * { animation: fade-up 450ms var(--ease-out-soft) both; }
+  .stagger > * { animation: fade-up 450ms var(--ease-out-soft) backwards; }
   .stagger > *:nth-child(2) { animation-delay: 40ms; }
   .stagger > *:nth-child(3) { animation-delay: 80ms; }
   .stagger > *:nth-child(4) { animation-delay: 120ms; }
@@ -283,7 +286,7 @@ button.bg-primary:not(:disabled):active, a.bg-primary:active { transform: scale(
 @keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-page, .animate-pop, .stagger > * { animation: fade-in 200ms linear both; }
+  .animate-page, .animate-pop, .stagger > * { animation: fade-in 200ms linear backwards; }
   .hover-lift:hover { transform: none; }
 }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

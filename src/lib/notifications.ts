@@ -10,6 +10,7 @@ export type NotificationType =
   | "BUG_ASSIGNED"
   | "BUG_STATUS"
   | "TEST_CASE_ASSIGNED"
+  | "TASK_MOVED"
   | "SYSTEM"
 
 export interface NotificationInput {
