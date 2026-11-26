@@ -14,7 +14,6 @@ import {
   Copy, 
   FileCode, 
   RefreshCw, 
-  ChevronLeft,
   ArrowRight,
   ShieldCheck,
   Zap
@@ -267,11 +266,6 @@ export default function ElementLocatorPickerPage() {
     <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center gap-3 border-b pb-4">
-        <Link href={`/projects/${project.id}`}>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <ChevronLeft className="h-5 w-5" />
-          </Button>
-        </Link>
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Element Locator Picker</h1>
           <p className="text-sm text-muted-foreground mt-1">

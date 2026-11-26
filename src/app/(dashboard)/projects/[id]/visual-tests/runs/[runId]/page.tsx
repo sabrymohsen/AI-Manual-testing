@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { AlertTriangle, ArrowLeft, Bug, Loader2, MinusCircle, PlusCircle, Square } from "@/components/ui/icons"
+import { AlertTriangle, Bug, Loader2, MinusCircle, PlusCircle, Square } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -93,9 +93,6 @@ export default function VisualRunPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-6">
-      <Link href={`/projects/${projectId}/visual-tests/${test.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> {test.name}
-      </Link>
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>

@@ -3,7 +3,7 @@
 import { Suspense, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Check, ChevronDown, ChevronRight, FileUp, Folder, Loader2, Play, Save, Search } from "@/components/ui/icons"
+import { Check, ChevronDown, ChevronRight, FileUp, Folder, Loader2, Play, Save, Search } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { CompareSettings, DEFAULT_SETTINGS, EnvironmentPicker, type VisualSettings } from "@/components/visual-tests/settings-fields"
@@ -212,9 +212,6 @@ function Wizard() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 p-6">
-      <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Visual tests
-      </Link>
       <div>
         <h1 className="text-2xl font-semibold text-foreground">{type === "FullWebsite" ? "Test a whole website" : "Test a list of pages"}</h1>
         <p className="mt-1 text-sm text-muted-foreground">Answer one question at a time. Nothing is saved until the last step.</p>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Eye, EyeOff, Loader2, Play, Plus, Save, Trash2 } from "@/components/ui/icons"
+import { Eye, EyeOff, Loader2, Play, Plus, Save, Trash2 } from "@/components/ui/icons"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -62,9 +62,6 @@ export default function VisualTestDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <Link href={`/projects/${projectId}/visual-tests`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Visual tests
-      </Link>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">{test.name}</h1>

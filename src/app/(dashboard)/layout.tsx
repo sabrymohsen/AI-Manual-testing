@@ -490,6 +490,7 @@ export default function DashboardLayout({
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Top header: notifications + user menu */}
         <header className="flex h-12 shrink-0 items-center justify-end gap-1 border-b border-border bg-card px-3">
+          <BackButton />
           <NotificationBell token={token} />
           <DesktopAiBridge token={token} />
           <UpdateNotice />
@@ -542,7 +543,6 @@ export default function DashboardLayout({
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
         ) : (
           <div className="flex-1 overflow-y-auto bg-background px-6 py-6 md:px-8">
-            <BackButton />
             {children}
           </div>
         )}

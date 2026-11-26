@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Brain,
-  ChevronLeft,
   RefreshCw,
   Activity,
   Zap,
@@ -412,11 +411,6 @@ export default function QAAgentTelemetryDetailPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border dark:border-slate-800 pb-6">
         <div className="flex items-center gap-3">
-          <Link href={`/projects/${params.id}/agent`}>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-border dark:border-slate-800 bg-background hover:bg-muted/50">
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          </Link>
           <div>
             <h1 className="text-3xl font-semibold text-foreground dark:text-slate-50">Agent Telemetry Dashboard</h1>
             <p className="text-sm text-muted-foreground font-semibold mt-1">

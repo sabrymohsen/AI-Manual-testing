@@ -206,9 +206,6 @@ export default function VisualScreenAnalyzerPage() {
     <div className="flex h-[calc(100vh-4rem)] flex-col">
       {/* Top bar */}
       <div className="flex flex-wrap items-center gap-3 border-b bg-card px-4 py-3">
-        <Link href={`/projects/${projectId}/visual-tests/runs/${screen.runId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Run
-        </Link>
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 truncate font-semibold text-foreground">
             {screen.url ? pathOf(screen.url) : screen.name}

@@ -8,7 +8,6 @@ import {
   FileType2,
   Download,
   Trash2,
-  ArrowLeft,
   Loader2,
   History,
   Link2,
@@ -160,12 +159,6 @@ export default function BrdDetailPage() {
   return (
     <div className="mx-auto max-w-5xl">
       {/* Header */}
-      <button
-        onClick={() => router.push(`/projects/${projectId}/brds`)}
-        className="mb-3 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> BRD Hub
-      </button>
 
       <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
         <div className="flex items-start gap-3">
