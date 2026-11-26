@@ -245,7 +245,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import issues</DialogTitle>
-          <DialogDescription className="body-6">Add issues from a spreadsheet (XLSX, XLS or CSV) or from this project's test cases.</DialogDescription>
+          <DialogDescription className="body-6">Add issues from a spreadsheet (XLSX, XLS or CSV) or from this project&apos;s test cases.</DialogDescription>
         </DialogHeader>
 
         {/* Source tabs */}
