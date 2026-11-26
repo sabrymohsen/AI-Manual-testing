@@ -39,7 +39,7 @@ interface Props {
 }
 
 export default function CreateBugBoardModal({ projectId, open, onClose, onCreated }: Props) {
-  const [name, setName] = useState("Bug Workflow")
+  const [name, setName] = useState("Bug workflow")
   const [plan, setPlan] = useState<ColumnPlan[] | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [providerName, setProviderName] = useState<string>("the tracker")
@@ -51,7 +51,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
 
   useEffect(() => {
     if (!open) return
-    setName("Bug Workflow")
+    setName("Bug workflow")
     setPlan(null)
     setSelected(new Set())
     setBugTypeName(null)
@@ -171,7 +171,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   disabled={creating}
-                  placeholder="Bug Workflow"
+                  placeholder="Bug workflow"
                   className="h-9"
                 />
               </div>
@@ -202,7 +202,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
                     return (
                       <label
                         key={col.statusId}
-                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-2 text-xs font-bold transition-colors ${
+                        className={`flex cursor-pointer items-center gap-2 rounded-md border px-2 py-2 text-xs font-semibold transition-colors ${
                           on
                             ? "border-primary/25 bg-primary/10 text-primary"
                             : "border-transparent text-muted-foreground hover:bg-accent"

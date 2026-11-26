@@ -219,7 +219,7 @@ export default function RebuildTrackerBugsModal({
                       <span className="font-mono text-muted-foreground shrink-0">#{item.externalId}</span>
                       <span className="truncate flex-1 font-medium">{item.title}</span>
                       <span
-                        className={`shrink-0 px-2 py-0.5 rounded font-bold ${
+                        className={`shrink-0 px-2 py-0.5 rounded font-semibold ${
                           item.action === "import-then-delete"
                             ? "bg-amber-100 text-amber-800"
                             : "bg-muted text-muted-foreground"

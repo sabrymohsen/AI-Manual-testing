@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -626,7 +627,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
                   Cancel
                 </Button>
                 <Button size="sm" onClick={read} disabled={!file || reading}>
-                  {reading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileText className="h-4 w-4 mr-2" />}
+                  {reading ? <BusyDot /> : <FileText className="h-4 w-4 mr-2" />}
                   {reading ? "Reading PDF…" : "Read PDF"}
                 </Button>
               </>
@@ -637,7 +638,7 @@ export default function ImportPdfBugsModal({ projectId, open, onClose, modules, 
                   Choose another PDF
                 </Button>
                 <Button size="sm" onClick={create} disabled={!selected.length || creating}>
-                  {creating && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {creating && <BusyDot />}
                   {creating
                     ? "Creating…"
                     : `Create ${selected.length} bug${selected.length === 1 ? "" : "s"}`}

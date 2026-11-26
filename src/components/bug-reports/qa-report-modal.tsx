@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -500,7 +501,7 @@ export default function QaReportModal({
             <button
               key={key}
               onClick={() => setTab(key as typeof tab)}
-              className={`px-3 py-2 text-xs font-bold rounded-t-lg transition-colors ${
+              className={`px-3 py-2 text-xs font-semibold rounded-t-lg transition-colors ${
                 tab === key
                   ? "bg-card text-foreground border border-b-0"
                   : "text-muted-foreground hover:text-foreground"
@@ -515,7 +516,7 @@ export default function QaReportModal({
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {loading && (
             <div className="flex items-center justify-center gap-2 py-16 text-xs text-muted-foreground font-semibold">
-              <Loader2 className="h-4 w-4 animate-spin" /> Gathering test results and defects…
+              <BusyDot /> Gathering test results and defects…
             </div>
           )}
 
@@ -611,7 +612,7 @@ export default function QaReportModal({
                                   className="h-8 text-xs"
                                 />
                                 {savingModule === i ? (
-                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+                                  <BusyDot />
                                 ) : savedModules[i] ? (
                                   <span
                                     title="Saved to the project — this module appears on the Bug Reports page and defects can be filed against it"
@@ -747,7 +748,7 @@ export default function QaReportModal({
                                   className="h-8 text-xs"
                                 />
                                 {savingDefect === b.id ? (
-                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />
+                                  <BusyDot />
                                 ) : b.id && savedDefects.includes(b.id) ? (
                                   <span
                                     title="Saved to the bug — the Bug Reports page behind this dialog shows the new values"

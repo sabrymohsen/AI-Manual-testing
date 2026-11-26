@@ -1,5 +1,6 @@
 "use client"
 
+import { BusyDot } from "@/components/ui/skeleton"
 import React, { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -377,13 +378,13 @@ function BoardMirrorBar({
               ? "Stop checking the tracker automatically"
               : `Check ${trackerName || "the tracker"} every minute while this page is open`
           }
-          className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-bold transition-colors ${
+          className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-xs font-semibold transition-colors ${
             autoPull
               ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
               : "bg-background hover:bg-accent"
           }`}
         >
-          <RefreshCw className={`h-3 w-3 ${autoPulling ? "animate-spin" : ""}`} />
+          {autoPulling ? <BusyDot /> : <RefreshCw className="h-3 w-3" />}
           Auto {autoPull ? "on" : "off"}
         </button>
 
@@ -498,7 +499,7 @@ export default function ProjectBugReportsPage() {
   const projectId = params.id as string
 
   // Connected tracker name (Jira / Azure DevOps / ClickUp / OpenProject) for labels.
-  const { name: trackerName, provider: trackerProvider } = useProjectIntegration(projectId)
+  const { name: trackerName, provider: trackerProvider, connected: trackerConnected } = useProjectIntegration(projectId)
 
   // Project details
   const [project, setProject] = useState<any>(null)
@@ -1596,7 +1597,7 @@ export default function ProjectBugReportsPage() {
 
       {/* Toast Feedback */}
       {toast && (
-        <div className={`fixed bottom-5 right-5 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-2 border font-bold text-white transition-all transform animate-in slide-in-from-bottom duration-300 ${
+        <div className={`fixed bottom-5 right-5 z-50 p-4 rounded-xl shadow-2xl flex items-center gap-2 border font-semibold text-white transition-all transform animate-in slide-in-from-bottom duration-300 ${
           toast.type === "success" ? "bg-emerald-600 border-emerald-500" : "bg-rose-600 border-rose-500"
         }`}>
           {toast.type === "success" ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
@@ -1610,7 +1611,7 @@ export default function ProjectBugReportsPage() {
           <div className="w-[440px] bg-background rounded-xl border shadow-[0_8px_24px_rgba(0,0,0,0.08)] p-6 space-y-4 animate-in zoom-in-95 duration-200 text-xs font-semibold">
             <div className="space-y-2">
               <h3 className="font-semibold text-sm text-foreground flex items-center gap-2">
-                <Trash2 className="h-4 w-4 text-rose-600" /> Delete Defect
+                <Trash2 className="h-4 w-4 text-rose-600" /> Delete bug
               </h3>
               <p className="text-xs text-muted-foreground font-medium leading-relaxed">
                 You can undo it for 10 seconds.
@@ -1740,25 +1741,36 @@ export default function ProjectBugReportsPage() {
       {/* 4. Summary Metrics Row Section */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         {[
-          { label: "Total Bugs", count: bugs.length, color: "text-foreground", filter: "all", field: "status" },
-          { label: "Open Bugs", count: bugs.filter(b => ["Open", "Reopened", "InProgress"].includes(b.status)).length, color: "text-amber-600", filter: "Open", field: "status" },
-          { label: "Critical Bugs", count: bugs.filter(b => b.severity === "Critical" || b.severity === "High").length, color: "text-rose-600", filter: "Critical", field: "severity" },
-          { label: "Auto-Created", count: bugs.filter(b => b.testRunId !== null).length, color: "text-primary", filter: "Auto", field: "source" },
-          { label: "OP Synced", count: bugs.filter(b => b.openProjectSyncStatus === "Synced").length, color: "text-sky-600", filter: "Synced", field: "openproject" },
+          { label: "Total", count: bugs.length, color: "text-foreground", filter: "all", field: "status" },
+          // Same three statuses the filter below asks the server for.
+          { label: "Open", count: bugs.filter(b => ["Open", "Reopened", "InProgress"].includes(b.status)).length, color: "text-amber-600", filter: "Open,Reopened,InProgress", field: "status" },
+          { label: "Critical", count: bugs.filter(b => b.severity === "Critical").length, color: "text-rose-600", filter: "Critical", field: "severity" },
+          // Matches the server's "Auto" source filter: from a test run or a test step.
+          { label: "From test runs", count: bugs.filter(b => b.testRunId !== null || !!(b as any).testStepResultId).length, color: "text-primary", filter: "Auto", field: "source" },
+          { label: "Synced to tracker", count: bugs.filter(b => b.openProjectSyncStatus === "Synced").length, color: "text-sky-600", filter: "", field: "info" },
           { label: "Duplicates", count: bugs.filter(b => b.status === "Duplicate").length, color: "text-muted-foreground", filter: "Duplicate", field: "status" }
         ].map((c, idx) => (
-          <div 
-            key={idx}
-            onClick={() => {
-              if (c.field === "status") setFilterStatus(c.filter)
-              if (c.field === "severity") setFilterSeverity(c.filter)
-              if (c.field === "source") setFilterSource(c.filter)
-            }}
-            className="p-4 border rounded-xl bg-card hover:bg-muted/50 cursor-pointer border-border shadow-sm transition-all text-center space-y-1"
-          >
-            <span className="text-xs font-medium text-muted-foreground/60">{c.label}</span>
-            <div className={`text-xl font-semibold ${c.color}`}>{c.count}</div>
-          </div>
+          c.field === "info" ? (
+            <div key={idx} className="space-y-1 rounded-xl border border-border bg-card p-4 text-center">
+              <span className="caption-4 text-muted-foreground">{c.label}</span>
+              <div className={`text-xl font-semibold ${c.color}`}>{c.count}</div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              key={idx}
+              onClick={() => {
+                // Each card shows exactly the bugs it counts; other filters reset.
+                setFilterStatus(c.field === "status" ? c.filter : "all")
+                setFilterSeverity(c.field === "severity" ? c.filter : "all")
+                setFilterSource(c.field === "source" ? c.filter : "all")
+              }}
+              className="space-y-1 rounded-xl border border-border bg-card p-4 text-center shadow-sm transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
+            >
+              <span className="caption-4 text-muted-foreground">{c.label}</span>
+              <div className={`text-xl font-semibold ${c.color}`}>{c.count}</div>
+            </button>
+          )
         ))}
       </div>
 
@@ -1832,6 +1844,7 @@ export default function ProjectBugReportsPage() {
             className="h-9 px-3 rounded-lg border text-xs bg-background outline-none min-w-[110px]"
           >
             <option value="all">Status: All</option>
+            <option value="Open,Reopened,InProgress">Any open</option>
             <option value="Open">Open</option>
             <option value="InProgress">In Progress</option>
             <option value="ReadyForRetest">Ready for Retest</option>
@@ -1849,7 +1862,7 @@ export default function ProjectBugReportsPage() {
           >
             <option value="all">Source: All</option>
             <option value="Manual">Manual</option>
-            <option value="Auto">Auto Run</option>
+            <option value="Auto">Auto run</option>
           </select>
 
           {filterTestCaseId && (
@@ -1904,11 +1917,12 @@ export default function ProjectBugReportsPage() {
             </button>
           )}
 
-          {trackerName && (
+          {/* Only offered when a tracker is really connected: it deletes work items there. */}
+          {trackerConnected && (
             <button
               onClick={() => setShowRebuildModal(true)}
               title={`Delete every bug work item in ${trackerName} and push this project's bugs back as a clean set`}
-              className="h-9 px-3 rounded-lg border border-red-200 bg-background text-red-700 text-xs font-semibold hover:bg-red-50 transition-colors shrink-0 flex items-center gap-2"
+              className="h-9 px-3 rounded-lg border border-border bg-background text-muted-foreground text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors shrink-0 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <RefreshCw className="h-3.5 w-3.5" />
               Rebuild {trackerName}
@@ -1920,13 +1934,13 @@ export default function ProjectBugReportsPage() {
               onClick={() => setViewMode("list")}
               className={`h-9 px-3 text-xs font-semibold transition-all ${viewMode === "list" ? "bg-muted text-foreground" : "bg-background hover:bg-muted/50 text-muted-foreground"}`}
             >
-              List View
+              List view
             </button>
             <button 
               onClick={() => setViewMode("board")}
               className={`h-9 px-3 text-xs font-semibold transition-all ${viewMode === "board" ? "bg-muted text-foreground" : "bg-background hover:bg-muted/50 text-muted-foreground"}`}
             >
-              Board View
+              Board view
             </button>
           </div>
           <div className="basis-full">
@@ -2112,7 +2126,7 @@ export default function ProjectBugReportsPage() {
                       <th className="p-3 font-semibold">Priority</th>
                       <th className="p-3 font-semibold">Status</th>
                       <th className="p-3 font-semibold">Scope / Links</th>
-                      <th className="p-3 font-semibold">Created Date</th>
+                      <th className="p-3 font-semibold">Created</th>
                       <th className="p-3 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
@@ -2138,7 +2152,7 @@ export default function ProjectBugReportsPage() {
                               <span className="font-mono text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded font-semibold">
                                 {b.bugKey || "BUG"}
                               </span>
-                              <span className="font-semibold text-foreground truncate block hover:text-primary transition-colors" title={b.title}>
+                              <span className="font-semibold text-foreground truncate block hover:text-primary transition-colors" title={b.title} dir="auto">
                                 {b.title}
                               </span>
                             </div>
@@ -2157,7 +2171,7 @@ export default function ProjectBugReportsPage() {
                             </div>
                           </td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-xs ${
+                            <span className={`px-2 py-0.5 rounded font-semibold   text-xs ${
                               b.severity === "Critical" ? "bg-red-100 text-red-700" :
                               b.severity === "High" ? "bg-orange-100 text-orange-700" :
                               b.severity === "Medium" ? "bg-blue-100 text-blue-700" :
@@ -2170,7 +2184,7 @@ export default function ProjectBugReportsPage() {
                             <span className="text-slate-650 font-semibold">{b.priority}</span>
                           </td>
                           <td className="p-3">
-                            <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider text-xs ${
+                            <span className={`px-2 py-0.5 rounded font-semibold   text-xs ${
                               b.status === "Open" ? "bg-amber-100 text-amber-700" :
                               b.status === "InProgress" ? "bg-blue-100 text-blue-750" :
                               b.status === "Resolved" || b.status === "Closed" ? "bg-emerald-100 text-emerald-700" :
@@ -2258,7 +2272,7 @@ export default function ProjectBugReportsPage() {
                                 variant="ghost" 
                                 onClick={() => handleOpenDetail(b.id)}
                                 className="h-7 w-7 p-0"
-                                title="View Details"
+                                title="View details"
                               >
                                 <Eye className="h-4 w-4 text-muted-foreground" />
                               </Button>
@@ -2287,7 +2301,7 @@ export default function ProjectBugReportsPage() {
                                 variant="ghost" 
                                 onClick={() => handleDeleteBug(b.id)}
                                 className="h-7 w-7 p-0 hover:text-rose-600"
-                                title="Delete Bug"
+                                title="Delete bug"
                               >
                                 <Trash2 className="h-4 w-4 text-muted-foreground hover:text-rose-600" />
                               </Button>
@@ -2416,7 +2430,7 @@ export default function ProjectBugReportsPage() {
                           >
                             <div className="flex items-center justify-between font-mono text-xs text-muted-foreground font-semibold">
                               <span>{bug.bugKey || "BUG"}</span>
-                              <span className={`px-2 py-0.5 rounded text-xs uppercase ${
+                              <span className={`px-2 py-0.5 rounded text-xs  ${
                                 bug.severity === "Critical" ? "bg-red-50 text-red-600" : "bg-muted text-muted-foreground"
                               }`}>
                                 {bug.severity}
@@ -2621,7 +2635,7 @@ export default function ProjectBugReportsPage() {
                   className="group -mx-1 flex cursor-text items-start justify-between rounded-lg px-1 py-0.5 text-2xl font-semibold leading-snug tracking-tight text-foreground transition-all hover:bg-muted/50"
                 >
                   <span dir="auto">{selectedBug.title}</span>
-                  <Pencil className="ml-2 mt-2 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  <Pencil className="ml-2 mt-2 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100" />
                 </h3>
               )}
 
@@ -2648,14 +2662,14 @@ export default function ProjectBugReportsPage() {
                 { id: "steps", label: "Steps" },
                 { id: "test", label: "Linked Run" },
                 { id: "activity", label: "Activity Logs" },
-                { id: "openproject", label: trackerName }
+                { id: "openproject", label: trackerName === "tracker" ? "Tracker" : trackerName }
               ].map((tab) => {
                 const isActive = activeDetailTab === tab.id
                 return (
                   <button
                     key={tab.id}
                     onClick={() => setActiveDetailTab(tab.id as TabType)}
-                    className={`pb-3 pt-3 px-1 border-b-2 text-xs font-bold transition-all ${
+                    className={`pb-3 pt-3 px-1 border-b-2 text-xs font-semibold transition-all ${
                       isActive ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -2672,7 +2686,7 @@ export default function ProjectBugReportsPage() {
               {activeDetailTab === "overview" && (
                 <div className="space-y-6">
 
-                  <DrawerSection icon={FileText} title="Description / Action details">
+                  <DrawerSection icon={FileText} title="Description and steps">
                     {isEditingDesc ? (
                       <div className="space-y-2">
                         <textarea
@@ -2804,7 +2818,7 @@ export default function ProjectBugReportsPage() {
                       <p className="text-xs text-muted-foreground pl-1">No console logs output recorded.</p>
                     )}
 
-                    <span className="text-xs text-muted-foreground block mt-2">Network Errors Logs</span>
+                    <span className="text-xs text-muted-foreground block mt-2">Network errors</span>
                     {selectedBug.networkErrors ? (
                       <pre className="p-3 rounded-xl bg-slate-900 text-rose-450 font-mono text-xs overflow-x-auto max-h-[150px] whitespace-pre-wrap select-all">
                         {selectedBug.networkErrors}
@@ -2820,7 +2834,7 @@ export default function ProjectBugReportsPage() {
               {activeDetailTab === "steps" && (
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <span className="text-xs text-muted-foreground block">Expected Result</span>
+                    <span className="text-xs text-muted-foreground block">Expected result</span>
                     <textarea
                       value={editExpectedValue}
                       onChange={(e) => setEditExpectedValue(e.target.value)}
@@ -2831,11 +2845,12 @@ export default function ProjectBugReportsPage() {
                       }}
                       rows={3}
                       placeholder="What should happen..."
-                      className="w-full p-3 rounded-lg border bg-muted/50 leading-relaxed font-semibold text-foreground outline-none focus:ring-1 focus:ring-primary"
+                      dir="auto"
+                      className="w-full p-3 rounded-lg border bg-muted/50 leading-relaxed text-foreground outline-none focus:ring-1 focus:ring-primary"
                     />
                   </div>
                   <div className="space-y-1 border-t pt-3">
-                    <span className="text-xs text-muted-foreground block">Actual Result</span>
+                    <span className="text-xs text-muted-foreground block">Actual result</span>
                     <textarea
                       value={editActualValue}
                       onChange={(e) => setEditActualValue(e.target.value)}
@@ -2846,7 +2861,8 @@ export default function ProjectBugReportsPage() {
                       }}
                       rows={3}
                       placeholder="What happened instead..."
-                      className="w-full p-3 rounded-lg border border-rose-100 bg-rose-50/50 leading-relaxed font-semibold text-rose-700 outline-none focus:ring-1 focus:ring-rose-400"
+                      dir="auto"
+                      className="w-full p-3 rounded-lg border border-rose-100 bg-rose-50/50 leading-relaxed text-rose-700 outline-none focus:ring-1 focus:ring-rose-400"
                     />
                   </div>
                 </div>
@@ -2867,19 +2883,19 @@ export default function ProjectBugReportsPage() {
                           onClick={() => router.push(`/projects/${projectId}/test-cases`)}
                           className="h-7 bg-primary text-white font-semibold"
                         >
-                          Open Case
+                          Open case
                         </Button>
                       </div>
 
                       {selectedBug.testRun && (
                         <div className="border-t pt-3 space-y-2">
                           <div className="flex justify-between items-center text-xs text-slate-650 font-semibold">
-                            <span>Test Run Reference</span>
+                            <span>Test run</span>
                             <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded text-muted-foreground">RUN-{selectedBug.testRun.id.slice(0, 8)}</span>
                           </div>
                           <div className="flex justify-between items-center text-xs text-slate-650 font-semibold">
                             <span>Status</span>
-                            <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold  ${
                               selectedBug.testRun.status === "Passed" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
                             }`}>{selectedBug.testRun.status}</span>
                           </div>
@@ -2964,7 +2980,7 @@ export default function ProjectBugReportsPage() {
                           size="sm"
                           className="h-8 bg-slate-800 text-white font-semibold"
                         >
-                          Link Duplicate
+                          Link duplicate
                         </Button>
                       </div>
                     </div>
@@ -3060,7 +3076,7 @@ export default function ProjectBugReportsPage() {
                     <div className="p-4 border rounded-xl bg-muted/50 space-y-3">
                       <div className="flex justify-between items-center text-xs">
                         <span className="text-muted-foreground">Sync status</span>
-                        <span className={`px-2 py-0.5 rounded font-semibold uppercase text-xs ${
+                        <span className={`px-2 py-0.5 rounded font-semibold  text-xs ${
                           opSyncStatus.status === "Synced" ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-600"
                         }`}>{opSyncStatus.status}</span>
                       </div>
@@ -3117,7 +3133,7 @@ export default function ProjectBugReportsPage() {
             {/* ── Right metadata sidebar ── */}
             <div className="min-w-0 space-y-6 overflow-y-auto bg-muted/15 p-6">
 
-              <SideCard icon={Tag} title="Details &amp; Metadata">
+              <SideCard icon={Tag} title="Details">
                 <SideRow label="Type">
                   <span className="inline-flex items-center gap-2 text-xs font-semibold text-foreground">
                     <Bug className="h-3.5 w-3.5 text-rose-500" /> Bug
@@ -3388,7 +3404,7 @@ export default function ProjectBugReportsPage() {
                 onClick={() => handleDeleteBug(selectedBug.id)}
                 className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-card px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
               >
-                <Trash2 className="h-3.5 w-3.5" /> Delete Defect
+                <Trash2 className="h-3.5 w-3.5" /> Delete bug
               </button>
             </div>
           </div>

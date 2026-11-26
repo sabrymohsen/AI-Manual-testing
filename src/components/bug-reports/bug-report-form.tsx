@@ -110,7 +110,7 @@ export function BugReportForm({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-background border rounded-lg p-6 w-full max-w-lg shadow-[0_8px_24px_rgba(0,0,0,0.08)] max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Create Bug Report</h3>
+          <h3 className="text-lg font-semibold">Create bug report</h3>
           <Button
             type="button"
             variant="outline"
@@ -179,7 +179,7 @@ export function BugReportForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="expectedResult">Expected Result</Label>
+            <Label htmlFor="expectedResult">Expected result</Label>
             <textarea
               id="expectedResult"
               name="expectedResult"
@@ -190,7 +190,7 @@ export function BugReportForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="actualResult">Actual Result</Label>
+            <Label htmlFor="actualResult">Actual result</Label>
             <textarea
               id="actualResult"
               name="actualResult"
@@ -206,7 +206,7 @@ export function BugReportForm({
               Cancel
             </Button>
             <Button type="submit" disabled={loading || aiLoading}>
-              {loading ? "Saving..." : "Create Bug Report"}
+              {loading ? "Saving..." : "Create bug report"}
             </Button>
           </div>
         </form>
