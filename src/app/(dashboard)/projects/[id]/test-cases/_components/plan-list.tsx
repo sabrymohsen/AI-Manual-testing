@@ -84,7 +84,7 @@ export function PlanList({
 
         {!isLoading && plans.length === 0 && !adding && (
           <p className="px-2 py-2 text-xs leading-relaxed text-muted-foreground">
-            Save a set of cases you run again and again — select cases, then More → Add to plan.
+            A plan is a set of cases you run again, like a smoke test. Select cases, then choose More and Add to plan, or drag them here.
           </p>
         )}
 

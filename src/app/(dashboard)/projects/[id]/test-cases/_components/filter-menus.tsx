@@ -27,7 +27,7 @@ function Trigger({ label, values }: { label: string; values: string[] }) {
   return (
     <DropdownMenuTrigger
       className={cn(
-        "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors",
+        "inline-flex h-8 shrink-0 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors",
         on ? "border-primary/50 bg-primary/10 text-primary" : "bg-background hover:bg-accent"
       )}
     >

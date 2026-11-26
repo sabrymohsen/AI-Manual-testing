@@ -83,19 +83,16 @@ import {
  */
 
 const COL = {
-  select: 32,
-  suite: 130,
-  priority: 80,
-  assignee: 120,
-  type: 90,
-  lastRun: 124,
-  links: 72,
+  select: 20,
+  priority: 84,
+  assignee: 132,
+  lastRun: 128,
   actions: 32,
 } as const
 
 const GAP = 12
 /** Never let the title get narrower than this before dropping a column. */
-const MIN_TITLE = 300
+const MIN_TITLE = 340
 
 export const KEYS: { key: string; label: string }[] = [
   { key: "J / K", label: "Next / previous case" },
@@ -114,7 +111,8 @@ export const KEYS: { key: string; label: string }[] = [
  */
 export function visibleColumns(width: number) {
   // Least → most important. Dropped from the front as space runs out.
-  const order = ["type", "links", "suite", "assignee", "priority"] as const
+  // Suite, type and links live on the row's second line, so only these drop.
+  const order = ["assignee", "priority"] as const
   const shown = new Set<(typeof order)[number]>(order)
 
   const used = () =>
@@ -130,11 +128,8 @@ export function visibleColumns(width: number) {
   }
 
   return {
-    suite: shown.has("suite"),
     priority: shown.has("priority"),
     assignee: shown.has("assignee"),
-    type: shown.has("type"),
-    links: shown.has("links"),
   }
 }
 
@@ -352,7 +347,7 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
     <div ref={ref} className="flex h-full flex-col">
       {/* Header — mirrors Row's column widths exactly. */}
       <div
-        className="flex shrink-0 items-center border-b bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground"
+        className="flex shrink-0 items-center border-b px-4 py-2 text-xs font-medium text-muted-foreground"
         style={{ gap: GAP }}
       >
         <div style={{ width: COL.select }} className="shrink-0">
@@ -365,14 +360,12 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
             className="h-3.5 w-3.5 cursor-pointer accent-[hsl(var(--primary))]"
           />
         </div>
-        <div className="min-w-0 flex-1">
-          <SortButton label="Title" sortKey="title" />
+        <div className="min-w-0 flex-1 ps-6">
+          <SortButton label="Test case" sortKey="title" />
+          <span className="ms-3 text-muted-foreground/70">
+            <SortButton label="Estimate" sortKey="estimatedMinutes" />
+          </span>
         </div>
-        {visible.suite && (
-          <div style={{ width: COL.suite }} className="shrink-0 truncate">
-            Suite
-          </div>
-        )}
         {visible.priority && (
           <div style={{ width: COL.priority }} className="shrink-0">
             <SortButton label="Priority" sortKey="priority" />
@@ -383,19 +376,9 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
             Assignee
           </div>
         )}
-        {visible.type && (
-          <div style={{ width: COL.type }} className="shrink-0">
-            <SortButton label="Type · est." sortKey="estimatedMinutes" />
-          </div>
-        )}
         <div style={{ width: COL.lastRun }} className="shrink-0">
-          <SortButton label="Last run" sortKey="lastRunAt" />
+          <SortButton label="Last result" sortKey="lastRunAt" />
         </div>
-        {visible.links && (
-          <div style={{ width: COL.links }} className="shrink-0 truncate">
-            Links
-          </div>
-        )}
         <div style={{ width: COL.actions }} className="shrink-0" />
       </div>
 
@@ -435,10 +418,10 @@ npx tsx scripts/backfill-test-suites.ts --apply`}
           <p className="text-sm font-semibold">{filtered ? "No test cases match" : "No test cases yet"}</p>
           <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">
             {filters.plan
-              ? "This plan is empty. Select cases in All test cases, then More → Add to plan — or drag them onto the plan."
+              ? "This plan is empty. Open All test cases, select cases, then choose More and Add to plan, or drag them onto the plan."
               : filtered
                 ? "Try clearing a filter, or pick a different suite."
-                : "Create one manually, record a session, or import from a spreadsheet."}
+                : "Write one, record one in Recorder Studio, or import a spreadsheet."}
           </p>
           {filters.suite && filters.suite !== "unfiled" && (
             <Button
@@ -572,7 +555,16 @@ function Row({
   const deprecated = row.reviewState === "Deprecated"
 
   return (
-    <div className={cn("border-b", active && "bg-primary/5", checked && "bg-primary/[0.07]")}>
+    <div className={cn("relative border-b", checked && "bg-primary/[0.06]", active && "bg-accent")}>
+      {/* Verdict edge: the row's last result at a glance, down the whole list. */}
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-y-0 start-0 w-[3px]",
+          row.lastStatus === "NotExecuted" ? "bg-transparent" : status.dot,
+          active && "w-1"
+        )}
+      />
       <div
         draggable
         onDragStart={onDragStart}
@@ -581,12 +573,11 @@ function Row({
         data-active={active || undefined}
         style={{ gap: GAP }}
         className={cn(
-          "group flex cursor-pointer items-center px-4 py-3 text-sm transition-colors",
-          !active && "hover:bg-accent/40",
-          active && "shadow-[inset_2px_0_0_hsl(var(--primary))]"
+          "group flex cursor-pointer items-center px-4 py-2 text-sm transition-colors",
+          !active && "hover:bg-accent/50"
         )}
       >
-        <div style={{ width: COL.select }} className="flex shrink-0 items-center gap-0.5" onClick={stop}>
+        <div style={{ width: COL.select }} className="flex shrink-0 items-center" onClick={stop}>
           <input
             type="checkbox"
             aria-label={`Select ${row.title}`}
@@ -596,86 +587,93 @@ function Row({
           />
         </div>
 
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <button
-            onClick={(e) => {
-              stop(e)
-              onToggleExpand()
-            }}
-            aria-label={expanded ? "Hide steps" : "Show steps"}
-            aria-expanded={expanded}
-            title={`${row.stepCount} ${row.stepCount === 1 ? "step" : "steps"}`}
-            className="-ml-1 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-90")} />
-          </button>
-          <StatusIcon
-            className={cn(
-              "h-3.5 w-3.5 shrink-0",
-              row.lastStatus === "Passed" && "text-emerald-500",
-              row.lastStatus === "Failed" && "text-red-500",
-              row.lastStatus === "Blocked" && "text-orange-500",
-              row.lastStatus === "Warning" && "text-amber-500",
-              (row.lastStatus === "NotExecuted" || row.lastStatus === "Skipped") && "text-muted-foreground/50"
-            )}
-          />
-          <span
-            className={cn(
-              "min-w-[6rem] shrink truncate font-medium",
-              deprecated && "text-muted-foreground line-through"
-            )}
-            title={row.title}
-          >
-            {row.title}
-          </span>
+        <button
+          onClick={(e) => {
+            stop(e)
+            onToggleExpand()
+          }}
+          aria-label={expanded ? "Hide steps" : "Show steps"}
+          aria-expanded={expanded}
+          title={expanded ? "Hide steps" : "Show steps"}
+          className="-mx-1 shrink-0 self-start rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", expanded && "rotate-90")} />
+        </button>
 
-          {/* The review badge always shows in full; tags give way before the title does. */}
-          {row.reviewState !== "Ready" && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                onClick={stop}
-                title={REVIEW_META[row.reviewState].hint}
-                className={cn(
-                  "shrink-0 rounded px-2 py-0.5 text-xs font-medium",
-                  REVIEW_META[row.reviewState].chip
-                )}
-              >
-                {REVIEW_META[row.reviewState].label}
-              </DropdownMenuTrigger>
-              <ReviewMenu current={row.reviewState} onPick={(r) => onPatch({ reviewState: r })} />
-            </DropdownMenu>
-          )}
-
-          <span className="flex min-w-0 shrink-[3] items-center gap-2 overflow-hidden">
-
-          {row.tags.slice(0, 2).map((t) => (
+        <div className="min-w-0 flex-1 py-0.5">
+          <div className="flex min-w-0 items-center gap-2">
             <span
-              key={t}
-              className="hidden shrink-0 rounded border px-2 py-0.5 text-xs text-muted-foreground sm:inline"
+              dir="auto"
+              className={cn("min-w-0 truncate font-medium text-foreground", deprecated && "text-muted-foreground line-through")}
+              title={row.title}
             >
-              {t}
+              {row.title}
             </span>
-          ))}
-          {row.tags.length > 2 && (
-            <span className="shrink-0 text-xs text-muted-foreground" title={row.tags.slice(2).join(", ")}>
-              +{row.tags.length - 2}
-            </span>
-          )}
-          {row.isOrphan && (
-            <span
-              title="Not linked to any user story"
-              aria-label="Not linked to any user story"
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500"
-            />
-          )}
-          </span>
-        </div>
-
-        {visible.suite && (
-          <div style={{ width: COL.suite }} className="shrink-0 truncate text-xs text-muted-foreground">
-            {row.suite?.name ?? <span className="opacity-50">Unfiled</span>}
+            {row.reviewState !== "Ready" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  onClick={stop}
+                  title={REVIEW_META[row.reviewState].hint}
+                  className={cn("shrink-0 rounded px-2 py-0.5 text-xs font-medium", REVIEW_META[row.reviewState].chip)}
+                >
+                  {REVIEW_META[row.reviewState].label}
+                </DropdownMenuTrigger>
+                <ReviewMenu current={row.reviewState} onPick={(r) => onPatch({ reviewState: r })} />
+              </DropdownMenu>
+            )}
           </div>
-        )}
+
+          {/* Second line: where it lives and what it touches. */}
+          <div className="mt-0.5 flex min-w-0 items-center gap-3 overflow-hidden text-xs text-muted-foreground">
+            <span className="inline-flex min-w-[4.5rem] max-w-[14rem] shrink items-center gap-1" title={row.suite?.name ?? "Not in a suite"}>
+              <Folder className="h-3 w-3 shrink-0" aria-hidden />
+              <span className="truncate">{row.suite?.name ?? "Unfiled"}</span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1" title={row.executionType === "Automated" ? "Automated" : "Manual"}>
+              {row.executionType === "Automated" ? (
+                <Zap className="h-3 w-3 text-violet-500" aria-hidden />
+              ) : (
+                <ClipboardList className="h-3 w-3" aria-hidden />
+              )}
+              {row.stepCount} {row.stepCount === 1 ? "step" : "steps"}
+              {row.estimatedMinutes != null && <span className="tabular-nums">, {formatMinutes(row.estimatedMinutes)}</span>}
+            </span>
+            {row.requirementCount > 0 ? (
+              <span className="inline-flex shrink-0 items-center gap-1" title={`Covers ${row.requirementCount} user ${row.requirementCount === 1 ? "story" : "stories"}`}>
+                <Link2 className="h-3 w-3" aria-hidden />
+                {row.requirementCount}
+              </span>
+            ) : (
+              row.isOrphan && (
+                <span className="inline-flex shrink-0 items-center gap-1 text-amber-600" title="Not linked to any user story">
+                  <Link2 className="h-3 w-3" aria-hidden />
+                  No story
+                </span>
+              )
+            )}
+            {row.openBugCount > 0 && (
+              <span className="inline-flex shrink-0 items-center gap-1 text-red-600" title={`${row.openBugCount} open ${row.openBugCount === 1 ? "bug" : "bugs"}`}>
+                <Bug className="h-3 w-3" aria-hidden />
+                {row.openBugCount}
+              </span>
+            )}
+            {row.sync && (
+              <span className="inline-flex shrink-0 items-center text-emerald-600" title="Synced to tracker">
+                <CloudUpload className="h-3 w-3" aria-hidden />
+              </span>
+            )}
+            {row.tags.slice(0, 3).map((t) => (
+              <span key={t} className="hidden shrink-0 rounded bg-muted px-1.5 text-xs text-muted-foreground sm:inline">
+                {t}
+              </span>
+            ))}
+            {row.tags.length > 3 && (
+              <span className="shrink-0" title={row.tags.slice(3).join(", ")}>
+                +{row.tags.length - 3}
+              </span>
+            )}
+          </div>
+        </div>
 
         {visible.priority && (
           <div style={{ width: COL.priority }} className="shrink-0" onClick={stop}>
@@ -754,53 +752,25 @@ function Row({
           </div>
         )}
 
-        {visible.type && (
-          <div style={{ width: COL.type }} className="shrink-0 truncate text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1">
-              {row.executionType === "Automated" ? (
-                <Zap className="h-3 w-3 shrink-0 text-violet-500" />
-              ) : (
-                <ClipboardList className="h-3 w-3 shrink-0" />
-              )}
-              {row.executionType === "Automated" ? "Auto" : "Manual"}
-              {row.estimatedMinutes != null && (
-                <span className="tabular-nums">· {formatMinutes(row.estimatedMinutes)}</span>
-              )}
+        <div style={{ width: COL.lastRun }} className="flex shrink-0 items-center gap-2 text-xs">
+          <StatusIcon
+            aria-hidden
+            className={cn(
+              "h-4 w-4 shrink-0",
+              row.lastStatus === "Passed" && "text-emerald-500",
+              row.lastStatus === "Failed" && "text-red-500",
+              row.lastStatus === "Blocked" && "text-orange-500",
+              row.lastStatus === "Warning" && "text-amber-500",
+              (row.lastStatus === "NotExecuted" || row.lastStatus === "Skipped") && "text-muted-foreground/60"
+            )}
+          />
+          <span className="min-w-0">
+            <span className={cn("block font-medium", row.lastStatus === "NotExecuted" ? "text-muted-foreground" : "text-foreground")}>
+              {status.label}
             </span>
-          </div>
-        )}
-
-        <div style={{ width: COL.lastRun }} className="shrink-0 truncate text-xs">
-          <span className={cn("rounded px-2 py-0.5", status.chip)}>{status.label}</span>
-          {row.lastRunAt && (
-            <span className="ml-2 tabular-nums text-muted-foreground">{relativeTime(row.lastRunAt)}</span>
-          )}
+            {row.lastRunAt && <span className="block tabular-nums text-muted-foreground">{relativeTime(row.lastRunAt)}</span>}
+          </span>
         </div>
-
-        {visible.links && (
-          <div style={{ width: COL.links }} className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-            {row.requirementCount > 0 && (
-              <span className="inline-flex items-center gap-0.5" title={`${row.requirementCount} linked story(s)`}>
-                <Link2 className="h-3 w-3" />
-                {row.requirementCount}
-              </span>
-            )}
-            {row.openBugCount > 0 && (
-              <span
-                className="inline-flex items-center gap-0.5 text-red-600 dark:text-red-400"
-                title={`${row.openBugCount} open bug(s)`}
-              >
-                <Bug className="h-3 w-3" />
-                {row.openBugCount}
-              </span>
-            )}
-            {row.sync && (
-              <span className="inline-flex items-center gap-0.5 text-emerald-600 dark:text-emerald-400" title="Synced to tracker">
-                <CloudUpload className="h-3 w-3" />
-              </span>
-            )}
-          </div>
-        )}
 
         {/* Row action menu */}
         <div style={{ width: COL.actions }} className="flex shrink-0 items-center justify-end" onClick={stop}>

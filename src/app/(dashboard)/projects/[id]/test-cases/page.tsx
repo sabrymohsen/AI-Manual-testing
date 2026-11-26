@@ -274,37 +274,40 @@ export default function TestLibraryPage() {
 
   const bulk = (patch: BulkPatch) => bulkUpdate.mutate({ testCaseIds: selectedIds, ...patch })
 
+  const scopeLabel = activePlan
+    ? activePlan.name
+    : filters.suite === "unfiled"
+      ? "Unfiled"
+      : filters.suite
+        ? projectModules.find((m) => m.id === filters.suite)?.path ?? "Suite"
+        : "All test cases"
+
   const menuBtn =
     "inline-flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-muted/20">
-      {/* Header */}
-      <header className="shrink-0 space-y-3 border-b bg-card px-6 py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-0.5">
-            <h1 className="heading-6 flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <FlaskConical className="h-4 w-4" />
-              </span>
-              Test Cases
+    <div className="flex h-full flex-col overflow-hidden bg-background">
+      {/* Header: where you are, what to do, and how this scope is doing. */}
+      <header className="shrink-0 space-y-4 border-b bg-card px-6 pb-4 pt-5">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="caption-3 text-muted-foreground">Test cases</p>
+            <h1 className="heading-6 truncate text-foreground" title={scopeLabel}>
+              {scopeLabel}
             </h1>
-            <p className="text-xs text-muted-foreground">
-              Author, organise and execute this project&apos;s manual and automated tests.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="h-9 gap-2 text-xs">
-              <FileSpreadsheet className="h-3.5 w-3.5" /> Import
+            <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)} className="h-9 gap-2 text-xs">
+              <FileSpreadsheet className="h-4 w-4" /> Import
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => router.push(`/projects/${projectId}/recorder-studio`)}
               className="h-9 gap-2 text-xs"
             >
-              <Video className="h-3.5 w-3.5 text-rose-500" /> Record
+              <Video className="h-4 w-4" /> Record
             </Button>
             <Button
               size="sm"
@@ -327,7 +330,13 @@ export default function TestLibraryPage() {
         {/* Left rail */}
         {/* Suites keep a usable minimum; on a short screen the rail scrolls
             rather than squeezing the tree to nothing under the plans. */}
-        <aside className="flex w-64 shrink-0 flex-col overflow-y-auto border-r bg-card">
+        <aside
+          className={
+            "hidden w-60 shrink-0 flex-col overflow-y-auto border-r bg-card " +
+            // An open case needs the width more than the suites do, except on wide screens.
+            (activeId ? "2xl:flex" : "md:flex")
+          }
+        >
           <div className="min-h-[180px] flex-1">
             <SuiteTree
               projectId={projectId}
@@ -347,7 +356,7 @@ export default function TestLibraryPage() {
         </aside>
 
         {/* Centre */}
-        <main className="flex min-w-0 flex-1 flex-col bg-card">
+        <main className="relative flex min-w-0 flex-1 flex-col bg-card">
           {activePlan && (
             <div className="flex shrink-0 flex-wrap items-center gap-3 border-b bg-primary/[0.03] px-4 py-3">
               <ClipboardCheck className="h-4 w-4 text-primary" />
@@ -375,8 +384,8 @@ export default function TestLibraryPage() {
             </div>
           )}
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3">
-            <div className="relative">
+          <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b px-4 py-2 [scrollbar-width:none]">
+            <div className="relative min-w-[10rem] flex-1 sm:max-w-xs">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 ref={searchRef}
@@ -384,32 +393,41 @@ export default function TestLibraryPage() {
                 onChange={(e) => setSearchText(e.target.value)}
                 onKeyDown={(e) => e.key === "Escape" && (e.currentTarget as HTMLInputElement).blur()}
                 placeholder="Search title, preconditions, tag…  ( / )"
-                className="h-9 w-64 pl-8 text-xs"
+                className="h-8 w-full pl-8 text-xs"
               />
             </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                className={
-                  "inline-flex h-9 items-center gap-2 rounded-md border px-3 text-xs font-medium transition-colors " +
-                  (filters.executionType ? "border-primary/50 bg-primary/10 text-primary" : "bg-background hover:bg-accent")
-                }
-              >
-                {filters.executionType ?? "All types"}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40">
-                <DropdownMenuItem onClick={() => setFilters({ ...filters, executionType: undefined })}>All types</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilters({ ...filters, executionType: "Manual" })}>Manual</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilters({ ...filters, executionType: "Automated" })}>Automated</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div role="radiogroup" aria-label="Test type" className="inline-flex h-8 shrink-0 items-center rounded-md bg-muted p-0.5">
+              {([
+                [undefined, "All"],
+                ["Manual", "Manual"],
+                ["Automated", "Automated"],
+              ] as const).map(([value, label]) => {
+                const on = filters.executionType === value
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    role="radio"
+                    aria-checked={on}
+                    onClick={() => setFilters({ ...filters, executionType: value })}
+                    className={
+                      "h-7 rounded px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring " +
+                      (on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
 
             <FilterMenus projectId={projectId} filters={filters} onChange={setFilters} />
 
             {hasFilters && (
               <button
                 onClick={() => setFilters({ suite: filters.suite, plan: filters.plan, sort: filters.sort, dir: filters.dir })}
-                className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" /> Clear filters
               </button>
@@ -417,13 +435,13 @@ export default function TestLibraryPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+                className="ms-auto inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
                 aria-label="Keyboard shortcuts"
                 title="Keyboard shortcuts"
               >
                 <Keyboard className="h-4 w-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 p-2">
+              <DropdownMenuContent align="end" className="w-56 p-2">
                 <p className="mb-2 px-1 text-xs font-medium text-muted-foreground">Keyboard shortcuts</p>
                 {KEYS.map((k) => (
                   <div key={k.key} className="flex items-center justify-between px-1 py-0.5 text-xs">
@@ -434,8 +452,29 @@ export default function TestLibraryPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
+          </div>
+
+          <div className="min-h-0 flex-1">
+            <CaseTable
+              projectId={projectId}
+              filters={filters}
+              onChangeFilters={setFilters}
+              selectedIds={selectedIds}
+              onToggleSelect={toggleSelect}
+              onToggleAll={toggleAll}
+              onSelectAllMatching={selectAllMatching}
+              selectingAll={selectingAll}
+              activeId={activeId}
+              onOpen={openCase}
+              onClose={closeCase}
+              onRun={runCase}
+              onDragSelection={setDraggingIds}
+            />
+          </div>
+
             {selectedIds.length > 0 && (
-              <div className="ml-auto flex flex-wrap items-center gap-1 rounded-lg border border-border bg-card px-2 py-1 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+              <div className="pointer-events-none absolute inset-x-4 bottom-4 z-20 flex justify-center">
+              <div role="toolbar" aria-label="Actions for selected cases" className="animate-pop pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto whitespace-nowrap rounded-xl border border-border bg-popover px-2 py-1.5 shadow-lg">
                 <span className="px-2 text-xs font-medium text-foreground">{selectedIds.length} selected</span>
                 <span className="h-4 w-px bg-border" aria-hidden="true" />
 
@@ -628,31 +667,13 @@ export default function TestLibraryPage() {
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
+              </div>
             )}
-          </div>
-
-          <div className="min-h-0 flex-1">
-            <CaseTable
-              projectId={projectId}
-              filters={filters}
-              onChangeFilters={setFilters}
-              selectedIds={selectedIds}
-              onToggleSelect={toggleSelect}
-              onToggleAll={toggleAll}
-              onSelectAllMatching={selectAllMatching}
-              selectingAll={selectingAll}
-              activeId={activeId}
-              onOpen={openCase}
-              onClose={closeCase}
-              onRun={runCase}
-              onDragSelection={setDraggingIds}
-            />
-          </div>
         </main>
 
         {/* Right — only occupies width when a case is open. */}
         {activeId && (
-          <aside className="w-[380px] shrink-0 border-l bg-card">
+          <aside className="w-[440px] max-w-[48%] shrink-0 border-l bg-card">
             <DetailPanel projectId={projectId} testCaseId={activeId} onClose={closeCase} onRun={runCase} />
           </aside>
         )}

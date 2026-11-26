@@ -1,16 +1,18 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useFacets, type CaseStatus, type LibraryFilters } from "../_hooks/use-test-library"
 import { STATUS_META, STATUS_ORDER } from "./config"
 import { cn } from "@/lib/utils"
-import { Layers, ShieldAlert, AlertCircle } from "@/components/ui/icons"
+import { Bug as BugBeetle, Link2Off as LinkBreak } from "@/components/ui/icons"
 
 /**
- * Header counts that are also filters.
+ * Results bar: the latest result of every case in the current scope, drawn as
+ * one bar split by status. Each part (and its legend entry) filters the list,
+ * so the bar is both the summary and the quickest way to "show me what failed".
  *
- * On the old page these chips were decorative — computed by filtering the
- * whole in-memory array four times per render, and not clickable. Counts now
- * come from a single aggregate query and toggling one narrows the list.
+ * Counts come from the facets query, which applies every filter except status,
+ * so the bar keeps showing the whole picture while a status is selected.
  */
 export function FacetBar({
   projectId,
@@ -22,95 +24,146 @@ export function FacetBar({
   onChange: (next: LibraryFilters) => void
 }) {
   const { data, isLoading } = useFacets(projectId, filters)
+  // Grow the bar once when the numbers first arrive.
+  const [grown, setGrown] = useState(false)
+  useEffect(() => {
+    if (!data) return
+    const t = requestAnimationFrame(() => setGrown(true))
+    return () => cancelAnimationFrame(t)
+  }, [data])
 
+  const active = filters.status ?? []
   const toggleStatus = (s: CaseStatus) => {
-    const active = filters.status ?? []
     const next = active.includes(s) ? active.filter((x) => x !== s) : [...active, s]
     onChange({ ...filters, status: next.length ? next : undefined })
   }
-
   const toggleTrace = (t: "orphans" | "broken") =>
     onChange({ ...filters, trace: filters.trace === t ? undefined : t })
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-7 w-24 animate-pulse rounded-full bg-muted" />
-        ))}
+      <div className="space-y-3" aria-busy="true">
+        <div className="h-2.5 animate-pulse rounded-full bg-muted" />
+        <div className="h-4 w-80 animate-pulse rounded bg-muted" />
       </div>
     )
   }
 
-  const statusChips = STATUS_ORDER.filter((s) => (data?.byStatus[s] ?? 0) > 0 || s === "Passed" || s === "Failed")
+  const total = data.total ?? 0
+  const parts = STATUS_ORDER.map((s) => ({ s, n: data.byStatus[s] ?? 0 })).filter((p) => p.n > 0)
+  const legend = STATUS_ORDER.filter((s) => (data.byStatus[s] ?? 0) > 0 || s === "Passed" || s === "Failed" || s === "NotExecuted")
+  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-      <button
-        onClick={() => onChange({ ...filters, status: undefined, trace: undefined })}
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
-          !filters.status?.length && !filters.trace
-            ? "border-primary bg-primary/10 text-primary"
-            : "bg-background text-foreground hover:bg-accent"
-        )}
+    <div className="space-y-3">
+      <div
+        className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
+        role="img"
+        aria-label={
+          total === 0
+            ? "No test cases in this view"
+            : parts.map((p) => `${p.n} ${STATUS_META[p.s].label.toLowerCase()}`).join(", ")
+        }
       >
-        <Layers className="h-3 w-3" />
-        {data?.total ?? 0} total
-      </button>
-
-      {statusChips.map((s) => {
-        const meta = STATUS_META[s]
-        const on = filters.status?.includes(s) ?? false
-        const count = data?.byStatus[s] ?? 0
-        return (
+        {parts.map(({ s, n }) => (
           <button
             key={s}
+            type="button"
+            tabIndex={-1}
+            aria-hidden
             onClick={() => toggleStatus(s)}
-            aria-pressed={on}
+            title={`${n} ${STATUS_META[s].label.toLowerCase()} (${pct(n)}%)`}
+            style={{ flexGrow: grown ? n : 0, flexBasis: 0 }}
             className={cn(
-              "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
-              on ? "border-primary bg-primary/10 text-primary" : "bg-background hover:bg-accent",
-              !on && count === 0 && "text-muted-foreground"
+              "h-full min-w-[4px] transition-[flex-grow,opacity] duration-700 ease-out-soft motion-reduce:transition-none",
+              STATUS_META[s].dot,
+              active.length > 0 && !active.includes(s) && "opacity-30"
             )}
-          >
-            <span className={cn("h-1.5 w-1.5 rounded-full", meta.dot)} />
-            {count} {meta.label.toLowerCase()}
-          </button>
-        )
-      })}
+          />
+        ))}
+      </div>
 
-      <span className="mx-0.5 h-5 w-px bg-border" aria-hidden="true" />
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
+        {legend.map((s) => {
+          const n = data.byStatus[s] ?? 0
+          const on = active.includes(s)
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => toggleStatus(s)}
+              aria-pressed={on}
+              className={cn(
+                "inline-flex h-7 items-center gap-2 rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                on ? "bg-accent text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                n === 0 && !on && "opacity-60"
+              )}
+            >
+              <span className={cn("h-2 w-2 rounded-full", STATUS_META[s].dot)} aria-hidden />
+              <span className="font-semibold tabular-nums text-foreground">{n}</span>
+              {STATUS_META[s].label.toLowerCase()}
+              {total > 0 && n > 0 && <span className="tabular-nums opacity-70">{pct(n)}%</span>}
+            </button>
+          )
+        })}
 
-      <button
-        onClick={() => toggleTrace("orphans")}
-        aria-pressed={filters.trace === "orphans"}
-        title="Test cases not linked to any user story"
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
-          filters.trace === "orphans"
-            ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-400"
-            : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-        )}
-      >
-        <ShieldAlert className="h-3 w-3" />
-        {data?.orphans ?? 0} not linked
-      </button>
+        <span className="ms-auto" />
 
-      <button
-        onClick={() => toggleTrace("broken")}
-        aria-pressed={filters.trace === "broken"}
-        title="Failed on the last run, and no open bug tracks the failure"
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full border px-3 py-2 transition-colors",
-          filters.trace === "broken"
-            ? "border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400"
-            : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
-        )}
-      >
-        <AlertCircle className="h-3 w-3" />
-        {data?.broken ?? 0} failed, no bug
-      </button>
+        <TraceButton
+          on={filters.trace === "broken"}
+          count={data.broken ?? 0}
+          onClick={() => toggleTrace("broken")}
+          icon={BugBeetle}
+          label="failed with no bug filed"
+          tone="text-red-600"
+          title="The last run failed and no open bug tracks it"
+        />
+        <TraceButton
+          on={filters.trace === "orphans"}
+          count={data.orphans ?? 0}
+          onClick={() => toggleTrace("orphans")}
+          icon={LinkBreak}
+          label="not linked to a story"
+          tone="text-amber-600"
+          title="Coverage reports don't count cases that aren't linked to a user story"
+        />
+      </div>
     </div>
+  )
+}
+
+function TraceButton({
+  on,
+  count,
+  onClick,
+  icon: Icon,
+  label,
+  tone,
+  title,
+}: {
+  on: boolean
+  count: number
+  onClick: () => void
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  tone: string
+  title: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      title={title}
+      disabled={count === 0 && !on}
+      className={cn(
+        "inline-flex h-7 items-center gap-2 rounded-md px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-50",
+        on ? "bg-accent text-foreground" : "text-muted-foreground enabled:hover:bg-accent enabled:hover:text-foreground"
+      )}
+    >
+      <Icon className={cn("h-3.5 w-3.5", count > 0 ? tone : "")} aria-hidden />
+      <span className={cn("font-semibold tabular-nums", count > 0 ? "text-foreground" : "")}>{count}</span>
+      {label}
+    </button>
   )
 }

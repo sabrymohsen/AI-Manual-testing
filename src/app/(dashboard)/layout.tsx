@@ -114,11 +114,11 @@ export default function DashboardLayout({
   // Board-style routes render edge to edge instead of inside the padded,
   // vertically-scrolling document container.
   // Full-bleed app views manage their own header and scrolling: the Scrum
-  // board, the test case editor, and a manual run.
+  // board, the test library and its editor, and a manual run.
   const isFullBleed = useMemo(
     () =>
       /^\/projects\/[^/]+\/scrum(\/|$)/.test(pathname) ||
-      /^\/projects\/[^/]+\/test-cases\/(new|[^/]+\/edit)\/?$/.test(pathname) ||
+      /^\/projects\/[^/]+\/test-cases(\/(new|[^/]+\/edit))?\/?$/.test(pathname) ||
       /^\/projects\/[^/]+\/manual-sessions\/[^/]+\/?$/.test(pathname),
     [pathname]
   )
