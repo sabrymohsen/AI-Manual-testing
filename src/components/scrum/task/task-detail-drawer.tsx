@@ -82,13 +82,17 @@ export function TaskDrawer({ projectId }: { projectId: string }) {
     if (urlTask && !openTaskId) openTask(urlTask)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  // Mirror the open task into the URL.
+  // Mirror the open task into the URL. On the very first run the task from
+  // the URL hasn't been opened yet, so don't strip it (that dropped ?task=
+  // from shared links, and the address bar no longer matched the open item).
+  const pendingFromUrl = useRef<string | null>(search.get("task"))
   useEffect(() => {
     const current = new URLSearchParams(search.toString())
+    if (openTaskId && openTaskId === pendingFromUrl.current) pendingFromUrl.current = null
     if (openTaskId && current.get("task") !== openTaskId) {
       current.set("task", openTaskId)
       router.replace(`?${current.toString()}`, { scroll: false })
-    } else if (!openTaskId && current.has("task")) {
+    } else if (!openTaskId && current.has("task") && current.get("task") !== pendingFromUrl.current) {
       current.delete("task")
       router.replace(`?${current.toString()}`, { scroll: false })
     }
