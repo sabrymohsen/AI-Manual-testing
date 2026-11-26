@@ -146,7 +146,6 @@ export default function RecorderWorkspacePage() {
   const [viewport, setViewport] = useState("Desktop")
   const [recordingMode, setRecordingMode] = useState("Fast")
   const [isStartingSession, setIsStartingSession] = useState(false)
-  const [showLiveView, setShowLiveView] = useState(true)
   const [startError, setStartError] = useState<string | null>(null)
   const [startErrorDetails, setStartErrorDetails] = useState<string | null>(null)
   const [workerOnline, setWorkerOnline] = useState<boolean | null>(null)
@@ -1101,21 +1100,19 @@ export default function RecorderWorkspacePage() {
     : 2
 
   if (loadingProject) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <div className="flex flex-col items-center gap-3 text-muted-foreground">
-        <BusyDot />
-        <p className="text-sm">Loading workspace...</p>
-      </div>
+    <div className="mx-auto w-full max-w-2xl space-y-4 px-6 py-8" aria-busy="true" aria-label="Loading Recorder Studio">
+      <div className="h-7 w-48 animate-pulse rounded-lg bg-muted" />
+      <div className="h-80 animate-pulse rounded-2xl bg-muted" />
     </div>
   )
-  if (!project) return <p className="text-destructive p-6">Project not found</p>
+  if (!project) return <p className="p-6 text-sm text-muted-foreground">This project couldn&apos;t be loaded. It may have been deleted, or you may no longer be a member.</p>
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex h-full min-h-0 flex-col bg-background">
 
       {/* ── STICKY PAGE HEADER ── */}
-      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between gap-4">
+      <header className="shrink-0 border-b bg-card">
+        <div className="flex h-12 items-center justify-between gap-4 px-4 md:px-6">
           {/* Back + title */}
           <div className="flex items-center gap-2 min-w-0">
             <h1 className="font-semibold text-base tracking-tight truncate">Recorder Studio</h1>
@@ -1175,132 +1172,114 @@ export default function RecorderWorkspacePage() {
       {!sessionId ? (
         
         /* 1. SETUP PHASE */
-        <main className="flex-1 max-w-2xl mx-auto w-full px-4 md:px-6 py-8 space-y-6">
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-8 md:px-6">
           <div>
-            <h2 className="text-xl font-semibold">Start a new recording session</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              The browser opens right here in the studio and captures every interaction automatically.
+            <h2 className="heading-6 text-foreground">Record a test</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              A browser opens here in the studio. Use the site as a tester would, and every click and entry is saved as a step you can review, then export as automation code.
             </p>
           </div>
 
-          {/* Section 1 — What are you testing? */}
-          <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
-            <div className="px-6 py-3 border-b bg-accent/10">
-              <h3 className="text-xs font-medium text-muted-foreground">What are you testing?</h3>
+          {/* What and where */}
+          <div className="space-y-4 rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="space-y-2">
+              <Label htmlFor="rec-url" className="text-sm font-semibold">Start page</Label>
+              <Input
+                id="rec-url"
+                value={startUrl}
+                onChange={(e) => setStartUrl(e.target.value)}
+                placeholder="https://example.com/login"
+                className="h-11 font-mono text-sm"
+              />
             </div>
-            <div className="p-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="rec-title" className="text-sm font-semibold">Test case name</Label>
+              <Input
+                id="rec-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Sign in with a valid account"
+                className="h-10"
+              />
+              <p className="text-xs text-muted-foreground">Everything you do in the browser becomes this test case&apos;s steps. You can start more cases during the session.</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground">Test case name *</Label>
-                <Input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Verify user login flow"
-                  className="h-10"
-                />
+                <Label htmlFor="rec-browser" className="text-sm font-semibold">Browser</Label>
+                <select
+                  id="rec-browser"
+                  value={browserType}
+                  onChange={(e) => setBrowserType(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="Chromium">Chrome</option>
+                  <option value="Firefox">Firefox</option>
+                  <option value="WebKit">Safari</option>
+                </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground">Priority</Label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground">Preconditions (optional)</Label>
-                  <Input
-                    value={preconditions}
-                    onChange={(e) => setPreconditions(e.target.value)}
-                    placeholder="e.g. User account exists"
-                    className="h-9"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2 — Browser & environment */}
-          <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
-            <div className="px-6 py-3 border-b bg-accent/10">
-              <h3 className="text-xs font-medium text-muted-foreground">Browser & environment</h3>
-            </div>
-            <div className="p-6 space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-muted-foreground">Target URL *</Label>
-                <Input
-                  value={startUrl}
-                  onChange={(e) => setStartUrl(e.target.value)}
-                  placeholder="https://example.com/login"
-                  className="h-10 font-mono text-sm"
-                />
+                <Label htmlFor="rec-viewport" className="text-sm font-semibold">Screen size</Label>
+                <select
+                  id="rec-viewport"
+                  value={viewport}
+                  onChange={(e) => setViewport(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="Desktop">Desktop (1280 × 800)</option>
+                  <option value="Tablet">Tablet (768 × 1024)</option>
+                  <option value="Mobile">Phone (375 × 667)</option>
+                </select>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground">Browser</Label>
-                  <select
-                    value={browserType}
-                    onChange={(e) => setBrowserType(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
-                  >
-                    <option value="Chromium">Chromium</option>
-                    <option value="Firefox">Firefox</option>
-                    <option value="WebKit">WebKit</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground">Viewport</Label>
-                  <select
-                    value={viewport}
-                    onChange={(e) => setViewport(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
-                  >
-                    <option value="Desktop">Desktop (1280×800)</option>
-                    <option value="Tablet">Tablet (768×1024)</option>
-                    <option value="Mobile">Mobile (375×667)</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground">Login role</Label>
-                  <select
-                    value={requiredCredentialId}
-                    onChange={(e) => setRequiredCredentialId(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
-                  >
-                    <option value="">No auto-login</option>
-                    {project.credentials.map((c) => (
-                      <option key={c.id} value={c.id}>{c.roleName} ({c.username})</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold text-muted-foreground">Recording mode</Label>
-                  <select
-                    value={recordingMode}
-                    onChange={(e) => setRecordingMode(e.target.value)}
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
-                  >
-                    <option value="Fast">Fast</option>
-                    <option value="Detailed">Detailed</option>
-                    <option value="Assertion">Assertion</option>
-                  </select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="rec-login" className="text-sm font-semibold">Sign in as</Label>
+                <select
+                  id="rec-login"
+                  value={requiredCredentialId}
+                  onChange={(e) => setRequiredCredentialId(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Don&apos;t sign in</option>
+                  {project.credentials.map((c) => (
+                    <option key={c.id} value={c.id}>{c.roleName} ({c.username})</option>
+                  ))}
+                </select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="rec-priority" className="text-sm font-semibold">Priority</Label>
+                <select
+                  id="rec-priority"
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Critical">Critical</option>
+                </select>
+              </div>
+            </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="rec-pre" className="text-sm font-semibold">
+                Preconditions <span className="font-normal text-muted-foreground">(optional)</span>
+              </Label>
+              <Input
+                id="rec-pre"
+                value={preconditions}
+                onChange={(e) => setPreconditions(e.target.value)}
+                placeholder="e.g. The user account exists"
+                className="h-9"
+              />
             </div>
           </div>
 
           {/* Section 3 — Pre-flight + error + CTA */}
           <div className="border rounded-xl bg-card shadow-sm overflow-hidden">
             <div className="px-6 py-3 border-b bg-accent/10 flex items-center justify-between">
-              <h3 className="text-xs font-medium text-muted-foreground">Pre-flight check</h3>
+              <h3 className="text-sm font-semibold text-foreground">Ready to record?</h3>
               <button
                 type="button"
                 onClick={async () => { setIsCheckingStatus(true); await fetchRecorderStatus(); setIsCheckingStatus(false) }}
@@ -1313,22 +1292,18 @@ export default function RecorderWorkspacePage() {
             <div className="px-6 py-4 space-y-2 text-xs">
               <div className={startUrl.trim() ? "text-emerald-700 dark:text-emerald-400 flex items-center gap-2" : "text-muted-foreground flex items-center gap-2"}>
                 <span className={`w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold ${startUrl.trim() ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground/50"}`}>{startUrl.trim() ? "✓" : "○"}</span>
-                Target URL {startUrl.trim() ? "configured" : "not set"}
-              </div>
-              <div className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold bg-emerald-500 text-white">✓</span>
-                Credentials {requiredCredentialId ? "selected" : "optional — public test"}
+                {startUrl.trim() ? "Start page set" : "Enter a start page"}
               </div>
               {workerOnline ? (
                 <div className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                   <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold bg-emerald-500 text-white">✓</span>
-                  Recorder worker online
+                  Recording service is running
                 </div>
               ) : (
                 <div className="space-y-2">
                   <div className="text-red-600 dark:text-red-400 flex items-center gap-2 font-semibold">
                     <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold bg-red-500 text-white">✗</span>
-                    Recorder worker offline
+                    Recording service isn&apos;t running
                   </div>
                   <div className="flex items-center gap-2 bg-slate-900 text-slate-100 rounded-lg px-3 py-2 font-mono ml-6">
                     <span className="flex-1 select-all text-xs">npm run recorder-worker</span>
@@ -1336,20 +1311,20 @@ export default function RecorderWorkspacePage() {
                       {copiedCmd === "worker" ? <Check className="h-3 w-3 text-green-400" /> : <Copy className="h-3 w-3" />}
                     </button>
                   </div>
-                  <p className="text-muted-foreground ml-6">Run in a separate terminal and keep it open while you record.</p>
+                  <p className="text-muted-foreground ml-6">Whoever runs this server starts it with this command and keeps it running.</p>
                 </div>
               )}
               {workerOnline && (
                 playwrightInstalled !== false ? (
                   <div className="text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
                     <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold bg-emerald-500 text-white">✓</span>
-                    Playwright browsers ready
+                    Browsers are installed
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="text-red-600 dark:text-red-400 flex items-center gap-2 font-semibold">
                       <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold bg-red-500 text-white">✗</span>
-                      Playwright not installed
+                      Browsers aren&apos;t installed on the server
                     </div>
                     <div className="flex items-center gap-2 bg-slate-900 text-slate-100 rounded-lg px-3 py-2 font-mono ml-6">
                       <span className="flex-1 select-all text-xs">npx playwright install chromium</span>
@@ -1363,7 +1338,7 @@ export default function RecorderWorkspacePage() {
               {!workerOnline && (
                 <div className="text-muted-foreground/50 flex items-center gap-2 ">
                   <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-semibold bg-muted text-muted-foreground/40">○</span>
-                  Playwright — check after worker starts
+                  Browsers: checked once the recording service runs
                 </div>
               )}
             </div>
@@ -1383,27 +1358,28 @@ export default function RecorderWorkspacePage() {
 
             <div className="px-6 pb-6">
               <Button
-                className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                className="w-full h-11 font-semibold text-sm flex items-center justify-center gap-2"
                 onClick={handleStartSession}
                 disabled={isStartingSession}
               >
                 {isStartingSession ? (
-                  <><BusyDot /> Launching browser...</>
+                  <><BusyDot /> Opening the browser…</>
                 ) : (
-                  <><Play className="h-4 w-4 fill-current" /> Launch recording session</>
+                  <><Play className="h-4 w-4 fill-current" /> Start recording</>
                 )}
               </Button>
             </div>
+          </div>
           </div>
         </main>
       ) : (
 
         /* 2. RECORDING WORKSPACE */
-        <div className="flex flex-col flex-1">
+        <div className="flex min-h-0 flex-1 flex-col">
 
-          {/* ── Sticky session control bar ── */}
-          <div className="sticky top-14 z-20 border-b bg-card/95 backdrop-blur-sm">
-            <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center gap-4">
+          {/* ── Session bar ── */}
+          <div className="shrink-0 border-b bg-card">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 md:px-6">
               {/* Case name + hierarchy */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1435,6 +1411,13 @@ export default function RecorderWorkspacePage() {
               </div>
               {/* Controls */}
               <div className="flex items-center gap-2 shrink-0">
+                <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setIsNewCaseModalOpen(true)} title="Save this case and start recording another">
+                  <Plus className="h-3.5 w-3.5" /> New test case
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleSaveCurrentCase} disabled={isSavingCase} className="h-8 gap-1.5 text-xs" title="Save the steps so far as a test case">
+                  {isSavingCase ? <BusyDot /> : <Save className="h-3.5 w-3.5" />} Save case
+                </Button>
+                <span className="mx-1 h-5 w-px bg-border" aria-hidden />
                 {sessionStatus === "Active" ? (
                   <Button variant="outline" size="sm" onClick={handlePauseSession} className="h-8 text-xs gap-2">
                     <Pause className="h-3.5 w-3.5" /> Pause
@@ -1444,115 +1427,74 @@ export default function RecorderWorkspacePage() {
                     <Play className="h-3.5 w-3.5 fill-current" /> Resume
                   </Button>
                 )}
-                <Button size="sm" onClick={handleFinishAll} disabled={isFinishing} className="h-8 text-xs gap-2 bg-red-600 hover:bg-red-700 text-white">
+                <Button size="sm" onClick={handleFinishAll} disabled={isFinishing} className="h-8 gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700" title="Stop recording and review what was captured">
                   {isFinishing ? <BusyDot /> : <Check className="h-3.5 w-3.5" />} Finish
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleCancelSession} className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" title="Cancel the session" aria-label="Cancel the session">
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
             {connectionError && connectionStatus !== "Connected" && (
-              <div className="max-w-7xl mx-auto px-4 md:px-6 pb-2 text-xs text-red-600 dark:text-red-400 font-medium">{connectionError}</div>
+              <div className="px-4 pb-2 text-xs font-medium text-red-600 md:px-6">{connectionError}</div>
             )}
           </div>
 
           {/* ── Two-panel layout ── */}
-          <div className="max-w-7xl mx-auto w-full flex flex-1">
+          <div className="flex min-h-0 flex-1">
 
-            {/* LEFT SIDEBAR */}
-            <aside className="hidden md:flex flex-col w-56 lg:w-64 shrink-0 border-r py-6 px-4 gap-6">
+            {/* Browser: the main surface, full height */}
+            <section className="flex min-w-0 flex-1 flex-col bg-muted/30 p-3" aria-label="Browser being recorded">
+              {sessionId && (
+                <LiveBrowserView
+                  sessionId={sessionId}
+                  browserType={browserType}
+                  active={sessionStatus === "Active"}
+                  className="min-h-[240px] flex-1 overflow-hidden rounded-xl border bg-card shadow-sm"
+                />
+              )}
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                {sessionStatus === "Active"
+                  ? "Click, type and scroll in the page. Each action becomes a step on the right."
+                  : "Recording is paused. Actions in the page aren't saved until you resume."}
+              </p>
+            </section>
 
-              {/* Cases list */}
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">
-                  Test cases ({savedCasesList.length})
-                </p>
-                <div className="space-y-2">
-                  {savedCasesList.map((c) => (
-                    <div key={c.id} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors ${
-                      c.id === currentTestCase?.id
-                        ? "border-primary/30 bg-primary/5 text-primary"
-                        : c.status === "SavedAsTestCase"
-                        ? "border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/10 text-emerald-700 dark:text-emerald-400"
-                        : "border-border bg-accent/10 text-muted-foreground"
-                    }`}>
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${
-                        c.id === currentTestCase?.id ? "bg-red-500 animate-pulse" :
-                        c.status === "SavedAsTestCase" ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-600"
-                      }`} />
-                      <span className="truncate flex-1">{c.title}</span>
-                      {c.status === "SavedAsTestCase" && <Check className="h-3 w-3 shrink-0" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Bugs */}
-              {sessionBugs.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Bugs ({sessionBugs.length})</p>
-                  <div className="space-y-1">
-                    {sessionBugs.map((b) => (
-                      <div key={b.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-red-200 dark:border-red-900/40 bg-red-50/50 dark:bg-red-950/10 text-red-700 dark:text-red-400 text-xs font-medium">
-                        <Bug className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{b.bugKey || "Bug"}: {b.title}</span>
-                      </div>
+            {/* Steps: always visible next to the browser */}
+            <main className="flex w-full max-w-[460px] shrink-0 flex-col border-l bg-card">
+              <div className="shrink-0 space-y-3 border-b p-4">
+                {savedCasesList.length > 1 && (
+                  <div className="flex flex-wrap gap-1.5" aria-label="Test cases in this session">
+                    {savedCasesList.map((c) => (
+                      <span
+                        key={c.id}
+                        title={c.title}
+                        className={`inline-flex max-w-[11rem] items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${
+                          c.id === currentTestCase?.id
+                            ? "border-primary/40 bg-primary/10 text-primary"
+                            : c.status === "SavedAsTestCase"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "text-muted-foreground"
+                        }`}
+                      >
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.id === currentTestCase?.id ? "bg-red-500" : c.status === "SavedAsTestCase" ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+                        <span className="truncate">{c.title}</span>
+                      </span>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Actions */}
-              <div className="space-y-2 mt-auto">
-                <Button variant="outline" size="sm" className="w-full text-xs h-8 gap-2" onClick={() => setIsNewCaseModalOpen(true)}>
-                  <Plus className="h-3.5 w-3.5" /> New test case
-                </Button>
-                <Button
-                  variant="outline" size="sm"
-                  onClick={handleSaveCurrentCase}
-                  disabled={isSavingCase}
-                  className="w-full text-xs h-8 gap-2 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
-                >
-                  <Save className="h-3.5 w-3.5" /> Save current case
-                </Button>
-                <button
-                  onClick={handleCancelSession}
-                  className="w-full text-xs text-muted-foreground hover:text-destructive py-1 transition-colors text-center font-medium"
-                >
-                  Cancel session
-                </button>
-              </div>
-            </aside>
-
-            {/* STEP FEED */}
-            <main className="flex-1 min-w-0 px-4 md:px-6 py-4">
-
-              {/* Embedded live browser — the only way to drive the session when
-                  the worker runs on a server (no native window there). */}
-              {sessionId && (
-                <div className="mb-4 overflow-hidden rounded-xl border bg-card">
-                  <button
-                    onClick={() => setShowLiveView((v) => !v)}
-                    className="flex w-full items-center gap-2 px-4 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-accent/40"
-                  >
-                    <Video className="h-3.5 w-3.5 text-muted-foreground" />
-                    Live Browser
-                    <span className="text-xs font-normal text-muted-foreground">
-                      click, type, and scroll here — every interaction is recorded
-                    </span>
-                    <span className="ml-auto text-muted-foreground">{showLiveView ? "Hide" : "Show"}</span>
-                  </button>
-                  {showLiveView && (
-                    <LiveBrowserView
-                      sessionId={sessionId}
-                      browserType={browserType}
-                      active={sessionStatus === "Active"}
-                      className="max-h-[520px] min-h-[240px] border-t"
-                    />
-                  )}
-                </div>
-              )}
-
+                )}
+                {sessionBugs.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5" aria-label="Bugs filed in this session">
+                    {sessionBugs.map((b) => (
+                      <span key={b.id} className="inline-flex max-w-[14rem] items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs text-red-700" title={b.title}>
+                        <Bug className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{b.bugKey || "Bug"}: {b.title}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               {/* Feed header */}
-              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex rounded-lg border text-xs font-semibold overflow-hidden shrink-0">
                   <button
                     onClick={() => setStepsFilter("grouped")}
@@ -1574,11 +1516,14 @@ export default function RecorderWorkspacePage() {
                   <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-purple-600/30 text-purple-600 dark:text-purple-400 font-semibold" onClick={() => setShowExportModal(true)} disabled={recordedSteps.length === 0}>
                     <Code2 className="h-3 w-3" /> Export code
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={fetchSessionSteps} title="Refresh">
+                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={fetchSessionSteps} title="Refresh steps" aria-label="Refresh steps">
                     <RefreshCw className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-y-auto p-4">
 
               {/* Empty state */}
               {recordedSteps.length === 0 ? (
@@ -1588,7 +1533,7 @@ export default function RecorderWorkspacePage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-sm text-foreground">No steps yet</h3>
-                    <p className="text-xs mt-1 max-w-xs">Interact with the page in the Live Browser above — every click, fill, and selection appears here live.</p>
+                    <p className="text-xs mt-1 max-w-xs">Use the page on the left. Every click, entry and selection appears here as you go.</p>
                   </div>
                 </div>
               ) : (
@@ -1829,6 +1774,7 @@ export default function RecorderWorkspacePage() {
                   })()}
                 </div>
               )}
+              </div>
             </main>
           </div>
         </div>

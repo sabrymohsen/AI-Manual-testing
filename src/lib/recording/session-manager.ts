@@ -376,6 +376,11 @@ export async function startSession(
   // Set up automatic content script injection on context before creating any page.
   if (sessionMode === "Workstation") {
     await context.addInitScript("window.__QA_WORKSTATION_MODE = true;")
+  } else if (!canRunHeaded) {
+    // Recorder Studio on a server: the browser is only seen as a stream inside
+    // the studio, which has its own controls. The in-page toolbar would just
+    // cover the site being recorded (and duplicate those controls).
+    await context.addInitScript("window.__QA_STREAMED = true;")
   }
   await context.addInitScript(INJECTED_RECORDER_SCRIPT)
 

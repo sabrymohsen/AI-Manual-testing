@@ -999,7 +999,7 @@ export const INJECTED_RECORDER_SCRIPT = `(function() {
     // surface (pause, screenshot, video, bug, end). Skip the in-browser
     // toolbar entirely — recording hooks stay active — and keep only the
     // Alt+Shift+S quick-screenshot shortcut.
-    if (window.__QA_WORKSTATION_MODE) {
+    if (window.__QA_WORKSTATION_MODE || window.__QA_STREAMED) {
       document.addEventListener("keydown", function (e) {
         if (e.altKey && e.shiftKey && e.code === "KeyS") {
           window.qaRecordAction({ actionType: "take_screenshot", fullPage: false }).catch(function () {});

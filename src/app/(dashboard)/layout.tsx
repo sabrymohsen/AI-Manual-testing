@@ -122,6 +122,7 @@ export default function DashboardLayout({
       /^\/projects\/[^/]+\/automation-hub\/?$/.test(pathname) ||
       /^\/projects\/[^/]+\/team-chat\/?$/.test(pathname) ||
       /^\/projects\/[^/]+\/live-qa-session\/?$/.test(pathname) ||
+      /^\/projects\/[^/]+\/recorder-studio\/?$/.test(pathname) ||
       /^\/projects\/[^/]+\/manual-sessions\/[^/]+\/?$/.test(pathname),
     [pathname]
   )
