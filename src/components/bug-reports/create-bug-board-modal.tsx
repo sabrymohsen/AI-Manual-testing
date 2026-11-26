@@ -133,7 +133,7 @@ export default function CreateBugBoardModal({ projectId, open, onClose, onCreate
 
           {loading && (
             <p className="text-muted-foreground animate-pulse font-semibold py-6 text-center">
-              Reading the tracker's statuses…
+              Reading the tracker&apos;s statuses…
             </p>
           )}
 
