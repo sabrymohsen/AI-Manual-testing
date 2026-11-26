@@ -1,0 +1,14 @@
+{
+  "enabledPlugins": {
+    "skill-creator@anthropic-plugin-directory": true,
+    "code-review-anthropics@anthropic-plugin-directory": true,
+    "claude-md-management@anthropic-plugin-directory": true,
+    "vercel@anthropic-plugin-directory": true,
+    "code-simplifier@anthropic-plugin-directory": true,
+    "claude-code-setup@anthropic-plugin-directory": true,
+    "mcp-server-dev@anthropic-plugin-directory": true,
+    "shopify-ai-toolkit@anthropic-plugin-directory": true,
+    "design-skills@anthropic-plugin-directory": true,
+    "21st-21st-dev-tdrsx1ff@anthropic-plugin-directory": true
+  }
+}
