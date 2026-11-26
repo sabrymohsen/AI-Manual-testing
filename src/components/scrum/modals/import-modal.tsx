@@ -9,7 +9,7 @@ import { useScrumUI } from "@/stores/scrum-ui"
 import { useScrumSprints, useScrumEpics } from "@/hooks/scrum/use-scrum"
 import type { TaskType } from "@/types/scrum"
 import { TYPE_META } from "@/components/scrum/task/task-detail-config"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -245,6 +245,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Import issues</DialogTitle>
+          <DialogDescription className="body-6">Add issues from a spreadsheet (XLSX, XLS or CSV) or from this project's test cases.</DialogDescription>
         </DialogHeader>
 
         {/* Source tabs */}
@@ -252,7 +253,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
           {(
             [
               { id: "file", label: "From file", icon: FileSpreadsheet, hint: "stories, test cases, bugs" },
-              { id: "testCases", label: "From Test Cases", icon: ListChecks, hint: "already in this project" },
+              { id: "testCases", label: "From test cases", icon: ListChecks, hint: "already in this project" },
             ] as const
           ).map((t) => {
             const on = source === t.id
@@ -328,7 +329,7 @@ export function ImportModal({ projectId }: { projectId: string }) {
                       }`}
                     >
                       <Icon className={`h-3.5 w-3.5 ${on ? "" : meta.color}`} />
-                      {t === "STORY" ? "User Story" : meta.label}
+                      {t === "STORY" ? "User story" : meta.label}
                     </button>
                   )
                 })}

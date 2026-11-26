@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -135,6 +135,7 @@ export function SavedViews({ projectId, currentQuery, onApply }: { projectId: st
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Save view</DialogTitle>
+            <DialogDescription className="body-6">Save the current filters under a name so you can bring them back in one click.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. My open bugs" maxLength={80}

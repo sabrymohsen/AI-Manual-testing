@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useScrumUI } from "@/stores/scrum-ui"
 import { useSprintMutations } from "@/hooks/scrum/use-scrum"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -39,7 +39,7 @@ export function CreateSprintModal({ projectId }: { projectId: string }) {
   return (
     <Dialog open={createSprintOpen} onOpenChange={setCreateSprintOpen}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Create sprint</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Create sprint</DialogTitle><DialogDescription className="body-6">Give the sprint a name and dates. You can start it from the backlog.</DialogDescription></DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1">
             <label className="text-xs font-semibold text-muted-foreground">Name *</label>

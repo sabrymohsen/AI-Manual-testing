@@ -12,10 +12,10 @@ interface QuickFiltersProps {
 }
 
 const FILTERS: { key: QuickFilter; label: string; icon: React.ReactNode }[] = [
-  { key: "my-issues", label: "My Issues", icon: <User className="h-3 w-3" /> },
-  { key: "recently-updated", label: "Recently Updated", icon: <Clock className="h-3 w-3" /> },
-  { key: "only-stories", label: "Only Stories", icon: <BookOpen className="h-3 w-3" /> },
-  { key: "high-priority", label: "High Priority", icon: <ArrowUp className="h-3 w-3" /> },
+  { key: "my-issues", label: "My issues", icon: <User className="h-3 w-3" /> },
+  { key: "recently-updated", label: "Recently updated", icon: <Clock className="h-3 w-3" /> },
+  { key: "only-stories", label: "Only stories", icon: <BookOpen className="h-3 w-3" /> },
+  { key: "high-priority", label: "High priority", icon: <ArrowUp className="h-3 w-3" /> },
   { key: "overdue", label: "Overdue", icon: <AlertTriangle className="h-3 w-3" /> },
 ]
 

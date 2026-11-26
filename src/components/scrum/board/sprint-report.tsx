@@ -7,9 +7,10 @@
  */
 import { Skeleton, SkeletonLines } from "@/components/ui/skeleton"
 import { useQuery } from "@tanstack/react-query"
-import { BarChart3, } from "@/components/ui/icons"
+import { BarChart3 } from "@/components/ui/icons"
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { format, parseISO } from "date-fns"
 
 interface ReportData {
   burndown: {
@@ -44,30 +45,40 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
     : null
   const behind = idealNow !== undefined && remaining > idealNow
   const velocityRows = (data?.velocity.sprints ?? []).slice(-6)
+  // The average covers up to the last 3 finished sprints; say how many there really are.
+  const finishedCount = Math.min(3, (data?.velocity.sprints ?? []).filter((s) => s.sprintId !== sprintId).length)
+  const shortDate = (d: string) => {
+    try {
+      return format(parseISO(d), "MMM d")
+    } catch {
+      return d
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-primary" /> {data?.burndown.sprint.name ?? "Sprint"} report
+            <BarChart3 className="h-5 w-5 text-primary" aria-hidden /> {data?.burndown.sprint.name ?? "Sprint"} report
           </DialogTitle>
+          <DialogDescription className="body-6">Remaining work per day, and how much recent sprints finished.</DialogDescription>
         </DialogHeader>
         {isLoading ? (
           <div className="space-y-4 py-6"><Skeleton className="h-24 w-full" /><SkeletonLines lines={3} /></div>
         ) : error ? (
-          <p className="py-8 text-sm text-destructive">{(error as Error).message}</p>
+          <p role="alert" className="py-8 text-sm text-destructive">{(error as Error).message}. Close the report and open it again to retry.</p>
         ) : data ? (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="Committed" value={`${data.burndown.totalPoints} ${unit}`} />
               <Stat label="Remaining" value={`${remaining} ${unit}`} tone={behind ? "warn" : undefined} hint={idealNow !== undefined ? `ideal today: ${idealNow}` : undefined} />
               <Stat label="Days left" value={daysLeft === null ? "—" : String(daysLeft)} />
-              <Stat label="Avg velocity" value={data.velocity.averageVelocity ? `${data.velocity.averageVelocity} pts` : "—"} hint={data.velocity.averageVelocity ? "last 3 finished sprints" : "after the first finished sprint"} />
+              <Stat label="Avg velocity" value={data.velocity.averageVelocity ? `${data.velocity.averageVelocity} pts` : "—"} hint={data.velocity.averageVelocity ? `last ${finishedCount === 1 ? "finished sprint" : `${finishedCount} finished sprints`}` : "after the first finished sprint"} />
             </div>
 
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Burndown</h3>
+              <h3 className="title-4 mb-2">Burndown</h3>
               {data.burndown.totalPoints === 0 ? (
                 <p className="text-sm text-muted-foreground">Nothing in this sprint yet.</p>
               ) : (
@@ -75,9 +86,9 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={data.burndown.points} margin={{ top: 5, right: 12, left: -12, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="date" tickFormatter={(d: string) => d.slice(5)} tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                      <Tooltip formatter={(v: number, n: string) => [`${v} ${unit}`, n]} labelFormatter={(d: string) => d} />
+                      <XAxis dataKey="date" tickFormatter={shortDate} tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                      <Tooltip formatter={(v: number, n: string) => [`${v} ${unit}`, n]} labelFormatter={(d: string) => shortDate(d)} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
                       <Line type="linear" dataKey="ideal" name="Ideal" stroke="#94a3b8" strokeDasharray="5 4" dot={false} />
                       <Line type="stepAfter" dataKey="actual" name="Remaining" stroke="#6366f1" strokeWidth={2} dot={false} connectNulls={false} />
@@ -91,7 +102,7 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
             </div>
 
             <div>
-              <h3 className="mb-2 text-sm font-semibold">Velocity</h3>
+              <h3 className="title-4 mb-2">Velocity</h3>
               {velocityRows.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Velocity appears once a sprint has been started.</p>
               ) : (
@@ -99,8 +110,8 @@ export function SprintReportDialog({ projectId, sprintId, open, onOpenChange }: 
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={velocityRows} margin={{ top: 5, right: 12, left: -12, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
                       <Tooltip />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
                       <Bar dataKey="committed" name="Committed" fill="#cbd5e1" radius={[3, 3, 0, 0]} />
